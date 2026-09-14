@@ -1,0 +1,25 @@
+# OS Metadata
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Obsidian internal workspaces
+.obsidian/workspace*
+.obsidian/cache

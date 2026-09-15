@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,311 +8,280 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - binary-search
+  - greedy
+  - google
+  - amazon
+  - meta
 ---
 
 # LeetCode 410: Split Array Largest Sum
 
-**LeetCode 410 – Split Array Largest Sum**, focusing on **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Google, Amazon, Meta, Microsoft, ByteDance, Apple  
+**Difficulty:** Hard  
+**Topic:** Dynamic Programming / Binary Search on Answer / Greedy Partition / Minimax  
 
 ---
-
-## LeetCode 410 — Split Array Largest Sum
 
 ### Problem Statement
 
-You are given an integer array `nums` and an integer `k`.
+Given an integer array `nums` and an integer `k`, split `nums` into `k` non-empty contiguous subarrays such that the **largest sum among these subarrays is minimized**.
 
-Split `nums` into **k non-empty contiguous subarrays** such that the **largest subarray sum** is minimized.
+Return the **minimized largest sum** of the split.
 
-Return this minimum possible largest subarray sum.
-
----
-
-## Key Observation
-
-* The split must be **contiguous**
-* We are minimizing a **maximum** → classic **minimax DP**
-* Greedy alone does not work because early local decisions affect later partitions
-
-This naturally leads to **Dynamic Programming with partitioning**.
+A **subarray** is a contiguous part of the array.
 
 ---
 
-## DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i][j] = minimum possible largest subarray sum
-           when splitting first i elements into j subarrays
-```
-
-### Meaning
-
-* We consider `nums[0 ... i-1]`
-* We split them into exactly `j` contiguous parts
-* Among all valid splits, `dp[i][j]` stores the **minimum possible maximum subarray sum**
+- **Input:**
+  - `nums: List[int]` — Array of non-negative integers.
+  - `k: int` — Number of contiguous subarrays.
+- **Output:**
+  - `int` — Minimum possible value of the maximum subarray sum.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 1000$
+  - $0 \le \text{nums}[i] \le 10^6$
+  - $1 \le k \le \min(50, \text{nums.length})$
 
 ---
 
-## Prefix Sum (Preprocessing)
+### Key Idea & Intuition
 
-To compute subarray sums efficiently:
+1. **Minimax Optimization:**
+   - We seek $\min_{\text{partitions}} \max_{1 \le p \le k} (\text{sum of partition } p)$.
+   - Two fundamental paradigms solve this problem:
+     1. **Binary Search on the Answer (Greedy Feasibility) — $\mathcal{O}(N \log(\sum \text{nums}))$:** Optimal for production and interview performance.
+     2. **Partition Dynamic Programming — $\mathcal{O}(N^2 \cdot k)$:** The classic theoretical formulation that demonstrates optimal substructure.
 
-```
-prefix[0] = 0
-prefix[i] = sum(nums[0 ... i-1])
-```
+2. **Paradigm 1: Binary Search on Answer (Optimal):**
+   - What are the minimum and maximum bounds for the maximum subarray sum?
+     - **Lower bound (`low`):** $\max(\text{nums})$ (any partition must hold at least the largest single element).
+     - **Upper bound (`high`):** $\sum \text{nums}$ (one partition holding the entire array).
+   - If we guess a candidate maximum sum `mid`:
+     - Can we partition `nums` into $\le k$ subarrays where each sum $\le \text{mid}$?
+     - **Greedy Check:** Iterate through `nums`, accumulating running sum. Whenever adding the next element exceeds `mid`, start a new subarray.
+     - If the number of required subarrays is $\le k$, then `mid` is feasible; try a tighter bound (`high = mid`).
+     - If required subarrays $> k$, `mid` is too small; we need a larger limit (`low = mid + 1`).
 
-Subarray sum from index `x` to `i-1`:
-
-```
-sum(x, i) = prefix[i] - prefix[x]
-```
-
----
-
-## DP Transition (Core Logic)
-
-To compute `dp[i][j]`:
-
-We try placing the **last cut** at position `x`, where:
-
-```
-j-1 ≤ x < i
-```
-
-* First `x` elements → `j-1` subarrays
-* Last subarray → `nums[x ... i-1]`
-
-### Transition Formula
-
-```
-dp[i][j] = min over x (
-               max(
-                   dp[x][j-1],
-                   prefix[i] - prefix[x]
-               )
-           )
-```
-
-### Explanation
-
-* `dp[x][j-1]` → largest sum in previous partitions
-* `prefix[i] - prefix[x]` → sum of last subarray
-* The **maximum** of these two defines the cost of this split
-* We **minimize** over all possible `x`
-
-This is classic **partition DP with minimax optimization**.
+3. **Paradigm 2: Partition Dynamic Programming:**
+   - Let $\text{dp}[i][j]$ be the minimum largest subarray sum splitting the prefix $\text{nums}[0 \dots i-1]$ into $j$ subarrays.
+   - Transition:
+     $$\text{dp}[i][j] = \min_{j - 1 \le x < i} \max\left( \text{dp}[x][j - 1], \sum_{m=x}^{i-1} \text{nums}[m] \right)$$
+   - Using prefix sums: $\sum_{m=x}^{i-1} \text{nums}[m] = \text{prefix}[i] - \text{prefix}[x]$.
+   - Base case: $\text{dp}[i][1] = \text{prefix}[i]$.
 
 ---
 
-## Base Cases
+### Solution Approach (Step-by-Step)
 
-### 1. One subarray
-
-```
-dp[i][1] = prefix[i]
-```
-
-If only one partition, entire array is one subarray.
-
-### 2. Zero elements
-
-```
-dp[0][0] = 0
-```
-
-### 3. Invalid states
-
-Initialize others as infinity.
-
----
-
-## DP Table Dimensions
-
-```
-dp size = (n+1) × (k+1)
-```
-
-* `i`: 0 → n
-* `j`: 0 → k
+#### Approach 1: Binary Search on Answer (Recommended)
+1. Set `low = max(nums)` and `high = sum(nums)`.
+2. While `low < high`:
+   - `mid = low + (high - low) // 2`.
+   - Greedily count required subarrays:
+     - `count = 1, current_sum = 0`.
+     - For `x` in `nums`:
+       - If `current_sum + x > mid`:
+         - `count += 1, current_sum = x`.
+       - Else:
+         - `current_sum += x`.
+   - If `count <= k`:
+     - `high = mid`.
+   - Else:
+     - `low = mid + 1`.
+3. Return `low`.
 
 ---
 
-## Example Walkthrough
+### Visual Algorithm Walkthrough
 
-### Input
-
-```text
-nums = [7, 2, 5, 10, 8]
-k = 2
-```
-
-### Prefix Sum
+For `nums = [7, 2, 5, 10, 8]` and $k = 2$:
+- `low = max(nums) = 10`
+- `high = sum(nums) = 32`
 
 ```
-index:   0  1  2  3   4   5
-prefix: [0, 7, 9, 14, 24, 32]
+Iteration 1:
+  mid = 10 + (32 - 10) / 2 = 21
+  Greedy test with limit 21:
+    [7, 2, 5] -> sum 14 <= 21
+    + 10 = 24 > 21 -> split! Subarray 1: [7, 2, 5] (sum 14)
+    [10, 8] -> sum 18 <= 21
+    Total pieces needed = 2 <= k (2) -> Feasible!
+  high = 21
+
+Iteration 2:
+  mid = 10 + (21 - 10) / 2 = 15
+  Greedy test with limit 15:
+    [7, 2, 5] -> sum 14 <= 15
+    + 10 = 24 > 15 -> split! Subarray 1: [7, 2, 5] (sum 14)
+    [10] <= 15, + 8 = 18 > 15 -> split! Subarray 2: [10] (sum 10)
+    Subarray 3: [8] (sum 8)
+    Total pieces needed = 3 > k (2) -> Infeasible (exceeds k=2)!
+  low = 16
+
+Iteration 3:
+  mid = 16 + (21 - 16) / 2 = 18
+  Greedy test with limit 18:
+    [7, 2, 5] -> sum 14 <= 18
+    + 10 = 24 > 18 -> split! Subarray 1: [7, 2, 5] (sum 14)
+    [10, 8] -> sum 18 <= 18 (Subarray 2)
+    Total pieces needed = 2 <= k (2) -> Feasible!
+  high = 18
+
+... Converges to low = 18.
+Optimal Split: [7, 2, 5] and [10, 8], max subarray sum = 18.
 ```
 
 ---
 
-### Step 1: Base Case (j = 1)
+### Solved Examples with Multiple Inputs
 
-| i | dp[i][1] |
-| --- | --- |
-| 1 | 7 |
-| 2 | 9 |
-| 3 | 14 |
-| 4 | 24 |
-| 5 | 32 |
-
----
-
-### Step 2: Compute dp[i][2]
-
-#### dp[2][2]
-
-Possible splits:
-
-* x = 1
-
-```
-max(dp[1][1], prefix[2] - prefix[1])
-= max(7, 2) = 7
-```
-
-```
-dp[2][2] = 7
-```
+| Case | `nums` | `k` | Optimal Partition | Result | Explanation |
+|---|---|---|---|---|---|
+| **Standard** | `[7, 2, 5, 10, 8]` | `2` | `[7, 2, 5]` (14) & `[10, 8]` (18) | `18` | Minimized maximum sum |
+| **All Equal Single Element** | `[1, 2, 3, 4, 5]` | `2` | `[1, 2, 3]` (6) & `[4, 5]` (9) | `9` | Equal or closest split |
+| **$k == 1$** | `[1, 4, 4]` | `1` | `[1, 4, 4]` (9) | `9` | Entire array is single partition |
+| **$k == n$** | `[1, 4, 4]` | `3` | `[1]`, `[4]`, `[4]` | `4` | Max element alone |
 
 ---
 
-#### dp[3][2]
+### Multi-Language Implementations
 
-x = 1 → max(7, 7) = 7  
-x = 2 → max(9, 5) = 9
-
-```
-dp[3][2] = 7
-```
-
----
-
-#### dp[4][2]
-
-x = 1 → max(7, 17) = 17  
-x = 2 → max(9, 15) = 15  
-x = 3 → max(14, 10) = 14
-
-```
-dp[4][2] = 14
-```
-
----
-
-#### dp[5][2]
-
-x = 1 → max(7, 25) = 25  
-x = 2 → max(9, 23) = 23  
-x = 3 → max(14, 18) = 18  
-x = 4 → max(24, 8) = 24
-
-```
-dp[5][2] = 18
-```
-
----
-
-## Final DP Table (Relevant)
-
-| i \ j | 1 | 2 |
-| --- | --- | --- |
-| 1 | 7 | — |
-| 2 | 9 | 7 |
-| 3 | 14 | 7 |
-| 4 | 24 | 14 |
-| 5 | 32 | 18 |
-
----
-
-## Final Answer
-
-```
-dp[5][2] = 18
-```
-
-Optimal split:
-
-```
-[7, 2, 5] | [10, 8]
-```
-
-Largest sum = `max(14, 18) = 18`
-
----
-
-## Python 3 DP Solution (Typed)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
-import math
 
 class Solution:
     def splitArray(self, nums: List[int], k: int) -> int:
-        n = len(nums)
+        low = max(nums)
+        high = sum(nums)
+        
+        def can_split(max_sum: int) -> bool:
+            subarrays = 1
+            curr_sum = 0
+            for num in nums:
+                if curr_sum + num > max_sum:
+                    subarrays += 1
+                    curr_sum = num
+                else:
+                    curr_sum += num
+            return subarrays <= k
 
-        # Prefix sum
-        prefix = [0] * (n + 1)
-        for i in range(n):
-            prefix[i + 1] = prefix[i] + nums[i]
+        while low < high:
+            mid = low + (high - low) // 2
+            if can_split(mid):
+                high = mid
+            else:
+                low = mid + 1
+                
+        return low
+```
 
-        # DP table
-        dp = [[math.inf] * (k + 1) for _ in range(n + 1)]
-        dp[0][0] = 0
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <numeric>
+#include <algorithm>
 
-        # Base case: one subarray
-        for i in range(1, n + 1):
-            dp[i][1] = prefix[i]
+class Solution {
+public:
+    int splitArray(std::vector<int>& nums, int k) {
+        long long low = *std::max_element(nums.begin(), nums.end());
+        long long high = std::accumulate(nums.begin(), nums.end(), 0LL);
 
-        # Fill DP
-        for j in range(2, k + 1):
-            for i in range(j, n + 1):
-                for x in range(j - 1, i):
-                    dp[i][j] = min(
-                        dp[i][j],
-                        max(dp[x][j - 1], prefix[i] - prefix[x])
-                    )
+        auto can_split = [&](long long max_sum) -> bool {
+            int subarrays = 1;
+            long long curr_sum = 0;
+            for (int num : nums) {
+                if (curr_sum + num > max_sum) {
+                    subarrays++;
+                    curr_sum = num;
+                } else {
+                    curr_sum += num;
+                }
+            }
+            return subarrays <= k;
+        };
 
-        return dp[n][k]
+        while (low < high) {
+            long long mid = low + (high - low) / 2;
+            if (can_split(mid)) {
+                high = mid;
+            } else {
+                low = mid + 1;
+            }
+        }
+
+        return static_cast<int>(low);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int splitArray(int[] nums, int k) {
+        long low = 0;
+        long high = 0;
+
+        for (int num : nums) {
+            low = Math.max(low, num);
+            high += num;
+        }
+
+        while (low < high) {
+            long mid = low + (high - low) / 2;
+            if (canSplit(nums, k, mid)) {
+                high = mid;
+            } else {
+                low = mid + 1;
+            }
+        }
+
+        return (int) low;
+    }
+
+    private boolean canSplit(int[] nums, int k, long maxSum) {
+        int subarrays = 1;
+        long currSum = 0;
+
+        for (int num : nums) {
+            if (currSum + num > maxSum) {
+                subarrays++;
+                currSum = num;
+            } else {
+                currSum += num;
+            }
+        }
+
+        return subarrays <= k;
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-| Metric | Value |
-| --- | --- |
-| Time | **O(n² · k)** |
-| Space | **O(n · k)** |
-
----
-
-## Why This DP Is Correct
-
-* Explores **all valid partition points**
-* Enforces **exactly k subarrays**
-* Minimizes the **worst subarray sum**
-* Uses prefix sums for efficient range queries
+- **Binary Search on Answer (Optimal):**
+  - **Time Complexity:** $\mathcal{O}(N \log(\sum \text{nums} - \max(\text{nums})))$  
+    Each feasibility check takes $\mathcal{O}(N)$ linear time. The search range is at most $1000 \times 10^6 = 10^9$, requiring at most $\approx 30$ binary search iterations. Total operations $\approx 30 \times 1000 = 3 \times 10^4$ ($< 2$ ms).
+  - **Space Complexity:** $\mathcal{O}(1)$ auxiliary space.
+- **Partition DP (Theoretical):**
+  - **Time Complexity:** $\mathcal{O}(N^2 \cdot k)$
+  - **Space Complexity:** $\mathcal{O}(N \cdot k)$
 
 ---
 
-If you want, next we can:
+### Takeaway Pattern & Interview Traps
 
-* Derive the **binary search + greedy** solution
-* Optimize DP with **monotonicity**
-* Visualize the **partition tree**
-* Compare DP vs Binary Search trade-offs
-
-Tell me how you want to proceed.
+1. **Recognizing "Minimize the Maximum":**
+   - The phrase "minimize the largest" or "maximize the minimum" is a hallmark signature of **Binary Search on the Answer**. When contiguous monotonicity holds, testing feasibility in $\mathcal{O}(N)$ transforms an otherwise $\mathcal{O}(N^2 k)$ DP into an ultra-fast $\mathcal{O}(N \log S)$ solution.
+2. **Same Family of Problems:**
+   - LeetCode 1011 (Capacity To Ship Packages Within D Days)
+   - LeetCode 875 (Koko Eating Bananas)
+   - LeetCode 1482 (Minimum Number of Days to Make m Bouquets)
+3. **Integer Overflow in Sum:**
+   - When calculating `high = sum(nums)`, total sum can reach $1000 \times 10^6 = 10^9$. In C++ and Java, use `long long` / `long` to avoid 32-bit signed integer overflow during `low + high`.

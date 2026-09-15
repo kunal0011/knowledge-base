@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,166 +8,186 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - array
+  - amazon
+  - google
+  - meta
+  - microsoft
 ---
 
 # LeetCode 198: House Robber
 
-## LeetCode 198 — House Robber
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Array  
+
+---
 
 ### Problem Statement
 
-You are given an integer array `nums` where `nums[i]` represents the amount of money in the `i`-th house along a street.  
-You **cannot rob two adjacent houses**.
+You are a professional robber planning to rob houses along a street. Each house has a certain amount of money stashed, the only constraint stopping you from robbing each of them is that adjacent houses have security systems connected and **it will automatically contact the police if two adjacent houses were broken into on the same night**.
 
-Return the **maximum amount of money** you can rob without triggering the alarm.
-
----
-
-## Dynamic Programming Approach
-
-This is a **classic linear DP optimization problem** where, at each index, you decide:
-
-* **Rob the current house**, or
-* **Skip the current house**
+Given an integer array `nums` representing the amount of money of each house, return *the maximum amount of money you can rob tonight **without alerting the police***.
 
 ---
 
-## 1. State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i] = maximum money that can be robbed from houses [0 .. i]
-```
-
-This definition ensures:
-
-* Every subproblem is independent
-* Each state builds on previously solved states
+- **Input:** An integer array `nums` ($1 \le |nums| \le 100$).
+- **Output:** An integer representing the maximum money that can be robbed.
+- **Constraints:**
+  - `1 <= nums.length <= 100`
+  - `0 <= nums[i] <= 400`
 
 ---
 
-## 2. State Transition
+### Key Idea & Intuition
 
-At house `i`, you have **two choices**:
+#### The Optimal Substructure Decision
+At each house $i$, the robber faces a binary decision:
+1. **Rob house $i$:** The robber collects $nums[i]$ dollars. By the adjacency constraint, the robber **cannot** have robbed house $i - 1$. The maximum money available prior to house $i$ is the optimal total up to house $i - 2$:
+   $$\text{profit} = dp[i - 2] + nums[i]$$
+2. **Skip house $i$:** The robber collects nothing from house $i$. The maximum money available is simply the optimal total up to house $i - 1$:
+   $$\text{profit} = dp[i - 1]$$
 
-### Option 1: Skip house `i`
+#### Recurrence Relation
+Combining both mutually exclusive options:
+$$dp[i] = \max\Big(dp[i - 1], \, dp[i - 2] + nums[i]\Big)$$
 
-You take whatever you earned until house `i - 1`.
+#### Space Optimization to $\mathcal{O}(1)$
+Notice that computing $dp[i]$ only requires values from the previous two houses ($dp[i - 1]$ and $dp[i - 2]$). We do not need an entire array: two scalar variables (`prev1` and `prev2`) are sufficient, reducing auxiliary memory to $\mathcal{O}(1)$.
 
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Base Case Handling:**
+   - If `len(nums) == 0`, return 0.
+   - If `len(nums) == 1`, return `nums[0]`.
+2. **Rolling Variables Initialization:**
+   - `prev2 = 0` (represents $dp[i - 2]$)
+   - `prev1 = 0` (represents $dp[i - 1]$)
+3. **Iterative Update:**
+   - For each number $x$ in `nums`:
+     - $current = \max(prev1, prev2 + x)$
+     - $prev2 = prev1$
+     - $prev1 = current$
+4. **Return Output:**
+   - Return `prev1`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+#### Trace for `nums = [2, 7, 9, 3, 1]`
 ```
-dp[i - 1]
-```
+Initial: prev2 = 0, prev1 = 0
 
-### Option 2: Rob house `i`
+House 0 (val = 2):
+  current = max(prev1=0, prev2=0 + 2) = 2
+  prev2 = 0, prev1 = 2
 
-If you rob this house, you **must skip house `i - 1`**, so you add `nums[i]` to the best you could do until `i - 2`.
+House 1 (val = 7):
+  current = max(prev1=2, prev2=0 + 7) = 7
+  prev2 = 2, prev1 = 7
 
-```
-dp[i - 2] + nums[i]
-```
+House 2 (val = 9):
+  current = max(prev1=7, prev2=2 + 9) = max(7, 11) = 11
+  prev2 = 7, prev1 = 11
 
-### Transition Formula
+House 3 (val = 3):
+  current = max(prev1=11, prev2=7 + 3) = max(11, 10) = 11
+  prev2 = 11, prev1 = 11
 
-```
-dp[i] = max(
-    dp[i - 1],           # skip current house
-    dp[i - 2] + nums[i]  # rob current house
-)
+House 4 (val = 1):
+  current = max(prev1=11, prev2=11 + 1) = max(11, 12) = 12
+  prev2 = 11, prev1 = 12
+
+Final Max Money Robbed: 12
+Optimal Houses Robbed: House 0 (2) + House 2 (9) + House 4 (1) = 12.
 ```
 
 ---
 
-## 3. Base Cases
+### Solved Examples with Multiple Inputs
 
-```
-dp[0] = nums[0]
-dp[1] = max(nums[0], nums[1])
-```
-
-Edge cases:
-
-* If `nums` is empty → return `0`
-* If only one house → return `nums[0]`
+| `nums` | Decisions per House | Optimal Subset Robbed | Output |
+|---|---|---|---|
+| `[1, 2, 3, 1]` | House 0 (1), House 2 (3) | Houses at index 0 and 2 | `4` |
+| `[2, 7, 9, 3, 1]` | $2 \to 7 \to 11 \to 11 \to 12$ | Houses at index 0, 2, and 4 | `12` |
+| `[2, 1, 1, 2]` | $2 \to 2 \to 3 \to 4$ | Houses at index 0 and 3 | `4` |
+| `[0]` | Single house | House 0 | `0` |
 
 ---
 
-## 4. DP Table Construction (Step-by-Step Example)
+### Multi-Language Implementations
 
-### Example Input
-
-```text
-nums = [2, 7, 9, 3, 1]
-```
-
-### DP Table Creation
-
-| i | nums[i] | dp[i-2] | dp[i-1] | dp[i] = max(dp[i-1], dp[i-2]+nums[i]) |
-| --- | --- | --- | --- | --- |
-| 0 | 2 | — | — | 2 |
-| 1 | 7 | — | 2 | max(2, 7) = 7 |
-| 2 | 9 | 2 | 7 | max(7, 2+9=11) = 11 |
-| 3 | 3 | 7 | 11 | max(11, 7+3=10) = 11 |
-| 4 | 1 | 11 | 11 | max(11, 11+1=12) = 12 |
-
-### Final Answer
-
-```
-12
-```
-
-Rob houses with money: `2 + 9 + 1`
-
----
-
-## 5. Python 3 DP Solution (with Typing)
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def rob(self, nums: List[int]) -> int:
-        n = len(nums)
+    def rob(self, nums: list[int]) -> int:
+        prev2: int = 0
+        prev1: int = 0
         
-        if n == 0:
-            return 0
-        if n == 1:
-            return nums[0]
-        
-        dp = [0] * n
-        
-        dp[0] = nums[0]
-        dp[1] = max(nums[0], nums[1])
-        
-        for i in range(2, n):
-            dp[i] = max(
-                dp[i - 1],          # skip current house
-                dp[i - 2] + nums[i] # rob current house
-            )
-        
-        return dp[-1]
+        for x in nums:
+            current: int = max(prev1, prev2 + x)
+            prev2 = prev1
+            prev1 = current
+            
+        return prev1
+```
+
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int rob(const std::vector<int>& nums) {
+        int prev2 = 0;
+        int prev1 = 0;
+
+        for (int x : nums) {
+            int current = std::max(prev1, prev2 + x);
+            prev2 = prev1;
+            prev1 = current;
+        }
+
+        return prev1;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int rob(int[] nums) {
+        int prev2 = 0;
+        int prev1 = 0;
+
+        for (int x : nums) {
+            int current = Math.max(prev1, prev2 + x);
+            prev2 = prev1;
+            prev1 = current;
+        }
+
+        return prev1;
+    }
+}
 ```
 
 ---
 
-## 6. Time and Space Complexity
+### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(n)` (DP table)
-
-> This problem can be further optimized to **O(1) space** using two variables (`prev1`, `prev2`) if needed.
+- **Time Complexity:** $\mathcal{O}(N)$, where $N = |nums|$. We iterate through the array once, performing constant-time operations at each step.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space. Only two scalar variables (`prev1`, `prev2`) are used.
 
 ---
 
-## 7. Key Takeaway
+### Takeaway Pattern & Interview Traps
 
-* This problem is a **decision DP** problem
-* Every index asks: **take or skip**
-* The adjacency constraint naturally leads to `i-2` dependency
-* This DP pattern reappears in many problems (e.g., circular houses, trees)
-
-If you want, I can also show:
-
-* Space-optimized version
-* Backtracking vs DP comparison
-* House Robber II (circular) or House Robber III (tree) next
+1. **The "Take or Skip" Canonical Pattern:** House Robber is the foundational template for non-adjacent subset selection (appearing in Delete and Earn LC 740, Maximum Alternating Subsequence Sum LC 1911).
+2. **0-Length Initialization:** Starting `prev1 = 0` and `prev2 = 0` elegantly absorbs base cases $N = 1$ and $N = 2$ without needing explicit boundary if-statements.
+3. **Relation to Fibonacci:** Notice that if all $nums[i] = 1$, the state transition $dp[i] = dp[i-1] + dp[i-2]$ mirrors the Fibonacci sequence recurrence.

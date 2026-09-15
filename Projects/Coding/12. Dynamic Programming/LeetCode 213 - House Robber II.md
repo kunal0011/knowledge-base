@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,243 +8,205 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - array
+  - amazon
+  - google
+  - meta
+  - microsoft
 ---
 
 # LeetCode 213: House Robber II
 
-**LeetCode 213 – House Robber II**, with **proper state definition, transitions, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Array  
 
 ---
 
-## Problem Statement (LeetCode 213 – House Robber II)
+### Problem Statement
 
-You are given an integer array `nums` where `nums[i]` represents the amount of money in the `i`-th house.  
-Houses are arranged **in a circle**, meaning:
+You are a professional robber planning to rob houses along a street. Each house has a certain amount of money stashed. All houses at this place are **arranged in a circle**. That means the first house is the neighbor of the last one. Meanwhile, adjacent houses have a security system connected, and **it will automatically contact the police if two adjacent houses were broken into on the same night**.
 
-* House `0` is adjacent to house `n-1`
-* You **cannot rob two adjacent houses**
-
-Return the **maximum amount of money** you can rob **without triggering the alarm**.
+Given an integer array `nums` representing the amount of money of each house, return *the maximum amount of money you can rob tonight without alerting the police*.
 
 ---
 
-## Key Observation (Why this differs from LeetCode 198)
+### Input & Output Formats & Constraints
 
-In **House Robber I**, houses are in a straight line.  
-In **House Robber II**, the circular arrangement introduces **one extra constraint**:
-
-> **You cannot rob both the first and the last house.**
-
-So the problem splits naturally into **two mutually exclusive cases**:
-
-1. **Rob houses from index `0` to `n-2`** (exclude last house)
-2. **Rob houses from index `1` to `n-1`** (exclude first house)
-
-The final answer is:
-
-```
-max(case1, case2)
-```
-
-Each case is a **standard House Robber (LeetCode 198)** problem.
+- **Input:** An integer array `nums` ($1 \le |nums| \le 100$).
+- **Output:** An integer denoting the maximum money that can be robbed.
+- **Constraints:**
+  - `1 <= nums.length <= 100`
+  - `0 <= nums[i] <= 1000`
 
 ---
 
-## DP State Definition (for linear robber subproblem)
+### Key Idea & Intuition
 
-For a given subarray `nums[l...r]`:
+#### The Circular Invariant & Decomposition
+In standard House Robber (LeetCode 198), houses are arranged in a linear line.
+In House Robber II, the circular layout creates a single mutual exclusion constraint:
+$$\text{House } 0 \text{ and House } n - 1 \text{ cannot both be robbed}$$
 
-### State
+Because the robber cannot rob both house $0$ and house $n - 1$, any valid robbing plan must satisfy at least one of two mutually exclusive conditions:
+1. **Case 1 (Exclude Last House):**
+   The robber considers houses from index $0$ to index $n - 2$.
+   *(House $n - 1$ is never robbed, so house $0$ is free to be robbed or skipped)*.
+2. **Case 2 (Exclude First House):**
+   The robber considers houses from index $1$ to index $n - 1$.
+   *(House $0$ is never robbed, so house $n - 1$ is free to be robbed or skipped)*.
 
-```
-dp[i] = maximum money that can be robbed from houses l to i
-```
+#### Reusing the Linear $\mathcal{O}(1)$ Subroutine
+Notice that both Case 1 and Case 2 are standard linear House Robber I problems on contiguous slices of length $n - 1$:
+$$\text{Max Money} = \max\Big(\text{rob\_linear}(nums[0 \dots n - 2]), \, \text{rob\_linear}(nums[1 \dots n - 1])\Big)$$
 
-### Transition
-
-At house `i`, you have two choices:
-
-1. **Do not rob house i**
-
-   ```
-   dp[i] = dp[i-1]
-   ```
-2. **Rob house i**
-
-   ```
-   dp[i] = dp[i-2] + nums[i]
-   ```
-
-### Final Transition Formula
-
-```
-dp[i] = max(dp[i-1], dp[i-2] + nums[i])
-```
+For the base case where $n = 1$, neither slice is valid; we simply return $nums[0]$.
 
 ---
 
-## Base Cases
+### Solution Approach (Step-by-Step)
 
-For the subarray starting at index `l`:
-
-* `dp[l] = nums[l]`
-* `dp[l+1] = max(nums[l], nums[l+1])`
-
----
-
-## Complete Algorithm
-
-1. If `n == 1`, return `nums[0]`
-2. Compute:
-
-   * `rob_linear(0, n-2)`
-   * `rob_linear(1, n-1)`
-3. Return the maximum of the two results
+1. **Base Case:**
+   - If $n == 1$, return $nums[0]$ immediately.
+2. **Linear Helper Function (`rob_linear(houses)`):**
+   - Maintain rolling variables `prev2 = 0` and `prev1 = 0`.
+   - For each value $x$ in `houses`:
+     - $curr = \max(prev1, prev2 + x)$
+     - $prev2 = prev1$
+     - $prev1 = curr$
+   - Return `prev1`.
+3. **Combine Results:**
+   - Return $\max(\text{rob\_linear}(nums[0..n-2]), \, \text{rob\_linear}(nums[1..n-1]))$.
 
 ---
 
-## Worked Example
+### Visual Algorithm Walkthrough
 
-### Input
-
-```text
-nums = [2, 3, 2]
+#### Trace for `nums = [2, 3, 2]` ($n = 3$)
 ```
+Circular arrangement:
+  House 0 (2) is adjacent to House 1 (3) AND House 2 (2).
 
-### Case 1: Rob from index `0` to `1`
+Decomposition:
+Case 1: Range [0 .. 1] -> nums[0:2] = [2, 3]
+  - x = 2: curr = max(0, 0 + 2) = 2 -> prev2 = 0, prev1 = 2
+  - x = 3: curr = max(2, 0 + 3) = 3 -> prev2 = 2, prev1 = 3
+  Case 1 Result = 3
 
-```
-Subarray = [2, 3]
-```
+Case 2: Range [1 .. 2] -> nums[1:3] = [3, 2]
+  - x = 3: curr = max(0, 0 + 3) = 3 -> prev2 = 0, prev1 = 3
+  - x = 2: curr = max(3, 0 + 2) = 3 -> prev2 = 3, prev1 = 3
+  Case 2 Result = 3
 
-| i | nums[i] | dp[i] | Explanation |
-| --- | --- | --- | --- |
-| 0 | 2 | 2 | Only one house |
-| 1 | 3 | 3 | max(2, 3) |
-
-Result = **3**
-
----
-
-### Case 2: Rob from index `1` to `2`
-
-```
-Subarray = [3, 2]
-```
-
-| i | nums[i] | dp[i] | Explanation |
-| --- | --- | --- | --- |
-| 1 | 3 | 3 | Only one house |
-| 2 | 2 | 3 | max(3, 2) |
-
-Result = **3**
-
----
-
-### Final Answer
-
-```
-max(3, 3) = 3
+Final Result = max(Case 1, Case 2) = max(3, 3) = 3.
+(Cannot rob both 0 and 2; robbing house 1 yields 3).
 ```
 
 ---
 
-## DP Table Example (Larger Input)
+### Solved Examples with Multiple Inputs
 
-### Input
-
-```text
-nums = [1, 2, 3, 1]
-```
-
----
-
-### Case 1: Rob from `0` to `2` → `[1, 2, 3]`
-
-| i | nums[i] | dp[i] |
-| --- | --- | --- |
-| 0 | 1 | 1 |
-| 1 | 2 | 2 |
-| 2 | 3 | max(2, 1+3) = 4 |
-
-Result = **4**
+| `nums` | Subarray 1 ($0 \dots n-2$) | Subarray 2 ($1 \dots n-1$) | Max(Sub1, Sub2) | Output |
+|---|---|---|---|---|
+| `[2, 3, 2]` | `[2, 3]` $\to 3$ | `[3, 2]` $\to 3$ | $\max(3, 3)$ | `3` |
+| `[1, 2, 3, 1]` | `[1, 2, 3]` $\to 4$ | `[2, 3, 1]` $\to 3$ | $\max(4, 3)$ | `4` |
+| `[1, 2, 3]` | `[1, 2]` $\to 2$ | `[2, 3]` $\to 3$ | $\max(2, 3)$ | `3` |
+| `[7]` | Base case: $n=1$ | None | Direct return | `7` |
 
 ---
 
-### Case 2: Rob from `1` to `3` → `[2, 3, 1]`
+### Multi-Language Implementations
 
-| i | nums[i] | dp[i] |
-| --- | --- | --- |
-| 1 | 2 | 2 |
-| 2 | 3 | 3 |
-| 3 | 1 | max(3, 2+1) = 3 |
-
-Result = **3**
-
----
-
-### Final Answer
-
-```
-max(4, 3) = 4
-```
-
----
-
-## Python 3 DP Implementation (With Typing)
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def rob(self, nums: List[int]) -> int:
+    def rob(self, nums: list[int]) -> int:
         n = len(nums)
         if n == 1:
             return nums[0]
+            
+        def rob_linear(houses: list[int]) -> int:
+            prev2: int = 0
+            prev1: int = 0
+            for x in houses:
+                curr = max(prev1, prev2 + x)
+                prev2 = prev1
+                prev1 = curr
+            return prev1
+            
+        return max(rob_linear(nums[:-1]), rob_linear(nums[1:]))
+```
 
-        def rob_linear(start: int, end: int) -> int:
-            if start == end:
-                return nums[start]
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
 
-            dp = [0] * n
-            dp[start] = nums[start]
-            dp[start + 1] = max(nums[start], nums[start + 1])
+class Solution {
+private:
+    int robLinear(const std::vector<int>& nums, int start, int end) {
+        int prev2 = 0;
+        int prev1 = 0;
 
-            for i in range(start + 2, end + 1):
-                dp[i] = max(dp[i - 1], dp[i - 2] + nums[i])
+        for (int i = start; i <= end; ++i) {
+            int curr = std::max(prev1, prev2 + nums[i]);
+            prev2 = prev1;
+            prev1 = curr;
+        }
 
-            return dp[end]
+        return prev1;
+    }
 
-        return max(
-            rob_linear(0, n - 2),
-            rob_linear(1, n - 1)
-        )
+public:
+    int rob(const std::vector<int>& nums) {
+        int n = static_cast<int>(nums.size());
+        if (n == 1) return nums[0];
+
+        // Case 1: Exclude last house (0 to n - 2)
+        // Case 2: Exclude first house (1 to n - 1)
+        return std::max(robLinear(nums, 0, n - 2), robLinear(nums, 1, n - 1));
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    private int robLinear(int[] nums, int start, int end) {
+        int prev2 = 0;
+        int prev1 = 0;
+
+        for (int i = start; i <= end; i++) {
+            int curr = Math.max(prev1, prev2 + nums[i]);
+            prev2 = prev1;
+            prev1 = curr;
+        }
+
+        return prev1;
+    }
+
+    public int rob(int[] nums) {
+        int n = nums.length;
+        if (n == 1) {
+            return nums[0];
+        }
+
+        return Math.max(robLinear(nums, 0, n - 2), robLinear(nums, 1, n - 1));
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-| Metric | Value |
-| --- | --- |
-| Time | **O(n)** |
-| Space | **O(n)** (can be optimized to **O(1)**) |
+- **Time Complexity:** $\mathcal{O}(N)$, where $N = |nums|$. We run the linear House Robber routine twice across arrays of size $N - 1$, resulting in $2(N - 1) = \mathcal{O}(N)$ operations.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space. Passing start/end indices in C++ and Java avoids copying subarrays, keeping memory consumption strictly $\mathcal{O}(1)$.
 
 ---
 
-## Why This DP Works
+### Takeaway Pattern & Interview Traps
 
-* Circular constraint is handled by **problem decomposition**
-* Each subproblem is **independent and linear**
-* DP captures the **optimal substructure**
-* No overlapping circular conflict remains
-
----
-
-If you want next:
-
-* **Space-optimized O(1) DP**
-* **State machine interpretation**
-* **Comparison with greedy (why greedy fails)**
-
-Tell me which one you want.
+1. **Circular Symmetry Resolution:** The classic technique for handling circular array dependencies is breaking the loop at an arbitrary boundary (here, separating whether index $0$ is allowed or prohibited).
+2. **Single-Element Base Case Trap:** If $n = 1$, slicing $nums[:-1]$ results in an empty array `[]` returning $0$ instead of $nums[0]$. Checking `if n == 1: return nums[0]` at the very beginning is mandatory.
+3. **Index Ranges in C++/Java:** In C++ and Java, pass `start` and `end` indices to `robLinear` to avoid allocating new sub-vectors or copying arrays.

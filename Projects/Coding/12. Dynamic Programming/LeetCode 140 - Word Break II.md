@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,250 +8,265 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - backtracking
+  - memoization
+  - string
+  - amazon
+  - bloomberg
+  - meta
+  - google
 ---
 
 # LeetCode 140: Word Break II
 
-**LeetCode 140 (Word Break II)** with **precise state definition, transition logic, DP table construction, and a worked example**.  
-The focus is on *how DP models the problem*, not just code.
+**Target Companies:** Amazon, Bloomberg, Meta, Google, Microsoft, Apple  
+**Difficulty:** Hard  
+**Topic:** Dynamic Programming / Backtracking / Memoization  
 
 ---
-
-## LeetCode 140 — Word Break II
 
 ### Problem Statement
 
-Given:
+Given a string `s` and a dictionary of strings `wordDict`, add spaces in `s` to construct a sentence where each word is a valid dictionary word. Return all such possible sentences in **any order**.
 
-* a string `s`
-* a list of strings `wordDict`
-
-Return **all possible sentences** where:
-
-* the sentence is formed by inserting spaces into `s`
-* every word is present in `wordDict`
-
-Order of output does not matter.
+**Note** that the same word in the dictionary may be reused multiple times in the segmentation.
 
 ---
 
-## Key Insight (Why DP is Needed)
+### Input & Output Formats & Constraints
 
-This is **not a yes/no problem** (unlike LeetCode 139).  
-We must **construct all valid sentences**, which implies:
-
-* Multiple decompositions
-* Overlapping subproblems
-* Exponential combinations without memoization
-
-Hence, we use **DP where each state stores all possible sentences for a suffix**.
-
----
-
-## DP State Definition
-
-Let:
-
-```
-dp[i] = list of all valid sentences that can be formed from substring s[i:]
-```
-
-Where:
-
-* `i` ranges from `0` to `len(s)`
-* `dp[n] = [""]` (base case: empty string has one valid decomposition)
+- **Input:**
+  - A string `s` ($1 \le |s| \le 20$).
+  - A list of unique strings `wordDict` ($1 \le |wordDict| \le 1000$, $1 \le |wordDict[i]| \le 10$).
+- **Output:** A list of strings `List[str]` representing all valid space-separated sentences.
+- **Constraints:**
+  - `1 <= s.length <= 20`
+  - `1 <= wordDict.length <= 1000`
+  - `1 <= wordDict[i].length <= 10`
+  - `s` and `wordDict[i]` consist of only lowercase English letters.
+  - All the strings of `wordDict` are **unique**.
+  - Input is generated such that the total number of sentences does not exceed $10^5$.
 
 ---
 
-## DP Transition
+### Key Idea & Intuition
 
-For a given index `i`:
+#### Suffix Decomposition with Memoization
+While LeetCode 139 only required a boolean answer (can we segment?), LeetCode 140 requires constructing **all valid sentences**.
+Because different prefixes can share the exact same valid suffix segmentations, recomputing suffix sentences from scratch causes exponential explosion.
+For example, in `s = "catsanddog"`, both prefixes `"cat" + "sand"` and `"cats" + "and"` arrive at suffix `"dog"`. Computing the sentences for `"dog"` once and memoizing the result prevents redundant work.
 
-1. Try **every word** in `wordDict`
-2. If `s[i:]` starts with `word`
-3. Then:
-
-   * append `word` in front of each sentence in `dp[i + len(word)]`
-
-Formally:
-
-```
-dp[i] += word + (" " if suffix != "" else "") + suffix
-         for each suffix in dp[i + len(word)]
-```
-
----
-
-## Base Case
-
-```
-dp[len(s)] = [""]
-```
-
-This allows sentence building to terminate cleanly without extra spaces.
+#### State Definition & Recurrence
+Let `memo[start]` be the list of all sentences that can be formed from the suffix $s[start:]$:
+- **Base Case:** When $start == |s|$, we have reached the end of the string. The only sentence for an empty suffix is the empty string `[""]`.
+- **Transitions:**
+  For each $end \in [start + 1, |s|]$:
+  - Let $word = s[start..end-1]$.
+  - If $word \in wordDict$:
+    - Recursively fetch all suffix sentences for $s[end:]$: `sub_sentences = dfs(end)`.
+    - For each `sub` in `sub_sentences`:
+      - If `sub == ""`, form `word`.
+      - Else, form `word + " " + sub`.
+- Cache and return `memo[start]`.
 
 ---
 
-## DP Table Construction Order
+### Solution Approach (Step-by-Step)
 
-We fill the DP table **bottom-up**:
+1. **Hash Set for Fast Lookups:**
+   - Convert `wordDict` into a hash set `word_set`.
+2. **Memoized DFS Helper:**
+   - Define `dfs(start)` returning `List[str]`:
+     - If $start \in memo$, return $memo[start]$.
+     - If $start == |s|$, return `[""]`.
+     - Initialize `sentences = []`.
+     - For $end$ from $start + 1$ to $|s| + 1$:
+       - $word = s[start:end]$.
+       - If $word \in word\_set$:
+         - For each $sub$ in $dfs(end)$:
+           - If $sub == ""$:
+             - $sentences.append(word)$.
+           - Else:
+             - $sentences.append(word + " " + sub)$.
+     - Store $memo[start] = sentences$ and return.
+3. **Execute:**
+   - Return `dfs(0)`.
 
+---
+
+### Visual Algorithm Walkthrough
+
+#### Trace for `s = "catsanddog"`, `wordDict = ["cat", "cats", "and", "sand", "dog"]`
 ```
-i = len(s) → 0
-```
+Recursion Tree with Memoization:
+dfs(0) [s = "catsanddog"]
+ ├── word = "cat" (s[0:3]) -> calls dfs(3) [s = "sanddog"]
+ │    └── word = "sand" (s[3:7]) -> calls dfs(7) [s = "dog"]
+ │         └── word = "dog" (s[7:10]) -> calls dfs(10) -> returns [""]
+ │              dfs(7) returns ["dog"]
+ │         dfs(3) combines: "sand" + " " + "dog" -> returns ["sand dog"]
+ │    From "cat", forms: "cat sand dog"
+ │
+ └── word = "cats" (s[0:4]) -> calls dfs(4) [s = "anddog"]
+      └── word = "and" (s[4:7]) -> calls dfs(7) [s = "dog"]
+           (CACHE HIT on dfs(7) -> immediately returns ["dog"])
+      dfs(4) combines: "and" + " " + "dog" -> returns ["and dog"]
+      From "cats", forms: "cats and dog"
 
-Reason:
-
-* `dp[i]` depends on `dp[i + len(word)]`
-* Suffix results must be computed first
-
----
-
-## Example Walkthrough
-
-### Input
-
-```
-s = "catsanddog"
-wordDict = ["cat", "cats", "and", "sand", "dog"]
-```
-
-Length `n = 10`
-
----
-
-### Step 1: Initialize DP Table
-
-| Index | Substring | dp[i] |
-| --- | --- | --- |
-| 10 | "" | [""] |
-| 0–9 | — | [] |
-
----
-
-### Step 2: Fill DP Bottom-Up
-
-#### i = 7 → `"dog"`
-
-* matches `"dog"`
-* `dp[7] = ["dog"]`
-
----
-
-#### i = 4 → `"sanddog"`
-
-* matches `"sand"`
-* `dp[4] = ["sand dog"]`
-
----
-
-#### i = 3 → `"sanddog"`
-
-* matches `"sand"`
-* `dp[3] = ["sand dog"]`
-
----
-
-#### i = 0 → `"catsanddog"`
-
-Matches:
-
-* `"cat"` → `dp[3] = ["sand dog"]`
-* `"cats"` → `dp[4] = ["sand dog"]`
-
-So:
-
-```
-dp[0] = [
-  "cat sand dog",
-  "cats sand dog"
-]
-```
-
----
-
-## Final DP Table Snapshot
-
-| i | s[i:] | dp[i] |
-| --- | --- | --- |
-| 10 | "" | [""] |
-| 7 | "dog" | ["dog"] |
-| 4 | "sanddog" | ["sand dog"] |
-| 3 | "sanddog" | ["sand dog"] |
-| 0 | "catsanddog" | ["cat sand dog", "cats sand dog"] |
-
----
-
-## Final Answer
-
-```
+Result from dfs(0):
 [
   "cat sand dog",
-  "cats sand dog"
+  "cats and dog"
 ]
 ```
 
 ---
 
-## Python 3 DP Solution (Typed, Bottom-Up)
+### Solved Examples with Multiple Inputs
 
+| String $s$ | `wordDict` | Branching Sequences | Output Sentences |
+|---|---|---|---|
+| `"catsanddog"` | `["cat","cats","and","sand","dog"]` | `"cat" + "sand dog"`, `"cats" + "and dog"` | `["cat sand dog", "cats and dog"]` |
+| `"pineapplepenapple"` | `["apple","pen","applepen","pine","pineapple"]` | Multiple overlaps | `["pine apple pen apple", "pineapple pen apple", "pine applepen apple"]` |
+| `"catsandog"` | `["cats","dog","sand","and","cat"]` | No valid path to end | `[]` |
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def wordBreak(self, s: str, wordDict: List[str]) -> List[str]:
-        n = len(s)
-        word_set = set(wordDict)
-
-        # dp[i] = all sentences formed from s[i:]
-        dp: List[List[str]] = [[] for _ in range(n + 1)]
-        dp[n] = [""]  # base case
-
-        for i in range(n - 1, -1, -1):
-            for word in word_set:
-                if s.startswith(word, i):
-                    for suffix in dp[i + len(word)]:
-                        if suffix == "":
-                            dp[i].append(word)
+    def wordBreak(self, s: str, wordDict: list[str]) -> list[str]:
+        word_set: set[str] = set(wordDict)
+        memo: dict[int, list[str]] = {}
+        n: int = len(s)
+        
+        def dfs(start: int) -> list[str]:
+            if start in memo:
+                return memo[start]
+            if start == n:
+                return [""]
+                
+            sentences: list[str] = []
+            for end in range(start + 1, n + 1):
+                word = s[start:end]
+                if word in word_set:
+                    sub_sentences = dfs(end)
+                    for sub in sub_sentences:
+                        if sub == "":
+                            sentences.append(word)
                         else:
-                            dp[i].append(word + " " + suffix)
+                            sentences.append(word + " " + sub)
+                            
+            memo[start] = sentences
+            return sentences
+            
+        return dfs(0)
+```
 
-        return dp[0]
+#### C++17
+```cpp
+#include <string>
+#include <vector>
+#include <unordered_set>
+#include <unordered_map>
+
+class Solution {
+private:
+    std::unordered_map<int, std::vector<std::string>> memo;
+
+    std::vector<std::string> dfs(int start, const std::string& s, const std::unordered_set<std::string>& word_set) {
+        if (memo.count(start)) {
+            return memo[start];
+        }
+        int n = static_cast<int>(s.size());
+        if (start == n) {
+            return {""};
+        }
+
+        std::vector<std::string> sentences;
+        for (int end = start + 1; end <= n; ++end) {
+            std::string word = s.substr(start, end - start);
+            if (word_set.count(word)) {
+                std::vector<std::string> sub_sentences = dfs(end, s, word_set);
+                for (const std::string& sub : sub_sentences) {
+                    if (sub.empty()) {
+                        sentences.push_back(word);
+                    } else {
+                        sentences.push_back(word + " " + sub);
+                    }
+                }
+            }
+        }
+
+        memo[start] = sentences;
+        return sentences;
+    }
+
+public:
+    std::vector<std::string> wordBreak(const std::string& s, const std::vector<std::string>& wordDict) {
+        std::unordered_set<std::string> word_set(wordDict.begin(), wordDict.end());
+        memo.clear();
+        return dfs(0, s, word_set);
+    }
+};
+```
+
+#### Java 17
+```java
+import java.util.*;
+
+class Solution {
+    private Map<Integer, List<String>> memo = new HashMap<>();
+
+    private List<String> dfs(int start, String s, Set<String> wordSet) {
+        if (memo.containsKey(start)) {
+            return memo.get(start);
+        }
+        int n = s.length();
+        if (start == n) {
+            return Collections.singletonList("");
+        }
+
+        List<String> sentences = new ArrayList<>();
+        for (int end = start + 1; end <= n; end++) {
+            String word = s.substring(start, end);
+            if (wordSet.contains(word)) {
+                List<String> subSentences = dfs(end, s, wordSet);
+                for (String sub : subSentences) {
+                    if (sub.isEmpty()) {
+                        sentences.add(word);
+                    } else {
+                        sentences.add(word + " " + sub);
+                    }
+                }
+            }
+        }
+
+        memo.put(start, sentences);
+        return sentences;
+    }
+
+    public List<String> wordBreak(String s, List<String> wordDict) {
+        Set<String> wordSet = new HashSet<>(wordDict);
+        memo.clear();
+        return dfs(0, s, wordSet);
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-### Time Complexity
-
-* Worst case: **O(N × W × S)**  
-  Where:
-
-  * `N` = length of string
-  * `W` = number of dictionary words
-  * `S` = number of generated sentences (can be exponential)
-
-### Space Complexity
-
-* **O(N × S)** due to storing all sentence combinations
+- **Time Complexity:** $\mathcal{O}(2^N + N^2)$, where $N = |s|$. In the worst case (e.g. `s = "aaa"`, `wordDict = ["a", "aa"]`), there can be $2^{N-1}$ valid sentence partitions. Memoization guarantees each suffix subproblem is computed once, so time is bounded by the total size of all output strings, which is $\le 10^5$ per constraints.
+- **Space Complexity:** $\mathcal{O}(2^N + N^2)$ to store all memoized suffix lists, plus $\mathcal{O}(N)$ recursion depth for the call stack.
 
 ---
 
-## Why This DP Works (Conceptual Summary)
+### Takeaway Pattern & Interview Traps
 
-* Each index represents a **sentence boundary**
-* DP stores **complete sentence solutions**, not booleans
-* Bottom-up avoids recomputation
-* Base case ensures clean concatenation
-
----
-
-If you want next:
-
-* **Top-down DP + memo recursion**
-* **Why pure backtracking TLEs**
-* **Optimization using Trie**
-* **Relation between LeetCode 139 and 140**
-
-Tell me which direction you want.
+1. **Why Memoized DFS is Superior to Bottom-Up:** Bottom-up DP constructs full string lists for *all* indices, even if those indices cannot be reached from the prefix $s[0]$. Top-down memoized DFS only explores reachable prefixes.
+2. **LC 139 Reachability Pruning:** If strings can be very long with many unmatchable suffixes, running LC 139 first to verify reachability before constructing strings avoids exploring dead ends.
+3. **Empty Base Case String:** Returning `[""]` instead of `[]` for $start == n$ allows the loop over `sub_sentences` to execute once, creating the leaf words without special edge-case branching.

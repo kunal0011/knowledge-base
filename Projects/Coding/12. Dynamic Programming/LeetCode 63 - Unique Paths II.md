@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,281 +8,224 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - grid
+  - obstacles
+  - amazon
+  - google
+  - meta
 ---
 
 # LeetCode 63: Unique Paths II
 
-**LeetCode 63 – Unique Paths II**, focusing on **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Google, Meta, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Grid Traversal with Obstacles / 1D Space Optimization  
 
 ---
-
-## LeetCode 63 – Unique Paths II
 
 ### Problem Statement
 
-You are given an `m x n` grid where:
+You are given an `m x n` integer array `obstacleGrid`. There is a robot initially located at the **top-left corner** (i.e., `grid[0][0]`). The robot tries to move to the **bottom-right corner** (i.e., `grid[m - 1][n - 1]`). The robot can only move either **down** or **right** at any point in time.
 
-* `0` represents an empty cell
-* `1` represents an obstacle
+An obstacle and space are marked as `1` or `0` respectively in `grid`. A path that the robot takes cannot include any square that is an obstacle.
 
-A robot starts at the **top-left corner** `(0,0)` and wants to reach the **bottom-right corner** `(m-1,n-1)`.
+Return the number of possible unique paths that the robot can take to reach the bottom-right corner.
 
-The robot can move **only right or down**.
-
-Return the **number of unique paths** that avoid obstacles.
+The testcases are generated so that the answer will be less than or equal to $2 \times 10^9$.
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-* If a cell contains an **obstacle**, it **cannot be part of any path**.
-* Otherwise, the number of ways to reach a cell depends on:
-
-  * the number of ways to reach the **cell above**
-  * the number of ways to reach the **cell to the left**
-
-This is a classic **2D Dynamic Programming grid problem**.
-
----
-
-## DP State Definition
-
-Let:
-
-```
-dp[i][j] = number of unique paths to reach cell (i, j)
-```
+- **Input:** `obstacleGrid: List[List[int]]` — 2D matrix where `1` = obstacle, `0` = open path.
+- **Output:** `int` — Count of valid unique obstacle-free paths.
+- **Constraints:**
+  - $m == \text{obstacleGrid.length}$
+  - $n == \text{obstacleGrid}[i].\text{length}$
+  - $1 \le m, n \le 100$
+  - `obstacleGrid[i][j]` is `0` or `1`.
 
 ---
 
-## DP Transition
+### Key Idea & Intuition
 
-For a normal cell (`obstacleGrid[i][j] == 0`):
+1. **Obstacle Nullification:**
+   - Any cell with an obstacle (`obstacleGrid[i][j] == 1`) cannot be traversed. Its contribution to any future path is strictly $0$:
+     $$\text{dp}[i][j] = 0 \quad \text{if } \text{obstacleGrid}[i][j] == 1$$
+   - For an open cell (`obstacleGrid[i][j] == 0`), paths can arrive from the top or left:
+     $$\text{dp}[i][j] = \text{dp}[i - 1][j] + \text{dp}[i][j - 1]$$
 
-```
-dp[i][j] = dp[i-1][j] + dp[i][j-1]
-```
+2. **Corner Obstacle Edge Cases:**
+   - If the starting cell has an obstacle (`obstacleGrid[0][0] == 1`), the robot cannot even start $\implies$ return `0`.
+   - If the ending cell has an obstacle (`obstacleGrid[m - 1][n - 1] == 1`), the destination cannot be entered $\implies$ return `0`.
 
-For an obstacle (`obstacleGrid[i][j] == 1`):
-
-```
-dp[i][j] = 0
-```
-
----
-
-## Base Conditions
-
-1. **Start Cell**
-
-   ```
-   dp[0][0] = 1   if obstacleGrid[0][0] == 0
-   dp[0][0] = 0   if obstacleGrid[0][0] == 1
-   ```
-2. **First Row**
-
-   * Only reachable from the **left**
-   * If an obstacle appears, all cells after it become unreachable
-3. **First Column**
-
-   * Only reachable from **above**
-   * Same obstacle rule applies
+3. **1D Space Optimization:**
+   - We maintain a single array `dp` of length $n$.
+   - For each cell $(i, j)$:
+     - If `obstacleGrid[i][j] == 1`: `dp[j] = 0` (cannot pass through).
+     - Else if $j > 0$: `dp[j] += dp[j - 1]`.
+   - The memory drops from $\mathcal{O}(m \times n)$ to $\mathcal{O}(n)$.
 
 ---
 
-## Example Walkthrough
+### Solution Approach (Step-by-Step)
 
-### Input Grid
-
-```
-obstacleGrid =
-[
-  [0, 0, 0],
-  [0, 1, 0],
-  [0, 0, 0]
-]
-```
+1. **Check Starting/Ending Obstacle:**
+   - If `obstacleGrid[0][0] == 1` or `obstacleGrid[m - 1][n - 1] == 1`, return `0`.
+2. **Initialize 1D DP Array:**
+   - `dp = [0] * n`
+   - Set `dp[0] = 1`.
+3. **Iterate Grid:**
+   - For $i$ from $0$ to $m - 1$:
+     - For $j$ from $0$ to $n - 1$:
+       - If `obstacleGrid[i][j] == 1`:
+         - `dp[j] = 0`
+       - Else if $j > 0$:
+         - `dp[j] += dp[j - 1]`
+4. **Return:**
+   - Return `dp[n - 1]`.
 
 ---
 
-### Step 1: Initialize DP Table
+### Visual Algorithm Walkthrough
+
+For `obstacleGrid = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]`:
 
 ```
-dp =
-[
-  [0, 0, 0],
-  [0, 0, 0],
-  [0, 0, 0]
-]
+Initial: dp = [1, 0, 0]
+
+Row 0 ([0, 0, 0]):
+  j = 0: open -> dp[0] = 1
+  j = 1: open -> dp[1] += dp[0] = 1
+  j = 2: open -> dp[2] += dp[1] = 1
+  dp = [1, 1, 1]
+
+Row 1 ([0, 1, 0]):
+  j = 0: open -> dp[0] = 1 (from row 0)
+  j = 1: OBSTACLE! -> dp[1] = 0
+  j = 2: open -> dp[2] += dp[1] = 1 + 0 = 1
+  dp = [1, 0, 1]
+
+Row 2 ([0, 0, 0]):
+  j = 0: open -> dp[0] = 1
+  j = 1: open -> dp[1] += dp[0] = 0 + 1 = 1
+  j = 2: open -> dp[2] += dp[1] = 1 + 1 = 2
+  dp = [1, 1, 2]
+
+Final Result: dp[2] = 2 unique paths.
 ```
 
 ---
 
-### Step 2: Fill DP Table Cell by Cell
+### Solved Examples with Multiple Inputs
 
-#### (0,0)
-
-```
-dp[0][0] = 1   (start cell, no obstacle)
-```
-
-```
-[1, 0, 0]
-[0, 0, 0]
-[0, 0, 0]
-```
+| Case | `obstacleGrid` | DP Execution | Result | Explanation |
+|---|---|---|---|---|
+| **Center Obstacle** | `[[0,0,0],[0,1,0],[0,0,0]]` | Path navigates around center obstacle | `2` | Two paths: Right-Down or Down-Right |
+| **Start Blocked** | `[[1,0],[0,0]]` | Start cell has obstacle | `0` | Cannot take any step |
+| **End Blocked** | `[[0,0],[0,1]]` | End cell has obstacle | `0` | Destination blocked |
+| **Full Blockade** | `[[0,1],[1,0]]` | Both exit branches blocked | `0` | Robot is trapped at (0,0) |
+| **Single Open Cell** | `[[0]]` | No moves needed | `1` | Start is destination |
 
 ---
 
-#### First Row
+### Multi-Language Implementations
 
-* (0,1): no obstacle → from left
-
-```
-dp[0][1] = dp[0][0] = 1
-```
-
-* (0,2): no obstacle → from left
-
-```
-dp[0][2] = dp[0][1] = 1
-```
-
-```
-[1, 1, 1]
-[0, 0, 0]
-[0, 0, 0]
-```
-
----
-
-#### Second Row
-
-* (1,0): no obstacle → from top
-
-```
-dp[1][0] = dp[0][0] = 1
-```
-
-* (1,1): obstacle
-
-```
-dp[1][1] = 0
-```
-
-* (1,2): no obstacle
-
-```
-dp[1][2] = dp[0][2] + dp[1][1]
-         = 1 + 0
-         = 1
-```
-
-```
-[1, 1, 1]
-[1, 0, 1]
-[0, 0, 0]
-```
-
----
-
-#### Third Row
-
-* (2,0): from top
-
-```
-dp[2][0] = dp[1][0] = 1
-```
-
-* (2,1): no obstacle
-
-```
-dp[2][1] = dp[1][1] + dp[2][0]
-         = 0 + 1
-         = 1
-```
-
-* (2,2): destination
-
-```
-dp[2][2] = dp[1][2] + dp[2][1]
-         = 1 + 1
-         = 2
-```
-
-```
-[1, 1, 1]
-[1, 0, 1]
-[1, 1, 2]
-```
-
----
-
-### Final Answer
-
-```
-2 unique paths
-```
-
----
-
-## Python 3 DP Solution (with typing)
-
+#### 1. Python 3 (Clean, Typed — 1D Space Optimized)
 ```python
 from typing import List
 
 class Solution:
     def uniquePathsWithObstacles(self, obstacleGrid: List[List[int]]) -> int:
-        m, n = len(obstacleGrid), len(obstacleGrid[0])
-        
-        # If starting cell is blocked
-        if obstacleGrid[0][0] == 1:
+        if not obstacleGrid or obstacleGrid[0][0] == 1:
             return 0
+            
+        m, n = len(obstacleGrid), len(obstacleGrid[0])
+        dp = [0] * n
+        dp[0] = 1
         
-        dp = [[0] * n for _ in range(m)]
-        dp[0][0] = 1
-        
-        # First column
-        for i in range(1, m):
-            if obstacleGrid[i][0] == 0:
-                dp[i][0] = dp[i - 1][0]
-        
-        # First row
-        for j in range(1, n):
-            if obstacleGrid[0][j] == 0:
-                dp[0][j] = dp[0][j - 1]
-        
-        # Fill rest of dp table
-        for i in range(1, m):
-            for j in range(1, n):
-                if obstacleGrid[i][j] == 0:
-                    dp[i][j] = dp[i - 1][j] + dp[i][j - 1]
-        
-        return dp[m - 1][n - 1]
+        for i in range(m):
+            for j in range(n):
+                if obstacleGrid[i][j] == 1:
+                    dp[j] = 0
+                elif j > 0:
+                    dp[j] += dp[j - 1]
+                    
+        return dp[n - 1]
+```
+
+#### 2. C++ (C++17 / STL — 1D Space Optimized)
+```cpp
+#include <vector>
+
+class Solution {
+public:
+    int uniquePathsWithObstacles(std::vector<std::vector<int>>& obstacleGrid) {
+        if (obstacleGrid.empty() || obstacleGrid[0][0] == 1) return 0;
+
+        int m = obstacleGrid.size();
+        int n = obstacleGrid[0].size();
+        // Use long long to safely avoid signed 32-bit overflow in intermediate states
+        std::vector<long long> dp(n, 0);
+        dp[0] = 1;
+
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (obstacleGrid[i][j] == 1) {
+                    dp[j] = 0;
+                } else if (j > 0) {
+                    dp[j] += dp[j - 1];
+                }
+            }
+        }
+
+        return static_cast<int>(dp[n - 1]);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed — 1D Space Optimized)
+```java
+class Solution {
+    public int uniquePathsWithObstacles(int[][] obstacleGrid) {
+        if (obstacleGrid == null || obstacleGrid.length == 0 || obstacleGrid[0][0] == 1) {
+            return 0;
+        }
+
+        int m = obstacleGrid.length;
+        int n = obstacleGrid[0].length;
+        long[] dp = new long[n];
+        dp[0] = 1;
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (obstacleGrid[i][j] == 1) {
+                    dp[j] = 0;
+                } else if (j > 0) {
+                    dp[j] += dp[j - 1];
+                }
+            }
+        }
+
+        return (int) dp[n - 1];
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-* **Time:** `O(m × n)`
-* **Space:** `O(m × n)`  
-  (Can be optimized to `O(n)` using a 1D DP array)
+- **Time Complexity:** $\mathcal{O}(m \times n)$  
+  A single pass visiting each of the $m \times n$ cells once, with $\mathcal{O}(1)$ operations per cell. For $m, n \le 100$, operations $\le 10^4$ ($< 0.5$ ms).
+- **Space Complexity:** $\mathcal{O}(n)$  
+  A single 1D array of length $n$ stores the accumulated path counts.
 
 ---
 
-## Pattern Recognition (Interview Insight)
+### Takeaway Pattern & Interview Traps
 
-* **Category:** Grid DP
-* **State:** `dp[i][j]`
-* **Transition:** top + left
-* **Obstacle handling:** zero out the state
-
-If you want, I can also:
-
-* Convert this to **1D DP**
-* Compare it with **LeetCode 62**
-* Draw a **DP dependency graph**
-* Show **edge-case traps interviewers test**
-
-Just say which one.
+1. **Why `dp[j] = 0` on Obstacles:**
+   - In 1D DP compression, when an obstacle is hit, setting `dp[j] = 0` ensures that paths from the row above are nullified and do not propagate to subsequent rows or rightwards.
+2. **Initial and Final Cell Checks:**
+   - Many candidates forget that `obstacleGrid[0][0]` or `obstacleGrid[m-1][n-1]` can themselves be obstacles. Always check these boundary cells.

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,284 +8,194 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - math
+  - greedy
+  - string
+  - amazon
+  - microsoft
 ---
 
 # LeetCode 553: Optimal Division
 
-**LeetCode 553 – Optimal Division**, including **state definition, transitions, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Microsoft, Google  
+**Difficulty:** Medium  
+**Topic:** Mathematical Proof / Greedy String Formatting / Interval Dynamic Programming  
 
 ---
-
-## LeetCode 553 – Optimal Division
 
 ### Problem Statement
 
-You are given an array `nums` of positive integers.  
-Insert division operators `/` and parentheses to **maximize the result** of the expression.
+You are given an integer array `nums`. The adjacent integers in `nums` will perform the float division.
 
-* You must keep the original order of numbers.
-* Division is real-number division.
+- For example, if `nums = [2, 3, 4]`, we will evaluate the expression `"2/3/4"`.
 
-Return the expression string that yields the **maximum value**.
+However, you can add any number of parentheses at any position to change the priority of operations. You want to add these parentheses such that the value of the expression after the evaluation is **maximized**.
 
----
+Return the corresponding expression that has the maximum value in string format.
 
-## Key Observation (Why DP is Applicable)
-
-This is an **interval DP** problem:
-
-* You are partitioning an array into left and right subexpressions.
-* Each partition affects the result due to **division’s non-associativity**.
-* For each subarray, you must know:
-
-  * The **maximum value** achievable
-  * The **minimum value** achievable  
-    (critical because division by a smaller number increases the result)
-
-Hence, **both min and max values must be tracked**.
+**Note:** Your expression should not contain redundant parentheses.
 
 ---
 
-## DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i][j] = (max_value, min_value)
-```
-
-Where:
-
-* `i` = start index
-* `j` = end index
-* `dp[i][j].max_value` = maximum value obtainable from nums[i..j]
-* `dp[i][j].min_value` = minimum value obtainable from nums[i..j]
+- **Input:** `nums: List[int]` — Array of integers where each integer is $\ge 2$.
+- **Output:** `str` — Optimal parenthesized expression maximizing the division result.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10$
+  - $2 \le \text{nums}[i] \le 1000$
+  - There is only one unique configuration that achieves the maximum value.
 
 ---
 
-## Base Case
+### Key Idea & Intuition
 
-For a single number:
+1. **Mathematical Invariant:**
+   - Any valid parenthesization of $[X_0, X_1, X_2, \dots, X_{n-1}]$ under real division evaluates to a fraction of the form:
+     $$\frac{\prod_{i \in \text{Numerator}} X_i}{\prod_{j \in \text{Denominator}} X_j}$$
+   - Notice two fundamental mathematical constants of this expression:
+     1. $X_0$ is **always in the numerator**, because no operator precedes it.
+     2. $X_1$ is **always in the denominator**, because the first division $X_0 / \dots$ always places $X_1$ below the primary fraction bar.
+     3. For every subsequent number $X_2, X_3, \dots, X_{n-1}$, we can choose whether it lands in the numerator or denominator depending on parentheses.
+   - Because all numbers in `nums` are strictly greater than $1$ ($X_i \ge 2$), to **maximize** the final result, we should place **every single number from $X_2$ to $X_{n-1}$ into the numerator**!
 
-```
-dp[i][i].max = nums[i]
-dp[i][i].min = nums[i]
-```
+2. **The Universal Parenthesization Pattern:**
+   - How can we force all elements $X_2, \dots, X_{n-1}$ into the numerator?
+   - Wrap the entire suffix from $X_1$ to $X_{n-1}$ in a single set of parentheses:
+     $$X_0 / (X_1 / X_2 / X_3 / \dots / X_{n-1})$$
+   - By algebra:
+     $$X_0 / \left(\frac{X_1}{X_2 \times X_3 \times \dots \times X_{n-1}}\right) = \frac{X_0 \times X_2 \times X_3 \times \dots \times X_{n-1}}{X_1}$$
+   - This achieves the absolute theoretical maximum possible value of the expression in $\mathcal{O}(N)$ time!
 
-Because no division is possible.
+3. **Interval DP Perspective (Min-Max Recurrence):**
+   - The classical DP formulation defines:
+     $$\text{dp}[i][j] = (\text{max\_val}, \text{min\_val})$$
+     $$\text{max\_val} = \max_{i \le k < j} \frac{\text{dp}[i][k].\text{max\_val}}{\text{dp}[k+1][j].\text{min\_val}}$$
+     $$\text{min\_val} = \min_{i \le k < j} \frac{\text{dp}[i][k].\text{min\_val}}{\text{dp}[k+1][j].\text{max\_val}}$$
+   - Solving this interval DP confirms the exact same mathematical conclusion derived above.
 
 ---
 
-## State Transition
+### Solution Approach (Step-by-Step)
 
-For interval `[i, j]`, split at position `k`:
+1. **Check Base Cases:**
+   - If $n = 1$: return `str(nums[0])`.
+   - If $n = 2$: return `f"{nums[0]}/{nums[1]}"`.
+2. **Format Suffix Parentheses ($n \ge 3$):**
+   - Build string: `f"{nums[0]}/({nums[1]}/{nums[2]}/.../{nums[n-1]})"`.
+3. **Return:**
+   - Return the formatted string.
 
-```
-(nums[i..k]) / (nums[k+1..j])
-```
+---
 
-To **maximize** the result:
+### Visual Algorithm Walkthrough
 
-```
-max = left.max / right.min
-```
-
-To **minimize** the result:
-
-```
-min = left.min / right.max
-```
-
-### Transition Formula
-
-For all `k ∈ [i, j-1]`:
+For `nums = [1000, 100, 10, 2]`:
 
 ```
-dp[i][j].max = max(
-    dp[i][k].max / dp[k+1][j].min
-)
+Without Parentheses:
+  1000 / 100 / 10 / 2 = ((1000 / 100) / 10) / 2 = (10 / 10) / 2 = 1 / 2 = 0.5
 
-dp[i][j].min = min(
-    dp[i][k].min / dp[k+1][j].max
-)
+With Optimal Suffix Parentheses:
+  1000 / (100 / 10 / 2)
+  Inner expression: 100 / 10 / 2 = (100 / 10) / 2 = 10 / 2 = 5
+  Outer expression: 1000 / 5 = 200
+
+Algebraic Form:
+  1000 * 10 * 2 / 100 = 20000 / 100 = 200 (Maximum Possible!)
+
+Output String: "1000/(100/10/2)"
 ```
 
 ---
 
-## DP Table Construction Order
+### Solved Examples with Multiple Inputs
 
-We fill the DP table by **increasing subarray length**:
-
-```
-length = 1 → n
-```
-
-This ensures smaller subproblems are already computed.
-
----
-
-## Example Walkthrough
-
-### Input
-
-```text
-nums = [1000, 100, 10, 2]
-```
-
-### Step 1: Base Cases
-
-| i | j | max | min |
-| --- | --- | --- | --- |
-| 0 | 0 | 1000 | 1000 |
-| 1 | 1 | 100 | 100 |
-| 2 | 2 | 10 | 10 |
-| 3 | 3 | 2 | 2 |
+| Case | `nums` | Formatted Expression | Evaluated Value | Explanation |
+|---|---|---|---|---|
+| **Standard 4** | `[1000, 100, 10, 2]` | `"1000/(100/10/2)"` | `200.0` | Maximizes numerator factors |
+| **Two Elements** | `[2, 3]` | `"2/3"` | `0.666...` | No parentheses needed |
+| **Single Element** | `[5]` | `"5"` | `5.0` | No division operators |
+| **Three Elements** | `[10, 2, 5]` | `"10/(2/5)"` | $10 / 0.4 = 25.0$ | $10 \times 5 / 2 = 25$ |
 
 ---
 
-### Step 2: Length = 2
+### Multi-Language Implementations
 
-| Interval | Expression | max | min |
-| --- | --- | --- | --- |
-| [0,1] | 1000/100 | 10 | 10 |
-| [1,2] | 100/10 | 10 | 10 |
-| [2,3] | 10/2 | 5 | 5 |
-
----
-
-### Step 3: Length = 3
-
-#### Interval [0,2]
-
-Splits:
-
-* k=0 → `1000 / (100/10) = 100`
-* k=1 → `(1000/100) / 10 = 1`
-
-```
-max = 100
-min = 1
-```
-
-#### Interval [1,3]
-
-Splits:
-
-* k=1 → `100 / (10/2) = 20`
-* k=2 → `(100/10) / 2 = 5`
-
-```
-max = 20
-min = 5
-```
-
----
-
-### Step 4: Length = 4 (Final)
-
-#### Interval [0,3]
-
-Splits:
-
-* k=0 → `1000 / (100/10/2) = 200`
-* k=1 → `(1000/100) / (10/2) = 2`
-* k=2 → `(1000/100/10) / 2 = 0.5`
-
-```
-max = 200
-min = 0.5
-```
-
----
-
-## Final Result
-
-Maximum value is achieved by:
-
-```
-1000 / (100 / 10 / 2)
-```
-
----
-
-## Python 3 DP Implementation (with typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
-from typing import List, Tuple
+from typing import List
 
 class Solution:
     def optimalDivision(self, nums: List[int]) -> str:
         n = len(nums)
+        if n == 1:
+            return str(nums[0])
+        if n == 2:
+            return f"{nums[0]}/{nums[1]}"
+            
+        # Group everything after nums[0] into a single denominator block
+        suffix = "/".join(str(x) for x in nums[1:])
+        return f"{nums[0]}/({suffix})"
+```
 
-        # dp[i][j] = (max_value, min_value)
-        dp: List[List[Tuple[float, float]]] = [
-            [(0.0, 0.0) for _ in range(n)] for _ in range(n)
-        ]
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <string>
+#include <vector>
 
-        # expr[i][j] stores expression for max value
-        expr = [["" for _ in range(n)] for _ in range(n)]
+class Solution {
+public:
+    std::string optimalDivision(std::vector<int>& nums) {
+        int n = nums.size();
+        if (n == 1) return std::to_string(nums[0]);
+        if (n == 2) return std::to_string(nums[0]) + "/" + std::to_string(nums[1]);
 
-        for i in range(n):
-            dp[i][i] = (nums[i], nums[i])
-            expr[i][i] = str(nums[i])
+        std::string result = std::to_string(nums[0]) + "/(" + std::to_string(nums[1]);
+        for (int i = 2; i < n; ++i) {
+            result += "/" + std::to_string(nums[i]);
+        }
+        result += ")";
 
-        for length in range(2, n + 1):
-            for i in range(n - length + 1):
-                j = i + length - 1
+        return result;
+    }
+};
+```
 
-                max_val = float("-inf")
-                min_val = float("inf")
-                max_expr = ""
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public String optimalDivision(int[] nums) {
+        int n = nums.length;
+        if (n == 1) return String.valueOf(nums[0]);
+        if (n == 2) return nums[0] + "/" + nums[1];
 
-                for k in range(i, j):
-                    left_max, left_min = dp[i][k]
-                    right_max, right_min = dp[k + 1][j]
+        StringBuilder sb = new StringBuilder();
+        sb.append(nums[0]).append("/(").append(nums[1]);
+        for (int i = 2; i < n; i++) {
+            sb.append("/").append(nums[i]);
+        }
+        sb.append(")");
 
-                    # maximize
-                    val = left_max / right_min
-                    if val > max_val:
-                        max_val = val
-                        right_part = expr[k + 1][j]
-                        if k + 1 < j:
-                            right_part = f"({right_part})"
-                        max_expr = f"{expr[i][k]}/{right_part}"
-
-                    # minimize
-                    min_val = min(min_val, left_min / right_max)
-
-                dp[i][j] = (max_val, min_val)
-                expr[i][j] = max_expr
-
-        return expr[0][n - 1]
+        return sb.toString();
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-| Metric | Value |
-| --- | --- |
-| Time | **O(n³)** |
-| Space | **O(n²)** |
-
----
-
-## Why This DP Works (Conceptual Summary)
-
-* Division rewards **small denominators**
-* Hence:
-
-  * Use **min** on the right for **maximization**
-  * Use **max** on the right for **minimization**
-* This mirrors classic **Min-Max Interval DP** (same idea as Matrix Chain Multiplication)
+- **Time Complexity:** $\mathcal{O}(N)$  
+  Constructing the output string takes a single pass over $N$ numbers. For $N \le 10$, this runs in $< 0.1$ ms.
+- **Space Complexity:** $\mathcal{O}(N)$  
+  Only the output string buffer of length proportional to $N$ is created.
 
 ---
 
-If you want, I can also:
+### Takeaway Pattern & Interview Traps
 
-* Convert this into a **pure mathematical proof**
-* Show why **greedy collapses to one parenthesis**
-* Draw a **DP dependency graph**
-* Compare **DP vs Greedy shortcut**
-
-Tell me how deep you want to go.
+1. **The Math Insight Saves $\mathcal{O}(N^3)$ Interval DP:**
+   - Although the problem appears to require $\mathcal{O}(N^3)$ interval dynamic programming (similar to Matrix Chain Multiplication), recognizing that all elements are $\ge 2$ collapses the problem into an $\mathcal{O}(N)$ greedy mathematical pattern.
+2. **Base Cases Handling:**
+   - Always check $n = 1$ and $n = 2$ separately. Putting parentheses around a single element (e.g. `100/(2)`) violates the "no redundant parentheses" rule.

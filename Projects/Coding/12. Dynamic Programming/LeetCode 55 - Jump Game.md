@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,277 +8,206 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - greedy
+  - amazon
+  - google
+  - meta
+  - apple
 ---
 
 # LeetCode 55: Jump Game
 
-**LeetCode 55 – Jump Game**, with **formal state definition, transition, DP table construction, and a worked example**.  
-I will deliberately avoid the greedy shortcut so the DP reasoning is fully clear.
+**Target Companies:** Amazon, Google, Meta, Apple, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Greedy / 1D Dynamic Programming / Array Reachability  
 
 ---
-
-## LeetCode 55 – Jump Game
 
 ### Problem Statement
 
-You are given an integer array `nums` where `nums[i]` represents the **maximum jump length** from index `i`.
+You are given an integer array `nums`. You are initially positioned at the array's **first index**, and each element in the array represents your maximum jump length at that position.
 
-You start at index `0`.  
-Determine whether you can reach the **last index**.
-
----
-
-## 1. DP State Definition (Most Important)
-
-We define a **boolean DP array**:
-
-```
-dp[i] = True  → index i is reachable from index 0
-dp[i] = False → index i is NOT reachable from index 0
-```
-
-### Size of DP Table
-
-```
-dp size = n (length of nums)
-```
+Return `true` if you can reach the **last index**, or `false` otherwise.
 
 ---
 
-## 2. Base Case
+### Input & Output Formats & Constraints
 
-```
-dp[0] = True
-```
-
-Reason:  
-You start at index `0`, so it is always reachable.
-
----
-
-## 3. State Transition
-
-To determine if index `i` is reachable:
-
-Index `i` is reachable **if there exists some previous index `j`** such that:
-
-1. `dp[j] == True` (we can reach `j`)
-2. `j + nums[j] >= i` (from `j`, we can jump to or beyond `i`)
-
-### Transition Formula
-
-```
-dp[i] = True
-if ∃ j in [0, i-1] such that:
-    dp[j] == True AND j + nums[j] >= i
-```
-
-Otherwise:
-
-```
-dp[i] = False
-```
+- **Input:** `nums: List[int]` — Array of non-negative integers.
+- **Output:** `bool` — `true` if last index is reachable, `false` otherwise.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10^4$
+  - $0 \le \text{nums}[i] \le 10^5$
 
 ---
 
-## 4. Order of Computation
+### Key Idea & Intuition
 
-We fill `dp` from **left to right**:
+1. **Reachability DP Formulation ($\mathcal{O}(N^2)$ Baseline):**
+   - Let $\text{dp}[i]$ be a boolean indicating whether index $i$ is reachable from index $0$.
+   - Base Case: $\text{dp}[0] = \text{true}$.
+   - Transition:
+     $$\text{dp}[i] = \exists j \in [0, i - 1] \text{ such that } \text{dp}[j] \land (j + \text{nums}[j] \ge i)$$
+   - This formulation checks all prior indices, taking $\mathcal{O}(N^2)$ time.
 
-```
-i = 1 → n-1
-```
-
-Because reachability of later indices depends only on earlier indices.
+2. **Greedy State Compression ($\mathcal{O}(N)$ Time, $\mathcal{O}(1)$ Space — Optimal):**
+   - Notice that if index $i$ is reachable, every index $k \le i + \text{nums}[i]$ is also reachable!
+   - We do not need a boolean flag for every individual index. We only need to maintain a single scalar:
+     $$\text{max\_reachable} = \max_{0 \le j \le i} (j + \text{nums}[j])$$
+   - As we iterate through $i$ from $0$ to $n - 1$:
+     - If $i > \text{max\_reachable}$, we have encountered an unbridgeable barrier (a series of zeros trapping the traversal) $\implies$ return `false`.
+     - Update $\text{max\_reachable} = \max(\text{max\_reachable}, \ i + \text{nums}[i])$.
+     - If $\text{max\_reachable} \ge n - 1$, the destination is already reachable $\implies$ return `true` immediately.
 
 ---
 
-## 5. DP Algorithm (Conceptual)
+### Solution Approach (Step-by-Step)
 
-For each index `i`:
-
-* Check all previous indices `j < i`
-* If any `j` can reach `i`, mark `dp[i] = True` and stop checking
+1. **Initialize Reachability Bound:**
+   - `max_reachable = 0`.
+2. **Iterate Through Array:**
+   - For index $i$ from $0$ to $n - 1$:
+     - If $i > \text{max\_reachable}$:
+       - Cannot proceed past current barrier $\implies$ return `False`.
+     - Update `max_reachable = max(max_reachable, i + nums[i])`.
+     - Early exit: If `max_reachable >= n - 1`, return `True`.
+3. **Return:**
+   - If the loop finishes, return `True` (for single-element arrays or fully covered bounds).
 
 ---
 
-## 6. Python 3 DP Implementation (With Typing)
+### Visual Algorithm Walkthrough
 
+#### Example 1: `nums = [2, 3, 1, 1, 4]`
+```
+i = 0 (val = 2):
+  max_reachable = max(0, 0 + 2) = 2
+
+i = 1 (val = 3):
+  1 <= max_reachable (2) -> valid
+  max_reachable = max(2, 1 + 3) = 4
+  max_reachable >= n - 1 (4 >= 4) -> Destination reached!
+  Returns True!
+```
+
+#### Example 2: `nums = [3, 2, 1, 0, 4]`
+```
+i = 0 (val = 3):
+  max_reachable = max(0, 0 + 3) = 3
+
+i = 1 (val = 2):
+  max_reachable = max(3, 1 + 2) = 3
+
+i = 2 (val = 1):
+  max_reachable = max(3, 2 + 1) = 3
+
+i = 3 (val = 0):
+  max_reachable = max(3, 3 + 0) = 3
+
+i = 4 (val = 4):
+  i (4) > max_reachable (3)!
+  Trapped at index 3 with 0 jump length!
+  Returns False!
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Case | `nums` | `max_reachable` Evolution | Result | Explanation |
+|---|---|---|---|---|
+| **Reachable** | `[2, 3, 1, 1, 4]` | $0 \to 2 \to 4$ | `true` | Can jump directly from index 1 to 4 |
+| **Trapped by Zero** | `[3, 2, 1, 0, 4]` | $0 \to 3 \to 3 \to 3 \to 3$ | `false` | Cannot jump past zero at index 3 |
+| **Single Element** | `[0]` | `max_reachable = 0 >= 0` | `true` | Already at target index 0 |
+| **Large Jump Start** | `[5, 0, 0, 0, 0]` | `max_reachable = 5 >= 4` | `true` | Reaches last index in 1 jump |
+| **Zero at Start** | `[0, 2, 3]` | `i = 1 > max_reachable = 0` | `false` | Stranded at index 0 |
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed — Greedy $\mathcal{O}(1)$ Space)
 ```python
 from typing import List
 
 class Solution:
     def canJump(self, nums: List[int]) -> bool:
+        max_reachable = 0
         n = len(nums)
-        dp = [False] * n
         
-        # Base case
-        dp[0] = True
-        
-        # Fill DP table
-        for i in range(1, n):
-            for j in range(i):
-                if dp[j] and j + nums[j] >= i:
-                    dp[i] = True
-                    break
-        
-        return dp[n - 1]
+        for i, jump in enumerate(nums):
+            if i > max_reachable:
+                return False
+            max_reachable = max(max_reachable, i + jump)
+            if max_reachable >= n - 1:
+                return True
+                
+        return True
+```
+
+#### 2. C++ (C++17 / STL — Greedy $\mathcal{O}(1)$ Space)
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    bool canJump(std::vector<int>& nums) {
+        int max_reachable = 0;
+        int n = nums.size();
+
+        for (int i = 0; i < n; ++i) {
+            if (i > max_reachable) {
+                return false;
+            }
+            max_reachable = std::max(max_reachable, i + nums[i]);
+            if (max_reachable >= n - 1) {
+                return true;
+            }
+        }
+
+        return true;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed — Greedy $\mathcal{O}(1)$ Space)
+```java
+class Solution {
+    public boolean canJump(int[] nums) {
+        int maxReachable = 0;
+        int n = nums.length;
+
+        for (int i = 0; i < n; i++) {
+            if (i > maxReachable) {
+                return false;
+            }
+            maxReachable = Math.max(maxReachable, i + nums[i]);
+            if (maxReachable >= n - 1) {
+                return true;
+            }
+        }
+
+        return true;
+    }
+}
 ```
 
 ---
 
-## 7. Example Walkthrough with DP Table
+### Complexity Analysis
 
-### Example Input
-
-```text
-nums = [2, 3, 1, 1, 4]
-```
-
-### Index and Values
-
-```
-Index:  0  1  2  3  4
-nums:   2  3  1  1  4
-```
+- **Time Complexity:** $\mathcal{O}(N)$  
+  A single pass through the array. At each element, only $\mathcal{O}(1)$ comparisons and updates are performed. For $N = 10^4$, executes in under $2$ ms.
+- **Space Complexity:** $\mathcal{O}(1)$  
+  Only a single integer accumulator (`max_reachable`) is stored.
 
 ---
 
-### Step-by-Step DP Table Construction
+### Takeaway Pattern & Interview Traps
 
-#### Step 0
-
-```
-dp = [True, False, False, False, False]
-```
-
----
-
-#### i = 1
-
-Check `j = 0`:
-
-* `dp[0] == True`
-* `0 + nums[0] = 2 >= 1` → reachable
-
-```
-dp[1] = True
-```
-
-```
-dp = [True, True, False, False, False]
-```
-
----
-
-#### i = 2
-
-Check `j = 0`:
-
-* `0 + 2 >= 2` → reachable
-
-```
-dp[2] = True
-```
-
-```
-dp = [True, True, True, False, False]
-```
-
----
-
-#### i = 3
-
-Check `j = 0`:
-
-* `0 + 2 < 3` → cannot reach
-
-Check `j = 1`:
-
-* `1 + 3 >= 3` → reachable
-
-```
-dp[3] = True
-```
-
-```
-dp = [True, True, True, True, False]
-```
-
----
-
-#### i = 4
-
-Check `j = 0`:
-
-* `0 + 2 < 4` → cannot reach
-
-Check `j = 1`:
-
-* `1 + 3 >= 4` → reachable
-
-```
-dp[4] = True
-```
-
-```
-dp = [True, True, True, True, True]
-```
-
----
-
-### Final Answer
-
-```
-dp[last_index] = True
-```
-
-✔ You **can reach the last index**
-
----
-
-## 8. Time and Space Complexity
-
-### Time Complexity
-
-```
-O(n²)
-```
-
-* For each index `i`, we scan all previous indices.
-
-### Space Complexity
-
-```
-O(n)
-```
-
-* DP table of size `n`.
-
----
-
-## 9. Why This DP Works (Key Insight)
-
-This DP formulation answers a **reachability question**:
-
-> “Is there **any** earlier reachable index that can jump to me?”
-
-It is equivalent to checking **path existence** in a directed graph where edges represent valid jumps.
-
----
-
-## 10. Important Note (Interview Insight)
-
-* This DP solution is **correct but suboptimal**
-* The **greedy solution** reduces time complexity to `O(n)`
-* DP is valuable for:
-
-  * Understanding the problem deeply
-  * Explaining correctness
-  * Variants where greedy fails
-
-If you want, I can next:
-
-* Convert this DP into **greedy step-by-step**
-* Show **why DP is redundant**
-* Or give a **visual reachability diagram** to link DP → Greedy reasoning
+1. **Jump Game I vs. Jump Game II:**
+   - **Jump Game I (LC 55):** Checks **feasibility** (is last index reachable?). Solved by tracking global `max_reachable`.
+   - **Jump Game II (LC 45):** Checks **optimality** (minimum jumps to reach last index). Solved by tracking BFS window boundaries `curr_end` and `farthest`.
+2. **Single Element Edge Case:**
+   - When `nums = [0]`, $n = 1$. The start index is already the destination index. The algorithm must return `true`.

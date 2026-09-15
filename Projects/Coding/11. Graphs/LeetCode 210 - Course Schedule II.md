@@ -217,5 +217,14 @@ class Solution {
 
 ### Complexity Analysis
 
-- **Time Complexity:** $O(V + E)$ where $V = \text{numCourses}$ and $E = \text{prerequisites.length}$. Every vertex and directed edge is traversed exactly once.
-- **Space Complexity:** $O(V + E)$ for the adjacency list and queue.
+- **Time Complexity:** $\mathcal{O}(V + E)$ where $V = \text{numCourses}$ and $E = \text{prerequisites.length}$. Every vertex and directed edge is traversed exactly once.
+- **Space Complexity:** $\mathcal{O}(V + E)$ for the adjacency list and queue.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Topological Order Uniqueness:** A directed acyclic graph can have **multiple valid topological orderings** (e.g. $[0, 1, 2, 3]$ and $[0, 2, 1, 3]$). The problem statement allows returning any valid order.
+2. **Cycle Returns Empty List:** If `len(order) != numCourses`, there is at least one cycle. Returning `[]` is strictly required.
+3. **Difference from LeetCode 207:** LeetCode 207 tests if a topological sort is possible (`bool`), while LeetCode 210 asks for the actual topological ordering array (`List[int]`).
+

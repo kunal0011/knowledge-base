@@ -104,6 +104,43 @@ Total Islands = 3
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Single Large Island with Lake
+- **Input:**
+  ```python
+  grid = [
+    ["1","1","1","1","0"],
+    ["1","1","0","1","0"],
+    ["1","1","0","0","0"],
+    ["0","0","0","0","0"]
+  ]
+  ```
+- **Step Trace:**
+  | Cell Scanned | Action | Islands Count | Notes |
+  | :--- | :--- | :--- | :--- |
+  | `(0, 0)` | Land found $\to$ BFS flood fill | 1 | All connected lands sink to `'0'` |
+  | Remaining cells | All are `'0'` | 1 | No other island triggers |
+- **Output:** `1`
+
+#### Example 2: Multiple Disjoint Islands
+- **Input:**
+  ```python
+  grid = [
+    ["1","1","0","0","0"],
+    ["1","1","0","0","0"],
+    ["0","0","1","0","0"],
+    ["0","0","0","1","1"]
+  ]
+  ```
+- **Step Trace:**
+  - `(0, 0)` triggers flood-fill covering 4 cells. Island count = 1.
+  - `(2, 2)` triggers flood-fill covering 1 cell. Island count = 2.
+  - `(3, 3)` triggers flood-fill covering 2 cells. Island count = 3.
+- **Output:** `3`
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -220,5 +257,13 @@ class Solution {
 
 ### Complexity Analysis
 
-- **Time Complexity:** $O(M \times N)$ — Every cell is checked once by the outer loop, and every `'1'` is enqueued and dequeued at most once.
-- **Space Complexity:** $O(\min(M, N))$ — Max queue memory in BFS on an $M \times N$ grid is proportional to the diagonal.
+- **Time Complexity:** $\mathcal{O}(M \times N)$ — Every cell is checked once by the outer loop, and every `'1'` is enqueued and dequeued at most once.
+- **Space Complexity:** $\mathcal{O}(\min(M, N))$ — In BFS, the maximum queue size is bounded by the diagonal of the grid, which is $\mathcal{O}(\min(M, N))$. In recursive DFS, recursion stack can be $\mathcal{O}(M \times N)$ in the worst case (snake-shaped island).
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Mark Visited Upon Enqueuing:** In BFS, mark `grid[nr][nc] = '0'` **immediately when adding to the queue**, NOT when popping! Marking when popping causes the same unvisited cell to be enqueued multiple times by different neighbors, triggering Memory Limit Exceeded (MLE) and exponential queue blowup.
+2. **String Characters vs Integers:** Note that `grid` contains strings `'1'` and `'0'`, not numbers `1` and `0`. Checking `if grid[r][c] == 1` in Python evaluates to False!
+3. **In-Place Grid Modification:** Overwriting `grid[r][c] = '0'` avoids allocating an $M \times N$ auxiliary `visited` table. Always ask the interviewer if mutating the input array is permitted. If not, maintain an explicit `visited` 2D boolean array or bitset.

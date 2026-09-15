@@ -1,5 +1,5 @@
 ---
-date: "2025-12-19"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Linked List"
 folder: "07. Linked List"
@@ -8,79 +8,127 @@ tags:
   - leetcode
   - coding
   - linked-list
+  - two-pointers
+  - dummy-node
+  - amazon
+  - google
 ---
 
 # LeetCode 19: Remove Nth Node From End of List
 
-Below is a **complete, structured explanation of LeetCode 19** aligned with your usual learning format.
+**Target Companies:** Amazon, Google, Meta, Apple, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Fixed-Gap Two Pointers (Lead & Follow) with Sentinel Head  
 
 ---
-
-## LeetCode 19 — Remove Nth Node From End of List
 
 ### Problem Statement
 
-You are given the head of a singly linked list and an integer `n`.  
-Remove the **n-th node from the end** of the list and return the head of the modified list.
+Given the `head` of a linked list, remove the $n$-th node from the end of the list and return its head.
 
-**Constraints**
-
-* The number of nodes in the list is at least `1`.
-* `1 ≤ n ≤ length of the list`.
+Could you do this in **one pass**?
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-Removing the *n-th node from the end* is equivalent to removing the  
-**(length − n + 1)-th node from the start**.
-
-However:
-
-* Computing the length first requires **two passes**
-* We can do it in **one pass** using a clever pointer offset
-
----
-
-## Core Linked List Insight (Two-Pointer Technique)
-
-### Idea
-
-Maintain a fixed gap of `n` nodes between two pointers:
-
-* `fast`
-* `slow`
-
-### Strategy
-
-1. Move `fast` pointer **n steps ahead**
-2. Move both `fast` and `slow` together until `fast` reaches the end
-3. At this point:
-
-   * `slow` is just **before** the node to remove
-4. Adjust pointers to skip the target node
-
-### Why This Works
-
-Because when `fast` reaches the end:
-
-* `slow` has traveled `(length − n)` steps
-* So `slow.next` is exactly the **n-th node from the end**
+- **Input:** `head: Optional[ListNode]`, `n: int`
+- **Output:** `Optional[ListNode]` (head of modified linked list)
+- **Constraints:**
+  - The number of nodes in the list is $sz$.
+  - $1 \le sz \le 30$
+  - $0 \le \text{Node.val} \le 100$
+  - $1 \le n \le sz$
 
 ---
 
-## Important Edge Case
+### Key Idea & Intuition
 
-When `n == length of list`, the **head must be removed**.
+A naive solution counts the total length $L$ in a first pass, then traverses $L - n$ nodes in a second pass to delete the target node.
 
-To handle this cleanly:
-
-* Use a **dummy node** before the head
+To accomplish this in a **single pass**:
+1. We introduce a **fixed gap of $n$ steps** between a `fast` and a `slow` pointer.
+2. Advance `fast` by $n$ steps forward.
+3. Advance both `fast` and `slow` one step at a time until `fast` reaches the last node of the list (`fast.next == null`).
+4. Because the gap between `slow` and `fast` is exactly $n$, when `fast` is at the $L$-th node (the end), `slow` will be at index $L - n$, which is **immediately preceding** the node to be removed!
+5. We delete the target node simply by relinking: `slow.next = slow.next.next`.
+6. **Sentinel (Dummy) Node:** Attaching a `dummy` node before `head` elegantly handles the edge case where the node to be removed is the `head` itself ($n = sz$).
 
 ---
 
-## Python 3 Implementation (with typing)
+### Solution Approach (Step-by-Step)
 
+1. Create a sentinel node: `dummy = ListNode(0, head)`.
+2. Initialize `fast = dummy` and `slow = dummy`.
+3. Advance `fast` forward by $n$ steps.
+4. While `fast.next` is not null:
+   - Advance `fast = fast.next`.
+   - Advance `slow = slow.next`.
+5. Remove the $n$-th node from the end:
+   - `slow.next = slow.next.next`.
+6. Return `dummy.next`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+List: [1 -> 2 -> 3 -> 4 -> 5], n = 2
+
+Step 0: Setup dummy
+dummy -> [1] -> [2] -> [3] -> [4] -> [5] -> null
+slow, fast at dummy
+
+Step 1: Move fast n = 2 steps forward
+dummy -> [1] -> [2] -> [3] -> [4] -> [5] -> null
+  ^               ^
+ slow            fast
+
+Step 2: Advance both until fast.next is null
+- Move 1: slow at [1], fast at [3]
+- Move 2: slow at [2], fast at [4]
+- Move 3: slow at [3], fast at [5] (fast.next is null! STOP)
+
+dummy -> [1] -> [2] -> [3] -> [4] -> [5] -> null
+                        ^               ^
+                       slow            fast
+
+Step 3: Relink slow.next to skip [4]
+slow.next = slow.next.next ([3].next points directly to [5])
+Node [4] is unlinked and deleted!
+
+Result: dummy.next -> [1 -> 2 -> 3 -> 5]
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Intermediate Node Removal
+- **Input:** `head = [1, 2, 3, 4, 5]`, `n = 2`
+- **Output:** `[1, 2, 3, 5]`
+
+#### Example 2: Single Node List (Removing Only Element)
+- **Input:** `head = [1]`, `n = 1`
+- **Trace:**
+  - `fast` moves 1 step to `[1]`.
+  - `fast.next` is null $\implies$ loop does not run.
+  - `slow` is at `dummy`. `slow.next = dummy.next.next = null`.
+- **Output:** `[]`
+
+#### Example 3: Removing the Head Node ($n = \text{length}$)
+- **Input:** `head = [1, 2]`, `n = 2`
+- **Trace:**
+  - `fast` moves 2 steps to `[2]`.
+  - `fast.next` is null $\implies$ loop stops immediately.
+  - `slow` is at `dummy`. `dummy.next = dummy.next.next = [2]`.
+- **Output:** `[2]`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import Optional
 
@@ -94,95 +142,99 @@ class Solution:
         dummy = ListNode(0, head)
         fast = dummy
         slow = dummy
-
-        # Step 1: Move fast n steps ahead
+        
+        # 1. Advance fast pointer n steps
         for _ in range(n):
             fast = fast.next
-
-        # Step 2: Move both pointers until fast reaches the end
+            
+        # 2. Advance both until fast reaches the last node
         while fast.next:
             fast = fast.next
             slow = slow.next
-
-        # Step 3: Remove the nth node from end
+            
+        # 3. Delete the target node
         slow.next = slow.next.next
-
+        
         return dummy.next
 ```
 
+#### 2. C++ (C++17 / STL)
+```cpp
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode *next) : val(x), next(next) {}
+};
+
+class Solution {
+public:
+    ListNode* removeNthFromEnd(ListNode* head, int n) {
+        ListNode dummy(0, head);
+        ListNode* fast = &dummy;
+        ListNode* slow = &dummy;
+
+        for (int i = 0; i < n; ++i) {
+            fast = fast->next;
+        }
+
+        while (fast->next != nullptr) {
+            fast = fast->next;
+            slow = slow->next;
+        }
+
+        ListNode* nodeToDelete = slow->next;
+        slow->next = slow->next->next;
+        delete nodeToDelete; // Prevent memory leak
+
+        return dummy.next;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode() {}
+    ListNode(int val) { this.val = val; }
+    ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+}
+
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode fast = dummy;
+        ListNode slow = dummy;
+
+        for (int i = 0; i < n; i++) {
+            fast = fast.next;
+        }
+
+        while (fast.next != null) {
+            fast = fast.next;
+            slow = slow.next;
+        }
+
+        slow.next = slow.next.next;
+
+        return dummy.next;
+    }
+}
+```
+
 ---
 
-## Worked-Out Example
+### Complexity Analysis
 
-### Input
-
-```
-Linked List: 1 → 2 → 3 → 4 → 5
-n = 2
-```
-
-### Step-by-Step Pointer Movement
-
-**Initial Setup**
-
-```
-dummy → 1 → 2 → 3 → 4 → 5
-fast = slow = dummy
-```
-
-**Move `fast` 2 steps**
-
-```
-fast → 2
-slow → dummy
-```
-
-**Move both until `fast.next` is None**
-
-| Step | fast | slow |
-| --- | --- | --- |
-| 1 | 3 | 1 |
-| 2 | 4 | 2 |
-| 3 | 5 | 3 |
-
-Now:
-
-```
-slow → 3
-slow.next → 4  (node to remove)
-```
-
-**Removal**
-
-```
-3.next = 5
-```
-
-### Final List
-
-```
-1 → 2 → 3 → 5
-```
+- **Time Complexity:** $O(L)$ where $L$ is the number of nodes in the list. Traverses the list in a single pass.
+- **Space Complexity:** $O(1)$ auxiliary space — Only two pointer references are maintained.
 
 ---
 
-## Time & Space Complexity
+### Takeaway Pattern & Interview Traps
 
-* **Time Complexity:** `O(N)` (single traversal)
-* **Space Complexity:** `O(1)` (constant extra space)
-
----
-
-## Key Takeaway
-
-This problem is a **canonical example** of:
-
-* Two-pointer offset technique
-* Dummy node usage to simplify head-edge cases
-* One-pass linked list manipulation
-
-If you want, I can also:
-
-* Draw a pointer-movement table visually
-* Explain why this fails without a dummy node
-* Compare with the two-pass solution for intuition contrast
+- **Pattern:** Offset Lead-and-Follow Two Pointers with Dummy Node.
+- **Trap:** Halting condition: Make sure `while (fast.next != null)` stops when `fast` is on the **last node**, so that `slow` stops on the node **before** the target node. If you wrote `while (fast != null)`, `slow` would land directly on the target node, making deletion awkward without a `prev` reference.

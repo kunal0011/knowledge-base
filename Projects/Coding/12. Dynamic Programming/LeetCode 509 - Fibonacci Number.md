@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,160 +8,191 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - math
+  - memoization
+  - amazon
+  - apple
+  - google
 ---
 
 # LeetCode 509: Fibonacci Number
 
-**LeetCode 509 – Fibonacci Number**, focusing on **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Apple, Google, Microsoft, Meta  
+**Difficulty:** Easy  
+**Topic:** Dynamic Programming / Space Optimization / Recurrence Relations  
 
 ---
 
-## Problem Statement (LeetCode 509)
+### Problem Statement
 
-The Fibonacci numbers are defined as:
+The **Fibonacci numbers**, commonly denoted `F(n)` form a sequence, called the **Fibonacci sequence**, such that each number is the sum of the two preceding ones, starting from `0` and `1`. That is:
 
-* `F(0) = 0`
-* `F(1) = 1`
-* `F(n) = F(n - 1) + F(n - 2)` for `n ≥ 2`
+- $F(0) = 0, \ F(1) = 1$
+- $F(n) = F(n - 1) + F(n - 2), \quad \text{for } n > 1$
 
-**Given** an integer `n`, return `F(n)`.
-
----
-
-## Dynamic Programming Approach
-
-This problem is a canonical example of **1-D Dynamic Programming**.
+Given `n`, calculate `F(n)`.
 
 ---
 
-## 1. DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i] = the i-th Fibonacci number, i.e., F(i)
-```
-
-Each state represents the answer to a **smaller subproblem**.
+- **Input:** `n: int` — Non-negative integer index.
+- **Output:** `int` — Value of $F(n)$.
+- **Constraints:**
+  - $0 \le n \le 30$
 
 ---
 
-## 2. State Transition
+### Key Idea & Intuition
 
-From the problem definition:
+1. **The Canonical DP Subproblem:**
+   - Naive recursion $F(n) = F(n-1) + F(n-2)$ branches into an exponential call tree of complexity $\mathcal{O}(2^n)$, re-evaluating overlapping subproblems repeatedly (e.g. $F(2)$ is computed independently many times).
+   - By storing subproblem answers, we reduce runtime to linear $\mathcal{O}(n)$.
 
-```
-dp[i] = dp[i - 1] + dp[i - 2]
-```
+2. **State Reduction ($\mathcal{O}(1)$ Space):**
+   - In bottom-up DP, to calculate $\text{dp}[i]$, we only ever need the two immediately preceding values: $\text{dp}[i - 1]$ and $\text{dp}[i - 2]$.
+   - Maintaining a full table of size $n + 1$ is redundant. We can keep two rolling variables `prev2` and `prev1`, updating them in $\mathcal{O}(1)$ space.
 
-This transition is valid because Fibonacci numbers are defined recursively using the previous two values.
-
----
-
-## 3. Base Cases
-
-The smallest subproblems are known upfront:
-
-```
-dp[0] = 0
-dp[1] = 1
-```
-
-These act as the foundation of the DP table.
+3. **Logarithmic Time Alternative (Matrix Exponentiation):**
+   - For massive $n$ ($n \le 10^9$):
+     $$\begin{pmatrix} F(n+1) & F(n) \\ F(n) & F(n-1) \end{pmatrix} = \begin{pmatrix} 1 & 1 \\ 1 & 0 \end{pmatrix}^n$$
+   - Using binary exponentiation, this yields an $\mathcal{O}(\log n)$ solution.
 
 ---
 
-## 4. DP Table Construction (Bottom-Up)
+### Solution Approach (Step-by-Step)
 
-We compute the DP table iteratively from `2` to `n`.
-
-### Algorithm
-
-1. Initialize a DP array of size `n + 1`
-2. Fill base cases
-3. Iterate and apply the transition
-
----
-
-## 5. Example Walkthrough
-
-### Input
-
-```
-n = 6
-```
-
-### Step-by-Step DP Table Filling
-
-| i | dp[i] calculation | dp[i] |
-| --- | --- | --- |
-| 0 | base case | 0 |
-| 1 | base case | 1 |
-| 2 | dp[1] + dp[0] = 1 + 0 | 1 |
-| 3 | dp[2] + dp[1] = 1 + 1 | 2 |
-| 4 | dp[3] + dp[2] = 2 + 1 | 3 |
-| 5 | dp[4] + dp[3] = 3 + 2 | 5 |
-| 6 | dp[5] + dp[4] = 5 + 3 | 8 |
-
-### Final DP Table
-
-```
-Index:  0  1  2  3  4  5  6
-dp:     0  1  1  2  3  5  8
-```
-
-**Answer:** `dp[6] = 8`
+1. **Base Cases:**
+   - If $n \le 1$, return $n$.
+2. **Rolling State Updates:**
+   - Initialize `prev2 = 0` ($F(0)$) and `prev1 = 1` ($F(1)$).
+   - For $i$ from $2$ to $n$:
+     - `curr = prev1 + prev2`
+     - `prev2 = prev1`
+     - `prev1 = curr`
+3. **Return:**
+   - Return `prev1`.
 
 ---
 
-## 6. Python 3 DP Implementation (With Typing)
+### Visual Algorithm Walkthrough
 
+For $n = 6$:
+
+```
+Initial: prev2 = 0, prev1 = 1
+
+i = 2:
+  curr = prev1 + prev2 = 1 + 0 = 1
+  prev2 = 1, prev1 = 1
+
+i = 3:
+  curr = prev1 + prev2 = 1 + 1 = 2
+  prev2 = 1, prev1 = 2
+
+i = 4:
+  curr = prev1 + prev2 = 2 + 1 = 3
+  prev2 = 2, prev1 = 3
+
+i = 5:
+  curr = prev1 + prev2 = 3 + 2 = 5
+  prev2 = 3, prev1 = 5
+
+i = 6:
+  curr = prev1 + prev2 = 5 + 3 = 8
+  prev2 = 5, prev1 = 8
+
+Final Result: F(6) = 8
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Case | `n` | Fibonacci Progression | Result | Explanation |
+|---|---|---|---|---|
+| **Base 0** | `0` | $F(0)$ | `0` | Standard definition |
+| **Base 1** | `1` | $F(1)$ | `1` | Standard definition |
+| **Small Value** | `2` | $F(0) + F(1) = 0 + 1$ | `1` | $F(2) = 1$ |
+| **Standard 4** | `4` | $0, 1, 1, 2, 3$ | `3` | $F(4) = 3$ |
+| **Upper Bound 30** | `30` | Linear progression | `832040` | Maximum test constraint |
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed — $\mathcal{O}(1)$ Space)
 ```python
-from typing import List
-
 class Solution:
     def fib(self, n: int) -> int:
-        # Base cases
         if n <= 1:
             return n
+            
+        prev2, prev1 = 0, 1
+        for _ in range(2, n + 1):
+            curr = prev1 + prev2
+            prev2 = prev1
+            prev1 = curr
+            
+        return prev1
+```
 
-        # DP table
-        dp: List[int] = [0] * (n + 1)
-        dp[0] = 0
-        dp[1] = 1
+#### 2. C++ (C++17 / STL — $\mathcal{O}(1)$ Space)
+```cpp
+class Solution {
+public:
+    int fib(int n) {
+        if (n <= 1) return n;
 
-        # Fill DP table
-        for i in range(2, n + 1):
-            dp[i] = dp[i - 1] + dp[i - 2]
+        int prev2 = 0;
+        int prev1 = 1;
 
-        return dp[n]
+        for (int i = 2; i <= n; ++i) {
+            int curr = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = curr;
+        }
+
+        return prev1;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed — $\mathcal{O}(1)$ Space)
+```java
+class Solution {
+    public int fib(int n) {
+        if (n <= 1) return n;
+
+        int prev2 = 0;
+        int prev1 = 1;
+
+        for (int i = 2; i <= n; i++) {
+            int curr = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = curr;
+        }
+
+        return prev1;
+    }
+}
 ```
 
 ---
 
-## 7. Time and Space Complexity
+### Complexity Analysis
 
-| Metric | Complexity |
-| --- | --- |
-| Time | **O(n)** |
-| Space | **O(n)** |
-
----
-
-## 8. Optimization Insight (Why This Is DP)
-
-* **Overlapping subproblems**: `F(n-1)` and `F(n-2)` are reused
-* **Optimal substructure**: `F(n)` depends only on optimal results of smaller states
-* DP avoids exponential recursion by **storing results**
-
-> This problem also admits a **space-optimized DP** (`O(1)` space), but the above solution is the **cleanest for learning state definition and table construction**.
+- **Time Complexity:** $\mathcal{O}(n)$  
+  The loop runs exactly $n - 1$ times for $n \ge 2$, with $\mathcal{O}(1)$ operations per step.
+- **Space Complexity:** $\mathcal{O}(1)$  
+  Only two integer variables are kept in memory.
 
 ---
 
-If you want, I can also:
+### Takeaway Pattern & Interview Traps
 
-* Show **space-optimized DP**
-* Compare **recursion vs memoization vs tabulation**
-* Generalize this to **climbing stairs / tribonacci / DP patterns**
-
-Just tell me.
+1. **The Recursion Pitfall:**
+   - Writing `return fib(n-1) + fib(n-2)` without memoization triggers catastrophic exponential complexity $\mathcal{O}(2^n)$.
+2. **The Golden Ratio Formula (Binet's Formula):**
+   - $F(n) = \frac{1}{\sqrt{5}} \left( \left(\frac{1 + \sqrt{5}}{2}\right)^n - \left(\frac{1 - \sqrt{5}}{2}\right)^n \right)$.
+   - While mathematically elegant, using floating-point operations introduces IEEE 754 precision rounding errors for larger $n$. The integer rolling variable method is robust and accurate.

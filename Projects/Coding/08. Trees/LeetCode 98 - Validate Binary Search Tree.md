@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,194 +8,245 @@ tags:
   - leetcode
   - coding
   - trees
+  - bst
+  - dfs
+  - amazon
+  - google
 ---
 
 # LeetCode 98: Validate Binary Search Tree
 
-Below is a structured, interview-grade explanation for **LeetCode 98 – Validate Binary Search Tree**, aligned with how this problem is expected to be reasoned about in system design and algorithmic interviews.
+**Target Companies:** Amazon (Top Tier Tree Question), Meta, Google, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Binary Search Tree / Interval Range Validation / In-order Monotonicity
 
 ---
 
-## 1. Problem Statement (LeetCode 98)
+### Problem Statement
 
-You are given the **root of a binary tree**.  
-Determine whether it is a **valid Binary Search Tree (BST)**.
+Given the `root` of a binary tree, determine if it is a valid binary search tree (BST).
 
-A **valid BST** satisfies **all** of the following:
-
-1. The left subtree of a node contains **only nodes with keys strictly less** than the node’s key.
-2. The right subtree of a node contains **only nodes with keys strictly greater** than the node’s key.
-3. **Both** the left and right subtrees must also be valid BSTs.
+A **valid BST** is defined as follows:
+- The left subtree of a node contains only nodes with keys **strictly less than** the node's key.
+- The right subtree of a node contains only nodes with keys **strictly greater than** the node's key.
+- Both the left and right subtrees must also be binary search trees.
 
 ---
 
-## 2. Key Observations & Core Concepts
+### Input & Output Formats & Constraints
 
-### ❌ Common Incorrect Assumption
-
-Checking only:
-
-* `node.left.val < node.val`
-* `node.right.val > node.val`
-
-is **not sufficient**.
-
-**Why?**  
-Because BST validity is a **global constraint**, not just a parent–child constraint.
+- **Input:** `root: Optional[TreeNode]`
+- **Output:** `bool` — `true` if the tree is a valid BST, `false` otherwise.
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[1, 10^4]$.
+  - $-2^{31} \le \text{Node.val} \le 2^{31} - 1$
 
 ---
 
-### ✅ Correct Insight (Global Range Constraint)
+### Key Idea & Intuition
 
-Each node must satisfy:
+- **The Local Parent-Child Trap:**
+  - A classic beginner bug is checking only immediate child relationships:
+    `node.left.val < node.val` and `node.right.val > node.val`.
+  - This fails for trees like:
+    ```
+        5
+       / \
+      1   6
+         / \
+        3   7
+    ```
+    Here $3 < 6$ and $7 > 6$ locally, but $3$ is in $5$'s right subtree and $3 < 5$, violating global BST ordering!
+- **The Open Interval Invariant:**
+  - BST validity is a **global ancestor constraint**. Every node $u$ must satisfy:
+    $$\text{low} < u.\text{val} < \text{high}$$
+  - When branching left: all descendants must be strictly smaller than $u.\text{val}$:
+    $$\text{new\_range} = (\text{low}, u.\text{val})$$
+  - When branching right: all descendants must be strictly greater than $u.\text{val}$:
+    $$\text{new\_range} = (u.\text{val}, \text{high})$$
+  - Root begins with bounds $(-\infty, +\infty)$.
+- **Integer Boundary Guard:**
+  - Constraints state node values can reach $-2^{31}$ or $2^{31} - 1$.
+  - Using 32-bit `INT_MIN` / `INT_MAX` for initial bounds will cause false negatives if root equals `INT_MAX` or `INT_MIN`.
+  - In C++ and Java, initial bounds must use 64-bit `long` or nullable wrapper types (`Long` / `TreeNode*`).
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Define recursive helper `validate(node, low, high)`:
+   - Base case: If `node is None`, return `True`.
+   - If `node.val <= low` or `node.val >= high`: return `False` (violates strict inequality).
+   - Recurse left: `validate(node.left, low, node.val)`.
+   - Recurse right: `validate(node.right, node.val, high)`.
+   - Return `left_valid and right_valid`.
+2. Initial call: `validate(root, -infinity, +infinity)`.
+
+---
+
+### Visual Algorithm Walkthrough
 
 ```
-min_allowed < node.val < max_allowed
+Example: Invalid BST
+        5 (low = -inf, high = +inf)
+       / \
+      1   4 (low = 5, high = +inf)  <- Invalid! 4 is not > 5
+         / \
+        3   6
+
+DFS Trace:
+1. Root 5: Valid (-inf < 5 < +inf)
+   - Branch Left: low = -inf, high = 5
+   - Branch Right: low = 5, high = +inf
+
+2. Node 1: Valid (-inf < 1 < 5)
+   - Left and Right are null -> True
+
+3. Node 4:
+   - Check: is 5 < 4 < +inf?
+   - 4 <= 5 (low bound violated!)
+   - Returns False immediately.
+
+Tree is NOT a valid BST.
 ```
 
-Where:
+---
 
-* `min_allowed` comes from ancestors on the **left**
-* `max_allowed` comes from ancestors on the **right**
+### Solved Examples with Multiple Inputs
 
-This range **shrinks as we go down the tree**.
+#### Example 1: Valid BST
+- **Input:** `root = [2, 1, 3]`
+- **Step Trace:**
+  | Node | `low` | `high` | Condition $\text{low} < val < \text{high}$ | Result |
+  | :--- | :--- | :--- | :--- | :--- |
+  | 2 | $-\infty$ | $+\infty$ | $-\infty < 2 < +\infty$ | Valid |
+  | 1 | $-\infty$ | 2 | $-\infty < 1 < 2$ | Valid (Leaf) |
+  | 3 | 2 | $+\infty$ | $2 < 3 < +\infty$ | Valid (Leaf) |
+- **Output:** `true`
+
+#### Example 2: Duplicate Node Value
+- **Input:** `root = [2, 2, 2]`
+- **Trace:** Node 2 left child is 2. Range for left is $(-\infty, 2)$. $2 \nless 2 \implies$ Invalid!
+- **Output:** `false` (Strict inequalities required)
+
+#### Example 3: Extreme Bounds (32-bit Integer Limit)
+- **Input:** `root = [-2147483648]`
+- **Trace:** With 64-bit bounds $(-\infty, +\infty)$, $-2^{63} < -2147483648 < 2^{63}-1$.
+- **Output:** `true`
 
 ---
 
-## 3. Two Correct Conceptual Approaches
+### Multi-Language Implementations
 
-### Approach 1: DFS with Min / Max Bounds (Preferred)
-
-* Start with range `(-∞, +∞)`
-* For each node:
-
-  * Validate `min < node.val < max`
-  * Recurse:
-
-    * Left child → `(min, node.val)`
-    * Right child → `(node.val, max)`
-
-**Time Complexity:** `O(n)`  
-**Space Complexity:** `O(h)` (recursion stack)
-
----
-
-### Approach 2: Inorder Traversal (Property-Based)
-
-* Inorder traversal of a valid BST produces a **strictly increasing sequence**
-* Track previous value and ensure current > previous
-
-This works, but **Approach 1 is clearer and safer** in interviews.
-
----
-
-## 4. Python 3 Solution (with Typing)
-
-### DFS with Range Validation
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import Optional
 
 class TreeNode:
-    def __init__(
-        self,
-        val: int = 0,
-        left: Optional["TreeNode"] = None,
-        right: Optional["TreeNode"] = None
-    ):
+    def __init__(self, val: int = 0, left: Optional['TreeNode'] = None, right: Optional['TreeNode'] = None):
         self.val = val
         self.left = left
         self.right = right
 
 class Solution:
     def isValidBST(self, root: Optional[TreeNode]) -> bool:
-
-        def dfs(node: Optional[TreeNode], low: float, high: float) -> bool:
+        def validate(node: Optional[TreeNode], low: float, high: float) -> bool:
             if not node:
                 return True
-
+                
+            # Node value must be strictly within (low, high)
             if not (low < node.val < high):
                 return False
+                
+            # Left subtree upper-bounded by node.val
+            # Right subtree lower-bounded by node.val
+            return (validate(node.left, low, node.val) and 
+                    validate(node.right, node.val, high))
+                    
+        return validate(root, float('-inf'), float('inf'))
+```
 
-            return (
-                dfs(node.left, low, node.val) and
-                dfs(node.right, node.val, high)
-            )
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <climits>
 
-        return dfs(root, float("-inf"), float("inf"))
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
+
+class Solution {
+public:
+    bool isValidBST(TreeNode* root) {
+        // Use 64-bit integers to prevent overflow when node values equal INT_MIN or INT_MAX
+        return validate(root, LONG_MIN, LONG_MAX);
+    }
+
+private:
+    bool validate(TreeNode* node, long long low, long long high) {
+        if (!node) return true;
+
+        if (node->val <= low || node->val >= high) {
+            return false;
+        }
+
+        return validate(node->left, low, node->val) && 
+               validate(node->right, node->val, high);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Solution {
+    public boolean isValidBST(TreeNode root) {
+        // Pass Long.MIN_VALUE and Long.MAX_VALUE to avoid integer overflow
+        return validate(root, Long.MIN_VALUE, Long.MAX_VALUE);
+    }
+
+    private boolean validate(TreeNode node, long low, long high) {
+        if (node == null) {
+            return true;
+        }
+
+        if (node.val <= low || node.val >= high) {
+            return false;
+        }
+
+        return validate(node.left, low, node.val) && 
+               validate(node.right, node.val, high);
+    }
+}
 ```
 
 ---
 
-## 5. Worked-Out Example (Step-by-Step)
+### Complexity Analysis
 
-### Example Tree (Invalid BST)
-
-```
-        5
-       / \
-      1   4
-         / \
-        3   6
-```
+- **Time Complexity:** $\mathcal{O}(N)$ — Each node in the tree is visited at most once during traversal. If an invalid node is encountered, DFS terminates early.
+- **Space Complexity:** $\mathcal{O}(H)$ — Where $H$ is the tree height corresponding to recursion call stack memory. In balanced trees $H = \mathcal{O}(\log N)$, in worst-case degenerate trees $H = \mathcal{O}(N)$.
 
 ---
 
-### Step-wise Validation
+### Takeaway Pattern & Interview Traps
 
-| Node | Allowed Range | Node Value | Valid? |
-| --- | --- | --- | --- |
-| 5 | (-∞, +∞) | 5 | ✅ |
-| 1 | (-∞, 5) | 1 | ✅ |
-| 4 | (5, +∞) | 4 | ❌ |
-
-🚫 **Violation:**  
-`4` appears in the **right subtree of 5**, but `4 < 5`.
-
----
-
-## 6. Conceptual Illustration (Range Propagation)
-
-```
-Start:
-Node 5 → range (-∞, +∞)
-
-Left Subtree:
-Node 1 → range (-∞, 5)
-
-Right Subtree:
-Node 4 → range (5, +∞) ❌
-```
-
-This illustrates **why local checks fail** and **global range tracking is required**.
-
----
-
-## 7. Why This Problem Is Important
-
-* Tests understanding of **tree recursion**
-* Reinforces **global vs local constraints**
-* Commonly used as a **filter problem** in interviews
-* Pattern repeats in:
-
-  * Tree validation
-  * Interval problems
-  * Distributed consistency checks
-
----
-
-## 8. Key Takeaways
-
-* BST validation is about **ranges, not neighbors**
-* Always think **top-down constraints**
-* Use **DFS with bounds** for clarity and correctness
-* Strict inequalities (`<` and `>`) matter
-
-If you want, I can also:
-
-* Walk through the **inorder approach**
-* Provide a **visual recursion trace**
-* Show **iterative stack-based solution**
-* Map this problem to a **general tree validation pattern**
-
-Just let me know.
+1. **No Duplicates Allowed:** In standard LeetCode BST definitions, all values in the left subtree must be *strictly* less ($<$), and all values in the right subtree *strictly* greater ($>$). If `node.val == low` or `node.val == high`, it is invalid.
+2. **64-bit Integer Bounds:** If you initialize `low = Integer.MIN_VALUE` and `high = Integer.MAX_VALUE` in Java/C++, a root whose value is `Integer.MIN_VALUE` will immediately fail the check `node.val <= low`. Always use 64-bit `long` or `null` checks.
+3. **In-order Monotonicity Alternative:** An in-order traversal of a valid BST must produce a strictly monotonically increasing sequence. Checking that `prev.val < curr.val` during an in-order traversal is an equally valid alternative solution.

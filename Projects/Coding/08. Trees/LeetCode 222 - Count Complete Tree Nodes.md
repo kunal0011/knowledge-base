@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,115 +8,138 @@ tags:
   - leetcode
   - coding
   - trees
+  - binary-search
+  - divide-and-conquer
+  - amazon
+  - google
 ---
 
 # LeetCode 222: Count Complete Tree Nodes
 
-Below is a structured, interview-ready explanation of **LeetCode 222 – Count Complete Tree Nodes**, aligned with how you have been studying other problems.
-
----
-
-## LeetCode 222: Count Complete Tree Nodes
+**Target Companies:** Google (Classic Sub-Linear Tree Algorithm), Amazon, Meta  
+**Difficulty:** Easy / Medium  
+**Topic:** Complete Binary Tree / Divide & Conquer / Sub-linear $\mathcal{O}(\log^2 N)$ Traversal
 
 ---
 
 ### Problem Statement
 
-You are given the **root of a complete binary tree**.  
-Return the **number of nodes** in the tree.
+Given the `root` of a **complete** binary tree, return the number of the nodes in the tree.
 
-**Definition – Complete Binary Tree**
+According to **Wikipedia**, every level, except possibly the last, is completely filled in a complete binary tree, and all nodes in the last level are as far left as possible. It can have between $1$ and $2^h$ nodes inclusive at the last level $h$.
 
-* Every level, except possibly the last, is **completely filled**
-* All nodes in the last level are as **far left as possible**
-
-**Constraints**
-
-* The tree can have up to ( 5 \times 10^4 ) nodes
-* A naive traversal solution (O(n)) works, but the problem **expects better than O(n)**
+Design an algorithm that runs in less than $\mathcal{O}(n)$ time complexity.
 
 ---
 
-## Key Observation & Core Concepts
+### Input & Output Formats & Constraints
 
-### 1. Structure Property of Complete Binary Trees
-
-For any node:
-
-* If **left subtree height == right subtree height**  
-  → the **left subtree is a perfect binary tree**
-* Else  
-  → the **right subtree is a perfect binary tree**
-
-A **perfect binary tree** with height `h` has:  
-[  
-\text{nodes} = 2^h - 1  
-]
+- **Input:** `root: Optional[TreeNode]`
+- **Output:** `int` — Total number of nodes in the complete binary tree.
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[0, 5 \times 10^4]$.
+  - $0 \le \text{Node.val} \le 5 \times 10^4$
+  - The tree is guaranteed to be **complete**.
 
 ---
 
-### 2. Height Definition (Important)
+### Key Idea & Intuition
 
-Height is measured by:
-
-* Following only **left child pointers**
-* Height of an empty tree = 0
-
-This works because a complete tree is always left-aligned.
-
----
-
-### 3. Divide & Conquer Strategy
-
-At each node:
-
-1. Compute left height
-2. Compute right height
-3. Decide which subtree is perfect
-4. Count nodes using formula + recurse on the other subtree
-
-This reduces complexity to:
-
-[  
-O((\log n)^2)  
-]
+- **Properties of a Complete Binary Tree:**
+  - A perfect binary tree of height $h$ contains exactly $2^h - 1$ nodes.
+  - In a complete binary tree, at least one of the two subtrees (left or right) is guaranteed to be a **perfect binary tree**!
+- **Height Comparison Subtree Pruning:**
+  - Define `get_depth(node)`: Traverse strictly along `node.left` to the deepest leaf in $\mathcal{O}(h)$ time.
+  - Let $h_L = \text{get\_depth}(node.left)$ and $h_R = \text{get\_depth}(node.right)$:
+    1. **If $h_L == h_R$:**
+       - The left subtree is a **perfect binary tree** of height $h_L$.
+       - The last level has reached into the right subtree.
+       - Nodes in left subtree $+$ current root $= (2^{h_L} - 1) + 1 = 2^{h_L} = (1 \ll h_L)$.
+       - Recurse only on the right subtree:
+         $$\text{count}(node) = 2^{h_L} + \text{count}(node.right)$$
+    2. **If $h_L > h_R$ ($h_L = h_R + 1$):**
+       - The right subtree is a **perfect binary tree** of height $h_R$.
+       - The last level has NOT reached the right subtree (the right subtree is one level shorter).
+       - Nodes in right subtree $+$ current root $= (2^{h_R} - 1) + 1 = 2^{h_R} = (1 \ll h_R)$.
+       - Recurse only on the left subtree:
+         $$\text{count}(node) = 2^{h_R} + \text{count}(node.left)$$
+- **Sub-linear Complexity:**
+  - In each step, we calculate heights in $\mathcal{O}(\log N)$ and discard one half of the tree.
+  - Recurrence: $T(N) = T(N/2) + \mathcal{O}(\log N) \implies \mathcal{O}(\log^2 N)$ total time!
 
 ---
 
-## Conceptual Illustration
+### Solution Approach (Step-by-Step)
 
-![Image](https://deen3evddmddt.cloudfront.net/uploads/content-images/what-is-complete-binary-tree.webp)
+1. Base case: If `root is None`, return `0`.
+2. Compute `left_height = get_depth(root.left)` and `right_height = get_depth(root.right)`:
+   - `get_depth(node)`: Follow `node = node.left` until `None`, counting steps.
+3. If `left_height == right_height`:
+   - Left subtree is perfect: return `(1 << left_height) + countNodes(root.right)`.
+4. If `left_height > right_height`:
+   - Right subtree is perfect: return `(1 << right_height) + countNodes(root.left)`.
 
-![Image](https://media.geeksforgeeks.org/wp-content/uploads/20220630154756/img2.jpg)
+---
 
-![Image](https://miro.medium.com/1%2ACMGFtehu01ZEBgzHG71sMg.png)
-
-Example tree:
+### Visual Algorithm Walkthrough
 
 ```
-        1
-       / \
-      2   3
-     / \  /
-    4  5 6
-```
+Case 1: left_height == right_height (h_L = 2, h_R = 2)
 
-* Left height = 3
-* Right height = 2
-* Right subtree is perfect → count directly
-* Recurse on left subtree
+             1               <- Root
+           /   \
+          2     3            <- Both subtrees reach height 2
+         / \   /
+        4   5 6
+
+- Left subtree (2, 4, 5) is PERFECT (height 2).
+- Count left subtree + root = 2^2 = 4 nodes (1, 2, 4, 5).
+- Recurse on Right child (3): countNodes(3).
+
+-----------------------------------------------------------
+
+Case 2: left_height > right_height (h_L = 2, h_R = 1)
+
+             1               <- Root
+           /   \
+          2     3            <- Right subtree does not reach height 2
+         /
+        4
+
+- Right subtree (3) is PERFECT (height 1).
+- Count right subtree + root = 2^1 = 2 nodes (1, 3).
+- Recurse on Left child (2): countNodes(2).
+```
 
 ---
 
-## Python 3 Solution (with typing)
+### Solved Examples with Multiple Inputs
 
+#### Example 1: Full Complete Tree
+- **Input:** `root = [1,2,3,4,5,6]`
+- **Step Trace:**
+  | Step | Node | $h_L$ | $h_R$ | Condition | Known Nodes | Next Recurse Node |
+  | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+  | 1 | 1 | 2 | 2 | $h_L == h_R$ | $2^2 = 4$ | Node 3 |
+  | 2 | 3 | 1 | 0 | $h_L > h_R$ | $2^0 = 1$ | Node 6 |
+  | 3 | 6 | 0 | 0 | $h_L == h_R$ | $2^0 = 1$ | `None` |
+  | 4 | `None` | - | - | Base case | 0 | Terminate |
+- **Total Nodes:** $4 + 1 + 1 + 0 = 6$
+
+#### Example 2: Empty Tree
+- **Input:** `root = []`
+- **Output:** `0`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import Optional
 
 class TreeNode:
-    def __init__(self, val: int = 0,
-                 left: Optional["TreeNode"] = None,
-                 right: Optional["TreeNode"] = None):
+    def __init__(self, val: int = 0, left: Optional['TreeNode'] = None, right: Optional['TreeNode'] = None):
         self.val = val
         self.left = left
         self.right = right
@@ -125,115 +148,120 @@ class Solution:
     def countNodes(self, root: Optional[TreeNode]) -> int:
         if not root:
             return 0
-
-        def left_height(node: Optional[TreeNode]) -> int:
-            height = 0
+            
+        def get_depth(node: Optional[TreeNode]) -> int:
+            d = 0
             while node:
-                height += 1
+                d += 1
                 node = node.left
-            return height
-
-        lh = left_height(root.left)
-        rh = left_height(root.right)
-
-        # Left subtree is perfect
-        if lh == rh:
-            return (1 << lh) + self.countNodes(root.right)
-        # Right subtree is perfect
+            return d
+            
+        left_h = get_depth(root.left)
+        right_h = get_depth(root.right)
+        
+        if left_h == right_h:
+            # Left subtree is perfect of height left_h
+            return (1 << left_h) + self.countNodes(root.right)
         else:
-            return (1 << rh) + self.countNodes(root.left)
+            # Right subtree is perfect of height right_h
+            return (1 << right_h) + self.countNodes(root.left)
+```
+
+#### 2. C++ (C++17 / STL)
+```cpp
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
+
+class Solution {
+public:
+    int countNodes(TreeNode* root) {
+        if (!root) return 0;
+
+        int leftH = getDepth(root->left);
+        int rightH = getDepth(root->right);
+
+        if (leftH == rightH) {
+            // Left subtree is a perfect binary tree of height leftH
+            return (1 << leftH) + countNodes(root->right);
+        } else {
+            // Right subtree is a perfect binary tree of height rightH
+            return (1 << rightH) + countNodes(root->left);
+        }
+    }
+
+private:
+    int getDepth(TreeNode* node) {
+        int depth = 0;
+        while (node) {
+            depth++;
+            node = node->left;
+        }
+        return depth;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Solution {
+    public int countNodes(TreeNode root) {
+        if (root == null) {
+            return 0;
+        }
+
+        int leftH = getDepth(root.left);
+        int rightH = getDepth(root.right);
+
+        if (leftH == rightH) {
+            // Left subtree is perfect binary tree
+            return (1 << leftH) + countNodes(root.right);
+        } else {
+            // Right subtree is perfect binary tree
+            return (1 << rightH) + countNodes(root.left);
+        }
+    }
+
+    private int getDepth(TreeNode node) {
+        int depth = 0;
+        while (node != null) {
+            depth++;
+            node = node.left;
+        }
+        return depth;
+    }
+}
 ```
 
 ---
 
-## Worked-Out Example (Step-by-Step)
+### Complexity Analysis
 
-Tree:
-
-```
-        1
-       / \
-      2   3
-     / \  /
-    4  5 6
-```
-
-### Step 1: At root (1)
-
-* Left height = 2 (2 → 4)
-* Right height = 1 (3 → 6)
-* Heights differ → right subtree is perfect
-
-Right subtree nodes:  
-[  
-2^1 = 2  
-]
-
-Recurse on left subtree
+- **Time Complexity:** $\mathcal{O}(\log^2 N)$ or $\mathcal{O}(H^2)$ — Tree height is $H = \log N$. At each level of recursion, we compute depths down the left spine in $\mathcal{O}(H)$ time, and we recurse down only one child. Total calls $= H$, total time $= \mathcal{O}(H \times H) = \mathcal{O}(\log^2 N)$. For $N = 50000$, $\log_2(50000) \approx 16 \implies \approx 256$ operations, dramatically faster than naive $\mathcal{O}(N)$ traversal.
+- **Space Complexity:** $\mathcal{O}(H) = \mathcal{O}(\log N)$ — Recursion call stack depth bounded by tree height $H$.
 
 ---
 
-### Step 2: At node (2)
+### Takeaway Pattern & Interview Traps
 
-* Left height = 1 (4)
-* Right height = 1 (5)
-* Equal → left subtree is perfect
-
-Left subtree nodes:  
-[  
-2^1 = 2  
-]
-
-Recurse on right subtree
-
----
-
-### Step 3: At node (5)
-
-* Leaf node → count = 1
-
----
-
-### Final Count
-
-| Component | Nodes |
-| --- | --- |
-| Root | 1 |
-| Perfect right subtree | 2 |
-| Perfect left subtree | 2 |
-| Leaf | 1 |
-| **Total** | **6** |
-
----
-
-## Why This Works Better Than DFS
-
-| Approach | Time Complexity |
-| --- | --- |
-| DFS / BFS | (O(n)) |
-| This method | (O((\log n)^2)) |
-
-Because:
-
-* Height calculation = (O(\log n))
-* Recursion depth = (O(\log n))
-
----
-
-## Key Interview Takeaways
-
-* Use **tree properties**, not brute force
-* Recognize **perfect subtree patterns**
-* Height is computed via **left pointers only**
-* Bit-shift `(1 << h)` is faster than `pow(2, h)`
-
----
-
-If you want, I can also provide:
-
-* Iterative version
-* Binary search on last level approach
-* Comparison with DFS solution
-* Visualization of recursion stack
-
-Just tell me what you want next.
+1. **Bitwise Power of 2:** Use `1 << h` to compute $2^h$ in $\mathcal{O}(1)$ time with zero floating point errors.
+2. **Left Spine Invariant:** In a complete binary tree, the maximum depth of any subtree is always reached by greedily traversing `node = node.left`. There is no need to check right children when measuring maximum subtree height.
+3. **Interview Sub-linear Clarification:** If an interviewer asks: *"Can you do better than $\mathcal{O}(N)$?"*, immediately mention the complete tree property allows binary search on the leaves or divide-and-conquer height comparison in $\mathcal{O}(\log^2 N)$ time.

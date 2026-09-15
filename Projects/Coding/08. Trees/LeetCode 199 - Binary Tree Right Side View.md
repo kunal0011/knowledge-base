@@ -85,6 +85,34 @@ Visible nodes: [1, 3, 4]
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Left Child Overhangs Right
+- **Input:** `root = [1, 2, 3, 4]` (Node 2 has left child 4; Node 3 has no children)
+- **Level-by-Level Trace:**
+  | Depth / Level | Queue Contents | Iteration Nodes | Last Node on Level (`result`) |
+  | :--- | :--- | :--- | :--- |
+  | Level 0 | `[1]` | 1 | **1** |
+  | Level 1 | `[2, 3]` | 2, 3 | **3** |
+  | Level 2 | `[4]` | 4 | **4** (Visible because 3 has no child!) |
+- **Output:** `[1, 3, 4]`
+
+#### Example 2: Skewed Tree to Left
+- **Input:** `root = [1, 2, null, 3]`
+- **Level-by-Level Trace:**
+  | Depth / Level | Queue Contents | Last Node on Level (`result`) |
+  | :--- | :--- | :--- |
+  | Level 0 | `[1]` | **1** |
+  | Level 1 | `[2]` | **2** |
+  | Level 2 | `[3]` | **3** |
+- **Output:** `[1, 2, 3]`
+
+#### Example 3: Empty Tree
+- **Input:** `root = []`
+- **Output:** `[]`
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -197,5 +225,15 @@ class Solution {
 
 ### Complexity Analysis
 
-- **Time Complexity:** $O(N)$ — Every node is visited and queued exactly once.
-- **Space Complexity:** $O(D)$ where $D$ is maximum tree diameter ($O(N)$ worst case for complete binary tree).
+- **Time Complexity:** $\mathcal{O}(N)$ — Every node is visited and queued exactly once.
+- **Space Complexity:** $\mathcal{O}(D)$ where $D$ is the maximum tree diameter ($\mathcal{O}(N)$ worst-case for a complete binary tree, $\mathcal{O}(1)$ for a skewed linear chain). For recursive DFS, auxiliary space is $\mathcal{O}(H)$ stack frames.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **"Right Child Only" Trap:** A common beginner error is traversing only right pointers (`curr = curr.right`). If the right subtree terminates earlier than the left subtree, the deeper nodes of the left subtree become visible from the right! BFS level-order traversal or right-first DFS (`depth == len(result)`) seamlessly handles this without special cases.
+2. **Left-Side View Variation:** To output the left-side view of a binary tree:
+   - In BFS: pick the *first* node popped at each level (`i == 0`).
+   - In DFS: traverse `node.left` before `node.right`.
+3. **Queue Sizing Invariant:** In BFS, snapshot `level_size = len(queue)` *before* the inner loop, ensuring nodes added for the next level aren't prematurely processed in the current level.

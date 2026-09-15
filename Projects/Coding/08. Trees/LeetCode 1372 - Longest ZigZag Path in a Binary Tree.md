@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,190 +8,277 @@ tags:
   - leetcode
   - coding
   - trees
+  - dfs
+  - dynamic-programming
+  - amazon
+  - google
 ---
 
 # LeetCode 1372: Longest ZigZag Path in a Binary Tree
 
-Below is a structured, interview-ready explanation for **LeetCode 1372 – Longest ZigZag Path in a Binary Tree**, aligned with your preferred format.
+**Target Companies:** Amazon, Google, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Tree DFS / Dynamic Programming on Trees / State Transition
 
 ---
 
-## LeetCode 1372: Longest ZigZag Path in a Binary Tree
-
----
-
-## Problem Statement
+### Problem Statement
 
 You are given the `root` of a binary tree.
 
-A **ZigZag path** is defined as a path where:
+A **ZigZag path** for a binary tree is defined as follow:
+- Choose any node in the binary tree and a direction (right or left).
+- If the current direction is right, move to the right child of the current node; otherwise, move to the left child.
+- Change the direction from right to left or from left to right.
+- Repeat the second and third steps until you cannot move in the tree.
 
-* You start from **any node**.
-* You move **downwards only** (parent → child).
-* The direction of movement **alternates** between left and right at each step.
+ZigZag length is defined as the **number of nodes visited - 1** (i.e., the **number of edges** in the path).
 
-Return the **maximum number of edges** in the longest ZigZag path.
-
----
-
-## Key Observations
-
-1. **Direction matters**
-
-   * A ZigZag path depends on the **previous direction** taken.
-   * At each node, the next valid move is constrained.
-2. **Path can start anywhere**
-
-   * The root is **not mandatory** as a starting point.
-   * Any node can be treated as a potential start.
-3. **Count edges, not nodes**
-
-   * Single node → length `0`.
-   * Each valid move adds `+1`.
-4. **Local optimal ≠ Global optimal**
-
-   * We must compute ZigZag lengths at **every node**.
-   * A global maximum must be tracked.
+Return the **longest ZigZag path** contained in the tree.
 
 ---
 
-## Core Concept
+### Input & Output Formats & Constraints
 
-At each node, maintain:
-
-* `left_len`: Longest ZigZag path **ending at this node** where the **last move was left**.
-* `right_len`: Longest ZigZag path **ending at this node** where the **last move was right**.
-
-### Transition Rule
-
-* If we move **left**, the previous move must have been **right**.
-* If we move **right**, the previous move must have been **left**.
+- **Input:** `root: Optional[TreeNode]`
+- **Output:** `int` — Maximum number of edges in a valid ZigZag path.
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[1, 5 \times 10^4]$.
+  - $1 \le \text{Node.val} \le 100$
 
 ---
 
-## Algorithm (DFS / Post-Order Traversal)
+### Key Idea & Intuition
 
-1. Perform DFS on the tree.
-2. For each node:
-
-   * Recursively compute `(left_len, right_len)` from children.
-   * Update:
-
-     * `curr_left = 1 + right_len_of_left_child`
-     * `curr_right = 1 + left_len_of_right_child`
-3. Update a global maximum.
-4. Return `(curr_left, curr_right)`.
+- **State Transition at Each Node:**
+  - When moving to a child node, we have two choices:
+    1. **Continue the ZigZag:** If we arrive at the current node from the opposite direction, the ZigZag chain extends: length becomes `prev_len + 1`.
+    2. **Restart a new ZigZag:** If we move in the same direction as the previous edge, the ZigZag sequence breaks. However, this single step can serve as the first edge of a *new* ZigZag path: length resets to `1`.
+- **Top-Down DFS Representation:**
+  - We can define `dfs(node, is_left, length)`:
+    - If `is_left == True` (we just moved left into `node`):
+      - We can continue the ZigZag by moving right: `dfs(node.right, False, length + 1)`.
+      - Or we can reset and move left: `dfs(node.left, True, 1)`.
+    - If `is_left == False` (we just moved right into `node`):
+      - We can continue the ZigZag by moving left: `dfs(node.left, True, length + 1)`.
+      - Or we can reset and move right: `dfs(node.right, False, 1)`.
+  - Maintain a global `max_len` updated with `length` at every visited node.
 
 ---
 
-## Python 3 Solution (with typing)
+### Solution Approach (Step-by-Step)
 
+1. Maintain global variable `max_zigzag = 0`.
+2. Base case: If `node is None`, return.
+3. Update `max_zigzag = max(max_zigzag, length)`.
+4. If `is_left` is `True`:
+   - To continue alternating: call `dfs(node.right, False, length + 1)`.
+   - To reset direction: call `dfs(node.left, True, 1)`.
+5. If `is_left` is `False`:
+   - To continue alternating: call `dfs(node.left, True, length + 1)`.
+   - To reset direction: call `dfs(node.right, False, 1)`.
+6. Start from root:
+   - `dfs(root.left, True, 1)`
+   - `dfs(root.right, False, 1)`
+7. Return `max_zigzag`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+Example Tree:
+       1
+        \
+         1 (R)
+        / \
+   (L) 1   1 (R)
+        \
+         1 (R)
+          \
+           1 (R)
+
+Tracing from Root (1):
+- Move right to node: path = [R], length = 1
+  - From here, move left: path = [R, L], length = 2
+    - From here, move right: path = [R, L, R], length = 3!
+      - From here, move right (breaks ZigZag): new path = [R], length = 1
+  - From here, move right (breaks ZigZag): new path = [R], length = 1
+
+Maximum ZigZag path found has length = 3 edges (Nodes visited = 4).
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Tree
+- **Input:** `root = [1,null,1,1,1,null,null,1,1,null,1,null,null,null,1]`
+- **Step Trace:**
+  | Node | Edge Taken | `is_left` | Incoming `length` | Continue Branch | Restart Branch | `max_zigzag` |
+  | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+  | Root | - | - | 0 | - | Left(1), Right(1) | 0 |
+  | Right Child | Right | `False` | 1 | Left (`length = 2`) | Right (`length = 1`) | 1 |
+  | Left Grandchild | Left | `True` | 2 | Right (`length = 3`) | Left (`length = 1`) | 2 |
+  | Right G-Grandchild| Right | `False` | 3 | Left (`length = 4`) | Right (`length = 1`) | **3** |
+- **Output:** `3`
+
+#### Example 2: Minimal Tree (Single Node)
+- **Input:** `root = [1]`
+- **Step Trace:**
+  - Neither `root.left` nor `root.right` exists.
+  - `max_zigzag` remains `0`.
+- **Output:** `0`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import Optional
 
 class TreeNode:
-    def __init__(self, val=0, left=None, right=None):
+    def __init__(self, val: int = 0, left: Optional['TreeNode'] = None, right: Optional['TreeNode'] = None):
         self.val = val
         self.left = left
         self.right = right
 
 class Solution:
     def longestZigZag(self, root: Optional[TreeNode]) -> int:
-        self.ans = 0
-
-        def dfs(node: Optional[TreeNode]) -> tuple[int, int]:
+        max_len = 0
+        
+        def dfs(node: Optional[TreeNode], is_left: bool, length: int) -> None:
+            nonlocal max_len
             if not node:
-                return -1, -1  # base case to offset +1 correctly
+                return
+            
+            max_len = max(max_len, length)
+            
+            if is_left:
+                # Came from left: continue by going right, or reset by going left
+                dfs(node.right, False, length + 1)
+                dfs(node.left, True, 1)
+            else:
+                # Came from right: continue by going left, or reset by going right
+                dfs(node.left, True, length + 1)
+                dfs(node.right, False, 1)
+                
+        if root:
+            if root.left:
+                dfs(root.left, True, 1)
+            if root.right:
+                dfs(root.right, False, 1)
+                
+        return max_len
+```
 
-            left = dfs(node.left)
-            right = dfs(node.right)
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <algorithm>
 
-            left_len = 1 + left[1]
-            right_len = 1 + right[0]
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
 
-            self.ans = max(self.ans, left_len, right_len)
+class Solution {
+public:
+    int longestZigZag(TreeNode* root) {
+        int maxLen = 0;
+        if (!root) return 0;
+        if (root->left) dfs(root->left, true, 1, maxLen);
+        if (root->right) dfs(root->right, false, 1, maxLen);
+        return maxLen;
+    }
 
-            return left_len, right_len
+private:
+    void dfs(TreeNode* node, bool isLeft, int length, int& maxLen) {
+        if (!node) return;
 
-        dfs(root)
-        return self.ans
+        maxLen = std::max(maxLen, length);
+
+        if (isLeft) {
+            // Alternate right, or reset left
+            dfs(node->right, false, length + 1, maxLen);
+            dfs(node->left, true, 1, maxLen);
+        } else {
+            // Alternate left, or reset right
+            dfs(node->left, true, length + 1, maxLen);
+            dfs(node->right, false, 1, maxLen);
+        }
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Solution {
+    private int maxLen = 0;
+
+    public int longestZigZag(TreeNode root) {
+        maxLen = 0;
+        if (root == null) return 0;
+
+        if (root.left != null) {
+            dfs(root.left, true, 1);
+        }
+        if (root.right != null) {
+            dfs(root.right, false, 1);
+        }
+
+        return maxLen;
+    }
+
+    private void dfs(TreeNode node, boolean isLeft, int length) {
+        if (node == null) {
+            return;
+        }
+
+        maxLen = Math.max(maxLen, length);
+
+        if (isLeft) {
+            // Continue alternating to right
+            dfs(node.right, false, length + 1);
+            // Restart new sequence to left
+            dfs(node.left, true, 1);
+        } else {
+            // Continue alternating to left
+            dfs(node.left, true, length + 1);
+            // Restart new sequence to right
+            dfs(node.right, false, 1);
+        }
+    }
+}
 ```
 
 ---
 
-## Worked Example
+### Complexity Analysis
 
-### Input Tree
-
-```
-        1
-         \
-          1
-         /
-        1
-         \
-          1
-         /
-        1
-```
-
-### ZigZag Path
-
-```
-Right → Left → Right → Left
-```
-
-### Step-by-Step Evaluation
-
-| Node | left\_len | right\_len |
-| --- | --- | --- |
-| leaf | 0 | 0 |
-| parent | 1 | 0 |
-| parent | 0 | 2 |
-| parent | 3 | 0 |
-
-**Final Answer = 4 edges**
+- **Time Complexity:** $\mathcal{O}(N)$ — Every node in the binary tree is visited at most twice during recursion (once continuing an alternating path, once as a restarted branch). Total work is linear $\mathcal{O}(N)$.
+- **Space Complexity:** $\mathcal{O}(H)$ — Recursion call stack space proportional to tree height $H$. For balanced trees $H = \mathcal{O}(\log N)$, for skewed trees $H = \mathcal{O}(N)$.
 
 ---
 
-## Conceptual Illustration
+### Takeaway Pattern & Interview Traps
 
-![Image](https://assets.leetcode.com/uploads/2020/01/22/sample_1_1702.png)
-
-![Image](https://ninjasfiles.s3.amazonaws.com/asset_0000000000000417_1618599937_path_in_zigzag_tree_example.png)
-
-![Image](https://i.sstatic.net/U7mzd.png)
-
-**Interpretation**
-
-* Each edge alternates direction.
-* The path may start at any depth.
-* DFS ensures every node contributes to the global maximum.
-
----
-
-## Time & Space Complexity
-
-| Metric | Complexity |
-| --- | --- |
-| Time | **O(N)** |
-| Space | **O(H)** (recursion stack) |
-
-Where:
-
-* `N` = number of nodes
-* `H` = height of tree
-
----
-
-## Final Takeaway
-
-* This is a **tree DP problem with direction-aware state**.
-* Track two values per node instead of recomputing paths.
-* Post-order DFS is essential because each node depends on its children.
-
-If you want, I can also:
-
-* Show an **iterative DFS version**
-* Convert this to a **state-diagram explanation**
-* Compare this with similar problems (e.g., alternating paths in graphs)
+1. **Edges vs Nodes Count:** Pay careful attention to the question: it asks for the number of *edges* (or nodes visited $- 1$). A single node path has length $0$, not $1$.
+2. **Remember the Reset Branch:** A common bug is only recursing on the alternating child (`length + 1`) and omitting the same-direction child (`length = 1`). Doing so misses optimal paths that begin midway down a chain of same-direction edges!

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,207 +8,221 @@ tags:
   - leetcode
   - coding
   - trees
+  - bst
+  - amazon
+  - google
 ---
 
 # LeetCode 235: Lowest Common Ancestor of a Binary Search Tree
 
-Below is a structured, interview-ready explanation of **LeetCode 235 – Lowest Common Ancestor of a Binary Search Tree**, aligned with how you have been studying other LeetCode patterns.
+**Target Companies:** Amazon (Top Tier Tree Classic), Google, Meta, Microsoft, Apple  
+**Difficulty:** Medium  
+**Topic:** Binary Search Tree Property / LCA / Iterative Split Search ($\mathcal{O}(1)$ Space)
 
 ---
 
-## LeetCode 235
+### Problem Statement
 
-**Lowest Common Ancestor of a Binary Search Tree**
+Given a binary search tree (BST), find the lowest common ancestor (LCA) node of two given nodes in the BST.
 
----
-
-## 1. Problem Statement
-
-You are given a **Binary Search Tree (BST)** and two nodes `p` and `q`.
-
-The task is to find their **Lowest Common Ancestor (LCA)**.
-
-> **Definition**  
-> The *lowest common ancestor* of two nodes `p` and `q` is the **lowest node in the tree that has both `p` and `q` as descendants** (a node can be a descendant of itself).
-
-### Constraints
-
-* All node values are **unique**
-* `p` and `q` **exist in the BST**
-* Tree is a **valid BST**
+According to the **definition of LCA on Wikipedia**: “The lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in `T` that has both `p` and `q` as descendants (where we allow **a node to be a descendant of itself**).”
 
 ---
 
-## 2. Key Observations
+### Input & Output Formats & Constraints
 
-This problem is **BST-specific**, which dramatically simplifies the solution.
-
-### BST Property
-
-For any node `root`:
-
-* All values in the **left subtree** are `< root.val`
-* All values in the **right subtree** are `> root.val`
-
----
-
-## 3. Core Insight (Most Important)
-
-At any node `root`:
-
-| Condition | Interpretation |
-| --- | --- |
-| `p.val < root.val` **and** `q.val < root.val` | Both nodes lie in **left subtree** |
-| `p.val > root.val` **and** `q.val > root.val` | Both nodes lie in **right subtree** |
-| Otherwise | **Split happens here → this node is the LCA** |
-
-This “**split point**” is the essence of the problem.
+- **Input:** `root: TreeNode`, `p: TreeNode`, `q: TreeNode`
+- **Output:** `TreeNode` (The Lowest Common Ancestor)
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[2, 10^5]$.
+  - $-10^9 \le \text{Node.val} \le 10^9$
+  - All `Node.val` are **unique**.
+  - `p != q`
+  - `p` and `q` will exist in the BST.
 
 ---
 
-## 4. Algorithm (Conceptual)
+### Key Idea & Intuition
 
-1. Start from the `root`
-2. Compare `p.val` and `q.val` with `root.val`
-3. Move:
-
-   * **Left** if both are smaller
-   * **Right** if both are larger
-4. If one is on each side (or one equals root), **current node is LCA**
+- **Binary Search Tree Invariant:**
+  - For any node `curr` in a BST:
+    - Every value in `curr.left` is strictly smaller than `curr.val`.
+    - Every value in `curr.right` is strictly greater than `curr.val`.
+- **The LCA "Split Point":**
+  - Starting from `curr = root`:
+    1. **Both $p$ and $q$ are strictly smaller than `curr.val`:**
+       - Both targets reside exclusively in the left subtree.
+       - Move left: `curr = curr.left`.
+    2. **Both $p$ and $q$ are strictly greater than `curr.val`:**
+       - Both targets reside exclusively in the right subtree.
+       - Move right: `curr = curr.right`.
+    3. **Split Condition ($p.\text{val} \le curr.\text{val} \le q.\text{val}$ or vice versa):**
+       - The paths to $p$ and $q$ diverge here!
+       - One node is in the left subtree (or is `curr` itself), and the other is in the right subtree (or is `curr` itself).
+       - Therefore, `curr` is the **Lowest Common Ancestor**!
+- **$\mathcal{O}(1)$ Auxiliary Space:**
+  - Because this is a guided single-path descent, we do not need recursion or backtracking; a simple while-loop achieves $\mathcal{O}(1)$ extra memory.
 
 ---
 
-## 5. Python 3 Solution (with Typing)
+### Solution Approach (Step-by-Step)
 
+1. Initialize pointer `curr = root`.
+2. Loop while `curr` is not null:
+   - If `p.val < curr.val` and `q.val < curr.val`:
+     - `curr = curr.left`
+   - Else if `p.val > curr.val` and `q.val > curr.val`:
+     - `curr = curr.right`
+   - Else:
+     - Found split point (or one of the target nodes matches `curr`): return `curr`.
+3. Return `None` (should not be reached under problem constraints).
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+BST Example:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+       / \
+      3   5
+
+Query: p = 2, q = 8
+1. Start at curr = 6:
+   - p.val = 2 (< 6)
+   - q.val = 8 (> 6)
+   - Split occurs at 6! Node 6 is the LCA.
+
+Query: p = 2, q = 4
+1. Start at curr = 6:
+   - p.val = 2 (< 6) and q.val = 4 (< 6) -> Move left to 2.
+2. curr = 2:
+   - p.val = 2 (== curr.val) and q.val = 4 (> 2) -> Split!
+   - Node 2 is the LCA (a node can be a descendant of itself).
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Ancestors on Opposite Subtrees
+- **Input:** `root = [6,2,8,0,4,7,9,null,null,3,5], p = 2, q = 8`
+- **Step Trace:**
+  | Step | `curr.val` | `p.val` (2) vs `curr` | `q.val` (8) vs `curr` | Decision |
+  | :--- | :--- | :--- | :--- | :--- |
+  | 1 | 6 | $2 < 6$ (Left) | $8 > 6$ (Right) | Split point reached! Return 6 |
+- **Output:** `6`
+
+#### Example 2: One Node is Ancestor of the Other
+- **Input:** `root = [6,2,8,0,4,7,9,null,null,3,5], p = 2, q = 4`
+- **Step Trace:**
+  | Step | `curr.val` | `p.val` (2) vs `curr` | `q.val` (4) vs `curr` | Decision |
+  | :--- | :--- | :--- | :--- | :--- |
+  | 1 | 6 | $2 < 6$ | $4 < 6$ | Both smaller $\to$ Move left |
+  | 2 | 2 | $2 == 2$ (Root match) | $4 > 2$ (Right) | Split / Match reached! Return 2 |
+- **Output:** `2`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed - $\mathcal{O}(1)$ Space)
 ```python
-from typing import Optional
-
 class TreeNode:
-    def __init__(self, val: int = 0,
-                 left: Optional["TreeNode"] = None,
-                 right: Optional["TreeNode"] = None):
-        self.val = val
-        self.left = left
-        self.right = right
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
 
 class Solution:
-    def lowestCommonAncestor(
-        self,
-        root: TreeNode,
-        p: TreeNode,
-        q: TreeNode
-    ) -> TreeNode:
-
+    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':
         curr = root
-
+        
         while curr:
             if p.val < curr.val and q.val < curr.val:
                 curr = curr.left
             elif p.val > curr.val and q.val > curr.val:
                 curr = curr.right
             else:
+                # Split point: p and q diverge, or one matches curr
                 return curr
+                
+        return root
+```
+
+#### 2. C++ (C++17 / STL - $\mathcal{O}(1)$ Space)
+```cpp
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+};
+
+class Solution {
+public:
+    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+        TreeNode* curr = root;
+
+        while (curr != nullptr) {
+            if (p->val < curr->val && q->val < curr->val) {
+                curr = curr->left;
+            } else if (p->val > curr->val && q->val > curr->val) {
+                curr = curr->right;
+            } else {
+                return curr;
+            }
+        }
+
+        return nullptr;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed - $\mathcal{O}(1)$ Space)
+```java
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode(int x) { val = x; }
+}
+
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        TreeNode curr = root;
+
+        while (curr != null) {
+            if (p.val < curr.val && q.val < curr.val) {
+                curr = curr.left;
+            } else if (p.val > curr.val && q.val > curr.val) {
+                curr = curr.right;
+            } else {
+                return curr;
+            }
+        }
+
+        return null;
+    }
+}
 ```
 
 ---
 
-## 6. Worked-Out Example
+### Complexity Analysis
 
-### Input Tree
-
-```
-        6
-       / \
-      2   8
-     / \ / \
-    0  4 7  9
-      / \
-     3   5
-```
-
-Let:
-
-* `p = 2`
-* `q = 8`
+- **Time Complexity:** $\mathcal{O}(H)$ — We traverse down a single path from root to the LCA node. In a balanced BST, $H = \mathcal{O}(\log N)$; in the worst-case degenerate BST, $H = \mathcal{O}(N)$.
+- **Space Complexity:** $\mathcal{O}(1)$ — The iterative approach requires strictly constant extra memory with no recursion stack frames.
 
 ---
 
-### Step-by-Step Traversal
+### Takeaway Pattern & Interview Traps
 
-| Current Node | p.val | q.val | Decision |
-| --- | --- | --- | --- |
-| `6` | 2 | 8 | Split happens → **LCA found** |
-
-### Answer
-
-```
-LCA = 6
-```
-
----
-
-## 7. Conceptual Illustration (Split Point)
-
-```
-        6   ← LCA
-       / \
-    p=2   q=8
-```
-
-* `p` is in the **left subtree**
-* `q` is in the **right subtree**
-* First node where paths diverge → **LCA**
-
----
-
-## 8. Another Example (Both on Same Side)
-
-### Input
-
-* `p = 2`
-* `q = 4`
-
-Traversal:
-
-```
-6 → left (both < 6)
-2 → split happens (2 ≤ 2 ≤ 4)
-```
-
-### Answer
-
-```
-LCA = 2
-```
-
----
-
-## 9. Complexity Analysis
-
-| Metric | Value |
-| --- | --- |
-| Time Complexity | **O(h)** (tree height) |
-| Space Complexity | **O(1)** (iterative) |
-
-* Balanced BST → `O(log n)`
-* Skewed BST → `O(n)`
-
----
-
-## 10. Key Takeaways (Interview Gold)
-
-* **BST property eliminates recursion/backtracking**
-* LCA is the **first node where paths to p and q diverge**
-* Iterative solution is cleaner and optimal
-* This logic **does NOT work for a general binary tree** (that is LeetCode 236)
-
----
-
-If you want, I can next:
-
-* Contrast **LeetCode 235 vs 236**
-* Show **recursive version**
-* Convert this into a **generic LCA template**
-* Provide **edge-case traps interviewers ask**
-
-Just indicate your preference.
+1. **BST vs General Binary Tree:**
+   - For a general binary tree (LeetCode 236), you must search both subtrees in post-order traversal taking $\mathcal{O}(N)$ time and $\mathcal{O}(H)$ stack space.
+   - For a **BST** (LeetCode 235), use the ordering property to prune an entire half of the tree at each step, operating in $\mathcal{O}(H)$ time and $\mathcal{O}(1)$ space!
+2. **Descendant of Itself:** Remember that LCA allows a node to be a descendant of itself. If `curr.val == p.val`, `curr` is the LCA since `q` is guaranteed to be in its subtree.

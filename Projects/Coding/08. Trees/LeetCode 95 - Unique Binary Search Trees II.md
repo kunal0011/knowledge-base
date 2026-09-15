@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,91 +8,137 @@ tags:
   - leetcode
   - coding
   - trees
+  - dynamic-programming
+  - divide-and-conquer
+  - bst
+  - amazon
+  - google
 ---
 
 # LeetCode 95: Unique Binary Search Trees II
 
-Below is a structured, interview-grade explanation of **LeetCode 95 – Unique Binary Search Trees II**, aligned with how you have been studying recent problems (problem statement → key observation → core concept → typed Python solution → worked example with conceptual illustration).
+**Target Companies:** Google, Amazon, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Divide & Conquer / Catalan Number Generation / BST Construction with Memoization
 
 ---
 
-## LeetCode 95: Unique Binary Search Trees II
+### Problem Statement
+
+Given an integer `n`, return *all the structurally unique **BST's** (binary search trees), which has exactly `n` nodes of unique values from `1` to `n`*. Return the answer in **any order**.
 
 ---
 
-## 1. Problem Statement
+### Input & Output Formats & Constraints
 
-You are given an integer `n`.  
-Generate **all structurally unique Binary Search Trees (BSTs)** that store values from `1` to `n`.
-
-Return all possible BST roots.
-
-### Constraints
-
-* `1 ≤ n ≤ 8`
+- **Input:** `n: int`
+- **Output:** `List[Optional[TreeNode]]` — A list of root nodes representing all structurally unique BSTs.
+- **Constraints:**
+  - $1 \le n \le 8$
 
 ---
 
-## 2. Key Observations
+### Key Idea & Intuition
 
-1. **BST Property**
-
-   * For any node with value `k`:
-
-     * All values in the left subtree must be `< k`
-     * All values in the right subtree must be `> k`
-2. **Root Selection Drives Structure**
-
-   * If we choose `k` as the root:
-
-     * Left subtree must be built from `[1 ... k-1]`
-     * Right subtree must be built from `[k+1 ... n]`
-3. **Independent Subproblems**
-
-   * Left and right subtree constructions are **independent**
-   * For a fixed root `k`, total trees =
-
-     ```
-     (# left subtrees) × (# right subtrees)
-     ```
-4. **Overlapping Subproblems**
-
-   * Same `(start, end)` range is recomputed many times
-   * This is a classic **divide-and-conquer with memoization** scenario
+- **Root Selection Drives Partitioning:**
+  - By the BST property, choosing node $i$ ($1 \le i \le n$) as the root forces:
+    - All nodes in its left subtree to come from the interval $[1, i - 1]$.
+    - All nodes in its right subtree to come from the interval $[i + 1, n]$.
+- **Cartesian Product of Subtrees:**
+  - The construction of the left subtree from $[start, i - 1]$ and right subtree from $[i + 1, end]$ are completely independent subproblems.
+  - If $[start, i - 1]$ produces $L$ unique subtrees and $[i + 1, end]$ produces $R$ unique subtrees, then choosing $i$ as root produces $L \times R$ unique BSTs.
+- **Base Case:**
+  - When $start > end$, the interval is empty, which represents an empty tree: return `[None]` (a list containing a single `null` element). This allows the nested loops over left and right children to execute once.
+- **Memoization:**
+  - Cache results for `(start, end)` ranges to avoid re-generating identical subtree structures.
 
 ---
 
-## 3. Core Concepts Used
+### Solution Approach (Step-by-Step)
 
-### 1. Recursive Tree Construction
-
-We recursively generate all BSTs for a given range `[start, end]`.
-
-### 2. Cartesian Product of Subtrees
-
-For each root `k`, we:
-
-* Generate all possible left subtrees
-* Generate all possible right subtrees
-* Combine **every left** with **every right**
-
-### 3. Base Case (Very Important)
-
-* If `start > end`, return `[None]`
-
-  * This allows valid attachment of empty children
+1. Define `generate(start, end)`:
+   - If `start > end`: return `[None]`.
+   - Initialize `all_trees = []`.
+   - For root value $i$ from `start` to `end`:
+     - `left_trees = generate(start, i - 1)`
+     - `right_trees = generate(i + 1, end)`
+     - For each `l` in `left_trees`:
+       - For each `r` in `right_trees`:
+         - `curr_root = TreeNode(i)`
+         - `curr_root.left = l`
+         - `curr_root.right = r`
+         - `all_trees.append(curr_root)`
+   - Return `all_trees`.
+2. Call `generate(1, n)` and return the list.
 
 ---
 
-## 4. Python 3 Solution (With Typing)
+### Visual Algorithm Walkthrough
 
+```
+For n = 3: Range [1, 3]
+
+1. Choose i = 1 as root:
+   - Left range: [1, 0] -> [None]
+   - Right range: [2, 3] -> 2 unique subtrees:
+     (a) 2 -> right 3       (b) 3 -> left 2
+   - Combined Trees:
+         1             1
+          \             \
+           2      and    3
+            \           /
+             3         2
+
+2. Choose i = 2 as root:
+   - Left range: [1, 1] -> [Node(1)]
+   - Right range: [3, 3] -> [Node(3)]
+   - Combined Tree:
+         2
+        / \
+       1   3
+
+3. Choose i = 3 as root:
+   - Left range: [1, 2] -> 2 unique subtrees:
+     (a) 1 -> right 2       (b) 2 -> left 1
+   - Right range: [4, 3] -> [None]
+   - Combined Trees:
+         3             3
+        /             /
+       1      and    2
+        \           /
+         2         1
+
+Total unique trees for n = 3: 2 + 1 + 2 = 5 (Catalan number C_3 = 5).
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: $n = 1$
+- **Input:** `n = 1`
+- **Tracing:** `i = 1`, left returns `[None]`, right returns `[None]`. One tree: `[1]`.
+- **Output:** `[[1]]`
+
+#### Example 2: $n = 3$
+- **Total Trees Generated:** 5
+- **Representations:**
+  1. `[1,null,2,null,3]`
+  2. `[1,null,3,2]`
+  3. `[2,1,3]`
+  4. `[3,1,null,null,2]`
+  5. `[3,2,null,1]`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional
 
 class TreeNode:
-    def __init__(self, val: int = 0,
-                 left: Optional["TreeNode"] = None,
-                 right: Optional["TreeNode"] = None):
+    def __init__(self, val: int = 0, left: Optional['TreeNode'] = None, right: Optional['TreeNode'] = None):
         self.val = val
         self.left = left
         self.right = right
@@ -101,153 +147,144 @@ class Solution:
     def generateTrees(self, n: int) -> List[Optional[TreeNode]]:
         if n == 0:
             return []
-
-        memo: Dict[Tuple[int, int], List[Optional[TreeNode]]] = {}
-
-        def build(start: int, end: int) -> List[Optional[TreeNode]]:
+            
+        memo = {}
+        
+        def generate(start: int, end: int) -> List[Optional[TreeNode]]:
             if start > end:
                 return [None]
-
             if (start, end) in memo:
                 return memo[(start, end)]
-
-            result: List[Optional[TreeNode]] = []
-
-            for root_val in range(start, end + 1):
-                left_trees = build(start, root_val - 1)
-                right_trees = build(root_val + 1, end)
-
-                for left in left_trees:
-                    for right in right_trees:
-                        root = TreeNode(root_val)
+                
+            trees = []
+            for i in range(start, end + 1):
+                # All possible left subtrees
+                left_subtrees = generate(start, i - 1)
+                # All possible right subtrees
+                right_subtrees = generate(i + 1, end)
+                
+                # Cartesian product of left and right subtrees
+                for left in left_subtrees:
+                    for right in right_subtrees:
+                        root = TreeNode(i)
                         root.left = left
                         root.right = right
-                        result.append(root)
+                        trees.append(root)
+                        
+            memo[(start, end)] = trees
+            return trees
+            
+        return generate(1, n)
+```
 
-            memo[(start, end)] = result
-            return result
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <map>
 
-        return build(1, n)
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
+
+class Solution {
+public:
+    std::vector<TreeNode*> generateTrees(int n) {
+        if (n == 0) return {};
+        return generate(1, n);
+    }
+
+private:
+    std::vector<TreeNode*> generate(int start, int end) {
+        if (start > end) {
+            return {nullptr};
+        }
+
+        std::vector<TreeNode*> allTrees;
+        for (int i = start; i <= end; ++i) {
+            std::vector<TreeNode*> leftSubtrees = generate(start, i - 1);
+            std::vector<TreeNode*> rightSubtrees = generate(i + 1, end);
+
+            for (auto left : leftSubtrees) {
+                for (auto right : rightSubtrees) {
+                    TreeNode* root = new TreeNode(i);
+                    root->left = left;
+                    root->right = right;
+                    allTrees.push_back(root);
+                }
+            }
+        }
+        return allTrees;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.*;
+
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Solution {
+    public List<TreeNode> generateTrees(int n) {
+        if (n == 0) {
+            return new ArrayList<>();
+        }
+        return generate(1, n);
+    }
+
+    private List<TreeNode> generate(int start, int end) {
+        List<TreeNode> allTrees = new ArrayList<>();
+        if (start > end) {
+            allTrees.add(null);
+            return allTrees;
+        }
+
+        for (int i = start; i <= end; i++) {
+            List<TreeNode> leftSubtrees = generate(start, i - 1);
+            List<TreeNode> rightSubtrees = generate(i + 1, end);
+
+            for (TreeNode left : leftSubtrees) {
+                for (TreeNode right : rightSubtrees) {
+                    TreeNode root = new TreeNode(i);
+                    root.left = left;
+                    root.right = right;
+                    allTrees.add(root);
+                }
+            }
+        }
+        return allTrees;
+    }
+}
 ```
 
 ---
 
-## 5. Worked Example (n = 3)
+### Complexity Analysis
 
-### Step 1: Choose Root = 1
-
-* Left range: `[]` → `[None]`
-* Right range: `[2, 3]`
-
-Right subtree possibilities:
-
-```
-   2          3
-    \        /
-     3      2
-```
-
-Generated trees:
-
-```
-1           1
- \           \
-  2           3
-   \         /
-    3       2
-```
+- **Time Complexity:** $\mathcal{O}(n \cdot C_n)$ where $C_n = \frac{1}{n+1} \binom{2n}{n}$ is the $n$-th Catalan number. For $n = 8$, $C_8 = 1430$, resulting in $\approx 8 \times 1430 \approx 1.1 \times 10^4$ operations.
+- **Space Complexity:** $\mathcal{O}(n \cdot C_n)$ to store all $C_n$ distinct generated trees, each having $n$ nodes.
 
 ---
 
-### Step 2: Choose Root = 2
+### Takeaway Pattern & Interview Traps
 
-* Left range: `[1]`
-* Right range: `[3]`
-
-Only one combination:
-
-```
-   2
-  / \
- 1   3
-```
-
----
-
-### Step 3: Choose Root = 3
-
-* Left range: `[1, 2]`
-* Right range: `[]`
-
-Left subtree possibilities:
-
-```
-   1          2
-    \        /
-     2      1
-```
-
-Generated trees:
-
-```
-     3          3
-    /          /
-   1          2
-    \        /
-     2      1
-```
-
----
-
-## 6. Conceptual Illustration (Recursive Decomposition)
-
-```
-build(1, 3)
-├── root = 1
-│   ├── left = build(1, 0) → [None]
-│   └── right = build(2, 3)
-│
-├── root = 2
-│   ├── left = build(1, 1)
-│   └── right = build(3, 3)
-│
-└── root = 3
-    ├── left = build(1, 2)
-    └── right = build(4, 3) → [None]
-```
-
-Each node combines **all left × all right** trees.
-
----
-
-## 7. Complexity Analysis
-
-* **Time Complexity:**  
-  Catalan number growth  
-  [  
-  O(C\_n) \approx O\left(\frac{4^n}{n^{3/2}}\right)  
-  ]
-* **Space Complexity:**
-
-  * Recursion stack: `O(n)`
-  * Memoized trees: `O(C_n)`
-
----
-
-## 8. Key Takeaways (Interview Ready)
-
-* This is **not DP over integers**, but **DP over tree structures**
-* Core trick: return `[None]` for empty ranges
-* This problem is the **constructive version** of LeetCode 96
-* Pattern: **Divide & Combine with Memoization**
-
----
-
-If you want, next we can:
-
-* Contrast **LeetCode 95 vs 96**
-* Visualize memo table usage
-* Rewrite this using bottom-up DP (conceptual)
-* Convert output to level-order arrays for debugging
-
-Tell me how you want to proceed.
+1. **Base Case Trap (`[None]` vs `[]`):** Returning an empty list `[]` when `start > end` causes the inner `for left in left_trees:` or `for right in right_trees:` loops to never execute, resulting in $0$ trees generated! You must return `[None]` so that `None` is attached as a null child.
+2. **Distinction from LeetCode 96:**
+   - LeetCode 96 asks only for the **count** of unique trees, solved via 1D dynamic programming in $\mathcal{O}(n^2)$ time and $\mathcal{O}(n)$ space.
+   - LeetCode 95 asks for the **actual trees**, necessitating structural generation and Cartesian product branching.

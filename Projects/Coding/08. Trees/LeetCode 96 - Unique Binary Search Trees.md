@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,196 +8,190 @@ tags:
   - leetcode
   - coding
   - trees
+  - dynamic-programming
+  - math
+  - amazon
+  - google
 ---
 
 # LeetCode 96: Unique Binary Search Trees
 
-Below is a structured, interview-ready explanation of **LeetCode 96 – Unique Binary Search Trees**, aligned with your usual format.
+**Target Companies:** Google, Amazon, Meta, Microsoft, Apple  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Catalan Numbers / Combinatorial Decomposition
 
 ---
 
-## 📘 LeetCode 96: Unique Binary Search Trees
+### Problem Statement
 
-### 🔹 Problem Statement
-
-Given an integer `n`, return the **number of structurally unique Binary Search Trees (BSTs)** that can be formed using values from `1` to `n`.
-
-A BST must satisfy:
-
-* All nodes in the left subtree are **less than** the root.
-* All nodes in the right subtree are **greater than** the root.
-* Both subtrees are themselves BSTs.
+Given an integer `n`, return the number of structurally unique **BST's** (binary search trees) which has exactly `n` nodes of unique values from `1` to `n`.
 
 ---
 
-## 🔹 Key Observation & Core Concepts
+### Input & Output Formats & Constraints
 
-### 1. **Choice of Root Decomposes the Problem**
+- **Input:** `n: int`
+- **Output:** `int` — Total count of structurally unique BSTs.
+- **Constraints:**
+  - $1 \le n \le 19$
 
-If we choose a number `i` (1 ≤ i ≤ n) as the root:
+---
 
-* Left subtree will contain values `[1 … i-1]`
-* Right subtree will contain values `[i+1 … n]`
+### Key Idea & Intuition
 
-Let:
+- **Subproblem Decomposition by Root Choice:**
+  - Let $G(n)$ be the total number of structurally unique BSTs that can be formed using $n$ distinct keys.
+  - If we choose key $i$ ($1 \le i \le n$) as the root of the tree:
+    - Keys $\{1, 2, \dots, i - 1\}$ must form the left subtree (size $i - 1$).
+    - Keys $\{i + 1, i + 2, \dots, n\}$ must form the right subtree (size $n - i$).
+  - Because any valid left subtree can be paired with any valid right subtree independently, the number of unique BSTs with root $i$ is:
+    $$F(i, n) = G(i - 1) \times G(n - i)$$
+- **Catalan Number Recurrence:**
+  - Summing over all possible roots $i \in [1, n]$:
+    $$G(n) = \sum_{i=1}^n G(i - 1) \times G(n - i)$$
+  - **Base Cases:**
+    - $G(0) = 1$: An empty subtree is a single unique valid BST structure (null pointer).
+    - $G(1) = 1$: A single node forms exactly 1 unique BST.
+  - This sequence generates the Catalan numbers $C_n = \frac{1}{n+1} \binom{2n}{n}$.
 
-* `L = number of nodes in left subtree = i - 1`
-* `R = number of nodes in right subtree = n - i`
+---
 
-The number of unique BSTs with root `i` is:
+### Solution Approach (Step-by-Step)
+
+1. Initialize an array `dp` of size $n + 1$ with zeros.
+2. Set base cases: `dp[0] = 1`, `dp[1] = 1`.
+3. Loop `length` from $2$ to $n$:
+   - Loop `root` from $1$ to `length`:
+     - `left = root - 1`
+     - `right = length - root`
+     - `dp[length] += dp[left] * dp[right]`
+4. Return `dp[n]`.
+
+---
+
+### Visual Algorithm Walkthrough
 
 ```
-(number of left BSTs) × (number of right BSTs)
-= dp[L] × dp[R]
-```
+Computing G(3):
+Possible roots: 1, 2, 3
 
----
+1. Root = 1:
+   - Left subtree size: 0  -> dp[0] = 1
+   - Right subtree size: 2 -> dp[2] = 2
+   - Contribution: 1 * 2 = 2
 
-### 2. **Independence of Subproblems**
+2. Root = 2:
+   - Left subtree size: 1  -> dp[1] = 1
+   - Right subtree size: 1 -> dp[1] = 1
+   - Contribution: 1 * 1 = 1
 
-* Left and right subtrees are **independent**
-* Any valid left subtree can be combined with any valid right subtree
+3. Root = 3:
+   - Left subtree size: 2  -> dp[2] = 2
+   - Right subtree size: 0 -> dp[0] = 1
+   - Contribution: 2 * 1 = 2
 
-This is a classic **Cartesian product** situation.
-
----
-
-### 3. **Catalan Number Structure**
-
-The recurrence relation matches the **Catalan numbers**:
-
-[  
-dp[n] = \sum\_{i=1}^{n} dp[i-1] \times dp[n-i]  
-]
-
-Where:
-
-* `dp[n]` = number of unique BSTs using `n` nodes
-
----
-
-### 4. **Base Case**
-
-* `dp[0] = 1` → empty tree is a valid BST
-* `dp[1] = 1` → only one possible tree
-
----
-
-## 🔹 Dynamic Programming State Definition
-
-| State | Meaning |
-| --- | --- |
-| `dp[k]` | Number of unique BSTs formed using `k` nodes |
-
----
-
-## 🔹 State Transition
-
-For each `n`:
-
-```
-dp[n] = Σ dp[left_nodes] × dp[right_nodes]
-       where left_nodes = i - 1
-             right_nodes = n - i
-             i ranges from 1 to n
+Total dp[3] = 2 + 1 + 2 = 5 unique BSTs.
 ```
 
 ---
 
-## 🔹 Python 3 Solution (with typing)
+### Solved Examples with Multiple Inputs
 
+#### Example 1: $n = 3$
+- **Input:** `n = 3`
+- **DP State Evaluation Table:**
+  | $n$ | Summation Breakdown ($\sum dp[i-1] \times dp[n-i]$) | $dp[n]$ |
+  | :--- | :--- | :--- |
+  | 0 | Base case (empty tree) | 1 |
+  | 1 | Base case (single node) | 1 |
+  | 2 | $dp[0] \times dp[1] + dp[1] \times dp[0] = 1 \times 1 + 1 \times 1$ | 2 |
+  | 3 | $dp[0] \times dp[2] + dp[1] \times dp[1] + dp[2] \times dp[0] = 1 \cdot 2 + 1 \cdot 1 + 2 \cdot 1$ | **5** |
+- **Output:** `5`
+
+#### Example 2: $n = 4$
+- **Calculation:**
+  $$dp[4] = dp[0]dp[3] + dp[1]dp[2] + dp[2]dp[1] + dp[3]dp[0] = 1(5) + 1(2) + 2(1) + 5(1) = 14$$
+- **Output:** `14`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
-from typing import List
-
 class Solution:
     def numTrees(self, n: int) -> int:
-        # dp[i] = number of unique BSTs with i nodes
-        dp: List[int] = [0] * (n + 1)
+        # dp[i] stores the number of unique BSTs of length i
+        dp = [0] * (n + 1)
+        dp[0] = 1
+        dp[1] = 1
         
-        dp[0] = 1  # empty tree
-        dp[1] = 1  # single node
-        
-        for nodes in range(2, n + 1):
-            total = 0
-            for root in range(1, nodes + 1):
+        for length in range(2, n + 1):
+            for root in range(1, length + 1):
                 left = root - 1
-                right = nodes - root
-                total += dp[left] * dp[right]
-            dp[nodes] = total
-        
+                right = length - root
+                dp[length] += dp[left] * dp[right]
+                
         return dp[n]
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
 
-## 🔹 Worked Example: `n = 3`
+class Solution {
+public:
+    int numTrees(int n) {
+        std::vector<int> dp(n + 1, 0);
+        dp[0] = 1;
+        dp[1] = 1;
 
-### Step 1: Initialize
+        for (int length = 2; length <= n; ++length) {
+            for (int root = 1; root <= length; ++root) {
+                int left = root - 1;
+                int right = length - root;
+                dp[length] += dp[left] * dp[right];
+            }
+        }
 
-```
-dp[0] = 1
-dp[1] = 1
-```
-
----
-
-### Step 2: Compute `dp[2]`
-
-| Root | Left Nodes | Right Nodes | Count |
-| --- | --- | --- | --- |
-| 1 | 0 | 1 | 1 × 1 = 1 |
-| 2 | 1 | 0 | 1 × 1 = 1 |
-
-```
-dp[2] = 2
-```
-
----
-
-### Step 3: Compute `dp[3]`
-
-| Root | Left Nodes | Right Nodes | Count |
-| --- | --- | --- | --- |
-| 1 | 0 | 2 | 1 × 2 = 2 |
-| 2 | 1 | 1 | 1 × 1 = 1 |
-| 3 | 2 | 0 | 2 × 1 = 2 |
-
-```
-dp[3] = 5
+        return dp[n];
+    }
+};
 ```
 
----
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int numTrees(int n) {
+        int[] dp = new int[n + 1];
+        dp[0] = 1;
+        dp[1] = 1;
 
-## 🔹 Conceptual Illustration (Tree Structures for n = 3)
+        for (int length = 2; length <= n; length++) {
+            for (int root = 1; root <= length; root++) {
+                int left = root - 1;
+                int right = length - root;
+                dp[length] += dp[left] * dp[right];
+            }
+        }
 
-![Image](https://assets.leetcode.com/uploads/2021/01/18/uniquebstn3.jpg)
-
-![Image](https://media.geeksforgeeks.org/wp-content/uploads/20250904151404252799/bst2.webp)
-
-![Image](https://ds055uzetaobb.cloudfront.net/brioche/uploads/TJiRcSyFDm-binarytrees.png?width=1200)
-
-Each distinct shape corresponds to a valid BST configuration.  
-The count of such shapes is exactly the Catalan number `C₃ = 5`.
+        return dp[n];
+    }
+}
+```
 
 ---
 
-## 🔹 Complexity Analysis
+### Complexity Analysis
 
-| Metric | Value |
-| --- | --- |
-| Time Complexity | **O(n²)** |
-| Space Complexity | **O(n)** |
+- **Time Complexity:** $\mathcal{O}(n^2)$ — Outer loop runs from $2$ to $n$. Inner loop runs $length$ times. Total iterations $= \sum_{k=2}^n k = \frac{n(n+1)}{2} - 1 = \mathcal{O}(n^2)$. For $n \le 19$, operations $\le 200$, effectively instantaneous.
+  *(Note: Using the closed-form Catalan formula $C_n = \frac{1}{n+1} \binom{2n}{n}$ solves the problem in $\mathcal{O}(n)$ time and $\mathcal{O}(1)$ space).*
+- **Space Complexity:** $\mathcal{O}(n)$ — 1D dynamic programming table of size $n + 1$.
 
 ---
 
-## 🔹 Interview Takeaways
+### Takeaway Pattern & Interview Traps
 
-* This problem is a **canonical DP + Catalan number** question.
-* The crucial insight is **fixing the root and multiplying independent subtree counts**.
-* Appears frequently as a foundation for harder BST construction problems (e.g., LeetCode 95).
-
-If you want, I can also:
-
-* Derive the **direct Catalan formula**
-* Show a **recursive + memoization** version
-* Connect this to **LeetCode 95 (Generate BSTs)** structurally
+1. **The Empty Tree Base Case:** $dp[0] = 1$ is mandatory. If $dp[0]$ were initialized to $0$, any tree whose left or right subtree was empty would multiply by zero and wipe out the valid configurations of the opposing subtree.
+2. **Values Don't Matter, Count Does:** Whether keys are $\{1, 2, 3\}$ or $\{100, 200, 300\}$, any set of $k$ sorted distinct numbers produces the exact same number of unique BST structures: $G(k)$.
+3. **Difference from LeetCode 95:** LeetCode 96 asks only for the count ($G(n)$), while LeetCode 95 asks for all actual tree instances.

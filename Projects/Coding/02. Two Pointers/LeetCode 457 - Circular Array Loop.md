@@ -1,5 +1,5 @@
 ---
-date: "2025-12-22"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Two Pointers"
 folder: "02. Two Pointers"
@@ -8,184 +8,277 @@ tags:
   - leetcode
   - coding
   - two-pointers
+  - floyds-tortoise-and-hare
+  - cycle-detection
+  - google
+  - amazon
 ---
 
 # LeetCode 457: Circular Array Loop
 
-Below is a **complete, interview-grade explanation** of **LeetCode 457 – Circular Array Loop**, structured exactly as requested.
+**Target Companies:** Google, Amazon, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Fast & Slow Pointers / Floyd's Cycle Detection / In-Place Path Marking  
 
 ---
 
-## 📌 Problem Statement (LeetCode 457)
+### Problem Statement
 
-You are given a **circular integer array** `nums` of length `n`.  
-Each element `nums[i]` represents the number of steps to move forward (positive) or backward (negative) from index `i`.
+You are playing a game involving a **circular** array of non-zero integers `nums` of length $n$. Each `nums[i]` represents the number of indices forward/backward you must jump from index $i$:
+- If `nums[i] > 0`, move `nums[i]` steps forward.
+- If `nums[i] < 0`, move `nums[i]` steps backward.
+
+Because the array is circular, jumping past the last element wraps around to the beginning, and jumping backward past the first element wraps around to the end.
 
 A **valid loop** must satisfy:
+1. Every movement in the loop follows the **same direction** (all positive or all negative).
+2. The loop contains **more than 1** element (a 1-element loop jumping to itself is invalid).
 
-1. The loop length is **greater than 1**
-2. All movements are in the **same direction** (all positive or all negative)
-3. The loop is **circular** (wrap-around allowed)
-
-Return `True` if such a loop exists, otherwise `False`.
+Return `true` if there is a cycle in `nums`, or `false` otherwise.
 
 ---
 
-## 🔑 Key Observations
+### Input & Output Formats & Constraints
 
-1. **Circular movement**
-
-   * Index calculation must be done using modulo:
-
-     ```
-     next = (current + nums[current]) % n
-     ```
-2. **Direction consistency**
-
-   * Once direction is chosen (positive or negative), it must remain the same throughout the loop.
-   * Mixed directions invalidate the loop.
-3. **Self-loop is invalid**
-
-   * A move that points back to itself (cycle length = 1) is **not allowed**.
-4. **Cycle detection**
-
-   * This is a classic **cycle detection** problem → use **Floyd’s Tortoise & Hare (two-pointer)** technique.
+- **Input:** `nums: List[int]`
+- **Output:** `bool` (`True` if valid loop exists, `False` otherwise)
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 5000$
+  - $-1000 \le \text{nums}[i] \le 1000$
+  - $\text{nums}[i] \ne 0$
 
 ---
 
-## 🧠 Two Pointer Technique (Why It Works)
+### Key Idea & Intuition
 
-* Use:
+This is **Floyd's Tortoise and Hare** algorithm applied on a functional graph with two critical constraints:
+1. **Unidirectional Constraint:** Every hop along the path must maintain `nums[curr] * nums[next] > 0`. If a hop flips sign, that path cannot form a valid cycle.
+2. **Cycle Length > 1:** If `curr == get_next(curr)`, it's a self-loop (e.g. `nums[i] % n == 0`), which is explicitly forbidden.
 
-  * `slow`: moves 1 step at a time
-  * `fast`: moves 2 steps at a time
-* If a cycle exists, `slow` and `fast` **must meet**
-* Abort if:
-
-  * Direction changes
-  * A self-loop is detected
-
-This gives:
-
-* **O(n)** time
-* **O(1)** space
+#### How to Guarantee $O(N)$ Time Complexity
+A naive fast/slow pointer run from each index $i$ could take $O(N^2)$ if paths overlap. To achieve true $O(N)$ time:
+- Once a path starting at $i$ is verified to contain no valid loop, we mark all nodes along that trajectory with `0`.
+- Because the problem guarantees $\text{nums}[i] \ne 0$, an encountered `0` denotes an already-failed path and can be skipped immediately!
 
 ---
 
-## 🧩 Algorithm
+### Solution Approach (Step-by-Step)
 
-For each index `i`:
-
-1. Set direction (`is_forward`)
-2. Initialize `slow = i`, `fast = i`
-3. Move pointers while direction remains consistent
-4. If `slow == fast`:
-
-   * Ensure it is **not a self-loop**
-   * Return `True`
-5. Otherwise continue
-6. If all indices checked → return `False`
+1. Helper `next_pos(i)`: returns `((i + nums[i]) % n + n) % n`.
+2. For each index $i \in [0, n - 1]$:
+   - If `nums[i] == 0`, skip (already visited).
+   - Initialize `slow = i`, `fast = next_pos(i)`.
+   - Direction test: ensure `nums[i] * nums[slow] > 0` and `nums[i] * nums[fast] > 0` and `nums[i] * nums[next_pos(fast)] > 0`.
+   - Advance `slow` by 1 step, `fast` by 2 steps while directions remain identical.
+   - If `slow == fast`:
+     - Check if it's a self-loop: if `slow == next_pos(slow)`, break (invalid).
+     - Otherwise, return `true`.
+   - If loop terminates without a valid cycle, mark all elements reachable from $i$ in the same direction as `0` to prevent redundant re-exploration.
+3. Return `false` if all indices are exhausted.
 
 ---
 
-## 🧪 Worked Example
+### Visual Algorithm Walkthrough
 
-### Input
+```
+nums = [2, -1, 1, 2, 2], n = 5
 
-```text
-nums = [2, -1, 1, 2, 2]
+Index:     0   1   2   3   4
+Value:     2  -1   1   2   2
+
+Start at index 0 (value > 0, forward direction):
+- slow = 0 -> next_pos(0) = (0 + 2) % 5 = 2
+- fast = next_pos(0) = 2 -> next_pos(2) = (2 + 1) % 5 = 3
+
+Round 1:
+  slow is at 2 (val = 1 > 0)
+  fast is at 3 (val = 2 > 0)
+  Advance slow -> next_pos(2) = 3
+  Advance fast -> next_pos(3) = 0, then next_pos(0) = 2
+  slow = 3, fast = 2
+
+Round 2:
+  Advance slow -> next_pos(3) = 0
+  Advance fast -> next_pos(2) = 3, then next_pos(3) = 0
+  slow = 0, fast = 0 -> slow == fast! (Cycle Detected!)
+
+Self-loop Check:
+  Is slow == next_pos(slow)?
+  slow = 0, next_pos(0) = 2. 0 != 2 -> Cycle length > 1.
+  Direction: 0 -> 2 (1 > 0) -> 3 (2 > 0) -> 0 (2 > 0). All positive!
+
+Result: Return True!
 ```
 
-### Step-by-step
+---
 
-* Start at index `0`, direction = positive
-* Moves:
+### Solved Examples with Multiple Inputs
 
-  ```
-  0 → 2 → 3 → 0
-  ```
-* Loop length = 3
-* Direction consistent
-* Valid cycle found ✅
+#### Example 1: Valid Forward Cycle
+- **Input:** `nums = [2, -1, 1, 2, 2]`
+- **Cycle:** $0 \to 2 \to 3 \to 0$ (length 3, all $> 0$).
+- **Output:** `true`
 
-**Output:** `True`
+#### Example 2: Invalid Self-Loop
+- **Input:** `nums = [-1, 2]`
+- **Trace:**
+  - Index 0: `(-1 + (-1)) % 2 = 0`. Jumps to itself! Cycle length = 1. Invalid.
+  - Index 1: `(1 + 2) % 2 = 1`. Jumps to itself! Cycle length = 1. Invalid.
+- **Output:** `false`
+
+#### Example 3: Mixed Direction Cycle (Invalid)
+- **Input:** `nums = [-2, 1, -1, -2, -2]`
+- **Trace:**
+  - Cycle involves index 1 (positive) and index 2 (negative).
+  - Direction constraint violated.
+- **Output:** `false`
 
 ---
 
-## 🧑‍💻 Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def circularArrayLoop(self, nums: List[int]) -> bool:
         n = len(nums)
-
-        def next_index(curr: int) -> int:
-            return (curr + nums[curr]) % n
-
+        
+        def get_next(i: int) -> int:
+            return ((i + nums[i]) % n + n) % n
+            
         for i in range(n):
+            if nums[i] == 0:
+                continue
+                
             slow = i
-            fast = i
-            is_forward = nums[i] > 0
-
-            while True:
-                # move slow pointer once
-                next_slow = next_index(slow)
-                if nums[next_slow] > 0 != is_forward:
-                    break
-
-                # move fast pointer twice
-                next_fast = next_index(fast)
-                if nums[next_fast] > 0 != is_forward:
-                    break
-
-                next_fast2 = next_index(next_fast)
-                if nums[next_fast2] > 0 != is_forward:
-                    break
-
-                slow = next_slow
-                fast = next_fast2
-
-                # cycle detected
+            fast = get_next(i)
+            direction = nums[i]
+            
+            # Floyd's Tortoise and Hare
+            while (nums[slow] * direction > 0 and 
+                   nums[fast] * direction > 0 and 
+                   nums[get_next(fast)] * direction > 0):
                 if slow == fast:
-                    # check for self-loop
-                    if slow == next_index(slow):
+                    # Self-loop check (cycle length 1)
+                    if slow == get_next(slow):
                         break
                     return True
-
+                slow = get_next(slow)
+                fast = get_next(get_next(fast))
+                
+            # Mark all nodes in this invalid path as 0
+            curr = i
+            while nums[curr] * direction > 0:
+                nxt = get_next(curr)
+                nums[curr] = 0
+                curr = nxt
+                
         return False
+```
+
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+
+class Solution {
+public:
+    bool circularArrayLoop(std::vector<int>& nums) {
+        int n = nums.size();
+        
+        auto getNext = [&](int i) {
+            return ((i + nums[i]) % n + n) % n;
+        };
+
+        for (int i = 0; i < n; ++i) {
+            if (nums[i] == 0) continue;
+            
+            int slow = i;
+            int fast = getNext(i);
+            int direction = nums[i];
+
+            while (nums[slow] * direction > 0 &&
+                   nums[fast] * direction > 0 &&
+                   nums[getNext(fast)] * direction > 0) {
+                if (slow == fast) {
+                    if (slow == getNext(slow)) {
+                        break; // Self loop
+                    }
+                    return true;
+                }
+                slow = getNext(slow);
+                fast = getNext(getNext(fast));
+            }
+
+            // Mark invalid path as 0
+            int curr = i;
+            while (nums[curr] * direction > 0) {
+                int nxt = getNext(curr);
+                nums[curr] = 0;
+                curr = nxt;
+            }
+        }
+        return false;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public boolean circularArrayLoop(int[] nums) {
+        int n = nums.length;
+
+        for (int i = 0; i < n; i++) {
+            if (nums[i] == 0) continue;
+
+            int slow = i;
+            int fast = getNext(nums, i);
+            int direction = nums[i];
+
+            while (nums[slow] * direction > 0 &&
+                   nums[fast] * direction > 0 &&
+                   nums[getNext(nums, fast)] * direction > 0) {
+                if (slow == fast) {
+                    if (slow == getNext(nums, slow)) {
+                        break; // Self loop of length 1
+                    }
+                    return true;
+                }
+                slow = getNext(nums, slow);
+                fast = getNext(nums, getNext(nums, fast));
+            }
+
+            // Invalidate explored nodes to maintain O(N)
+            int curr = i;
+            while (nums[curr] * direction > 0) {
+                int next = getNext(nums, curr);
+                nums[curr] = 0;
+                curr = next;
+            }
+        }
+        return false;
+    }
+
+    private int getNext(int[] nums, int i) {
+        int n = nums.length;
+        return ((i + nums[i]) % n + n) % n;
+    }
+}
 ```
 
 ---
 
-## ⏱️ Complexity Analysis
+### Complexity Analysis
 
-| Metric | Value |
-| --- | --- |
-| Time | **O(n)** |
-| Space | **O(1)** |
+- **Time Complexity:** $O(N)$ — Each node is marked as `0` as soon as it is identified as part of a dead-end or non-looping path. Thus, each index is processed a constant number of times.
+- **Space Complexity:** $O(1)$ — Modifies `nums` in-place using pointer variables with zero additional memory allocation.
 
 ---
 
-## 🎯 Key Takeaway
+### Takeaway Pattern & Interview Traps
 
-* This problem is **cycle detection with constraints**
-* The **two-pointer technique** is optimal because:
-
-  * No extra memory
-  * Clean handling of circular movement
-* Always enforce:
-
-  * Same direction
-  * Loop length > 1
-
----
-
-If you want, I can also provide:
-
-* A **dry-run table**
-* **Why marking visited works but is inferior**
-* **Comparison with DFS approach**
-
-Just tell me.
+- **Pattern:** Floyd's Cycle Finding on Dynamic Functional Graphs + In-Place Graph Poisoning (marking dead components with 0).
+- **Trap:** Forgetting that modulo in C++ and Java can produce negative numbers when `(i + nums[i]) < 0`. Always use `((i + nums[i]) % n + n) % n`.
+- **Trap:** Not checking for 1-node loops (`nums[i] % n == 0`), which are explicitly invalid under the problem statement.

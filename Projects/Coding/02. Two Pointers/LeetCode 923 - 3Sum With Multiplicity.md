@@ -1,5 +1,5 @@
 ---
-date: "2025-12-23"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Two Pointers"
 folder: "02. Two Pointers"
@@ -8,253 +8,299 @@ tags:
   - leetcode
   - coding
   - two-pointers
+  - combinatorics
+  - counting
+  - google
+  - amazon
 ---
 
 # LeetCode 923: 3Sum With Multiplicity
 
-Below is a **complete, structured explanation** of **LeetCode 923 – 3Sum With Multiplicity**, tailored for algorithmic clarity and interview readiness.
+**Target Companies:** Google, Amazon, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Two Pointers / Combinatorics with Multiplicity Deduplication  
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-You are given an integer array `arr` and an integer `target`.
+Given an integer array `arr`, and an integer `target`, return the number of tuples `(i, j, k)` such that:
+- $0 \le i < j < k < \text{arr.length}$
+- `arr[i] + arr[j] + arr[k] == target`
 
-Return the **number of tuples** `(i, j, k)` such that:
-
-* `0 <= i < j < k < len(arr)`
-* `arr[i] + arr[j] + arr[k] == target`
-
-Since the answer can be very large, return it **modulo 10⁹ + 7**.
+As the answer can be very large, return it **modulo $10^9 + 7$**.
 
 ---
 
-## 2. Key Observations
+### Input & Output Formats & Constraints
 
-1. **Order matters by index, not by value**
-
-   * We count distinct index triples, not unique value triples.
-2. **Array length is small enough to sort**
-
-   * `len(arr) ≤ 3000`
-   * Sorting enables a **two-pointer strategy**.
-3. **Duplicates are the core challenge**
-
-   * Unlike classic 3Sum, duplicates must be counted using **combinatorics**.
-4. **Brute force is infeasible**
-
-   * `O(n³)` → ~27 billion operations in worst case.
+- **Input:** `arr: List[int]`, `target: int`
+- **Output:** `int` (total valid index triplets modulo $10^9 + 7$)
+- **Constraints:**
+  - $3 \le \text{arr.length} \le 3000$
+  - $0 \le \text{arr}[i] \le 100$
+  - $0 \le target \le 300$
 
 ---
 
-## 3. Two-Pointer Technique (Core Idea)
+### Key Idea & Intuition
 
-### Strategy
+Unlike standard 3Sum where duplicates are simply discarded, this problem requires counting every valid **combination of indices**.
 
-1. **Sort the array**
-2. Fix one element `arr[i]`
-3. Use two pointers:
-
-   * `left = i + 1`
-   * `right = n - 1`
-4. Move pointers based on comparison with `target`
-
----
-
-### Case Analysis When a Valid Triplet is Found
-
-Let:
-
-```
-arr[i] + arr[left] + arr[right] == target
-```
-
-#### Case 1: `arr[left] != arr[right]`
-
-* Count how many times `arr[left]` repeats → `count_left`
-* Count how many times `arr[right]` repeats → `count_right`
-* Number of valid combinations:
-
-```
-count_left * count_right
-```
-
-Move both pointers inward.
+By sorting `arr`:
+1. We iterate over index $i \in [0, n - 3]$ and set up two pointers: `left = i + 1` and `right = n - 1`.
+2. For each step, let `current_sum = arr[i] + arr[left] + arr[right]`:
+   - If `current_sum < target`: advance `left++`.
+   - If `current_sum > target`: decrement `right--`.
+   - If `current_sum == target`: we have reached a match! Handling duplicates requires combinatorics:
+     - **Case 1: $arr[left] \ne arr[right]$**
+       - Count how many times $arr[left]$ appears contiguously ($c_1$).
+       - Count how many times $arr[right]$ appears contiguously ($c_2$).
+       - The total combinations contributed by these values is $c_1 \times c_2$.
+       - Advance `left += c1` and `right -= c2`.
+     - **Case 2: $arr[left] == arr[right]$**
+       - Every element from index `left` to index `right` inclusive has the exact same value.
+       - Let $k = right - left + 1$.
+       - Any pair chosen from these $k$ elements sums to $target - arr[i]$.
+       - Number of combinations is $\binom{k}{2} = \frac{k(k - 1)}{2}$.
+       - Break the inner loop, since no other pairs exist for this $i$.
 
 ---
 
-#### Case 2: `arr[left] == arr[right]`
+### Solution Approach (Step-by-Step)
 
-All values between `left` and `right` are equal.
-
-Let:
-
-```
-k = right - left + 1
-```
-
-Number of ways to choose 2 indices:
-
-```
-C(k, 2) = k * (k - 1) // 2
-```
-
-Break (no further pairs possible).
+1. Sort `arr` in ascending order.
+2. Initialize `ans = 0`, `MOD = 1_000_000_007`.
+3. Loop $i$ from $0$ to $n - 3$:
+   - `left = i + 1`, `right = n - 1`.
+   - While `left < right`:
+     - `s = arr[i] + arr[left] + arr[right]`.
+     - If `s < target`: `left += 1`.
+     - Else if `s > target`: `right -= 1`.
+     - Else:
+       - If `arr[left] != arr[right]`:
+         - Count duplicates of `arr[left]` $\to c_1$.
+         - Count duplicates of `arr[right]` $\to c_2$.
+         - `ans = (ans + c1 * c2) % MOD`.
+         - `left += c1`, `right -= c2`.
+       - Else:
+         - `k = right - left + 1`.
+         - `ans = (ans + k * (k - 1) // 2) % MOD`.
+         - Break inner while-loop.
+4. Return `ans`.
 
 ---
 
-## 4. Python 3 Solution (With Typing)
+### Visual Algorithm Walkthrough
 
+```
+arr = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5], target = 8
+Sorted array has 10 elements.
+
+Iteration i = 0 (arr[0] = 1):
+  Remaining needed: target - arr[0] = 7.
+  left = 1 (arr[1] = 1), right = 9 (arr[9] = 5)
+  arr[left] + arr[right] = 1 + 5 = 6 < 7 -> left++
+  left = 2 (arr[2] = 2), right = 9 (arr[9] = 5)
+  arr[left] + arr[right] = 2 + 5 = 7 == 7 (MATCH!)
+
+  Case 1: arr[left] (2) != arr[right] (5):
+    - arr[2] and arr[3] are both 2 -> c1 = 2
+    - arr[8] and arr[9] are both 5 -> c2 = 2
+    - Combinations added: 2 * 2 = 4. (Tuples: (0,2,8), (0,2,9), (0,3,8), (0,3,9))
+    - Advance left past 2s (left = 4), right past 5s (right = 7).
+
+  Now left = 4 (arr[4] = 3), right = 7 (arr[7] = 4):
+  arr[4] + arr[7] = 3 + 4 = 7 == 7 (MATCH!)
+  Case 1: arr[left] (3) != arr[right] (4):
+    - arr[4] and arr[5] are both 3 -> c1 = 2
+    - arr[6] and arr[7] are both 4 -> c2 = 2
+    - Combinations added: 2 * 2 = 4.
+    - Advance left to 6, right to 5 (left > right -> loop finishes for i = 0).
+
+Continue for all i:
+Total combinations summed = 20.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Multiplicity
+- **Input:** `arr = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]`, `target = 8`
+- **Output:** `20`
+
+#### Example 2: All Elements Identical ($arr[left] == arr[right]$)
+- **Input:** `arr = [1, 1, 2, 2, 2, 2]`, `target = 5`
+- **Trace:**
+  - When $arr[i] = 1$, we need two elements summing to 4.
+  - The remaining elements are all `2`.
+  - There are four 2s: $\binom{4}{2} = \frac{4 \times 3}{2} = 6$ ways.
+  - With two 1s, total ways = $2 \times 6 = 12$.
+- **Output:** `12`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def threeSumMulti(self, arr: List[int], target: int) -> int:
-        MOD = 10**9 + 7
+        MOD = 1_000_000_007
         arr.sort()
         n = len(arr)
-        result = 0
-
-        for i in range(n):
+        ans = 0
+        
+        for i in range(n - 2):
             left = i + 1
             right = n - 1
-
+            rem = target - arr[i]
+            
             while left < right:
-                total = arr[i] + arr[left] + arr[right]
-
-                if total < target:
+                total = arr[left] + arr[right]
+                if total < rem:
                     left += 1
-                elif total > target:
+                elif total > rem:
                     right -= 1
                 else:
-                    # Case 1: different values
                     if arr[left] != arr[right]:
-                        left_val = arr[left]
-                        right_val = arr[right]
-
-                        count_left = 0
-                        count_right = 0
-
-                        while left < right and arr[left] == left_val:
-                            count_left += 1
+                        c1 = 1
+                        while left + 1 < right and arr[left] == arr[left + 1]:
+                            c1 += 1
                             left += 1
-
-                        while left <= right and arr[right] == right_val:
-                            count_right += 1
+                        c2 = 1
+                        while right - 1 > left and arr[right] == arr[right - 1]:
+                            c2 += 1
                             right -= 1
-
-                        result += count_left * count_right
-
-                    # Case 2: same values
+                        ans = (ans + c1 * c2) % MOD
+                        left += 1
+                        right -= 1
                     else:
+                        # All elements between left and right are equal
                         k = right - left + 1
-                        result += k * (k - 1) // 2
+                        ans = (ans + (k * (k - 1) // 2)) % MOD
                         break
+                        
+        return ans
+```
 
-        return result % MOD
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int threeSumMulti(std::vector<int>& arr, int target) {
+        const int MOD = 1e9 + 7;
+        std::sort(arr.begin(), arr.end());
+        int n = arr.size();
+        long long ans = 0;
+
+        for (int i = 0; i < n - 2; ++i) {
+            int left = i + 1;
+            int right = n - 1;
+            int rem = target - arr[i];
+
+            while (left < right) {
+                int total = arr[left] + arr[right];
+                if (total < rem) {
+                    left++;
+                } else if (total > rem) {
+                    right--;
+                } else {
+                    if (arr[left] != arr[right]) {
+                        int c1 = 1;
+                        while (left + 1 < right && arr[left] == arr[left + 1]) {
+                            c1++;
+                            left++;
+                        }
+                        int c2 = 1;
+                        while (right - 1 > left && arr[right] == arr[right - 1]) {
+                            c2++;
+                            right--;
+                        }
+                        ans = (ans + 1LL * c1 * c2) % MOD;
+                        left++;
+                        right--;
+                    } else {
+                        long long k = right - left + 1;
+                        ans = (ans + (k * (k - 1) / 2)) % MOD;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return static_cast<int>(ans);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
+
+class Solution {
+    public int threeSumMulti(int[] arr, int target) {
+        final int MOD = 1_000_000_007;
+        Arrays.sort(arr);
+        int n = arr.length;
+        long ans = 0;
+
+        for (int i = 0; i < n - 2; i++) {
+            int left = i + 1;
+            int right = n - 1;
+            int rem = target - arr[i];
+
+            while (left < right) {
+                int total = arr[left] + arr[right];
+                if (total < rem) {
+                    left++;
+                } else if (total > rem) {
+                    right--;
+                } else {
+                    if (arr[left] != arr[right]) {
+                        int c1 = 1;
+                        while (left + 1 < right && arr[left] == arr[left + 1]) {
+                            c1++;
+                            left++;
+                        }
+                        int c2 = 1;
+                        while (right - 1 > left && arr[right] == arr[right - 1]) {
+                            c2++;
+                            right--;
+                        }
+                        ans = (ans + (long) c1 * c2) % MOD;
+                        left++;
+                        right--;
+                    } else {
+                        long k = right - left + 1;
+                        ans = (ans + (k * (k - 1) / 2)) % MOD;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return (int) ans;
+    }
+}
 ```
 
 ---
 
-## 5. Worked-Out Example
+### Complexity Analysis
 
-### Input
-
-```
-arr = [1,1,2,2,3,3,4,4,5,5]
-target = 8
-```
+- **Time Complexity:** $O(N^2)$ — Outer loop runs $O(N)$ iterations, and the inner two-pointer search sweeps across the rest of the array in $O(N)$ time.
+- **Space Complexity:** $O(1)$ auxiliary space beyond the in-place sort.
 
 ---
 
-### Step-by-Step Breakdown
+### Takeaway Pattern & Interview Traps
 
-#### Sorted Array
-
-```
-[1,1,2,2,3,3,4,4,5,5]
-```
-
----
-
-### Fix `i = 0` → `arr[i] = 1`
-
-| left | right | sum | Action |
-| --- | --- | --- | --- |
-| 1 (1) | 9 (5) | 7 | left++ |
-| 2 (2) | 9 (5) | 8 | valid |
-
-* `2` appears **twice**
-* `5` appears **twice**
-* Add `2 × 2 = 4`
-
----
-
-### Fix `i = 2` → `arr[i] = 2`
-
-Valid combinations:
-
-* `(2,2,4)`
-* `2 occurs twice, 4 occurs twice`
-* Add `4`
-
----
-
-### Fix `i = 4` → `arr[i] = 3`
-
-* `(3,3,2)` not valid due to order
-* `(3,3,2)` excluded
-* `(3,3,2)` skipped
-
-But:
-
-* `(3,3,2)` is avoided due to pointer rules
-
----
-
-### Fix `i = 4` with `left = 5`, `right = 6`
-
-```
-3 + 3 + 2 != 8
-```
-
-Later:
-
-* `(3,3,2)` skipped
-* `(3,3,2)` avoided
-
----
-
-### Total Count
-
-```
-20
-```
-
----
-
-## 6. Time & Space Complexity
-
-| Metric | Value |
-| --- | --- |
-| Time Complexity | `O(n²)` |
-| Space Complexity | `O(1)` (excluding sort) |
-
----
-
-## 7. Key Takeaways
-
-* Sorting enables deterministic pointer movement
-* Duplicate handling requires **count aggregation**
-* Combination math avoids redundant iteration
-* This problem is a **hybrid of 3Sum + Counting**
-
----
-
-If you want:
-
-* A **visual pointer movement diagram**
-* Or a **comparison with hashmap-based solution**
-* Or an **optimized explanation for interviews**
-
-Tell me how you want to proceed.
+- **Pattern:** 3Sum with Combinatorial Duplicates Handling ($\binom{k}{2}$ when $arr[left] == arr[right]$, and $c_1 \times c_2$ when distinct).
+- **Trap:** Forgetting 64-bit integer cast before multiplying counts in C++ and Java (`1LL * c1 * c2`), which can cause intermediate 32-bit overflow before modulo.

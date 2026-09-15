@@ -1,5 +1,5 @@
 ---
-date: "2025-12-22"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Two Pointers"
 folder: "02. Two Pointers"
@@ -8,92 +8,126 @@ tags:
   - leetcode
   - coding
   - two-pointers
+  - binary-search
+  - sorting
+  - google
+  - amazon
 ---
 
 # LeetCode 475: Heaters
 
-Below is a complete, interview-ready explanation for **LeetCode 475 – Heaters**, structured exactly as requested.
+**Target Companies:** Google, Amazon  
+**Difficulty:** Medium  
+**Topic:** Two Pointers / Greedy Proximity Search  
 
 ---
-
-## LeetCode 475 — Heaters
 
 ### Problem Statement
 
-You are given two integer arrays:
+Winter is coming! During the contest, your first job is to design a standard heater with a fixed warm radius to warm all the houses.
 
-* `houses`: positions of houses on a number line
-* `heaters`: positions of heaters on the same number line
+Every house can be warmed as long as the house is within the heater's warm radius range.
 
-Each heater warms all houses within a **fixed radius R**.
-
-**Goal:**  
-Find the **minimum radius R** such that **every house** is within distance `R` of **at least one heater**.
+Given the positions of `houses` and `heaters` on a horizontal line, return the **minimum radius** necessary to warm all houses.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-For each house, what matters is:
-
-> **The distance to its nearest heater**
-
-If we compute the minimum distance from every house to a heater, then:
-
-> **The answer is the maximum of those minimum distances**
-
-Why?
-
-* A single radius `R` must cover **all houses**
-* The house that is farthest from its closest heater determines the required radius
+- **Input:** `houses: List[int]`, `heaters: List[int]`
+- **Output:** `int` (minimum heater radius)
+- **Constraints:**
+  - $1 \le \text{houses.length}, \text{heaters.length} \le 3 \times 10^4$
+  - $1 \le \text{houses}[i], \text{heaters}[i] \le 10^9$
 
 ---
 
-### Why Sorting Helps
+### Key Idea & Intuition
 
-Sort both arrays:
+Every single house $h$ must be covered by *some* heater. To minimize the needed global radius, house $h$ should naturally be served by the heater nearest to it:
+$$\text{dist}(h) = \min_{ht \in \text{heaters}} |h - ht|$$
 
-* `houses` in increasing order
-* `heaters` in increasing order
+The global radius must be large enough to cover the most isolated house, so:
+$$R = \max_{h \in \text{houses}} \left( \min_{ht \in \text{heaters}} |h - ht| \right)$$
 
-This allows us to **scan both arrays in one pass**, maintaining the nearest heater for the current house.
-
----
-
-### Two Pointer Technique (Core Idea)
-
-Maintain a pointer `j` over heaters.
-
-For each house `h`:
-
-1. While moving to the **next heater makes it closer**, advance `j`
-2. Compute distance from `h` to the closest heater seen so far
-3. Track the **maximum** of these distances
-
-This works because:
-
-* Houses are processed in sorted order
-* Heater distances change monotonically
+If we sort both `houses` and `heaters`:
+- As we iterate through sorted houses, the nearest heater never moves backwards.
+- We maintain a heater pointer $j$. For each house, we greedily advance $j$ as long as the next heater `heaters[j + 1]` is closer (or equidistant) to the current house than `heaters[j]`.
+- This converts the nearest-neighbor search into an $O(N + M)$ two-pointer scan after sorting.
 
 ---
 
-### Algorithm Steps
+### Solution Approach (Step-by-Step)
 
-1. Sort `houses` and `heaters`
-2. Initialize:
-
-   * `j = 0` (heater pointer)
-   * `answer = 0`
-3. For each house:
-
-   * Move `j` while next heater is closer
-   * Update `answer = max(answer, distance)`
-4. Return `answer`
+1. Sort `houses` and `heaters` in ascending order.
+2. Initialize `j = 0` (pointer into `heaters`) and `radius = 0`.
+3. For each `house` in `houses`:
+   - While `j + 1 < len(heaters)` and `abs(heaters[j + 1] - house) <= abs(heaters[j] - house)`:
+     - Advance `j += 1`.
+   - Update `radius = max(radius, abs(heaters[j] - house))`.
+4. Return `radius`.
 
 ---
 
-### Python 3 Implementation (With Typing)
+### Visual Algorithm Walkthrough
 
+```
+houses = [1, 2, 3, 4], heaters = [1, 4]
+Sorted:
+  houses:  1   2   3   4
+  heaters: 1           4
+           j=0         j=1
+
+House 1:
+  Compare abs(heaters[0] - 1) = |1 - 1| = 0
+          abs(heaters[1] - 1) = |4 - 1| = 3
+  Next heater is farther (3 > 0), keep j = 0.
+  Distance = 0. radius = max(0, 0) = 0.
+
+House 2:
+  Compare abs(heaters[0] - 2) = |1 - 2| = 1
+          abs(heaters[1] - 2) = |4 - 2| = 2
+  Next heater is farther (2 > 1), keep j = 0.
+  Distance = 1. radius = max(0, 1) = 1.
+
+House 3:
+  Compare abs(heaters[0] - 3) = |1 - 3| = 2
+          abs(heaters[1] - 3) = |4 - 3| = 1
+  Next heater is CLOSER (1 <= 2)! Advance j -> 1.
+  Distance = 1. radius = max(1, 1) = 1.
+
+House 4:
+  j is already at 1 (last heater).
+  Distance = |4 - 4| = 0.
+  radius = max(1, 0) = 1.
+
+All houses covered with minimum radius = 1!
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Symmetric Setup
+- **Input:** `houses = [1, 2, 3]`, `heaters = [2]`
+- **Trace:**
+  - House 1: distance $|1 - 2| = 1$.
+  - House 2: distance $|2 - 2| = 0$.
+  - House 3: distance $|3 - 2| = 1$.
+- **Output:** `1`
+
+#### Example 2: Out of Bounds Extreme
+- **Input:** `houses = [1, 5]`, `heaters = [2]`
+- **Trace:**
+  - House 1: distance $|1 - 2| = 1$.
+  - House 5: distance $|5 - 2| = 3$.
+- **Output:** `3`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
@@ -101,93 +135,83 @@ class Solution:
     def findRadius(self, houses: List[int], heaters: List[int]) -> int:
         houses.sort()
         heaters.sort()
-
+        
         j = 0
         radius = 0
-
+        m = len(heaters)
+        
         for house in houses:
-            # Move heater pointer if next heater is closer
-            while (
-                j + 1 < len(heaters) and
-                abs(heaters[j + 1] - house) <= abs(heaters[j] - house)
-            ):
+            # Advance heater pointer while next heater is closer or equidistant
+            while j + 1 < m and abs(heaters[j + 1] - house) <= abs(heaters[j] - house):
                 j += 1
-
-            # Update maximum radius needed
             radius = max(radius, abs(heaters[j] - house))
-
+            
         return radius
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
+#include <cmath>
 
-### Worked Out Example
-
-#### Input
-
-```
-houses  = [1, 2, 3, 4]
-heaters = [1, 4]
-```
-
-#### Step 1: Sort (already sorted)
-
-```
-houses  = [1, 2, 3, 4]
-heaters = [1, 4]
-```
-
----
-
-#### Step 2: Process Each House
-
-| House | Closest Heater | Distance |
-| --- | --- | --- |
-| 1 | 1 | 0 |
-| 2 | 1 | 1 |
-| 3 | 4 | 1 |
-| 4 | 4 | 0 |
-
----
-
-#### Step 3: Final Answer
-
-```
-Maximum distance = 1
+class Solution {
+public:
+    int findRadius(std::vector<int>& houses, std::vector<int>& heaters) {
+        std::sort(houses.begin(), houses.end());
+        std::sort(heaters.begin(), heaters.end());
+        
+        int j = 0;
+        int radius = 0;
+        int m = heaters.size();
+        
+        for (int house : houses) {
+            while (j + 1 < m && std::abs(heaters[j + 1] - house) <= std::abs(heaters[j] - house)) {
+                j++;
+            }
+            radius = std::max(radius, std::abs(heaters[j] - house));
+        }
+        
+        return radius;
+    }
+};
 ```
 
-**Output**
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
 
+class Solution {
+    public int findRadius(int[] houses, int[] heaters) {
+        Arrays.sort(houses);
+        Arrays.sort(heaters);
+        
+        int j = 0;
+        int radius = 0;
+        int m = heaters.length;
+        
+        for (int house : houses) {
+            while (j + 1 < m && Math.abs(heaters[j + 1] - house) <= Math.abs(heaters[j] - house)) {
+                j++;
+            }
+            radius = Math.max(radius, Math.abs(heaters[j] - house));
+        }
+        
+        return radius;
+    }
+}
 ```
-1
-```
-
----
-
-### Time & Space Complexity
-
-* **Time:** `O(n log n + m log m)`
-
-  * Sorting dominates
-  * Two-pointer scan is linear
-* **Space:** `O(1)` extra space (ignoring sort cost)
-
----
-
-### Key Takeaways (Interview Gold)
-
-* This is a **nearest neighbor on a line** problem
-* Convert “global coverage” into **per-house minimum distance**
-* Sorting + two pointers avoids binary search per house
-* Extremely clean and optimal solution
 
 ---
 
-If you want:
+### Complexity Analysis
 
-* Binary search alternative
-* Visualization walkthrough
-* Edge-case discussion
-* Conversion to sliding-window intuition
+- **Time Complexity:** $O(N \log N + M \log M)$ where $N = \text{len(houses)}$ and $M = \text{len(heaters)}$. Sorting dominates. The two-pointer traversal takes $O(N + M)$ because $j$ only advances forward across all iterations.
+- **Space Complexity:** $O(1)$ auxiliary space beyond the in-place sorting routines.
 
-Let me know.
+---
+
+### Takeaway Pattern & Interview Traps
+
+- **Pattern:** Nearest-Neighbor on 1D Coordinate Line via Dual-Sorting & Monotonic Advancing Pointer.
+- **Trap:** Using `<` instead of `<=` when comparing next heater distance. Equidistant heaters should be advanced so subsequent houses further to the right don't get stuck comparing against an older left heater.

@@ -1,0 +1,471 @@
+---
+date: "2025-12-14"
+type: leetcode-solution
+category: "Backtracking"
+folder: "10. Backtracking"
+title: "LeetCode 89: Gray Code"
+tags:
+  - leetcode
+  - coding
+  - backtracking
+---
+
+# LeetCode 89: Gray Code
+
+## LeetCode 89 — Gray Code
+
+---
+
+## Problem Statement
+
+An **n-bit Gray code sequence** is a sequence of `2^n` integers where:
+
+1. Every integer is in the range `[0, 2^n - 1]`
+2. The **first integer is 0**
+3. **Adjacent integers differ by exactly one bit**
+4. The sequence is **cyclic** (the last and first also differ by one bit)
+
+Given an integer `n`, return **any valid Gray code sequence**.
+
+**Constraints**
+
+* `1 ≤ n ≤ 16`
+
+**Example**
+
+```text
+Input: n = 2
+Output: [0, 1, 3, 2]
+```
+
+Binary:
+
+```
+00 → 01 → 11 → 10
+```
+
+Each step flips exactly **one bit**.
+
+---
+
+## Key Observations
+
+1. Gray code is fundamentally about **single-bit transitions**.
+2. A powerful identity exists:
+
+   ```
+   gray(i) = i ^ (i >> 1)
+   ```
+3. Conceptually, Gray code can be generated via **backtracking on a hypercube**:
+
+   * Each node is an `n`-bit number
+   * Each edge flips exactly one bit
+4. This forms a **Hamiltonian path** on an `n`-dimensional hypercube.
+5. While math-based solutions are optimal, **backtracking explains the structure clearly**.
+
+---
+
+## All Solution Approaches
+
+---
+
+## Approach 1 — Mathematical Formula (Optimal & Standard)
+
+### Idea
+
+Generate numbers from `0` to `2^n - 1` and convert each to Gray code.
+
+### Python 3 Code (with Typing)
+
+```python
+from typing import List
+
+class Solution:
+    def grayCode(self, n: int) -> List[int]:
+        result: List[int] = []
+        for i in range(1 << n):
+            result.append(i ^ (i >> 1))
+        return result
+```
+
+### Complexity
+
+* **Time:** `O(2^n)`
+* **Space:** `O(2^n)`
+
+---
+
+## Approach 2 — Reflect-and-Append (Recursive / Backtracking-Friendly)
+
+### Key Insight
+
+To build `n`-bit Gray code:
+
+1. Take `(n-1)`-bit Gray code
+2. Prefix `0` to the original list
+3. Prefix `1` to the **reversed** list
+
+This guarantees a single-bit change at the boundary.
+
+---
+
+### Python 3 Code (with Typing)
+
+```python
+from typing import List
+
+class Solution:
+    def grayCode(self, n: int) -> List[int]:
+        result: List[int] = [0]
+
+        for i in range(n):
+            prefix = 1 << i
+            for num in reversed(result):
+                result.append(num | prefix)
+
+        return result
+```
+
+---
+
+## Example Walkthrough (`n = 3`)
+
+Start:
+
+```
+n = 0 → [0]
+```
+
+Iteration 1:
+
+```
+[0]
+→ [0, 1]
+```
+
+Iteration 2:
+
+```
+[00, 01]
+→ [00, 01, 11, 10]
+```
+
+Iteration 3:
+
+```
+[000,001,011,010]
+→ [000,001,011,010,110,111,101,100]
+```
+
+Decimal:
+
+```
+[0,1,3,2,6,7,5,4]
+```
+
+---
+
+## Approach 3 — Backtracking (Hypercube DFS)
+
+> This approach is mainly **conceptual**, but it explains *why* Gray code works.
+
+### Idea
+
+* Start from `0`
+* At each step, flip **one unused bit**
+* Track visited numbers
+* Stop after visiting all `2^n` numbers
+
+---
+
+### Python (Conceptual Backtracking)
+
+```python
+from typing import List, Set
+
+class Solution:
+    def grayCode(self, n: int) -> List[int]:
+        result: List[int] = [0]
+        visited: Set[int] = {0}
+        total = 1 << n
+
+        def backtrack(current: int) -> bool:
+            if len(result) == total:
+                return True
+
+            for i in range(n):
+                next_val = current ^ (1 << i)
+                if next_val not in visited:
+                    visited.add(next_val)
+                    result.append(next_val)
+                    if backtrack(next_val):
+                        return True
+                    visited.remove(next_val)
+                    result.pop()
+
+            return False
+
+        backtrack(0)
+        return result
+```
+
+---
+
+## Backtracking Tree Structure (n = 2)
+
+### Binary Representation
+
+```
+00
+01
+11
+10
+```
+
+---
+
+### Tree Navigation Diagram
+
+```
+00
+                  /           \
+           flip bit 0        flip bit 1
+               |                 |
+              01                10
+               |                 |
+          flip bit 1        flip bit 0
+               |                 |
+              11                11
+```
+
+Chosen path:
+
+```
+00 → 01 → 11 → 10
+```
+
+Each edge flips **exactly one bit**.
+
+---
+
+## Mental Model (Important)
+
+* Nodes = `n`-bit integers
+* Edges = flip one bit
+* Goal = visit all nodes once
+* Result = Hamiltonian path in hypercube
+
+This explains:
+
+* Why reversal works
+* Why prefixing guarantees single-bit transitions
+* Why Gray code is cyclic
+
+---
+
+## Comparison of Approaches
+
+| Approach | Interview Friendly | Optimal | Conceptual |
+| --- | --- | --- | --- |
+| Formula (`i ^ (i>>1)`) | Yes | Yes | Medium |
+| Reflect & append | Yes | Yes | High |
+| Backtracking | Rare | No | Very High |
+
+---
+
+## One-Line Interview Explanation
+
+> “Gray code can be generated by either using the formula `i ^ (i >> 1)` or by reflecting the previous sequence and prefixing bits, ensuring adjacent numbers differ by exactly one bit.”
+
+---
+
+If you want next, I can:
+
+* Prove **why** `i ^ (i >> 1)` works
+* Compare Gray code vs binary counting
+* Show how this maps to **Hypercube graphs**
+* Explain why backtracking is exponential and avoided in practice
+
+why i ^ (i >> 1)
+
+This question goes to the **core theory of Gray code**. I will explain it from first principles, not as a memorized formula.
+
+---
+
+## Why Gray code is `i ^ (i >> 1)`
+
+### Goal of Gray Code
+
+We want a sequence where **adjacent numbers differ by exactly one bit**.
+
+Normal binary counting fails:
+
+```
+0111 → 1000   (4 bits flip)
+```
+
+Gray code fixes this.
+
+---
+
+## Step 1: Understand what changes when `i` increments
+
+When you increment a binary number:
+
+* The **rightmost 0 becomes 1**
+* All trailing 1s flip to 0
+
+Example:
+
+```
+i =  0111
+i+1 =1000
+```
+
+Multiple bits flip → problem.
+
+---
+
+## Step 2: Key insight behind Gray code
+
+We want:
+
+* Higher-order bits to change **less frequently**
+* Lower-order bits to change **more frequently**
+
+This is exactly what a **right shift** does.
+
+```
+i      = b3 b2 b1 b0
+i >> 1 =  0 b3 b2 b1
+```
+
+Now compare bits **position-wise**.
+
+---
+
+## Step 3: Why XOR (`^`)?
+
+XOR outputs:
+
+```
+0 if bits are same
+1 if bits are different
+```
+
+So:
+
+```
+gray_bit[k] = i[k] XOR i[k+1]
+```
+
+This means:
+
+* A Gray bit turns `1` **only when a change happens**
+* Carries in binary addition get canceled out
+
+---
+
+## Step 4: Visual Example (`n = 4`)
+
+| i (binary) | i >> 1 | i ^ (i>>1) (Gray) |
+| --- | --- | --- |
+| 0000 | 0000 | 0000 |
+| 0001 | 0000 | 0001 |
+| 0010 | 0001 | 0011 |
+| 0011 | 0001 | 0010 |
+| 0100 | 0010 | 0110 |
+| 0101 | 0010 | 0111 |
+| 0110 | 0011 | 0101 |
+| 0111 | 0011 | 0100 |
+| 1000 | 0100 | 1100 |
+
+Notice:
+
+* Every consecutive Gray value differs by **one bit**
+* Even when binary flips many bits, Gray flips one
+
+---
+
+## Step 5: Why exactly ONE bit changes (Intuition)
+
+Let:
+
+```
+i = xxxx0111
+i+1 = xxxx1000
+```
+
+* All trailing 1s flip
+* The first 0 flips to 1
+
+In Gray code:
+
+```
+i ^ (i >> 1)
+```
+
+The carry chain appears in **both `i` and `i >> 1`**, so XOR cancels it out, leaving **only one differing bit**.
+
+That is the key trick.
+
+---
+
+## Bit-Level Proof Sketch (Important for Interviews)
+
+Let:
+
+* `k` = position of rightmost zero in `i`
+
+Then:
+
+* Bits below `k` change in both `i` and `i >> 1`
+* XOR removes them
+* Only bit `k` remains different
+
+Hence → **one-bit difference guaranteed**
+
+---
+
+## Why this produces a cyclic sequence
+
+* First Gray code = `0`
+* Last Gray code = `100...0`
+* They differ by exactly one bit
+
+So the sequence is circular.
+
+---
+
+## Mental Model (Best Way to Remember)
+
+> Gray code stores **where the binary number changes**, not the number itself.
+
+XOR answers:
+
+> “Did this bit change compared to the next higher bit?”
+
+---
+
+## One-Line Interview Answer
+
+> “`i ^ (i >> 1)` works because XOR cancels binary carry chains during increment, ensuring consecutive values differ by exactly one bit.”
+
+---
+
+## When to Use Which Explanation
+
+| Context | Explanation |
+| --- | --- |
+| Interview | Carry cancellation |
+| Theory | Hypercube Hamiltonian path |
+| Coding | Known identity |
+
+---
+
+If you want next, I can:
+
+* Derive the formula mathematically
+* Prove adjacency formally
+* Show reverse conversion (Gray → binary)
+* Explain hardware relevance (encoders, ADCs)

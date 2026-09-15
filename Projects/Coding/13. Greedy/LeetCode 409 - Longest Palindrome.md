@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,220 +8,214 @@ tags:
   - leetcode
   - coding
   - greedy
+  - hash-table
+  - string
+  - counting
+  - amazon
+  - google
 ---
 
 # LeetCode 409: Longest Palindrome
 
-**LeetCode 409 – Longest Palindrome**, covering the problem statement, key observations, greedy reasoning, implementation details, and a fully worked example with step-by-step processing.
+**Target Companies:** Amazon, Google, Microsoft, Apple, Bloomberg  
+**Difficulty:** Easy  
+**Topic:** Greedy / Hash Table / String / Counting  
 
 ---
-
-## LeetCode 409 – Longest Palindrome
 
 ### Problem Statement
 
-Given a string `s` consisting of lowercase and/or uppercase English letters, return the **length of the longest palindrome**that can be built using the letters of `s`.
+Given a string `s` which consists of lowercase or uppercase letters, return the length of the **longest palindrome** that can be built with those letters.
 
-* Letters are **case-sensitive** (`'A'` and `'a'` are different).
-* You may rearrange the letters.
-* Each character can be used **at most as many times as it appears** in `s`.
+Letters are **case sensitive**, for example, `"Aa"` is not considered a palindrome.
 
 ---
 
-### Key Observations
+### Input & Output Formats & Constraints
 
-1. **Palindrome Structure**
-
-   * A palindrome reads the same forward and backward.
-   * Characters must appear in **pairs** (one on the left, one on the right).
-   * At most **one character** may appear an **odd number of times**, placed in the **center**.
-2. **Character Frequency Is Sufficient**
-
-   * The order of characters in the string is irrelevant.
-   * Only the **count (frequency)** of each character matters.
-3. **Even vs Odd Counts**
-
-   * If a character appears `k` times:
-
-     * If `k` is even → all `k` can be used.
-     * If `k` is odd → only `k - 1` can be used for pairs.
-   * If **any** character has an odd count, we can place **exactly one** odd character in the center.
+- **Input:**
+  - `s`: `str` / `string` ($1 \le |s| \le 2000$).
+- **Output:**
+  - `int` — the maximum possible length of a palindrome formed by rearranging characters from `s`.
+- **Constraints:**
+  - $1 \le \text{s.length} \le 2000$
+  - `s` consists of lowercase and/or uppercase English letters only.
 
 ---
 
-### Greedy Solution – Core Idea
+### Key Idea & Intuition
 
-This is a **greedy counting problem**.
+A palindrome reads identically forward and backward:
+1. Every character off-center must appear in symmetric **pairs** (one on the left wing, one mirrored on the right wing).
+2. At most **one** character can have an odd count, acting as the singular **center pivot**.
 
-Greedy decision:
+#### The Greedy Character Utilization Invariant:
+For each unique character with frequency $c$:
+- We can always form $\lfloor c / 2 \rfloor \times 2$ symmetric pairs:
+  $$\text{paired\_count} = c - (c \pmod 2)$$
+- If $c$ is odd ($c \pmod 2 == 1$), one instance of this character is leftover and cannot be paired.
+- If there is **at least one** character with an odd frequency across the entire string, we can place exactly one odd leftover in the center of the palindrome, adding $+1$ to our total length.
+- Further leftovers cannot be used because a palindrome cannot have more than one center pivot.
 
-* Use **as many pairs as possible** from each character.
-* If **at least one odd count exists**, add **one extra character** to the total length (center of palindrome).
-
-Why greedy works:
-
-* Using pairs always increases palindrome length by 2.
-* Using more than one odd-count character in the center is impossible.
-* Therefore, the locally optimal choice (consume all pairs) leads to a globally optimal palindrome length.
-
----
-
-### Algorithm Steps
-
-1. Count frequency of each character.
-2. Initialize:
-
-   * `length = 0`
-   * `has_odd = False`
-3. For each character frequency `count`:
-
-   * Add `(count // 2) * 2` to `length`
-   * If `count` is odd → set `has_odd = True`
-4. If `has_odd` is true:
-
-   * Add `1` to `length`
-5. Return `length`
+Thus, the maximum palindrome length is:
+$$\text{Length} = \sum_{c \in \text{freq}} (c - (c \pmod 2)) + \mathbb{I}(\exists c \text{ such that } c \pmod 2 == 1)$$
 
 ---
 
-### Python 3 Solution (With Typing)
+### Solution Approach (Step-by-Step)
 
+1. Count frequencies of all characters in `s`.
+2. Initialize `length = 0` and `has_odd = False`.
+3. For each frequency `count` in character counts:
+   - If `count % 2 == 0`:
+     - `length += count`
+   - Else:
+     - `length += count - 1`
+     - `has_odd = True`
+4. If `has_odd`:
+   - `length += 1`
+5. Return `length`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `s = "abccccdd"`:
+
+```
+Character Frequencies:
+  'a': 1
+  'b': 1
+  'c': 4
+  'd': 2
+
+Evaluation:
+  'a' (count 1): odd -> add 0, has_odd = True
+  'b' (count 1): odd -> add 0, has_odd = True
+  'c' (count 4): even -> add 4 (total: 4)
+  'd' (count 2): even -> add 2 (total: 6)
+
+After loop:
+  length = 6
+  has_odd = True -> add 1 for center pivot
+  Total Length = 7
+
+One optimal palindrome construction:
+  "dccaccd" or "dccbccd" (length 7).
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `s = "abccccdd"`
+- **Output:** `7`
+
+#### Example 2:
+- **Input:** `s = "a"`
+- **Tracing:** Frequency: `{'a': 1}`. 1 is odd $\rightarrow$ length = 1.
+- **Output:** `1`
+
+#### Example 3 (All Characters Even):
+- **Input:** `s = "bb"`
+- **Tracing:** Frequency: `{'b': 2}`. No odd leftover.
+- **Output:** `2`
+
+#### Example 4 (Case Sensitivity):
+- **Input:** `s = "Aa"`
+- **Tracing:** `'A': 1, 'a': 1`. Only one can be in center.
+- **Output:** `1`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
 from collections import Counter
-from typing import Dict
 
 class Solution:
     def longestPalindrome(self, s: str) -> int:
-        freq: Dict[str, int] = Counter(s)
+        counts = Counter(s)
+        length = 0
+        has_odd = False
         
-        length: int = 0
-        has_odd: bool = False
-        
-        for count in freq.values():
-            # Use all possible pairs
-            length += (count // 2) * 2
-            
-            # Check if there's at least one odd count
+        for count in counts.values():
+            length += count // 2 * 2
             if count % 2 == 1:
                 has_odd = True
+                
+        return length + 1 if has_odd else length
+```
+
+#### C++17
+```cpp
+#include <string>
+#include <vector>
+
+class Solution {
+public:
+    int longestPalindrome(const std::string& s) {
+        std::vector<int> counts(128, 0);
+        for (char c : s) {
+            counts[static_cast<unsigned char>(c)]++;
+        }
         
-        # One odd character can be placed in the center
-        if has_odd:
-            length += 1
+        int length = 0;
+        bool has_odd = false;
         
-        return length
+        for (int count : counts) {
+            length += (count / 2) * 2;
+            if (count % 2 == 1) {
+                has_odd = true;
+            }
+        }
+        
+        return has_odd ? length + 1 : length;
+    }
+};
 ```
 
----
-
-### Complete Worked Example (Step-by-Step)
-
-#### Input
-
+#### Java 17
+```java
+class Solution {
+    public int longestPalindrome(String s) {
+        int[] counts = new int[128];
+        for (int i = 0; i < s.length(); i++) {
+            counts[s.charAt(i)]++;
+        }
+        
+        int length = 0;
+        boolean hasOdd = false;
+        
+        for (int count : counts) {
+            length += (count / 2) * 2;
+            if (count % 2 == 1) {
+                hasOdd = true;
+            }
+        }
+        
+        return hasOdd ? length + 1 : length;
+    }
+}
 ```
-s = "abccccdd"
-```
-
-#### Step 1: Frequency Count
-
-| Character | Count |
-| --- | --- |
-| a | 1 |
-| b | 1 |
-| c | 4 |
-| d | 2 |
-
-#### Step 2: Process Each Character
-
-Initialize:
-
-```
-length = 0
-has_odd = False
-```
-
----
-
-**Character `'a'` → count = 1**
-
-* Pairs: `(1 // 2) * 2 = 0`
-* Odd count → `has_odd = True`
-* `length = 0`
-
----
-
-**Character `'b'` → count = 1**
-
-* Pairs: `0`
-* Odd count → `has_odd` already true
-* `length = 0`
-
----
-
-**Character `'c'` → count = 4**
-
-* Pairs: `(4 // 2) * 2 = 4`
-* Even count
-* `length = 4`
-
----
-
-**Character `'d'` → count = 2**
-
-* Pairs: `(2 // 2) * 2 = 2`
-* Even count
-* `length = 6`
-
----
-
-#### Step 3: Add Center Character
-
-* `has_odd = True` → add `1`
-
-```
-final length = 6 + 1 = 7
-```
-
----
-
-### Final Answer
-
-```
-7
-```
-
-#### Example Palindrome Construction
-
-One valid palindrome:
-
-```
-dccaccd
-```
-
-(Exact order does not matter; only length matters.)
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-
-  * Single pass to count characters.
-* **Space Complexity:** `O(1)`
-
-  * At most 52 characters (uppercase + lowercase English letters).
+- **Time Complexity:** $\mathcal{O}(n)$
+  - Scanning string `s` of length $n$ to populate counts takes $\mathcal{O}(n)$ time.
+  - Iterating over the 128 ASCII buckets takes $\mathcal{O}(1)$ time.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - The array or hash table stores at most 52 unique English letters (uppercase and lowercase).
 
 ---
 
-### Summary
+### Takeaway Pattern & Interview Traps
 
-* This problem is a **frequency-based greedy problem**.
-* Use all possible pairs.
-* Allow **only one odd-count character** in the center.
-* Simple counting leads to an optimal solution.
-
-If you want, I can also explain:
-
-* Why **two odd centers are impossible**
-* How this problem relates to **palindrome construction problems**
-* Variations of this problem in interviews
+- **Case Sensitivity:** `'A'` and `'a'` are distinct characters and must not be grouped together. An array of size 128 indexed by ASCII character values avoids case normalization pitfalls.
+- **One-Liner Alternative:** Notice that every odd character wastes exactly 1 element, except for the single center element. Thus:
+  $$\text{Length} = n - \max(0, \text{odd\_count} - 1)$$
+  where `odd_count` is the number of characters with odd frequency!

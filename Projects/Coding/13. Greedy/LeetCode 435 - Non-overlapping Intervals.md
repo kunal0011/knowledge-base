@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,83 +8,128 @@ tags:
   - leetcode
   - coding
   - greedy
+  - interval-scheduling
+  - sorting
+  - array
+  - amazon
+  - google
 ---
 
 # LeetCode 435: Non-overlapping Intervals
 
-**LeetCode 435 – Non-overlapping Intervals**, structured exactly as requested.
+**Target Companies:** Amazon (Signature Classic), Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Greedy / Interval Scheduling / Sorting  
 
 ---
-
-## LeetCode 435: Non-overlapping Intervals
 
 ### Problem Statement
 
-You are given an array of intervals, where  
-`intervals[i] = [start_i, end_i]`.
+Given an array of intervals `intervals` where `intervals[i] = [start_i, end_i]`, return the minimum number of intervals you need to remove to make the rest of the intervals non-overlapping.
 
-An interval `[a, b]` **overlaps** with `[c, d]` if  
-`min(b, d) > max(a, c)`.
-
-Return the **minimum number of intervals you need to remove** so that the remaining intervals are **non-overlapping**.
+Note that intervals which touch at a single point (such as `[1, 2]` and `[2, 3]`) are non-overlapping.
 
 ---
 
-### Key Observation (Core Insight)
+### Input & Output Formats & Constraints
 
-Instead of thinking **“which intervals to remove”**, think:
+- **Input:**
+  - `intervals`: `List[List[int]]` / `vector<vector<int>>` / `int[][]` ($1 \le \text{intervals.length} \le 10^5$).
+- **Output:**
+  - `int` — minimum number of intervals to remove.
+- **Constraints:**
+  - $1 \le \text{intervals.length} \le 10^5$
+  - `intervals[i].length == 2`
+  - $-5 \times 10^4 \le \text{start}_i < \text{end}_i \le 5 \times 10^4$
 
-> **“What is the maximum number of non-overlapping intervals I can keep?”**
+---
 
-Once you know that:
+### Key Idea & Intuition
+
+The problem asks to **minimize the number of removed intervals**.
+By the complementary counting principle:
+$$\text{Min Removals} = N - \text{Max Non-Overlapping Intervals Kept}$$
+This immediately transforms the problem into the textbook **Interval Scheduling Maximization Problem (ISMP)**.
+
+#### The Earliest End Time Greedy Invariant:
+To maximize the number of non-overlapping intervals we can retain:
+- We should sort intervals by their **finish / end time** ascending.
+- If we must choose between two overlapping intervals, picking the one with the **earlier end time** is always optimal:
+  - An interval that finishes earlier frees up the timeline as soon as possible.
+  - It leaves the maximum possible slack for future non-overlapping intervals to be selected.
+
+#### Alternative: Sorting by Start Time
+If sorted by `start_time` ascending:
+- Maintain `prev_end`.
+- If current interval `start < prev_end` (overlap detected!):
+  - Increment removals `removals += 1`.
+  - Greedily eliminate the interval with the later end: `prev_end = min(prev_end, end)`.
+- Else (no overlap):
+  - `prev_end = end`.
+
+Both approaches yield the exact same optimal answer in $\mathcal{O}(N \log N)$ time.
+
+---
+
+### Solution Approach (Step-by-Step: Earliest End Time)
+
+1. If `len(intervals) <= 1`, return `0`.
+2. Sort `intervals` in ascending order of their end times: `intervals.sort(key=lambda x: x[1])`.
+3. Initialize `kept_count = 1` and `last_end = intervals[0][1]`.
+4. Iterate through `intervals` from index $1$ to $N - 1$:
+   - If `interval[0] >= last_end`:
+     - This interval does not overlap with our last kept interval.
+     - Keep it: `kept_count += 1`, `last_end = interval[1]`.
+5. Return `len(intervals) - kept_count`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `intervals = [[1,2], [2,3], [3,4], [1,3]]`:
 
 ```
-intervals_to_remove = total_intervals − max_non_overlapping_intervals
+1. Sorted by end time:
+   [1, 2], [2, 3], [1, 3], [3, 4]
+
+Timeline:
+[1, 2] : |---|
+[2, 3] :     |---|
+[1, 3] : |-------|   (Conflicts with [1,2] and [2,3])
+[3, 4] :         |---|
+
+Trace:
+- Interval 0: [1, 2] -> Keep! last_end = 2, kept = 1
+- Interval 1: [2, 3] -> start(2) >= last_end(2) -> Keep! last_end = 3, kept = 2
+- Interval 2: [1, 3] -> start(1) < last_end(3) -> Conflict! Do not keep.
+- Interval 3: [3, 4] -> start(3) >= last_end(3) -> Keep! last_end = 4, kept = 3
+
+Total kept = 3.
+Removals needed = Total (4) - Kept (3) = 1 (remove [1, 3]).
 ```
 
-This transforms the problem into a **classic interval scheduling problem**.
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `intervals = [[1,2],[2,3],[3,4],[1,3]]`
+- **Output:** `1`
+
+#### Example 2 (Already Non-Overlapping):
+- **Input:** `intervals = [[1,2],[2,3]]`
+- **Output:** `0`
+
+#### Example 3 (Identical Overlapping Intervals):
+- **Input:** `intervals = [[1,2],[1,2],[1,2]]`
+- **Tracing:** Only one `[1,2]` can be kept. Remove the other 2.
+- **Output:** `2`
 
 ---
 
-### Why Greedy Works Here
+### Multi-Language Implementations
 
-To **keep as many intervals as possible**, we should:
-
-* Always pick the interval that **ends earliest**
-* This leaves **maximum room** for future intervals
-
-This is the same greedy principle used in:
-
-* Activity Selection
-* Interval Scheduling Maximum Compatibility
-
----
-
-### Greedy Strategy (Critical Trick)
-
-1. **Sort intervals by end time**
-2. Track the `end` of the last selected interval
-3. If the current interval starts **before** the last end → overlap → must remove it
-4. Otherwise → keep it and update `end`
-
----
-
-### Algorithm Steps
-
-1. Sort intervals by `end`
-2. Initialize:
-
-   * `count_removed = 0`
-   * `prev_end = end of first interval`
-3. Iterate through remaining intervals:
-
-   * If `start < prev_end` → overlap → increment removal count
-   * Else → update `prev_end`
-
----
-
-### Python 3 Solution (with typing)
-
+#### Python 3
 ```python
 from typing import List
 
@@ -92,97 +137,95 @@ class Solution:
     def eraseOverlapIntervals(self, intervals: List[List[int]]) -> int:
         if not intervals:
             return 0
-        
-        # Step 1: Sort by end time
+            
+        # Sort intervals by end time ascending
         intervals.sort(key=lambda x: x[1])
         
-        removed = 0
-        prev_end = intervals[0][1]
+        kept = 1
+        last_end = intervals[0][1]
         
-        # Step 2: Process intervals greedily
-        for start, end in intervals[1:]:
-            if start < prev_end:
-                # Overlap detected → remove current interval
-                removed += 1
-            else:
-                # No overlap → keep interval
-                prev_end = end
+        for i in range(1, len(intervals)):
+            if intervals[i][0] >= last_end:
+                kept += 1
+                last_end = intervals[i][1]
+                
+        return len(intervals) - kept
+```
+
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int eraseOverlapIntervals(std::vector<std::vector<int>>& intervals) {
+        if (intervals.empty()) return 0;
         
-        return removed
+        // Sort by end time
+        std::sort(intervals.begin(), intervals.end(), [](const auto& a, const auto& b) {
+            return a[1] < b[1];
+        });
+        
+        int kept = 1;
+        int last_end = intervals[0][1];
+        int n = static_cast<int>(intervals.size());
+        
+        for (int i = 1; i < n; ++i) {
+            if (intervals[i][0] >= last_end) {
+                kept++;
+                last_end = intervals[i][1];
+            }
+        }
+        
+        return n - kept;
+    }
+};
+```
+
+#### Java 17
+```java
+import java.util.Arrays;
+
+class Solution {
+    public int eraseOverlapIntervals(int[][] intervals) {
+        if (intervals == null || intervals.length == 0) {
+            return 0;
+        }
+        
+        // Sort by end coordinate ascending
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));
+        
+        int kept = 1;
+        int lastEnd = intervals[0][1];
+        
+        for (int i = 1; i < intervals.length; i++) {
+            if (intervals[i][0] >= lastEnd) {
+                kept++;
+                lastEnd = intervals[i][1];
+            }
+        }
+        
+        return intervals.length - kept;
+    }
+}
 ```
 
 ---
 
-### Complete Worked Example (Step-by-Step)
+### Complexity Analysis
 
-#### Input
-
-```
-intervals = [[1,2], [2,3], [3,4], [1,3]]
-```
-
----
-
-### Step 1: Sort by End Time
-
-```
-Sorted intervals:
-[1,2], [1,3], [2,3], [3,4]
-```
+- **Time Complexity:** $\mathcal{O}(n \log n)$
+  - Sorting $n$ intervals takes $\mathcal{O}(n \log n)$.
+  - A single linear scan takes $\mathcal{O}(n)$.
+  - Total time: $\mathcal{O}(n \log n)$.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - In-place sorting and scalar end tracking.
 
 ---
 
-### Step 2: Initialize
+### Takeaway Pattern & Interview Traps
 
-```
-prev_end = 2   (from [1,2])
-removed = 0
-```
-
----
-
-### Step 3: Iterate Through Intervals
-
-| Current Interval | Check (`start < prev_end`) | Action | prev\_end | removed |
-| --- | --- | --- | --- | --- |
-| [1,3] | 1 < 2 → YES | Remove | 2 | 1 |
-| [2,3] | 2 < 2 → NO | Keep | 3 | 1 |
-| [3,4] | 3 < 3 → NO | Keep | 4 | 1 |
-
----
-
-### Final Result
-
-```
-Minimum intervals to remove = 1
-```
-
----
-
-### Why Removing the Later-Ending Interval Is Optimal
-
-When overlap occurs:
-
-* Removing the interval with **larger end time** keeps the schedule more flexible
-* That is exactly what sorting by end time guarantees
-
----
-
-### Time and Space Complexity
-
-* **Time:** `O(n log n)` (sorting)
-* **Space:** `O(1)` extra space (in-place processing)
-
----
-
-### Interview Takeaway
-
-If you remember only one line:
-
-> **Sort by end time, not start time — greedy interval problems almost always depend on minimizing future conflicts.**
-
-If you want, I can also:
-
-* Convert this into a **visual interval timeline**
-* Compare with **DP approach (why greedy dominates here)**
-* Show **edge cases that break incorrect greedy strategies**
+- **Complementary Inversion:** Min removals $\iff$ Max non-overlapping intervals. Always solve the maximum compatibility problem with earliest end time sorting.
+- **Adjacent Contact Is Non-Overlapping:** `intervals[i][0] >= last_end` uses `>=` because the problem explicitly specifies touching endpoints `[1, 2]` and `[2, 3]` are non-overlapping.
+- **Twin Problem:** LeetCode 452 (Minimum Number of Arrows to Burst Balloons) is structurally identical, except touching points `[1, 2]` and `[2, 3]` DO overlap for arrow hits (`>`).

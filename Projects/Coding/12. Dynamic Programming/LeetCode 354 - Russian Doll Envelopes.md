@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,240 +8,250 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - binary-search
+  - longest-increasing-subsequence
+  - google
+  - amazon
+  - meta
 ---
 
 # LeetCode 354: Russian Doll Envelopes
 
-**LeetCode 354 – Russian Doll Envelopes**, focusing strictly on **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Google, Amazon, Meta, Microsoft, ByteDance  
+**Difficulty:** Hard  
+**Topic:** Dynamic Programming / Longest Increasing Subsequence (LIS) / Patience Sorting / Binary Search  
 
 ---
-
-## LeetCode 354 – Russian Doll Envelopes
 
 ### Problem Statement
 
-You are given envelopes where  
-`envelopes[i] = [width_i, height_i]`.
+You are given a 2D array of integers `envelopes` where `envelopes[i] = [wi, hi]` represents the width and the height of an envelope.
 
-One envelope can fit into another **iff**:
+One envelope can fit into another if and only if both the width and height of one envelope are **strictly greater** than the other envelope's width and height.
 
-```
-width1 < width2 AND height1 < height2
-```
+Return the **maximum number of envelopes** you can Russian doll (i.e., put one inside the other).
 
-Return the **maximum number of envelopes** you can Russian-doll (nest).
+**Note:** You cannot rotate an envelope.
 
 ---
 
-## Key Observation (DP Perspective)
+### Input & Output Formats & Constraints
 
-This is a **2D version of Longest Increasing Subsequence (LIS)**:
-
-* We want the longest chain where **both width and height strictly increase**.
-* Direct LIS on 2D is hard → we **sort first**, then apply DP.
-
----
-
-## Step 1: Sorting Strategy (Critical)
-
-Sort envelopes by:
-
-1. **width ascending**
-2. **height ascending** (for DP version)
-
-```
-(width ↑, height ↑)
-```
-
-Why?
-
-* Ensures width condition is automatically respected
-* We only need to check height during DP transition
-
-> Note: Descending height is required for the optimized LIS solution, **not** for the O(n²) DP.
+- **Input:** `envelopes: List[List[int]]` — 2D array where each element is `[w, h]`.
+- **Output:** `int` — Maximum number of nested envelopes.
+- **Constraints:**
+  - $1 \le \text{envelopes.length} \le 10^5$
+  - $\text{envelopes}[i].\text{length} == 2$
+  - $1 \le w_i, h_i \le 10^5$
 
 ---
 
-## Step 2: DP State Definition
+### Key Idea & Intuition
 
-### DP State
+1. **Reduction to Longest Increasing Subsequence (LIS):**
+   - We need a chain of envelopes $(w_1, h_1), (w_2, h_2), \dots, (w_k, h_k)$ such that $w_1 < w_2 < \dots < w_k$ and $h_1 < h_2 < \dots < h_k$.
+   - If we sort the envelopes by width $w$ ascending, the width dimension is largely ordered. Can we then simply find the LIS on heights $h$?
+   - **Crucial Conflict (Equal Widths):**
+     - If two envelopes have identical widths, say $[6, 4]$ and $[6, 7]$, neither can fit into the other ($6 \not< 6$).
+     - If we sort height ascending for identical widths, an LIS on height would pick both $[6, 4]$ and $[6, 7]$ because $4 < 7$. This violates the strict width condition!
+   - **The Invariant Fix (Sort Width Ascending, Height Descending):**
+     - Sort envelopes primarily by $w$ **ascending**.
+     - For envelopes with the **same $w$**, sort $h$ **descending**!
+     - *Why descending?* Because if heights with the same width are descending, no two envelopes with identical widths can ever be part of a strictly increasing subsequence of heights! The larger height will appear earlier and will never be extended by a smaller or equal height with the same width.
+     - Consequently, the problem reduces strictly to 1D LIS on the `height` coordinates.
 
-```
-dp[i] = maximum number of envelopes ending at envelope i
-```
-
-Interpretation:
-
-* Envelope `i` is the **outermost** envelope in this chain
-
----
-
-## Step 3: DP Transition
-
-For every `i`, try all previous envelopes `j < i`:
-
-```
-If height[j] < height[i]:
-    dp[i] = max(dp[i], dp[j] + 1)
-```
-
-Why only height?
-
-* Width is already guaranteed by sorting
+2. **$O(N \log N)$ Patience Sorting / Binary Search:**
+   - Because $N \le 10^5$, an $O(N^2)$ DP will result in Time Limit Exceeded (TLE).
+   - We maintain an active tails array `tails`, where `tails[len]` is the smallest tail of all increasing subsequences of length `len + 1`.
+   - For each height $h$:
+     - Binary search (`bisect_left` / `lower_bound`) to find the first element in `tails` $\ge h$.
+     - If no such element exists, append $h$ to `tails`.
+     - Otherwise, overwrite that element with $h$.
+   - The length of `tails` at the end is the maximum nesting depth.
 
 ---
 
-## Step 4: Base Case
+### Solution Approach (Step-by-Step)
 
-Every envelope can form a chain of length **1** by itself:
+1. **Sort Envelopes:**
+   - Sort by key: `(w, -h)` in Python, or custom comparator `a[0] < b[0] || (a[0] == b[0] && a[1] > b[1])` in C++ / Java.
+2. **Execute LIS on Heights:**
+   - Initialize an empty dynamic array `tails`.
+   - For each envelope `[w, h]`:
+     - Perform binary search to find index `idx` of the first element in `tails` that is $\ge h$.
+     - If `idx == len(tails)`, append $h$.
+     - Else, replace `tails[idx] = h`.
+3. **Return Length:**
+   - Return `len(tails)`.
 
+---
+
+### Visual Algorithm Walkthrough
+
+Given `envelopes = [[5, 4], [6, 4], [6, 7], [2, 3]]`.
+
+**Step 1: Custom Sort (`w` asc, `h` desc on tie)**
 ```
-dp[i] = 1
+Original: [[5, 4], [6, 4], [6, 7], [2, 3]]
+Sorted:   [[2, 3], [5, 4], [6, 7], [6, 4]]
+Heights:   [  3,      4,      7,      4   ]
+```
+Notice for $w = 6$, height $7$ comes before $4$.
+
+**Step 2: Binary Search LIS on Heights**
+```
+Height = 3:
+  tails is empty -> tails = [3]
+
+Height = 4:
+  3 < 4, append -> tails = [3, 4]
+
+Height = 7:
+  4 < 7, append -> tails = [3, 4, 7]
+
+Height = 4:
+  Binary search for 4 finds tails[1] = 4
+  Replace tails[1] with 4 -> tails = [3, 4, 7]
+
+Final tails length = 3
+Max Russian doll nesting = 3  (Chain: [2, 3] -> [5, 4] -> [6, 7])
 ```
 
 ---
 
-## Step 5: Final Answer
+### Solved Examples with Multiple Inputs
 
-```
-answer = max(dp)
-```
+| Case | Input `envelopes` | Sorted by `(w asc, h desc)` | Height Sequence | Result | Explanation |
+|---|---|---|---|---|---|
+| **Standard** | `[[5,4],[6,4],[6,7],[2,3]]` | `[[2,3],[5,4],[6,7],[6,4]]` | `[3, 4, 7, 4]` | `3` | `[2,3] -> [5,4] -> [6,7]` |
+| **All Same Width** | `[[1,1],[1,2],[1,3]]` | `[[1,3],[1,2],[1,1]]` | `[3, 2, 1]` | `1` | Cannot nest any since widths are equal |
+| **All Same Height** | `[[1,5],[2,5],[3,5]]` | `[[1,5],[2,5],[3,5]]` | `[5, 5, 5]` | `1` | Heights must strictly increase; cannot nest |
+| **Strict Diagonal** | `[[1,1],[2,2],[3,3],[4,4]]` | `[[1,1],[2,2],[3,3],[4,4]]` | `[1, 2, 3, 4]` | `4` | All strictly increase in both dimensions |
 
 ---
 
-## Python 3 DP Solution (O(n²))
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
+import bisect
 
 class Solution:
     def maxEnvelopes(self, envelopes: List[List[int]]) -> int:
         if not envelopes:
             return 0
+        
+        # Sort width ascending; if widths match, sort height descending
+        envelopes.sort(key=lambda x: (x[0], -x[1]))
+        
+        # LIS on heights using patience sorting (binary search)
+        tails: List[int] = []
+        for _, h in envelopes:
+            idx = bisect.bisect_left(tails, h)
+            if idx == len(tails):
+                tails.append(h)
+            else:
+                tails[idx] = h
+                
+        return len(tails)
+```
 
-        # Step 1: sort by width asc, height asc
-        envelopes.sort(key=lambda x: (x[0], x[1]))
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
 
-        n = len(envelopes)
-        dp = [1] * n  # Step 4: base case
+class Solution {
+public:
+    int maxEnvelopes(std::vector<std::vector<int>>& envelopes) {
+        if (envelopes.empty()) return 0;
 
-        # Step 3: DP transition
-        for i in range(n):
-            for j in range(i):
-                if envelopes[j][1] < envelopes[i][1]:
-                    dp[i] = max(dp[i], dp[j] + 1)
+        // Sort width asc, height desc on ties
+        std::sort(envelopes.begin(), envelopes.end(), [](const std::vector<int>& a, const std::vector<int>& b) {
+            if (a[0] == b[0]) {
+                return a[1] > b[1];
+            }
+            return a[0] < b[0];
+        });
 
-        return max(dp)
+        // Patience sorting / LIS on height
+        std::vector<int> tails;
+        for (const auto& env : envelopes) {
+            int h = env[1];
+            auto it = std::lower_bound(tails.begin(), tails.end(), h);
+            if (it == tails.end()) {
+                tails.push_back(h);
+            } else {
+                *it = h;
+            }
+        }
+
+        return static_cast<int>(tails.size());
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
+
+class Solution {
+    public int maxEnvelopes(int[][] envelopes) {
+        if (envelopes == null || envelopes.length == 0) return 0;
+
+        // Sort width asc; if width tie, sort height desc
+        Arrays.sort(envelopes, (a, b) -> {
+            if (a[0] == b[0]) {
+                return Integer.compare(b[1], a[1]);
+            }
+            return Integer.compare(a[0], b[0]);
+        });
+
+        // Patience sorting / LIS on height
+        int[] tails = new int[envelopes.length];
+        int len = 0;
+
+        for (int[] env : envelopes) {
+            int h = env[1];
+            int left = 0, right = len;
+            // Binary search for insertion point
+            while (left < right) {
+                int mid = left + (right - left) / 2;
+                if (tails[mid] < h) {
+                    left = mid + 1;
+                } else {
+                    right = mid;
+                }
+            }
+
+            tails[left] = h;
+            if (left == len) {
+                len++;
+            }
+        }
+
+        return len;
+    }
+}
 ```
 
 ---
 
-## Step 6: DP Table Construction (Worked Example)
+### Complexity Analysis
 
-### Input
-
-```
-envelopes = [[5,4],[6,4],[6,7],[2,3]]
-```
-
-### After Sorting
-
-```
-Index   Envelope
-0       [2,3]
-1       [5,4]
-2       [6,4]
-3       [6,7]
-```
+- **Time Complexity:** $\mathcal{O}(N \log N)$  
+  Sorting $N$ envelopes takes $\mathcal{O}(N \log N)$. Iterating through $N$ envelopes while performing a binary search of cost $\mathcal{O}(\log N)$ on `tails` takes $\mathcal{O}(N \log N)$. Overall time is strictly $\mathcal{O}(N \log N)$, easily handling $N = 10^5$.
+- **Space Complexity:** $\mathcal{O}(N)$  
+  The `tails` array stores at most $N$ elements in the worst case.
 
 ---
 
-### DP Table Evolution
+### Takeaway Pattern & Interview Traps
 
-| i | Envelope | Valid Previous j | dp[i] |
-| --- | --- | --- | --- |
-| 0 | [2,3] | — | 1 |
-| 1 | [5,4] | [2,3] | 2 |
-| 2 | [6,4] | [2,3] | 2 |
-| 3 | [6,7] | [2,3], [5,4], [6,4] | 3 |
-
----
-
-### Detailed Transition Walkthrough
-
-#### i = 0 → [2,3]
-
-```
-dp[0] = 1
-```
-
----
-
-#### i = 1 → [5,4]
-
-```
-[2,3] → [5,4] valid
-dp[1] = dp[0] + 1 = 2
-```
-
----
-
-#### i = 2 → [6,4]
-
-```
-[2,3] → [6,4] valid
-[5,4] → [6,4] invalid (height not <)
-
-dp[2] = 2
-```
-
----
-
-#### i = 3 → [6,7]
-
-```
-[2,3] → [6,7] ✔
-[5,4] → [6,7] ✔
-[6,4] → [6,7] ✔
-
-dp[3] = max(2+1, 2+1, 1+1) = 3
-```
-
----
-
-## Final DP Table
-
-```
-dp = [1, 2, 2, 3]
-```
-
-### Output
-
-```
-3
-```
-
----
-
-## Time & Space Complexity
-
-| Metric | Value |
-| --- | --- |
-| Time | O(n²) |
-| Space | O(n) |
-
----
-
-## When to Use This DP Approach
-
-* When you want **clear state + transition reasoning**
-* Useful in interviews to **explain correctness**
-* Easier to debug and extend than LIS optimization
-
-If you want next:
-
-* **Why optimized LIS needs height descending**
-* **Binary Search LIS version with proof**
-* **Backtracking / reconstruction of actual envelope chain**
-
-Just tell me.
+1. **The Tie-Breaking Direction Trap:**
+   - The single most common failure in this problem is sorting height in *ascending* order when widths match.
+   - If widths match and heights ascend, `[3, 3]` and `[3, 4]` would both be picked by standard LIS because $3 < 4$, illegally claiming an envelope can nest inside another of equal width.
+   - Sorting matching widths in *descending* height guarantees that between `[3, 4]` and `[3, 3]`, $4$ appears first, so $3$ can never extend it, preventing two envelopes with width $3$ from both being selected.
+2. **$O(N^2)$ TLE:**
+   - A standard double-loop LIS approach is $O(N^2)$. With $N = 10^5$, $N^2 = 10^{10}$ operations, which will inevitably result in a TLE on LeetCode. Binary search LIS ($\mathcal{O}(N \log N)$) is strictly required.

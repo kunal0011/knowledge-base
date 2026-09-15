@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Arrays & Hashing"
 folder: "01. Arrays & Hashing"
@@ -8,31 +8,52 @@ tags:
   - leetcode
   - coding
   - arrays-and-hashing
+  - amazon
+  - google
 ---
 
 # LeetCode 238: Product of Array Except Self
+
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Apple, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Prefix & Suffix Accumulation in O(1) Auxiliary Space
 
 ---
 
 ### Problem Statement
 
-Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all elements of `nums` except `nums[i]`. Division is not permitted.
+Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all the elements of `nums` except `nums[i]`.
+
+The product of any prefix or suffix of `nums` is guaranteed to fit in a **32-bit** integer.
+
+You must write an algorithm that runs in **$O(n)$ time** and **without using the division operation**.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-* The product for index `i` is `(prefix_product_before_i) * (suffix_product_after_i)`.
-* We can compute prefixes on a left pass, then accumulate suffixes on a right pass in `O(1)` auxiliary space.
+- **Input:** `nums: List[int]`
+- **Output:** `List[int]`
+- **Constraints:**
+  - $2 \le \text{nums.length} \le 10^5$
+  - $-30 \le \text{nums}[i] \le 30$
+  - Output fits within 32-bit signed integer.
 
 ---
 
-### Core Technique: Prefix & Suffix Accumulation
+### Key Idea & Intuition
+
+- **Decomposition:**
+  $$\text{ans}[i] = (\text{product of all elements before } i) \times (\text{product of all elements after } i)$$
+- **Constant Auxiliary Space Trick:**
+  - We use the output array `res` to hold the running prefix products during a left pass.
+  - Then we sweep from right to left using a single scalar variable `suffix = 1` to multiply each position by the suffix product.
 
 ---
 
-### Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
@@ -56,30 +77,60 @@ class Solution:
         return res
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
 
-### Worked-Out Example
+class Solution {
+public:
+    std::vector<int> productExceptSelf(std::vector<int>& nums) {
+        int n = nums.size();
+        std::vector<int> res(n, 1);
 
-```text
-nums = [1, 2, 3, 4]
-After prefix pass: res = [1, 1, 2, 6]
-Suffix pass:
-  i = 3: res[3] = 6 * 1 = 6, suffix = 4
-  i = 2: res[2] = 2 * 4 = 8, suffix = 12
-  i = 1: res[1] = 1 * 12 = 12, suffix = 24
-  i = 0: res[0] = 1 * 24 = 24
-Result = [24, 12, 8, 6]
+        int prefix = 1;
+        for (int i = 0; i < n; ++i) {
+            res[i] = prefix;
+            prefix *= nums[i];
+        }
+
+        int suffix = 1;
+        for (int i = n - 1; i >= 0; --i) {
+            res[i] *= suffix;
+            suffix *= nums[i];
+        }
+
+        return res;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int[] productExceptSelf(int[] nums) {
+        int n = nums.length;
+        int[] res = new int[n];
+
+        int prefix = 1;
+        for (int i = 0; i < n; i++) {
+            res[i] = prefix;
+            prefix *= nums[i];
+        }
+
+        int suffix = 1;
+        for (int i = n - 1; i >= 0; i--) {
+            res[i] *= suffix;
+            suffix *= nums[i];
+        }
+
+        return res;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(1) auxiliary (output array excluded)`
-
----
-
-### Takeaway Pattern
-
-When excluded element products are needed without division, split the problem into prefix and suffix passes.
+- **Time Complexity:** $O(N)$ — Two linear passes over the array.
+- **Space Complexity:** $O(1)$ auxiliary space (excluding the output array).

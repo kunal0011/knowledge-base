@@ -1,5 +1,5 @@
 ---
-date: "2025-12-22"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Two Pointers"
 folder: "02. Two Pointers"
@@ -8,168 +8,108 @@ tags:
   - leetcode
   - coding
   - two-pointers
+  - amazon
+  - google
 ---
 
 # LeetCode 581: Shortest Unsorted Continuous Subarray
 
-Below is a structured, interview-grade explanation of **LeetCode 581 – Shortest Unsorted Continuous Subarray**, aligned with your requested format.
+**Target Companies:** Amazon, Google, Meta  
+**Difficulty:** Medium  
+**Topic:** Monotonic Extremes Sweep in O(N) Time and O(1) Space
 
 ---
-
-## LeetCode 581 – Shortest Unsorted Continuous Subarray
 
 ### Problem Statement
 
-Given an integer array `nums`, return the length of the shortest **continuous subarray** such that if you sort only this subarray in **ascending order**, the **entire array** becomes sorted.
+Given an integer array `nums`, you need to find one **continuous subarray** that if you only sort this subarray in ascending order, then the whole array will be sorted in ascending order.
 
-If the array is already sorted, return `0`.
-
-**Example**
-
-```text
-Input:  nums = [2, 6, 4, 8, 10, 9, 15]
-Output: 5
-```
+Return the **shortest length** of such a subarray.
 
 ---
 
-## Key Observation
+### Multi-Language Implementations
 
-1. If the array were already sorted, every prefix minimum and suffix maximum would respect ordering.
-2. The unsorted subarray is bounded by:
-
-   * The **first index from the left** where the ordering breaks.
-   * The **first index from the right** where the ordering breaks.
-3. Once these boundaries are identified, the subarray must expand to include:
-
-   * Any element on the left **greater than the minimum** of the unsorted region.
-   * Any element on the right **less than the maximum** of the unsorted region.
-
-This naturally leads to a **two-pointer / bidirectional scan** strategy.
-
----
-
-## Two Pointer Technique (Linear Time, Constant Space)
-
-### Step 1: Scan from Left → Right
-
-Track the **maximum seen so far**.
-
-* If `nums[i] < max_so_far`, the array is unsorted at index `i`.
-* Update `right` boundary.
-
-### Step 2: Scan from Right → Left
-
-Track the **minimum seen so far**.
-
-* If `nums[i] > min_so_far`, the array is unsorted at index `i`.
-* Update `left` boundary.
-
-### Step 3: Compute Result
-
-* If `right` was never updated → array is already sorted → return `0`
-* Else → return `right - left + 1`
-
----
-
-## Python 3 Solution (with Typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def findUnsortedSubarray(self, nums: List[int]) -> int:
-        n: int = len(nums)
+        n = len(nums)
+        end = -1
+        max_so_far = nums[0]
         
-        left: int = -1
-        right: int = -1
-        
-        max_seen: int = nums[0]
         for i in range(1, n):
-            if nums[i] < max_seen:
-                right = i
+            if nums[i] < max_so_far:
+                end = i
             else:
-                max_seen = nums[i]
-        
-        min_seen: int = nums[-1]
+                max_so_far = nums[i]
+                
+        start = 0
+        min_so_far = nums[-1]
         for i in range(n - 2, -1, -1):
-            if nums[i] > min_seen:
-                left = i
+            if nums[i] > min_so_far:
+                start = i
             else:
-                min_seen = nums[i]
-        
-        if right == -1:
-            return 0
-        
-        return right - left + 1
+                min_so_far = nums[i]
+                
+        return end - start + 1 if end != -1 else 0
+```
+
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int findUnsortedSubarray(std::vector<int>& nums) {
+        int n = nums.size();
+        int end = -1, start = 0;
+        int maxSoFar = nums[0], minSoFar = nums[n - 1];
+
+        for (int i = 1; i < n; ++i) {
+            if (nums[i] < maxSoFar) end = i;
+            else maxSoFar = nums[i];
+        }
+
+        for (int i = n - 2; i >= 0; --i) {
+            if (nums[i] > minSoFar) start = i;
+            else minSoFar = nums[i];
+        }
+
+        return end == -1 ? 0 : end - start + 1;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int findUnsortedSubarray(int[] nums) {
+        int n = nums.length;
+        int end = -1, start = 0;
+        int maxSoFar = nums[0], minSoFar = nums[n - 1];
+
+        for (int i = 1; i < n; i++) {
+            if (nums[i] < maxSoFar) end = i;
+            else maxSoFar = nums[i];
+        }
+
+        for (int i = n - 2; i >= 0; i--) {
+            if (nums[i] > minSoFar) start = i;
+            else minSoFar = nums[i];
+        }
+
+        return end == -1 ? 0 : end - start + 1;
+    }
+}
 ```
 
 ---
 
-## Worked-Out Example
+### Complexity Analysis
 
-### Input
-
-```text
-nums = [2, 6, 4, 8, 10, 9, 15]
-```
-
----
-
-### Left → Right Scan (Find `right`)
-
-| Index | Value | max\_seen | Condition | right |
-| --- | --- | --- | --- | --- |
-| 0 | 2 | 2 | — | — |
-| 1 | 6 | 6 | sorted | — |
-| 2 | 4 | 6 | 4 < 6 ❌ | 2 |
-| 3 | 8 | 8 | sorted | 2 |
-| 4 | 10 | 10 | sorted | 2 |
-| 5 | 9 | 10 | 9 < 10 ❌ | 5 |
-| 6 | 15 | 15 | sorted | 5 |
-
-**right = 5**
-
----
-
-### Right → Left Scan (Find `left`)
-
-| Index | Value | min\_seen | Condition | left |
-| --- | --- | --- | --- | --- |
-| 6 | 15 | 15 | — | — |
-| 5 | 9 | 9 | sorted | — |
-| 4 | 10 | 9 | 10 > 9 ❌ | 4 |
-| 3 | 8 | 8 | sorted | 4 |
-| 2 | 4 | 4 | sorted | 4 |
-| 1 | 6 | 4 | 6 > 4 ❌ | 1 |
-| 0 | 2 | 2 | sorted | 1 |
-
-**left = 1**
-
----
-
-### Final Answer
-
-```
-Length = right - left + 1
-        = 5 - 1 + 1
-        = 5
-```
-
----
-
-## Complexity Analysis
-
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(1)`
-* **Technique Used:** Two pointers / Bidirectional scan
-
----
-
-If you want, I can also:
-
-* Compare this with the **sorting-based O(n log n)** approach
-* Show a **monotonic stack** solution
-* Explain why this works using **inversion logic**
-
-Just tell me how deep you want to go.
+- **Time Complexity:** $O(N)$ — Two single passes without sorting.
+- **Space Complexity:** $O(1)$ auxiliary space.

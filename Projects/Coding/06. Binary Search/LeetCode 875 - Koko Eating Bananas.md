@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Binary Search"
 folder: "06. Binary Search"
@@ -8,76 +8,129 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - amazon
+  - google
 ---
 
 # LeetCode 875: Koko Eating Bananas
+
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta  
+**Difficulty:** Medium  
+**Topic:** Binary Search on Answer (Monotonic Predicate)
 
 ---
 
 ### Problem Statement
 
-Koko wants to eat all bananas within `h` hours. Return the minimum integer eating speed `k` per hour.
+Koko loves to eat bananas. There are `n` piles of bananas, the $i$-th pile has `piles[i]` bananas. The guards have gone and will come back in `h` hours.
+
+Koko can decide her bananas-per-hour eating speed of `k`. Each hour, she chooses some pile of bananas and eats `k` bananas from that pile. If the pile has less than `k` bananas, she eats all of them instead and will not eat any more bananas during this hour.
+
+Return the **minimum integer `k`** such that she can eat all the bananas within `h` hours.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-* The speed `k` lies in monotonic range `[1, max(piles)]`.
-* If speed `k` is sufficient to eat in `h` hours, any speed `> k` is also valid.
-* This monotonicity enables Binary Search on the Answer.
+- **Input:** `piles: List[int]`, `h: int`
+- **Output:** `int` (minimum speed $k$)
+- **Constraints:**
+  - $1 \le \text{piles.length} \le 10^4$
+  - $\text{piles.length} \le h \le 10^9$
+  - $1 \le \text{piles}[i] \le 10^9$
 
 ---
 
-### Core Technique: Binary Search on Monotonic Feasibility Function
+### Key Idea & Intuition
+
+- **Monotonicity:**
+  - Let $f(k)$ be the hours needed to eat all bananas at speed $k$.
+  - As speed $k$ increases, hours $f(k)$ monotonically decreases!
+  - Search range for $k$: $[1, \max(\text{piles})]$.
+  - If at speed $k$, hours $\le h$, speed $k$ is feasible; try smaller speeds (`right = mid`).
+  - Otherwise, speed $k$ is too slow; must increase speed (`left = mid + 1`).
 
 ---
 
-### Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
-import math
 from typing import List
+import math
 
 class Solution:
     def minEatingSpeed(self, piles: List[int], h: int) -> int:
         left, right = 1, max(piles)
-        ans = right
         
-        while left <= right:
-            mid = left + (right - left) // 2
-            total_hours = sum(math.ceil(p / mid) for p in piles)
+        while left < right:
+            mid = (left + right) // 2
+            hours_needed = sum(math.ceil(p / mid) for p in piles)
             
-            if total_hours <= h:
-                ans = mid
-                right = mid - 1  # try finding a smaller valid speed
+            if hours_needed <= h:
+                right = mid
             else:
-                left = mid + 1   # speed too slow
+                left = mid + 1
                 
-        return ans
+        return left
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
 
-### Worked-Out Example
+class Solution {
+public:
+    int minEatingSpeed(std::vector<int>& piles, int h) {
+        int left = 1, right = *std::max_element(piles.begin(), piles.end());
 
-```python
-piles = [3, 6, 7, 11], h = 8
-left = 1, right = 11
-mid = 6: hours = ceil(3/6)+ceil(6/6)+ceil(7/6)+ceil(11/6) = 1+1+2+2 = 6 <= 8 (valid) -> ans=6, right=5
-mid = 3: hours = 1+2+3+4 = 10 > 8 (invalid) -> left=4
-mid = 4: hours = 1+2+2+3 = 8 <= 8 (valid) -> ans=4, right=3
-Result = 4
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            long long hoursNeeded = 0;
+            for (int p : piles) {
+                hoursNeeded += (p + mid - 1) / mid;
+            }
+
+            if (hoursNeeded <= h) {
+                right = mid;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return left;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int minEatingSpeed(int[] piles, int h) {
+        int left = 1, right = 0;
+        for (int p : piles) right = Math.max(right, p);
+
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            long hoursNeeded = 0;
+            for (int p : piles) {
+                hoursNeeded += (p + mid - 1) / mid;
+            }
+
+            if (hoursNeeded <= h) {
+                right = mid;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return left;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n * log(max(piles)))`
-* **Space Complexity:** `O(1)`
-
----
-
-### Takeaway Pattern
-
-Whenever asked to minimize/maximize an answer with a monotonic verification condition, use Binary Search on Answer.
+- **Time Complexity:** $O(N \log(\max(\text{piles})))$ — Binary search over speed range $[1, 10^9]$.
+- **Space Complexity:** $O(1)$ auxiliary space.

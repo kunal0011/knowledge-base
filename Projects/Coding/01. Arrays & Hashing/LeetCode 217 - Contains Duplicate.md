@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Arrays & Hashing"
 folder: "01. Arrays & Hashing"
@@ -8,31 +8,37 @@ tags:
   - leetcode
   - coding
   - arrays-and-hashing
+  - amazon
+  - apple
 ---
 
 # LeetCode 217: Contains Duplicate
+
+**Target Companies:** Amazon, Apple, Google, Microsoft  
+**Difficulty:** Easy  
+**Topic:** Hash Set Membership / Early Exit
 
 ---
 
 ### Problem Statement
 
-Given an integer array `nums`, return `true` if any value appears at least twice in the array, and return `false` if every element is distinct.
+Given an integer array `nums`, return `true` if any value appears **at least twice** in the array, and return `false` if every element is distinct.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-* A Hash Set allows checking element presence in `O(1)` average time.
-* If `len(nums) != len(set(nums))`, duplicate exists.
+- **Input:** `nums: List[int]`
+- **Output:** `bool`
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10^5$
+  - $-10^9 \le \text{nums}[i] \le 10^9$
 
 ---
 
-### Core Technique: Hash Set Membership
+### Multi-Language Implementations
 
----
-
-### Python 3 Solution (with typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
@@ -46,28 +52,44 @@ class Solution:
         return False
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <unordered_set>
 
-### Worked-Out Example
+class Solution {
+public:
+    bool containsDuplicate(std::vector<int>& nums) {
+        std::unordered_set<int> seen;
+        for (int num : nums) {
+            if (seen.count(num)) return true;
+            seen.insert(num);
+        }
+        return false;
+    }
+};
+```
 
-```python
-nums = [1, 2, 3, 1]
-seen = {}
-num = 1 -> add to seen -> {1}
-num = 2 -> add to seen -> {1, 2}
-num = 3 -> add to seen -> {1, 2, 3}
-num = 1 -> 1 is in seen! -> return True
+#### 3. Java (Modern, Typed)
+```java
+import java.util.HashSet;
+import java.util.Set;
+
+class Solution {
+    public boolean containsDuplicate(int[] nums) {
+        Set<Integer> seen = new HashSet<>();
+        for (int num : nums) {
+            if (seen.contains(num)) return true;
+            seen.add(num);
+        }
+        return false;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(n)`
-
----
-
-### Takeaway Pattern
-
-Use a Hash Set for instant duplicate detection.
+- **Time Complexity:** $O(N)$ with early exit on the first detected duplicate.
+- **Space Complexity:** $O(N)$ for the hash set.

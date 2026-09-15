@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Linked List"
 folder: "07. Linked List"
@@ -8,9 +8,15 @@ tags:
   - leetcode
   - coding
   - linked-list
+  - amazon
+  - google
 ---
 
 # LeetCode 206: Reverse Linked List
+
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Apple, Microsoft  
+**Difficulty:** Easy  
+**Topic:** In-Place Pointer Reversal / Iterative & Recursive
 
 ---
 
@@ -20,19 +26,9 @@ Given the `head` of a singly linked list, reverse the list, and return the rever
 
 ---
 
-### Key Observation
+### Multi-Language Implementations
 
-* Maintain three pointers: `prev`, `curr`, and `next_temp`.
-* Invert the `curr.next = prev` pointer on each iteration while advancing forward.
-
----
-
-### Core Technique: Three-Pointer Iterative Reversal
-
----
-
-### Python 3 Solution (with typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import Optional
 
@@ -45,35 +41,68 @@ class Solution:
     def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
         prev = None
         curr = head
+        
         while curr:
-            next_node = curr.next
+            nxt = curr.next
             curr.next = prev
             prev = curr
-            curr = next_node
+            curr = nxt
+            
         return prev
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode(int x) : val(x), next(nullptr) {}
+};
 
-### Worked-Out Example
+class Solution {
+public:
+    ListNode* reverseList(ListNode* head) {
+        ListNode* prev = nullptr;
+        ListNode* curr = head;
 
-```python
-1 -> 2 -> 3 -> None
-curr=1: 1.next = None, prev = 1, curr = 2
-curr=2: 2.next = 1, prev = 2, curr = 3
-curr=3: 3.next = 2, prev = 3, curr = None
-return prev = 3 -> 2 -> 1 -> None
+        while (curr != nullptr) {
+            ListNode* nxt = curr->next;
+            curr->next = prev;
+            prev = curr;
+            curr = nxt;
+        }
+        return prev;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int val) { this.val = val; }
+}
+
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        ListNode prev = null;
+        ListNode curr = head;
+
+        while (curr != null) {
+            ListNode nxt = curr.next;
+            curr.next = prev;
+            prev = curr;
+            curr = nxt;
+        }
+        return prev;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(1)`
-
----
-
-### Takeaway Pattern
-
-Store `curr.next` before overwriting the pointer to preserve list traversal.
+- **Time Complexity:** $O(N)$ single pass.
+- **Space Complexity:** $O(1)$ in-place iterative reversal.

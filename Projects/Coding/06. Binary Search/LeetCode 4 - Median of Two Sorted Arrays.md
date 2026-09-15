@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Binary Search"
 folder: "06. Binary Search"
@@ -8,31 +8,50 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - amazon
+  - google
 ---
 
 # LeetCode 4: Median of Two Sorted Arrays
+
+**Target Companies:** Google (Signature Classic Hard), Amazon, Meta, Apple  
+**Difficulty:** Hard  
+**Topic:** Binary Search on Partition Boundary
 
 ---
 
 ### Problem Statement
 
-Given two sorted arrays `nums1` and `nums2` of size `m` and `n`, return the median of the two sorted arrays in `O(log (m+n))` time.
+Given two sorted arrays `nums1` and `nums2` of size $m$ and $n$ respectively, return the **median** of the two sorted arrays.
+
+The overall run time complexity should be **$O(\log (m+n))$**.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-* Binary search for partition cut in the **smaller** array `nums1` (size `m <= n`).
-* Partition both arrays into left and right halves such that `len(left_half) == len(right_half)` and `max(left1, left2) <= min(right1, right2)`.
+- **Input:** `nums1: List[int]`, `nums2: List[int]`
+- **Output:** `float` (median value)
+- **Constraints:**
+  - $0 \le m \le 1000, 0 \le n \le 1000, 1 \le m + n \le 2000$
+  - $-10^6 \le \text{nums1}[i], \text{nums2}[i] \le 10^6$
 
 ---
 
-### Core Technique: Dual Array Partition Binary Search
+### Key Idea & Intuition
+
+- **Binary Search on the Shorter Array:**
+  - Ensure $m \le n$ (swap if needed) so binary search runs in $O(\log(\min(m, n)))$.
+  - We want to partition both arrays such that the left half has $\lfloor (m + n + 1) / 2 \rfloor$ elements, and every element in the left half $\le$ every element in the right half:
+    - $\text{maxLeft1} \le \text{minRight2}$ and $\text{maxLeft2} \le \text{minRight1}$.
+  - If $\text{maxLeft1} > \text{minRight2}$, partition 1 is too far right $\implies$ search left (`high = i - 1`).
+  - If $\text{maxLeft2} > \text{minRight1}$, partition 1 is too far left $\implies$ search right (`low = i + 1`).
 
 ---
 
-### Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
@@ -40,53 +59,108 @@ class Solution:
     def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
         if len(nums1) > len(nums2):
             nums1, nums2 = nums2, nums1
+            
         m, n = len(nums1), len(nums2)
-        left, right = 0, m
-        total = m + n
-        half = (total + 1) // 2
+        low, high = 0, m
         
-        while left <= right:
-            i = (left + right) // 2
-            j = half - i
+        while low <= high:
+            i = (low + high) // 2
+            j = (m + n + 1) // 2 - i
             
-            left1 = nums1[i - 1] if i > 0 else float('-inf')
-            right1 = nums1[i] if i < m else float('inf')
-            left2 = nums2[j - 1] if j > 0 else float('-inf')
-            right2 = nums2[j] if j < n else float('inf')
+            max_left1 = float('-inf') if i == 0 else nums1[i - 1]
+            min_right1 = float('inf') if i == m else nums1[i]
             
-            if left1 <= right2 and left2 <= right1:
-                if total % 2 != 0:
-                    return float(max(left1, left2))
-                return (max(left1, left2) + min(right1, right2)) / 2.0
-            elif left1 > right2:
-                right = i - 1
+            max_left2 = float('-inf') if j == 0 else nums2[j - 1]
+            min_right2 = float('inf') if j == n else nums2[j]
+            
+            if max_left1 <= min_right2 and max_left2 <= min_right1:
+                if (m + n) % 2 == 1:
+                    return max(max_left1, max_left2)
+                return (max(max_left1, max_left2) + min(min_right1, min_right2)) / 2.0
+            elif max_left1 > min_right2:
+                high = i - 1
             else:
-                left = i + 1
-        return 0.0
+                low = i + 1
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
+#include <climits>
 
-### Worked-Out Example
+class Solution {
+public:
+    double findMedianSortedArrays(std::vector<int>& nums1, std::vector<int>& nums2) {
+        if (nums1.size() > nums2.size()) return findMedianSortedArrays(nums2, nums1);
 
-```python
-nums1 = [1, 3], nums2 = [2]
-m = 2, n = 1 -> swap -> nums1 = [2], nums2 = [1, 3]
-total = 3, half = 2
-i = 1, j = 1 -> left1 = 2, right1 = inf, left2 = 1, right2 = 3
-left1 (2) <= right2 (3) and left2 (1) <= right1 (inf) -> Valid partition!
-Median = max(left1, left2) = max(2, 1) = 2.0
+        int m = nums1.size(), n = nums2.size();
+        int low = 0, high = m;
+
+        while (low <= high) {
+            int i = low + (high - low) / 2;
+            int j = (m + n + 1) / 2 - i;
+
+            int maxLeft1 = (i == 0) ? INT_MIN : nums1[i - 1];
+            int minRight1 = (i == m) ? INT_MAX : nums1[i];
+
+            int maxLeft2 = (j == 0) ? INT_MIN : nums2[j - 1];
+            int minRight2 = (j == n) ? INT_MAX : nums2[j];
+
+            if (maxLeft1 <= minRight2 && maxLeft2 <= minRight1) {
+                if ((m + n) % 2 == 1) {
+                    return std::max(maxLeft1, maxLeft2);
+                }
+                return (std::max(maxLeft1, maxLeft2) + std::min(minRight1, minRight2)) / 2.0;
+            } else if (maxLeft1 > minRight2) {
+                high = i - 1;
+            } else {
+                low = i + 1;
+            }
+        }
+        return 0.0;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public double findMedianSortedArrays(int[] nums1, int[] nums2) {
+        if (nums1.length > nums2.length) return findMedianSortedArrays(nums2, nums1);
+
+        int m = nums1.length, n = nums2.length;
+        int low = 0, high = m;
+
+        while (low <= high) {
+            int i = (low + high) / 2;
+            int j = (m + n + 1) / 2 - i;
+
+            int maxLeft1 = (i == 0) ? Integer.MIN_VALUE : nums1[i - 1];
+            int minRight1 = (i == m) ? Integer.MAX_VALUE : nums1[i];
+
+            int maxLeft2 = (j == 0) ? Integer.MIN_VALUE : nums2[j - 1];
+            int minRight2 = (j == n) ? Integer.MAX_VALUE : nums2[j];
+
+            if (maxLeft1 <= minRight2 && maxLeft2 <= minRight1) {
+                if ((m + n) % 2 == 1) {
+                    return Math.max(maxLeft1, maxLeft2);
+                }
+                return (Math.max(maxLeft1, maxLeft2) + Math.min(minRight1, minRight2)) / 2.0;
+            } else if (maxLeft1 > minRight2) {
+                high = i - 1;
+            } else {
+                low = i + 1;
+            }
+        }
+        return 0.0;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(log(min(m, n)))`
-* **Space Complexity:** `O(1)`
-
----
-
-### Takeaway Pattern
-
-Always run binary search on the shorter array to ensure partition indices remain non-negative and log-bounded.
+- **Time Complexity:** $O(\log(\min(m, n)))$ — Binary search on partition of shorter array.
+- **Space Complexity:** $O(1)$ auxiliary space.

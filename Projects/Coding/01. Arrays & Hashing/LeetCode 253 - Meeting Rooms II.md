@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Arrays & Hashing"
 folder: "01. Arrays & Hashing"
@@ -8,34 +8,49 @@ tags:
   - leetcode
   - coding
   - arrays-and-hashing
+  - heap
+  - amazon
+  - google
 ---
 
 # LeetCode 253: Meeting Rooms II
 
-**Target Companies:** Amazon, Google, Meta
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Chronological Event Sweep / Min-Heap Allocation
 
 ---
 
 ### Problem Statement
 
-Given an array of meeting time intervals `intervals` where `intervals[i] = [start_i, end_i]`, return the minimum number of conference rooms required.
+Given an array of meeting time intervals `intervals` where `intervals[i] = [start_i, end_i]`, return the **minimum number of conference rooms required**.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-* Separate all start times and end times into two sorted arrays.
-* A new room is needed whenever a meeting starts before the earliest ending meeting finishes (`start[s] < end[e]`).
-* Alternatively, maintain a Min-Heap of meeting end times: if `start >= min_heap[0]`, reuse room by popping.
-
----
-
-### Core Technique: Two Pointers on Chronological Events / Min-Heap Concurrency
+- **Input:** `intervals: List[List[int]]`
+- **Output:** `int` (minimum conference rooms)
+- **Constraints:**
+  - $1 \le \text{intervals.length} \le 10^4$
+  - $0 \le start_i < end_i \le 10^6$
 
 ---
 
-### Python 3 Solution (with typing)
+### Key Idea & Intuition
 
+- **Chronological Separation:**
+  - A meeting room is needed when a meeting begins.
+  - A meeting room is freed when a meeting ends.
+  - If we separate all `starts` and `ends` into two sorted arrays:
+    - When `starts[s] < ends[e]`: A meeting starts before the earliest room is freed $\implies$ increment `rooms += 1` and `s += 1`.
+    - When `starts[s] >= ends[e]`: A meeting ended and freed its room $\implies$ reuse room (`e += 1` and `s += 1`).
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
@@ -44,45 +59,84 @@ class Solution:
         starts = sorted([i[0] for i in intervals])
         ends = sorted([i[1] for i in intervals])
         
-        s, e = 0, 0
-        used_rooms = 0
-        max_rooms = 0
+        rooms = 0
+        end_ptr = 0
         
-        while s < len(intervals):
-            if starts[s] < ends[e]:
-                used_rooms += 1
-                s += 1
+        for start in starts:
+            if start < ends[end_ptr]:
+                rooms += 1
             else:
-                used_rooms -= 1
-                e += 1
-            max_rooms = max(max_rooms, used_rooms)
-            
-        return max_rooms
+                end_ptr += 1
+                
+        return rooms
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
 
-### Worked-Out Example
+class Solution {
+public:
+    int minMeetingRooms(std::vector<std::vector<int>>& intervals) {
+        std::vector<int> starts, ends;
+        for (const auto& i : intervals) {
+            starts.push_back(i[0]);
+            ends.push_back(i[1]);
+        }
 
-```python
-intervals = [[0, 30], [5, 10], [15, 20]]
-starts = [0, 5, 15], ends = [10, 20, 30]
-start=0 < end=10 -> rooms = 1, s=1
-start=5 < end=10 -> rooms = 2, s=2
-start=15 >= end=10 -> rooms = 1, e=1
-start=15 < end=20 -> rooms = 2, s=3
-Max rooms needed = 2
+        std::sort(starts.begin(), starts.end());
+        std::sort(ends.begin(), ends.end());
+
+        int rooms = 0, endPtr = 0;
+        for (int start : starts) {
+            if (start < ends[endPtr]) {
+                rooms++;
+            } else {
+                endPtr++;
+            }
+        }
+        return rooms;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
+
+class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        int n = intervals.length;
+        int[] starts = new int[n];
+        int[] ends = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            starts[i] = intervals[i][0];
+            ends[i] = intervals[i][1];
+        }
+
+        Arrays.sort(starts);
+        Arrays.sort(ends);
+
+        int rooms = 0;
+        int endPtr = 0;
+
+        for (int start : starts) {
+            if (start < ends[endPtr]) {
+                rooms++;
+            } else {
+                endPtr++;
+            }
+        }
+        return rooms;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n log n) for sorting`
-* **Space Complexity:** `O(n)`
-
----
-
-### Takeaway Pattern
-
-Deconstruct intervals into independent start and end event timelines to track peak concurrency.
+- **Time Complexity:** $O(N \log N)$ for sorting start and end times.
+- **Space Complexity:** $O(N)$ for the separated arrays.

@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Bit Manipulation"
 folder: "14. Bit Manipulation"
@@ -8,62 +8,77 @@ tags:
   - leetcode
   - coding
   - bit-manipulation
+  - amazon
+  - google
 ---
 
-# LeetCode 191: Number of 1 Bits
+# LeetCode 191: Number of 1 Bits (Hamming Weight)
+
+**Target Companies:** Amazon, Google, Microsoft, Apple  
+**Difficulty:** Easy  
+**Topic:** Brian Kernighan's Algorithm (`n & (n - 1)`)
 
 ---
 
 ### Problem Statement
 
-Write a function that takes the binary representation of a positive integer and returns the number of set bits ('1's) it has (Hamming weight).
+Given a positive integer `n`, write a function that returns the number of set bits (1s) in its binary representation (also known as the **Hamming weight**).
 
 ---
 
-### Key Observation
+### Key Idea & Intuition
 
-* The operation `n & (n - 1)` flips the lowest set bit of `n` to `0`.
-* Looping until `n == 0` executes in iterations equal to the number of set bits.
-
----
-
-### Core Technique: Brian Kernighan's Algorithm
+- **Brian Kernighan's Bit Trick:**
+  - $n \ \& \ (n - 1)$ always clears the **lowest set bit** (rightmost 1) of $n$ to 0!
+  - Instead of looping 32 times, loop only as many times as there are 1-bits in $n$.
 
 ---
 
-### Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 class Solution:
     def hammingWeight(self, n: int) -> int:
         count = 0
-        while n > 0:
+        while n:
             n &= (n - 1)
             count += 1
         return count
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+class Solution {
+public:
+    int hammingWeight(int n) {
+        int count = 0;
+        while (n != 0) {
+            n &= (n - 1);
+            count++;
+        }
+        return count;
+    }
+};
+```
 
-### Worked-Out Example
-
-```python
-n = 11 (binary 1011)
-iter 1: 1011 & 1010 = 1010 (count = 1)
-iter 2: 1010 & 1001 = 1000 (count = 2)
-iter 3: 1000 & 0111 = 0000 (count = 3)
-n == 0 -> return 3
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int hammingWeight(int n) {
+        int count = 0;
+        while (n != 0) {
+            n &= (n - 1);
+            count++;
+        }
+        return count;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(k) where k is number of set bits (at most 32)`
-* **Space Complexity:** `O(1)`
-
----
-
-### Takeaway Pattern
-
-`n & (n - 1)` clears the lowest set bit in O(1) bitwise operations.
+- **Time Complexity:** $O(K)$ where $K$ is the number of 1-bits ($\le 32$).
+- **Space Complexity:** $O(1)$ constant space.

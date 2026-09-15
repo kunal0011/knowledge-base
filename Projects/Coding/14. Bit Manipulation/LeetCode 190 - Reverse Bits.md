@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Bit Manipulation"
 folder: "14. Bit Manipulation"
@@ -8,9 +8,15 @@ tags:
   - leetcode
   - coding
   - bit-manipulation
+  - amazon
+  - google
 ---
 
 # LeetCode 190: Reverse Bits
+
+**Target Companies:** Google, Amazon, Apple  
+**Difficulty:** Easy  
+**Topic:** Bitwise Extraction and Shifting
 
 ---
 
@@ -20,20 +26,9 @@ Reverse bits of a given 32 bits unsigned integer.
 
 ---
 
-### Key Observation
+### Multi-Language Implementations
 
-* Extract the lowest bit of `n` using `n & 1`.
-* Shift the result left by 1 and append the extracted bit.
-* Shift `n` right by 1. Repeat exactly 32 times.
-
----
-
-### Core Technique: Bit Shift & Accumulation
-
----
-
-### Python 3 Solution (with typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 class Solution:
     def reverseBits(self, n: int) -> int:
@@ -44,24 +39,40 @@ class Solution:
         return res
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <cstdint>
 
-### Worked-Out Example
-
+class Solution {
+public:
+    uint32_t reverseBits(uint32_t n) {
+        uint32_t res = 0;
+        for (int i = 0; i < 32; ++i) {
+            res = (res << 1) | (n & 1);
+            n >>= 1;
+        }
+        return res;
+    }
+};
 ```
-n = 00000010100101000001111010011100
-After 32 shifts, res = 00111001011110000010100101000000 (964176192)
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int reverseBits(int n) {
+        int res = 0;
+        for (int i = 0; i < 32; i++) {
+            res = (res << 1) | (n & 1);
+            n >>>= 1;
+        }
+        return res;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(1) (fixed 32 iterations)`
-* **Space Complexity:** `O(1)`
-
----
-
-### Takeaway Pattern
-
-Extract bits with `& 1` and assemble the reversed integer with `(res << 1) | bit`.
+- **Time Complexity:** $O(1)$ — Exactly 32 bit operations.
+- **Space Complexity:** $O(1)$ constant auxiliary space.

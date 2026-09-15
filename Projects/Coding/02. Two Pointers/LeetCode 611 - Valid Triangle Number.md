@@ -1,5 +1,5 @@
 ---
-date: "2025-12-22"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Two Pointers"
 folder: "02. Two Pointers"
@@ -8,182 +8,106 @@ tags:
   - leetcode
   - coding
   - two-pointers
+  - amazon
+  - google
 ---
 
 # LeetCode 611: Valid Triangle Number
 
-Below is a complete, interview-ready explanation of **LeetCode 611 – Valid Triangle Number**, structured exactly as requested.
+**Target Companies:** Amazon, Google, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Sorted Two Pointers / Triangle Inequality Invariant
 
 ---
 
-## 📌 Problem Statement (LeetCode 611 – Valid Triangle Number)
+### Problem Statement
 
-You are given an integer array `nums`.  
-Return the number of **triplets** `(i, j, k)` such that:
+Given an integer array `nums`, return the number of triplets chosen from the array that can make triangles if we take them as side lengths of a triangle.
 
-* `i < j < k`
-* `nums[i]`, `nums[j]`, and `nums[k]` can form a **valid triangle**
-
-### Triangle validity rule
-
-For three sides `a`, `b`, `c` (assuming `a ≤ b ≤ c`):
-
-```
-a + b > c
-```
+Three sides $a, b, c$ form a triangle if $a + b > c$, $a + c > b$, and $b + c > a$. When sorted ($a \le b \le c$), this reduces strictly to $a + b > c$.
 
 ---
 
-## 🔑 Key Observation
+### Multi-Language Implementations
 
-1. **Sorting simplifies the triangle condition**
-
-   * After sorting, for indices `i < j < k`, we have:
-
-     ```
-     nums[i] ≤ nums[j] ≤ nums[k]
-     ```
-   * We only need to check:
-
-     ```
-     nums[i] + nums[j] > nums[k]
-     ```
-2. **Monotonic behavior after sorting**
-
-   * Fix the **largest side** `nums[k]`
-   * If `nums[i] + nums[j] > nums[k]` is true for some `i`,  
-     then it will also be true for all indices `i' > i` (because values increase).
-
-This monotonicity enables a **two-pointer optimization**.
-
----
-
-## 🧠 Two Pointer Technique (Core Insight)
-
-### Strategy
-
-1. **Sort** the array
-2. Fix `k` as the **largest side** (iterate from right to left)
-3. Use two pointers:
-
-   * `i = 0` (smallest)
-   * `j = k - 1` (second largest)
-
-### Pointer logic
-
-* If `nums[i] + nums[j] > nums[k]`
-
-  * Then **all indices from `i` to `j-1`** also form valid triangles with `j` and `k`
-  * Add `(j - i)` to the answer
-  * Decrease `j`
-* Else
-
-  * Increase `i` to make the sum larger
-
-### Time Complexity
-
-* Sorting: `O(n log n)`
-* Two-pointer scan: `O(n²)`
-* **Overall:** `O(n²)`
-
----
-
-## 🧩 Python 3 Solution (with Typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def triangleNumber(self, nums: List[int]) -> int:
         nums.sort()
-        n = len(nums)
         count = 0
-
-        # Fix the largest side nums[k]
+        n = len(nums)
+        
         for k in range(n - 1, 1, -1):
-            i, j = 0, k - 1
-
-            while i < j:
-                if nums[i] + nums[j] > nums[k]:
-                    # All pairs (i, i+1, ..., j-1) with j are valid
-                    count += (j - i)
-                    j -= 1
+            left, right = 0, k - 1
+            while left < right:
+                if nums[left] + nums[right] > nums[k]:
+                    # All pairs from left to right-1 also satisfy condition with right
+                    count += (right - left)
+                    right -= 1
                 else:
-                    i += 1
-
+                    left += 1
+                    
         return count
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
 
-## 🧪 Worked-Out Example
+class Solution {
+public:
+    int triangleNumber(std::vector<int>& nums) {
+        std::sort(nums.begin(), nums.end());
+        int count = 0, n = nums.size();
 
-### Input
-
-```text
-nums = [2, 2, 3, 4]
+        for (int k = n - 1; k >= 2; --k) {
+            int left = 0, right = k - 1;
+            while (left < right) {
+                if (nums[left] + nums[right] > nums[k]) {
+                    count += (right - left);
+                    right--;
+                } else {
+                    left++;
+                }
+            }
+        }
+        return count;
+    }
+};
 ```
 
-### Step 1: Sort
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
 
-```text
-nums = [2, 2, 3, 4]
+class Solution {
+    public int triangleNumber(int[] nums) {
+        Arrays.sort(nums);
+        int count = 0, n = nums.length;
+
+        for (int k = n - 1; k >= 2; k--) {
+            int left = 0, right = k - 1;
+            while (left < right) {
+                if (nums[left] + nums[right] > nums[k]) {
+                    count += (right - left);
+                    right--;
+                } else {
+                    left++;
+                }
+            }
+        }
+        return count;
+    }
+}
 ```
-
----
-
-### Step 2: Fix k = 3 → nums[k] = 4
-
-| i | j | nums[i] + nums[j] | Condition | Action |
-| --- | --- | --- | --- | --- |
-| 0 | 2 | 2 + 3 = 5 | > 4 ✅ | count += (2 - 0) = 2, j-- |
-| 0 | 1 | 2 + 2 = 4 | > 4 ❌ | i++ |
-
-Valid triangles found:
-
-```
-(2,3,4), (2,3,4)
-```
-
----
-
-### Step 3: Fix k = 2 → nums[k] = 3
-
-| i | j | nums[i] + nums[j] | Condition | Action |
-| --- | --- | --- | --- | --- |
-| 0 | 1 | 2 + 2 = 4 | > 3 ✅ | count += (1 - 0) = 1 |
-
-Valid triangle:
-
-```
-(2,2,3)
-```
-
----
-
-### ✅ Final Count
-
-```
-Total valid triangles = 3
-```
-
----
-
-## 🧠 Why This Works (Interview Takeaway)
-
-* Sorting converts a **3-sum-like brute force** into a **two-pointer counting problem**
-* Key trick: when a condition works for `(i, j)`, it works for a **range of indices**
-* Common pattern used in:
-
-  * Triangle problems
-  * Pair counting
-  * Optimized combinatorics
 
 ---
 
-If you want, I can also provide:
+### Complexity Analysis
 
-* Dry-run visualization
-* Edge-case analysis
-* Comparison with brute force
-* Similar problems using the same two-pointer pattern
+- **Time Complexity:** $O(N^2)$ — Sorting takes $O(N \log N)$, outer loop fixed $k$ takes $N$, inner two-pointer search takes $O(N)$.
+- **Space Complexity:** $O(1)$ auxiliary space.

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-18"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,186 +8,200 @@ tags:
   - leetcode
   - coding
   - greedy
+  - string
+  - counting
+  - amazon
+  - google
 ---
 
 # LeetCode 1221: Split a String in Balanced Strings
 
-Below is a structured, end-to-end explanation of **LeetCode 1221 – Split a String in Balanced Strings**, aligned to your requested format and level of rigor.
-
----
-
-## LeetCode 1221 — Split a String in Balanced Strings
+**Target Companies:** Amazon, Google, Microsoft, Apple  
+**Difficulty:** Easy  
+**Topic:** Greedy / String / Counting  
 
 ---
 
 ### Problem Statement
 
-You are given a string `s` consisting only of the characters `'L'` and `'R'`.
+**Balanced** strings are those that have an equal quantity of `'L'` and `'R'` characters.
 
-A **balanced string** is defined as a string that contains an equal number of `'L'` and `'R'`.
+Given a **balanced** string `s`, split it into some number of substrings such that:
+- Each substring is balanced.
 
-Your task is to split the string into the **maximum number of balanced substrings**, such that:
-
-* Each substring is balanced.
-* Substrings are contiguous.
-* Every character of `s` belongs to exactly one substring.
-
-Return the **maximum number of balanced substrings** that can be obtained.
+Return the **maximum number of balanced substrings** you can obtain.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-This problem does **not** require backtracking, DP, or prefix arrays.
-
-The critical insight is:
-
-> As soon as the count of `'L'` and `'R'` becomes equal while scanning left to right, we can safely split the string at that position.
-
-Why this works:
-
-* The earliest possible split always leaves the remaining suffix as large as possible.
-* Delaying a split can never increase the total number of balanced substrings.
-* Therefore, a **greedy earliest-split strategy** is optimal.
+- **Input:**
+  - `s`: `str` / `string` ($2 \le |s| \le 1000$, guaranteed to be balanced).
+- **Output:**
+  - `int` — maximum number of contiguous balanced substrings.
+- **Constraints:**
+  - $2 \le \text{s.length} \le 1000$
+  - `s[i]` is either `'L'` or `'R'`.
+  - `s` is a balanced string.
 
 ---
 
-### Greedy Solution – Core Idea
+### Key Idea & Intuition
 
-Maintain a running **balance counter**:
+The goal is to maximize the number of balanced contiguous partitions.
+Consider scanning `s` from left to right while tracking the net balance:
+$$\text{balance} = \text{count}('R') - \text{count}('L')$$
+(or equivalently `+1` for `'R'` and `-1` for `'L'`).
 
-* Increment balance for `'L'`
-* Decrement balance for `'R'`
+#### The Greedy Earliest-Cut Invariant:
+Whenever $\text{balance} == 0$, the prefix processed so far has an equal number of `'R'`s and `'L'`s, meaning it forms a valid balanced substring.
+- Should we immediately cut the string here?
+- **Yes!** Suppose a balanced prefix $P$ is found. If we do not cut at $P$ and instead wait for a larger balanced prefix $P'$, then $P' = P + Q$. Since $P'$ is balanced and $P$ is balanced, the suffix $Q$ must also be balanced!
+- Cutting $P$ immediately gives us 1 balanced piece from $P$ plus any balanced pieces we can extract from $Q$. Merging them would give only 1 piece, which can never be better than cutting them into at least 2 pieces.
+- Therefore, splitting **as early as possible** (the moment $\text{balance} == 0$) is mathematically guaranteed to maximize the total number of balanced substrings.
 
-Whenever:
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Initialize `balance = 0` and `ans = 0`.
+2. Iterate through each character `ch` in `s`:
+   - If `ch == 'R'`, increment `balance += 1`.
+   - Else (`ch == 'L'`), decrement `balance -= 1`.
+   - If `balance == 0`:
+     - Increment `ans += 1` (a complete balanced component has ended).
+3. Return `ans`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `s = "RLRRLLRLRL"`:
 
 ```
-balance == 0
+Index:   0    1    2    3    4    5    6    7    8    9
+Char:    R    L    R    R    L    L    R    L    R    L
+
+i=0 ('R'): balance = +1
+i=1 ('L'): balance =  0 -> balance == 0! CUT 1: "RL"  (ans = 1)
+i=2 ('R'): balance = +1
+i=3 ('R'): balance = +2
+i=4 ('L'): balance = +1
+i=5 ('L'): balance =  0 -> balance == 0! CUT 2: "RRLL" (ans = 2)
+i=6 ('R'): balance = +1
+i=7 ('L'): balance =  0 -> balance == 0! CUT 3: "RL"  (ans = 3)
+i=8 ('R'): balance = +1
+i=9 ('L'): balance =  0 -> balance == 0! CUT 4: "RL"  (ans = 4)
+
+Total balanced substrings = 4 ("RL", "RRLL", "RL", "RL").
 ```
 
-it means:
+---
 
-* We have seen equal `'L'` and `'R'`
-* A balanced substring ends here
-* We increment our answer counter
+### Solved Examples with Multiple Inputs
 
-Then we continue scanning the rest of the string.
+#### Example 1:
+- **Input:** `s = "RLRRLLRLRL"`
+- **Output:** `4`
+
+#### Example 2:
+- **Input:** `s = "RLRRRLLRLL"`
+- **Tracing:**
+  - Cut 1 at index 1: `"RL"`
+  - Cut 2 at index 9: `"RRRLLRLL"`
+- **Output:** `2`
+
+#### Example 3:
+- **Input:** `s = "LLLLRRRR"`
+- **Tracing:** Balance only reaches 0 at the very end (index 7).
+- **Output:** `1`
 
 ---
 
-### Greedy “Tricks” Used
+### Multi-Language Implementations
 
-1. **Balance Instead of Two Counters**
-
-   * Using one integer is enough.
-   * `balance = (#L so far) − (#R so far)`
-2. **Earliest Valid Cut**
-
-   * As soon as balance becomes zero, split immediately.
-   * This maximizes the number of substrings.
-3. **Single Pass**
-
-   * Time Complexity: **O(n)**
-   * Space Complexity: **O(1)**
-
----
-
-### Python 3 Solution (With Typing)
-
+#### Python 3
 ```python
-from typing import *
-
 class Solution:
     def balancedStringSplit(self, s: str) -> int:
-        balance: int = 0
-        result: int = 0
-
+        balance = 0
+        ans = 0
+        
         for ch in s:
-            if ch == 'L':
+            if ch == 'R':
                 balance += 1
-            else:  # ch == 'R'
+            else:
                 balance -= 1
-
+                
             if balance == 0:
-                result += 1
+                ans += 1
+                
+        return ans
+```
 
-        return result
+#### C++17
+```cpp
+#include <string>
+
+class Solution {
+public:
+    int balancedStringSplit(const std::string& s) {
+        int balance = 0;
+        int ans = 0;
+        
+        for (char ch : s) {
+            if (ch == 'R') {
+                balance++;
+            } else {
+                balance--;
+            }
+            
+            if (balance == 0) {
+                ans++;
+            }
+        }
+        
+        return ans;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int balancedStringSplit(String s) {
+        int balance = 0;
+        int ans = 0;
+        
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == 'R') {
+                balance++;
+            } else {
+                balance--;
+            }
+            
+            if (balance == 0) {
+                ans++;
+            }
+        }
+        
+        return ans;
+    }
+}
 ```
 
 ---
 
-### Complete Worked Example (Step-by-Step)
+### Complexity Analysis
 
-#### Input
-
-```
-s = "RLRRLLRLRL"
-```
-
----
-
-### Step-by-Step Processing
-
-| Index | Character | Balance Change | Balance | Balanced Substring? | Count |
-| --- | --- | --- | --- | --- | --- |
-| 0 | R | -1 | -1 | No | 0 |
-| 1 | L | +1 | 0 | Yes → split | 1 |
-| 2 | R | -1 | -1 | No | 1 |
-| 3 | R | -1 | -2 | No | 1 |
-| 4 | L | +1 | -1 | No | 1 |
-| 5 | L | +1 | 0 | Yes → split | 2 |
-| 6 | R | -1 | -1 | No | 2 |
-| 7 | L | +1 | 0 | Yes → split | 3 |
-| 8 | R | -1 | -1 | No | 3 |
-| 9 | L | +1 | 0 | Yes → split | 4 |
+- **Time Complexity:** $\mathcal{O}(n)$
+  - We traverse the string of length $n$ once, performing $\mathcal{O}(1)$ counter increments and comparisons per character.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Uses only two integer counters `balance` and `ans`.
 
 ---
 
-### Visual Split Representation
+### Takeaway Pattern & Interview Traps
 
-```
-R L | R R L L | R L | R L
-```
-
-Each segment has equal `'L'` and `'R'`.
-
----
-
-### Final Answer
-
-```
-Output = 4
-```
-
----
-
-### Why Greedy Is Correct (Intuition)
-
-* Any balanced substring must end at a position where cumulative balance becomes zero.
-* Taking the **earliest such position** guarantees:
-
-  * One valid substring
-  * Maximum remaining characters to form more substrings
-* There is no advantage in merging two balanced substrings into one.
-
----
-
-### Summary
-
-| Aspect | Value |
-| --- | --- |
-| Technique | Greedy |
-| Traversal | Single pass |
-| Time Complexity | O(n) |
-| Space Complexity | O(1) |
-| Core Insight | Split immediately when balance reaches zero |
-
----
-
-If you want, I can also:
-
-* Show **counter-examples where delaying the split fails**
-* Compare this with **prefix sum interpretation**
-* Map this to a **stack-based mental model**
-
-Just let me know.
+- **The Greedy Splitting Invariant:** When seeking to maximize the number of valid independent blocks, cutting at the earliest valid boundary is optimal if and only if the valid property is additive/closed under subtraction ($A$ and $A+B$ valid $\implies$ $B$ valid).
+- **Guaranteed Balance:** The problem guarantees the input string is already globally balanced, so `balance` will always equal $0$ at the final character.

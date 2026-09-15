@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,182 +8,237 @@ tags:
   - leetcode
   - coding
   - greedy
+  - two-pointers
+  - array
+  - amazon
+  - google
 ---
 
 # LeetCode 11: Container With Most Water
 
-**LeetCode 11 – Container With Most Water**, structured for clarity and rigor.
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Greedy / Two Pointers / Array  
 
 ---
 
-## Problem Statement
+### Problem Statement
 
-You are given an integer array `height` of length `n`.  
-Each element represents the height of a vertical line drawn at index `i`.
+You are given an integer array `height` of length $n$. There are $n$ vertical lines drawn such that the two endpoints of the $i$-th line are $(i, 0)$ and $(i, \text{height}[i])$.
 
-Choose **two different lines** such that together with the x-axis they form a container that can store the **maximum amount of water**.
+Find two lines that together with the x-axis form a container, such that the container contains the most water.
 
-Return the **maximum water** the container can store.
+Return the **maximum amount of water** a container can store.
 
-### Constraints
-
-* `2 ≤ n ≤ 10^5`
-* `0 ≤ height[i] ≤ 10^4`
+Notice that you may not slant the container.
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-For any two indices `i < j`:
+- **Input:**
+  - `height`: `List[int]` / `vector<int>` / `int[]` ($2 \le \text{height.length} \le 10^5$).
+- **Output:**
+  - `int` — the maximum volume/area of water the container can hold.
+- **Constraints:**
+  - $n == \text{height.length}$
+  - $2 \le n \le 10^5$
+  - $0 \le \text{height}[i] \le 10^4$
+
+---
+
+### Key Idea & Intuition
+
+The area formed by two lines at indices $l$ and $r$ ($l < r$) is given by:
+$$\text{Area}(l, r) = \min(\text{height}[l], \text{height}[r]) \times (r - l)$$
+
+#### The Greedy Proof by Contradiction:
+1. Start with the widest possible container: $l = 0$ and $r = n - 1$.
+2. Suppose $\text{height}[l] < \text{height}[r]$.
+   - Consider any pair $(l, k)$ where $k \in (l, r)$:
+     $$\text{Width}(l, k) = k - l < r - l$$
+     $$\text{Height}(l, k) = \min(\text{height}[l], \text{height}[k]) \le \text{height}[l] = \min(\text{height}[l], \text{height}[r])$$
+   - Therefore, for **every** $k < r$:
+     $$\text{Area}(l, k) < \text{Area}(l, r)$$
+   - Index $l$ can **never** pair with any other right boundary to produce an area greater than $\text{Area}(l, r)$.
+   - Hence, we can safely and permanently discard $l$ by incrementing $l \mathrel{+}= 1$ without missing any optimal solution!
+3. By symmetry, if $\text{height}[r] < \text{height}[l]$, we safely decrement $r \mathrel{-}= 1$.
+4. If $\text{height}[l] == \text{height}[r]$, moving either pointer (or both) is safe because neither can produce a larger area with any interior line without finding a line strictly taller than both.
+
+This establishes an invariant where at each step, one boundary is discarded with mathematical certainty, converging in exactly $n - 1$ steps.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Initialize `l = 0`, `r = len(height) - 1`, and `max_water = 0`.
+2. While `l < r`:
+   - Compute current width: `width = r - l`.
+   - Compute current area: `area = min(height[l], height[r]) * width`.
+   - Update `max_water = max(max_water, area)`.
+   - If `height[l] < height[r]`:
+     - Increment `l += 1`.
+   - Else:
+     - Decrement `r -= 1`.
+3. Return `max_water`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `height = [1, 8, 6, 2, 5, 4, 8, 3, 7]`:
 
 ```
-Water Area = min(height[i], height[j]) × (j − i)
+Indices:   0   1   2   3   4   5   6   7   8
+Heights:  [1,  8,  6,  2,  5,  4,  8,  3,  7]
+
+Step 1: l = 0 (h=1), r = 8 (h=7), width = 8
+  Area = min(1, 7) * 8 = 1 * 8 = 8. max_water = 8
+  height[0] < height[8] -> increment l to 1.
+
+Step 2: l = 1 (h=8), r = 8 (h=7), width = 7
+  Area = min(8, 7) * 7 = 7 * 7 = 49. max_water = 49
+  height[8] < height[1] -> decrement r to 7.
+
+Step 3: l = 1 (h=8), r = 7 (h=3), width = 6
+  Area = min(8, 3) * 6 = 3 * 6 = 18.
+  height[7] < height[1] -> decrement r to 6.
+
+Step 4: l = 1 (h=8), r = 6 (h=8), width = 5
+  Area = min(8, 8) * 5 = 8 * 5 = 40.
+  Equal -> decrement r to 5.
+
+... Pointers continue to shrink inwards, no area exceeds 49.
+Pointers meet at index 1.
+Maximum Area = 49.
 ```
-
-To maximize the area:
-
-* We want a **large width** `(j − i)`
-* We want a **large minimum height**
-
-Brute force checks all pairs → **O(n²)** (too slow).
 
 ---
 
-## Greedy Insight (Why Two Pointers Work)
+### Solved Examples with Multiple Inputs
 
-Start with the **widest container**:
+#### Example 1:
+- **Input:** `height = [1, 8, 6, 2, 5, 4, 8, 3, 7]`
+- **Output:** `49` (Between index 1 and index 8: $\min(8, 7) \times (8 - 1) = 7 \times 7 = 49$)
 
-* Left pointer at index `0`
-* Right pointer at index `n − 1`
+#### Example 2:
+- **Input:** `height = [1, 1]`
+- **Output:** `1` (Between index 0 and index 1: $\min(1, 1) \times 1 = 1$)
 
-Now consider:
-
-* The width is maximum initially
-* The area is limited by the **shorter line**
-
-### Critical Greedy Rule
-
-> Always move the pointer pointing to the **shorter height**.
-
-### Why this is correct
-
-Assume:
-
-```
-height[left] < height[right]
-```
-
-* The area is limited by `height[left]`
-* Moving `right` inward only **reduces width**, while height constraint remains
-* Moving `left` may find a **taller line**, potentially increasing area
-
-Thus:
-
-* Move the **shorter side**
-* Never miss the optimal solution
-
-This is a classic **proof by elimination** greedy strategy.
+#### Example 3 (Monotonically Decreasing Heights):
+- **Input:** `height = [4, 3, 2, 1, 4]`
+- **Tracing:** Index 0 (4) and Index 4 (4) yield $\min(4, 4) \times 4 = 16$.
+- **Output:** `16`
 
 ---
 
-## Algorithm (Two Pointer Greedy)
+### Multi-Language Implementations
 
-1. Initialize:
-
-   * `left = 0`
-   * `right = n − 1`
-   * `max_area = 0`
-2. While `left < right`:
-
-   * Compute current area
-   * Update `max_area`
-   * Move the pointer with smaller height
-3. Return `max_area`
-
----
-
-## Python 3 Solution (with Typing)
-
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def maxArea(self, height: List[int]) -> int:
-        left: int = 0
-        right: int = len(height) - 1
-        max_area: int = 0
-
-        while left < right:
-            width: int = right - left
-            curr_height: int = min(height[left], height[right])
-            area: int = width * curr_height
-            max_area = max(max_area, area)
-
-            # Move the pointer with smaller height
-            if height[left] < height[right]:
-                left += 1
+        l = 0
+        r = len(height) - 1
+        max_water = 0
+        
+        while l < r:
+            h_l = height[l]
+            h_r = height[r]
+            
+            # Compute current container capacity
+            if h_l < h_r:
+                area = h_l * (r - l)
+                l += 1
             else:
-                right -= 1
+                area = h_r * (r - l)
+                r -= 1
+                
+            if area > max_water:
+                max_water = area
+                
+        return max_water
+```
 
-        return max_area
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int maxArea(const std::vector<int>& height) {
+        int l = 0;
+        int r = static_cast<int>(height.size()) - 1;
+        int max_water = 0;
+        
+        while (l < r) {
+            int h_l = height[l];
+            int h_r = height[r];
+            int area = 0;
+            
+            if (h_l < h_r) {
+                area = h_l * (r - l);
+                ++l;
+            } else {
+                area = h_r * (r - l);
+                --r;
+            }
+            
+            max_water = std::max(max_water, area);
+        }
+        
+        return max_water;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int maxArea(int[] height) {
+        int l = 0;
+        int r = height.length - 1;
+        int maxWater = 0;
+        
+        while (l < r) {
+            int hl = height[l];
+            int hr = height[r];
+            int area;
+            
+            if (hl < hr) {
+                area = hl * (r - l);
+                l++;
+            } else {
+                area = hr * (r - l);
+                r--;
+            }
+            
+            if (area > maxWater) {
+                maxWater = area;
+            }
+        }
+        
+        return maxWater;
+    }
+}
 ```
 
 ---
 
-## Worked Example
+### Complexity Analysis
 
-### Input
-
-```
-height = [1,8,6,2,5,4,8,3,7]
-```
-
-### Step-by-Step
-
-| Left | Right | Heights | Width | Area | Action |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 8 | (1,7) | 8 | 8 | Move left |
-| 1 | 8 | (8,7) | 7 | 49 | Move right |
-| 1 | 7 | (8,3) | 6 | 18 | Move right |
-| 1 | 6 | (8,8) | 5 | 40 | Move either |
-| 1 | 5 | (8,4) | 4 | 16 | Move right |
-| 1 | 4 | (8,5) | 3 | 15 | Move right |
-| 1 | 3 | (8,2) | 2 | 4 | Move right |
-| 1 | 2 | (8,6) | 1 | 6 | Stop |
-
-### Maximum Area
-
-```
-49
-```
-
-Formed by:
-
-* Index 1 → height = 8
-* Index 8 → height = 7
-* Width = 7
+- **Time Complexity:** $\mathcal{O}(n)$
+  - The pointers `l` and `r` start at opposite ends of the array of size $n$ and advance towards each other by at least 1 at every step.
+  - Exactly $n - 1$ steps are performed before they meet.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Only scalar pointer variables and area accumulators are used.
 
 ---
 
-## Complexity Analysis
+### Takeaway Pattern & Interview Traps
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(1)`
-
----
-
-## Interview Takeaways
-
-* This problem is a **greedy + two pointer** classic
-* Key skill: **prove why moving the shorter pointer is safe**
-* Frequently asked in FAANG interviews
-* Cannot be solved optimally with sliding window or DP
-
----
-
-If you want, I can also provide:
-
-* Formal proof sketch for the greedy move
-* Common wrong intuitions
-* Comparison with brute force
-* Visualization diagram for pointer movement
+- **The Proof by Contradiction:** When asked *"Why is it safe to advance the pointer with the smaller height?"*, articulate that keeping the shorter line while decreasing width cannot possibly increase the area, because the width strictly decreases while the height remains bounded by that shorter line.
+- **Micro-Optimization:** Fast-skipping: while advancing $l$, you can do `while l < r and height[l] <= hl: l += 1` to skip lines shorter than the previous boundary without recalculating area.

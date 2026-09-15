@@ -170,3 +170,15 @@ class Solution {
 
 - **Time Complexity:** $O(N)$ — One pass through the array. Hash map insertions and lookups take average $O(1)$ time.
 - **Space Complexity:** $O(N)$ — Stores up to $N - 1$ key-value pairs in the hash map.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **One-Pass vs Two-Pass Hash Map:**
+   - A two-pass hash map (insert all first, then find complement) risks using the same element twice (e.g. for `target = 6, nums = [3]`, 6 - 3 = 3 will find index 0). The one-pass approach looks backward only, eliminating self-pairing naturally.
+2. **Duplicate Values Handling:**
+   - If duplicates sum to target (e.g. `[3, 3]`, target 6), the first 3 is stored in the map, and when the second 3 is encountered, it finds the first 3's index before overwriting.
+3. **Space-Time Tradeoff:**
+   - Hash map gives optimal $O(N)$ time with $O(N)$ space. If memory is strictly $O(1)$, sorting with Two Pointers gives $O(N \log N)$ time, but original indices would need to be preserved with pair tuples.
+

@@ -52,6 +52,26 @@ Notice that the solution set must not contain duplicate triplets.
   - If `sum > 0`, decrement `right--` to decrease sum.
   - If `sum == 0`, record triplet, then skip all duplicate `nums[left]` and `nums[right]`.
 
+### Solution Approach (Step-by-Step)
+
+1. **Sort the Input Array:**
+   - Sort `nums` in ascending order.
+2. **Iterate First Element ($i$ from $0$ to $n - 3$):**
+   - **Early pruning:** If `nums[i] > 0`, break immediately because any remaining numbers are positive and can never sum to zero.
+   - **Skip duplicates:** If $i > 0$ and `nums[i] == nums[i - 1]`, skip this index to avoid duplicate triplets.
+3. **Initialize Two Pointers:**
+   - `left = i + 1`, `right = n - 1`.
+4. **Scan with Two Pointers:**
+   - Compute `total = nums[i] + nums[left] + nums[right]`.
+   - If `total < 0`: Increment `left` to increase the sum.
+   - If `total > 0`: Decrement `right` to decrease the sum.
+   - If `total == 0`:
+     - Record `[nums[i], nums[left], nums[right]]`.
+     - Skip identical numbers for `left` while `nums[left] == nums[left + 1]`.
+     - Skip identical numbers for `right` while `nums[right] == nums[right - 1]`.
+     - Advance both `left++` and `right--`.
+5. **Return Collected Triplets.**
+
 ---
 
 ### Visual Algorithm Walkthrough
@@ -67,6 +87,17 @@ i=1 (num = -1): target = 1.
 i=2 (num = -1): nums[2] == nums[1] -> SKIP duplicate!
 i=3 (num = 0):  target = 0. left=4 (1), right=5 (2) -> sum=3 > 0.
 ```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Input `nums` | Sorted Array | Triplets Identified | Explanation |
+| :--- | :--- | :--- | :--- |
+| `[-1, 0, 1, 2, -1, -4]` | `[-4, -1, -1, 0, 1, 2]` | `[[-1, -1, 2], [-1, 0, 1]]` | Two unique combinations sum to 0 |
+| `[0, 1, 1]` | `[0, 1, 1]` | `[]` | Minimum sum is $0 + 1 + 1 = 2 > 0$ |
+| `[0, 0, 0]` | `[0, 0, 0]` | `[[0, 0, 0]]` | Single unique zero-sum triplet |
+| `[-2, 0, 1, 1, 2]` | `[-2, 0, 1, 1, 2]` | `[[-2, 0, 2], [-2, 1, 1]]` | Handles duplicate positive elements |
 
 ---
 
@@ -185,3 +216,17 @@ class Solution {
 
 - **Time Complexity:** $O(N^2)$ — Sorting takes $O(N \log N)$ and the nested two-pointer loop takes $O(N^2)$.
 - **Space Complexity:** $O(1)$ auxiliary space (ignoring sorting recursion stack).
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Deduplication Without Hash Sets:**
+   - Instead of inserting found triplets into a `set` (which adds heavy memory and hashing overhead), sorting allows clean deduplication:
+     - Outer loop: `if (i > 0 && nums[i] == nums[i-1]) continue;`
+     - Inner two pointers: advance past duplicates only **after** recording a valid triplet.
+2. **Early Pruning Invariant:**
+   - Once `nums[i] > 0`, since the array is sorted ascending, all subsequent elements are also positive. The sum of three positive numbers can never be zero, so we can `break` early.
+3. **Pointers Movement Timing:**
+   - Both `left` and `right` must be incremented/decremented simultaneously when a triplet is found, and then duplicate values skipped. Skipping beforehand or updating only one pointer leads to infinite loops or missed triplets.
+

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,158 +8,186 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - fibonacci
+  - math
+  - amazon
+  - google
+  - meta
 ---
 
 # LeetCode 70: Climbing Stairs
 
-**LeetCode 70 – Climbing Stairs**, focusing explicitly on **state definition, transition, DP table creation, and a worked example**, as typically expected in interviews.
+**Target Companies:** Amazon (Top #1), Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Easy  
+**Topic:** 1D Dynamic Programming / Recurrence Relations / Space Optimization  
 
 ---
-
-## LeetCode 70 — Climbing Stairs
 
 ### Problem Statement
 
-You are climbing a staircase with `n` steps.  
-Each time, you can climb either **1 step** or **2 steps**.
+You are climbing a staircase. It takes `n` steps to reach the top.
 
-Return the **number of distinct ways** to reach the top.
-
----
-
-## 1. Key Observation (Why DP?)
-
-* At any step `i`, you could have arrived:
-
-  * from step `i - 1` (taking 1 step)
-  * from step `i - 2` (taking 2 steps)
-* The total ways to reach step `i` is the **sum of ways** to reach those previous steps.
-
-This exhibits:
-
-* **Overlapping subproblems**
-* **Optimal substructure**
-
-Hence, **Dynamic Programming**.
+Each time you can either climb `1` or `2` steps. In how many distinct ways can you climb to the top?
 
 ---
 
-## 2. DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i] = number of distinct ways to reach step i
-```
-
-Our goal is to compute `dp[n]`.
+- **Input:** `n: int` — Total number of steps to reach the top.
+- **Output:** `int` — Count of distinct combinations of 1-step and 2-step climbs.
+- **Constraints:**
+  - $1 \le n \le 45$
 
 ---
 
-## 3. DP Transition (Recurrence Relation)
+### Key Idea & Intuition
 
-To reach step `i`:
+1. **Optimal Substructure:**
+   - To land on step $i$, your preceding move was either:
+     - A 1-step climb from step $i - 1$.
+     - A 2-step climb from step $i - 2$.
+   - Since these two incoming branches are mutually exclusive and exhaustive:
+     $$\text{dp}[i] = \text{dp}[i - 1] + \text{dp}[i - 2]$$
+   - This matches the canonical **Fibonacci sequence**:
+     - $\text{dp}[1] = 1$ (one 1-step climb: `[1]`)
+     - $\text{dp}[2] = 2$ (two combinations: `[1, 1]`, `[2]`)
+     - $\text{dp}[3] = 3$ (`[1, 1, 1]`, `[1, 2]`, `[2, 1]`)
 
-* From step `i - 1`, take 1 step
-* From step `i - 2`, take 2 steps
-
-Therefore:
-
-```
-dp[i] = dp[i - 1] + dp[i - 2]
-```
-
-This is identical in structure to the **Fibonacci sequence**.
-
----
-
-## 4. Base Cases
-
-These define the foundation of the DP table:
-
-| Step | Meaning | Value |
-| --- | --- | --- |
-| `dp[0]` | One way to stay at ground (do nothing) | `1` |
-| `dp[1]` | Only one way: 1 step | `1` |
+2. **Space Optimization ($\mathcal{O}(1)$ Space):**
+   - Because calculating $\text{dp}[i]$ only requires the two immediately preceding values, maintaining an entire array of size $n + 1$ is unnecessary.
+   - Using two rolling integer variables `prev2` and `prev1` achieves $\mathcal{O}(1)$ space complexity.
 
 ---
 
-## 5. DP Table Creation (Bottom-Up)
+### Solution Approach (Step-by-Step)
 
-We iteratively fill the DP table from `0` to `n`.
+1. **Handle Base Cases:**
+   - If $n \le 2$, return $n$.
+2. **Rolling Variables Initialization:**
+   - `prev2 = 1` ($\text{dp}[1]$)
+   - `prev1 = 2` ($\text{dp}[2]$)
+3. **Iterate from Step 3 to $n$:**
+   - For $i$ from $3$ to $n$:
+     - `curr = prev1 + prev2`
+     - `prev2 = prev1`
+     - `prev1 = curr`
+4. **Return:**
+   - Return `prev1`.
 
-### Example: `n = 5`
+---
 
-| i (step) | dp[i] | Explanation |
-| --- | --- | --- |
-| 0 | 1 | Base case |
-| 1 | 1 | Base case |
-| 2 | 2 | `dp[1] + dp[0] = 1 + 1` |
-| 3 | 3 | `dp[2] + dp[1] = 2 + 1` |
-| 4 | 5 | `dp[3] + dp[2] = 3 + 2` |
-| 5 | 8 | `dp[4] + dp[3] = 5 + 3` |
+### Visual Algorithm Walkthrough
 
-### Final Answer
+For $n = 5$:
 
 ```
-dp[5] = 8
+Step 1: 1 way   ([1])
+Step 2: 2 ways  ([1,1], [2])
+
+i = 3:
+  curr = prev1 + prev2 = 2 + 1 = 3  ([1,1,1], [1,2], [2,1])
+  prev2 = 2, prev1 = 3
+
+i = 4:
+  curr = prev1 + prev2 = 3 + 2 = 5  ([1,1,1,1], [1,1,2], [1,2,1], [2,1,1], [2,2])
+  prev2 = 3, prev1 = 5
+
+i = 5:
+  curr = prev1 + prev2 = 5 + 3 = 8
+  prev2 = 5, prev1 = 8
+
+Total unique ways for n = 5: 8.
 ```
 
 ---
 
-## 6. Python 3 DP Implementation (with typing)
+### Solved Examples with Multiple Inputs
 
+| Case | `n` | Intermediate Sequence | Result | Explanation |
+|---|---|---|---|---|
+| **Base Case 1** | `1` | `[1]` | `1` | Only step 1 |
+| **Base Case 2** | `2` | `[1, 1]`, `[2]` | `2` | Two ways |
+| **Small 3** | `3` | $1 + 2 = 3$ | `3` | Three ways |
+| **Standard 5** | `5` | $1, 2, 3, 5, 8$ | `8` | Fibonacci progression |
+| **Upper Bound 45** | `45` | Linear progression | `1836311903` | Fits within 32-bit signed int ($< 2 \times 10^9$) |
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed — $\mathcal{O}(1)$ Space)
 ```python
-from typing import List
-
 class Solution:
     def climbStairs(self, n: int) -> int:
-        # dp[i] = number of ways to reach step i
-        dp: List[int] = [0] * (n + 1)
+        if n <= 2:
+            return n
+            
+        prev2, prev1 = 1, 2
+        
+        for _ in range(3, n + 1):
+            curr = prev1 + prev2
+            prev2 = prev1
+            prev1 = curr
+            
+        return prev1
+```
 
-        # base cases
-        dp[0] = 1
-        dp[1] = 1
+#### 2. C++ (C++17 / STL — $\mathcal{O}(1)$ Space)
+```cpp
+class Solution {
+public:
+    int climbStairs(int n) {
+        if (n <= 2) return n;
 
-        # fill dp table
-        for i in range(2, n + 1):
-            dp[i] = dp[i - 1] + dp[i - 2]
+        int prev2 = 1;
+        int prev1 = 2;
 
-        return dp[n]
+        for (int i = 3; i <= n; ++i) {
+            int curr = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = curr;
+        }
+
+        return prev1;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed — $\mathcal{O}(1)$ Space)
+```java
+class Solution {
+    public int climbStairs(int n) {
+        if (n <= 2) return n;
+
+        int prev2 = 1;
+        int prev1 = 2;
+
+        for (int i = 3; i <= n; i++) {
+            int curr = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = curr;
+        }
+
+        return prev1;
+    }
+}
 ```
 
 ---
 
-## 7. Time and Space Complexity
+### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(n)` (can be optimized to `O(1)`)
-
----
-
-## 8. (Optional) Space Optimization Insight
-
-Since `dp[i]` only depends on the previous two states:
-
-```
-prev2 = dp[i - 2]
-prev1 = dp[i - 1]
-```
-
-You can replace the DP array with two variables (Fibonacci optimization).
+- **Time Complexity:** $\mathcal{O}(n)$  
+  The single loop executes $n - 2$ times for $n \ge 3$, performing $\mathcal{O}(1)$ additions per iteration. For $n = 45$, finishes in $< 0.1$ ms.
+- **Space Complexity:** $\mathcal{O}(1)$  
+  Only two integer tracking variables (`prev2`, `prev1`) are maintained in registers.
 
 ---
 
-## Interview-Ready Summary
+### Takeaway Pattern & Interview Traps
 
-* **State:** `dp[i]` = ways to reach step `i`
-* **Transition:** `dp[i] = dp[i-1] + dp[i-2]`
-* **Base:** `dp[0] = 1`, `dp[1] = 1`
-* **Pattern:** Fibonacci DP
-
-If you want, I can also:
-
-* Draw the **DP dependency tree**
-* Show the **recursive + memoization version**
-* Explain **why greedy does not work**
-* Map this problem to **other DP staircase variants**
+1. **Integer Overflow Check:**
+   - Notice the constraint $n \le 45$. $F(45) = 1,836,311,903$, which is just under `INT_MAX` ($2,147,483,647$).
+   - If $n$ were $46$, $F(46) = 2,971,215,073$, which would overflow standard 32-bit signed integers.
+2. **Step Step Variations:**
+   - If the problem allowed taking $1, 2$, or $3$ steps (Tribonacci), the recurrence expands to $\text{dp}[i] = \text{dp}[i-1] + \text{dp}[i-2] + \text{dp}[i-3]$ with three rolling variables.

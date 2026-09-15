@@ -1,5 +1,5 @@
 ---
-date: "2025-12-23"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Binary Search"
 folder: "06. Binary Search"
@@ -8,343 +8,254 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - lower-bound
+  - upper-bound
+  - google
+  - amazon
 ---
 
 # LeetCode 34: Find First and Last Position of Element in Sorted Array
 
-Below is a complete, structured explanation of **Problem 34 – Find First and Last Position of Element in Sorted Array**.
+**Target Companies:** Google, Amazon, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Boundary-Biased Binary Search (Lower & Upper Bounds)  
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-You are given a **sorted array of integers** `nums` (in non-decreasing order) and an integer `target`.
+Given an array of integers `nums` sorted in non-decreasing order, find the starting and ending position of a given `target` value.
 
-Your task is to return the **starting index** and **ending index** of `target` in `nums`.
+If `target` is not found in the array, return `[-1, -1]`.
 
-* If `target` does not exist in the array, return `[-1, -1]`.
-* The algorithm **must run in O(log n)** time.
-
----
-
-## 2. Key Observation
-
-1. The array is **sorted**, which immediately suggests **Binary Search**.
-2. A standard binary search finds **any one occurrence**, but this problem requires:
-
-   * the **leftmost (first) occurrence**
-   * the **rightmost (last) occurrence**
-3. Therefore:
-
-   * Perform **two binary searches**
-
-     * one biased toward the **left**
-     * one biased toward the **right**
-
-This preserves `O(log n)` complexity.
+You must write an algorithm with $O(\log n)$ runtime complexity.
 
 ---
 
-## 3. Binary Search Technique Used
+### Input & Output Formats & Constraints
 
-### Modified Binary Search Pattern
-
-Instead of stopping when `nums[mid] == target`, we:
-
-* **Left boundary search**
-
-  * Record `mid` as a candidate
-  * Continue searching **left half**
-* **Right boundary search**
-
-  * Record `mid` as a candidate
-  * Continue searching **right half**
-
-### Why this works
-
-Binary search guarantees logarithmic narrowing of the search space.  
-By continuing after finding `target`, we force the algorithm to locate the **extreme boundaries**.
+- **Input:** `nums: List[int]`, `target: int`
+- **Output:** `List[int]` (two elements `[first_idx, last_idx]`)
+- **Constraints:**
+  - $0 \le \text{nums.length} \le 10^5$
+  - $-10^9 \le \text{nums}[i] \le 10^9$
+  - `nums` is a non-decreasing array.
+  - $-10^9 \le \text{target} \le 10^9$
 
 ---
 
-## 4. Python 3 Solution (with typing)
+### Key Idea & Intuition
 
+Standard binary search stops as soon as `nums[mid] == target`. However, when duplicates exist, that occurrence could be anywhere in the target cluster.
+
+To locate the exact boundaries in $O(\log n)$ time, we run **two distinct binary searches**:
+1. **Find First (Left) Boundary:**
+   - When `nums[mid] == target`, record `mid` as a candidate, but keep searching **to the left**: `right = mid - 1`.
+   - When `nums[mid] < target`, move right: `left = mid + 1`.
+   - When `nums[mid] > target`, move left: `right = mid - 1`.
+2. **Find Last (Right) Boundary:**
+   - If the left boundary did not exist, the target is not in `nums`, so return `[-1, -1]` immediately.
+   - When `nums[mid] == target`, record `mid` as a candidate, but keep searching **to the right**: `left = mid + 1`.
+   - When `nums[mid] < target`, move right: `left = mid + 1`.
+   - When `nums[mid] > target`, move left: `right = mid - 1`.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Implement helper `find_bound(is_first: bool) -> int`:
+   - Set `left = 0`, `right = len(nums) - 1`, `bound = -1`.
+   - While `left <= right`:
+     - `mid = left + (right - left) // 2`.
+     - If `nums[mid] == target`:
+       - `bound = mid`
+       - If `is_first`: `right = mid - 1` (continue left)
+       - Else: `left = mid + 1` (continue right)
+     - Else if `nums[mid] < target`: `left = mid + 1`.
+     - Else: `right = mid - 1`.
+   - Return `bound`.
+2. Call `first = find_bound(True)`.
+3. If `first == -1`, return `[-1, -1]`.
+4. Call `last = find_bound(False)`.
+5. Return `[first, last]`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+nums = [5, 7, 7, 8, 8, 10], target = 8
+
+--- Left Boundary Search ---
+left = 0, right = 5
+mid = 2, nums[2] = 7 < 8 -> left = mid + 1 = 3
+
+left = 3, right = 5
+mid = 4, nums[4] = 8 == target!
+  Candidate first = 4.
+  Search left: right = mid - 1 = 3.
+
+left = 3, right = 3
+mid = 3, nums[3] = 8 == target!
+  Candidate first = 3.
+  Search left: right = mid - 1 = 2.
+
+left (3) > right (2) -> STOP. First occurrence = 3.
+
+--- Right Boundary Search ---
+left = 3, right = 5
+mid = 4, nums[4] = 8 == target!
+  Candidate last = 4.
+  Search right: left = mid + 1 = 5.
+
+left = 5, right = 5
+mid = 5, nums[5] = 10 > 8 -> right = mid - 1 = 4.
+
+left (5) > right (4) -> STOP. Last occurrence = 4.
+
+Result: [3, 4]
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Target with Multiple Duplicates
+- **Input:** `nums = [5, 7, 7, 8, 8, 10]`, `target = 8`
+- **Output:** `[3, 4]`
+
+#### Example 2: Target Not in Array
+- **Input:** `nums = [5, 7, 7, 8, 8, 10]`, `target = 6`
+- **Output:** `[-1, -1]`
+
+#### Example 3: Empty Array
+- **Input:** `nums = []`, `target = 0`
+- **Output:** `[-1, -1]`
+
+#### Example 4: Single Element Match
+- **Input:** `nums = [1]`, `target = 1`
+- **Output:** `[0, 0]`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def searchRange(self, nums: List[int], target: int) -> List[int]:
-
-        def find_left() -> int:
+        def find_bound(is_first: bool) -> int:
             left, right = 0, len(nums) - 1
-            index = -1
-
+            bound = -1
+            
             while left <= right:
-                mid = (left + right) // 2
-                if nums[mid] >= target:
-                    right = mid - 1
-                else:
-                    left = mid + 1
-
+                mid = left + (right - left) // 2
                 if nums[mid] == target:
-                    index = mid
-            return index
-
-        def find_right() -> int:
-            left, right = 0, len(nums) - 1
-            index = -1
-
-            while left <= right:
-                mid = (left + right) // 2
-                if nums[mid] <= target:
+                    bound = mid
+                    if is_first:
+                        right = mid - 1  # Bias left
+                    else:
+                        left = mid + 1   # Bias right
+                elif nums[mid] < target:
                     left = mid + 1
                 else:
                     right = mid - 1
+                    
+            return bound
+            
+        first = find_bound(True)
+        if first == -1:
+            return [-1, -1]
+        last = find_bound(False)
+        return [first, last]
+```
 
-                if nums[mid] == target:
-                    index = mid
-            return index
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
 
-        return [find_left(), find_right()]
+class Solution {
+public:
+    std::vector<int> searchRange(std::vector<int>& nums, int target) {
+        auto findBound = [&](bool isFirst) -> int {
+            int left = 0, right = static_cast<int>(nums.size()) - 1;
+            int bound = -1;
+
+            while (left <= right) {
+                int mid = left + (right - left) / 2;
+                if (nums[mid] == target) {
+                    bound = mid;
+                    if (isFirst) {
+                        right = mid - 1; // Bias left
+                    } else {
+                        left = mid + 1;  // Bias right
+                    }
+                } else if (nums[mid] < target) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+            return bound;
+        };
+
+        int first = findBound(true);
+        if (first == -1) return {-1, -1};
+        int last = findBound(false);
+        return {first, last};
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int[] searchRange(int[] nums, int target) {
+        int first = findBound(nums, target, true);
+        if (first == -1) {
+            return new int[]{-1, -1};
+        }
+        int last = findBound(nums, target, false);
+        return new int[]{first, last};
+    }
+
+    private int findBound(int[] nums, int target, boolean isFirst) {
+        int left = 0, right = nums.length - 1;
+        int bound = -1;
+
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (nums[mid] == target) {
+                bound = mid;
+                if (isFirst) {
+                    right = mid - 1; // Continue searching left
+                } else {
+                    left = mid + 1;  // Continue searching right
+                }
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+
+        return bound;
+    }
+}
 ```
 
 ---
 
-## 5. Worked-Out Example
+### Complexity Analysis
 
-### Input
-
-```text
-nums = [5, 7, 7, 8, 8, 10]
-target = 8
-```
+- **Time Complexity:** $O(\log N)$ — Exactly two binary searches, each halving the search space at every step. Total time is $2 \cdot O(\log N) = O(\log N)$.
+- **Space Complexity:** $O(1)$ — Only scalar index pointers.
 
 ---
 
-### Step 1: Find Leftmost Index
+### Takeaway Pattern & Interview Traps
 
-| left | right | mid | nums[mid] | action |
-| --- | --- | --- | --- | --- |
-| 0 | 5 | 2 | 7 | move right |
-| 3 | 5 | 4 | 8 | record index=4, move left |
-| 3 | 3 | 3 | 8 | record index=3, move left |
-
-**Leftmost index = 3**
-
----
-
-### Step 2: Find Rightmost Index
-
-| left | right | mid | nums[mid] | action |
-| --- | --- | --- | --- | --- |
-| 0 | 5 | 2 | 7 | move right |
-| 3 | 5 | 4 | 8 | record index=4, move right |
-| 5 | 5 | 5 | 10 | move left |
-
-**Rightmost index = 4**
-
----
-
-### Final Output
-
-```
-[3, 4]
-```
-
----
-
-## 6. Complexity Analysis
-
-* **Time Complexity**:  
-  `O(log n)` (two binary searches)
-* **Space Complexity**:  
-  `O(1)` (constant extra space)
-
----
-
-## 7. Takeaway Pattern
-
-This problem is a **classic binary search boundary pattern**:
-
-> When asked for **first / last occurrence** in a sorted array →  
-> **Binary search with directional bias**
-
-This pattern appears frequently in range and boundary-search problems.
-
----
-
-If you want, I can also:
-
-* derive this from a **single generalized binary search**
-* explain **why normal binary search fails**
-* map this problem to other similar problems for practice
-
-  Below is the same **LeetCode 34** solution rewritten using **Python’s `bisect` module**, which internally uses **binary search**and fully satisfies the `O(log n)` requirement.
-
-  ---
-
-  ## 1. Problem Statement (Recap)
-
-  Given a **sorted integer array** `nums` and a value `target`, return the **first and last position** of `target`.
-
-  * If `target` is not present → return `[-1, -1]`
-  * Required time complexity: **O(log n)**
-
-  ---
-
-  ## 2. Key Observation (Bisect Insight)
-
-  Python’s `bisect` module gives us exactly what we need:
-
-  * `bisect_left(nums, target)`
-
-    * returns the **first index where `target` can be inserted**
-  * `bisect_right(nums, target)`
-
-    * returns the **first index where an element > target can be inserted**
-
-  ### Critical insight
-
-  If `target` exists:
-
-  * **first occurrence** = `bisect_left`
-  * **last occurrence** = `bisect_right - 1`
-
-  If `target` does **not** exist:
-
-  * `bisect_left` will point to an index where `nums[i] != target`
-
-  ---
-
-  ## 3. Binary Search Technique Used
-
-  This is a **library-backed binary search boundary technique**:
-
-  | Function | Purpose |
-  | --- | --- |
-  | `bisect_left` | Finds left boundary |
-  | `bisect_right` | Finds right boundary |
-
-  Each call runs in **O(log n)**.
-
-  ---
-
-  ## 4. Python 3 Solution (with typing)
-
-  ```python
-  from typing import List
-  import bisect
-
-  class Solution:
-      def searchRange(self, nums: List[int], target: int) -> List[int]:
-          left = bisect.bisect_left(nums, target)
-
-          # target not present
-          if left == len(nums) or nums[left] != target:
-              return [-1, -1]
-
-          right = bisect.bisect_right(nums, target) - 1
-          return [left, right]
-  ```
-
-  ---
-
-  ## 5. Worked-Out Example
-
-  ### Input
-
-  ```text
-  nums = [5, 7, 7, 8, 8, 10]
-  target = 8
-  ```
-
-  ---
-
-  ### Step-by-step Execution
-
-  #### Step 1: `bisect_left(nums, 8)`
-
-  ```
-  Insertion point = 3
-  nums[3] == 8  → valid
-  ```
-
-  #### Step 2: `bisect_right(nums, 8)`
-
-  ```
-  Insertion point = 5
-  Last index = 5 - 1 = 4
-  ```
-
-  ---
-
-  ### Output
-
-  ```
-  [3, 4]
-  ```
-
-  ---
-
-  ## 6. Edge Case Example
-
-  ### Input
-
-  ```text
-  nums = [2, 2, 2, 2]
-  target = 3
-  ```
-
-  * `bisect_left(nums, 3) = 4`
-  * `left == len(nums)` → target not present
-
-  ### Output
-
-  ```
-  [-1, -1]
-  ```
-
-  ---
-
-  ## 7. Complexity Analysis
-
-  | Metric | Value |
-  | --- | --- |
-  | Time | `O(log n)` |
-  | Space | `O(1)` |
-
-  ---
-
-  ## 8. When to Prefer `bisect`
-
-  Use `bisect` when:
-
-  * You want **clean, readable boundary logic**
-  * The array is **already sorted**
-  * Language/library support is allowed
-
-  Avoid it when:
-
-  * You are implementing binary search **from scratch**
-  * Interview explicitly restricts library usage
-
-  ---
-
-  ## 9. Pattern Takeaway
-
-  > **Range in sorted array**  
-  > → `bisect_left` + `bisect_right - 1`
-
-  This pattern directly generalizes to:
-
-  * count of occurrences
-  * insertion ranges
-  * lower/upper bound problems
-
-  ---
-
-  If you want, I can also:
-
-  * convert this into a **count occurrences** problem
-  * show the **C++ STL equivalent**
-  * compare **manual binary search vs bisect** in interviews
+- **Pattern:** Binary Search with Directional Bias (Lower Bound / Upper Bound).
+- **Trap:** Forgetting integer overflow when computing `mid = (left + right) / 2` in C++ and Java. Always write `mid = left + (right - left) / 2`.

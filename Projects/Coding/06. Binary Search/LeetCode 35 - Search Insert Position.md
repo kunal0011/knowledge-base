@@ -1,5 +1,5 @@
 ---
-date: "2026-08-29"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Binary Search"
 folder: "06. Binary Search"
@@ -8,203 +8,201 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - lower-bound
+  - google
+  - amazon
 ---
 
 # LeetCode 35: Search Insert Position
+
+**Target Companies:** Google, Amazon, Apple, Microsoft, Bloomberg  
+**Difficulty:** Easy  
+**Topic:** Lower Bound Binary Search Invariant  
 
 ---
 
 ### Problem Statement
 
-You are given a **sorted array of distinct integers** `nums` and a **target** integer `target`.
+Given a sorted array of distinct integers `nums` and a target value `target`, return the index if the target is found. If not, return the index where it would be if it were inserted in order.
 
-Return the **index** if the target is found.  
-If not, return the **index where it would be inserted** in order.
-
-**Constraints**
-
-* `1 <= nums.length <= 10^4`
-* `-10^4 <= nums[i], target <= 10^4`
-* `nums` is sorted in **strictly increasing order**
-* Time complexity requirement: **O(log n)**
+You must write an algorithm with $O(\log n)$ runtime complexity.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-Because the array is:
-
-* **Sorted**
-* **Has unique elements**
-
-this is a **classic binary search variant**.
-
-The crucial insight is:
-
-> Even if the target is **not present**, binary search naturally converges to the **correct insertion index**.
-
-At the end of binary search:
-
-* The `left` pointer always points to the **smallest index where `nums[left] >= target`**
-* If all elements are smaller, `left` points to `len(nums)`
-
-Therefore:
-
-* **Return `left` unconditionally**
+- **Input:** `nums: List[int]`, `target: int`
+- **Output:** `int` (index of target or insertion slot)
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10^4$
+  - $-10^4 \le \text{nums}[i], \text{target} \le 10^4$
+  - `nums` contains **distinct** values sorted in **ascending** order.
 
 ---
 
-### Binary Search Technique Used
+### Key Idea & Intuition
 
-This problem uses **lower bound binary search**:
+This is the canonical implementation of the **Lower Bound** problem:
+$$\text{Find the smallest index } i \text{ such that } nums[i] \ge \text{target}$$
 
-Goal:
-
-> Find the first index `i` such that `nums[i] >= target`
-
-Binary search invariants:
-
-* All elements **left of `left`** are `< target`
-* All elements **right of `right`** are `> target`
-
-Pointer movement:
-
-* If `nums[mid] < target` → discard left half
-* Else → discard right half but keep `mid`
+#### Loop Invariant Analysis:
+- Throughout the binary search, we maintain:
+  - Every element at index $< left$ is strictly $< \text{target}$.
+  - Every element at index $> right$ is strictly $> \text{target}$.
+- When the search terminates (`left > right`), the search interval has shrunk to zero size.
+- At termination:
+  - `right` points to the largest element $< \text{target}$.
+  - `left` points to the smallest element $\ge \text{target}$, which is precisely the valid index where `target` should be placed!
+- If `target` is greater than all elements, `left` naturally ends at `len(nums)`.
+- If `target` is smaller than all elements, `left` naturally ends at `0`.
 
 ---
 
-### Python 3 Solution (with typing)
+### Solution Approach (Step-by-Step)
 
+1. Set `left = 0`, `right = len(nums) - 1`.
+2. While `left <= right`:
+   - Compute `mid = left + (right - left) // 2`.
+   - If `nums[mid] == target`: return `mid`.
+   - Else if `nums[mid] < target`: `left = mid + 1`.
+   - Else: `right = mid - 1`.
+3. If loop finishes without returning, return `left`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+nums = [1, 3, 5, 6], target = 2
+
+Initial:
+  [1,   3,   5,   6]
+   ^              ^
+  left           right (mid = (0 + 3) // 2 = 1, nums[1] = 3)
+
+Iteration 1:
+  nums[mid] = 3 > 2 (target)
+  right = mid - 1 = 0
+
+  [1,   3,   5,   6]
+   ^
+ left, right (mid = (0 + 0) // 2 = 0, nums[0] = 1)
+
+Iteration 2:
+  nums[mid] = 1 < 2 (target)
+  left = mid + 1 = 1
+
+  [1,   3,   5,   6]
+   ^    ^
+ right left
+
+Termination:
+  left (1) > right (0). Loop ends.
+  left is 1. Target 2 should be inserted between 1 and 3 (index 1).
+Return left = 1.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Target Exists in Array
+- **Input:** `nums = [1, 3, 5, 6]`, `target = 5`
+- **Output:** `2`
+
+#### Example 2: Insert into Interior Gap
+- **Input:** `nums = [1, 3, 5, 6]`, `target = 2`
+- **Output:** `1`
+
+#### Example 3: Insert at the End
+- **Input:** `nums = [1, 3, 5, 6]`, `target = 7`
+- **Output:** `4`
+
+#### Example 4: Insert at the Beginning
+- **Input:** `nums = [1, 3, 5, 6]`, `target = 0`
+- **Output:** `0`
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def searchInsert(self, nums: List[int], target: int) -> int:
         left, right = 0, len(nums) - 1
-
+        
         while left <= right:
             mid = left + (right - left) // 2
-
             if nums[mid] == target:
                 return mid
             elif nums[mid] < target:
                 left = mid + 1
             else:
                 right = mid - 1
-
+                
         return left
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
 
-### Worked-Out Example
+class Solution {
+public:
+    int searchInsert(std::vector<int>& nums, int target) {
+        int left = 0, right = static_cast<int>(nums.size()) - 1;
 
-#### Example 1
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (nums[mid] == target) {
+                return mid;
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
 
-```text
-nums = [1, 3, 5, 6]
-target = 5
+        return left;
+    }
+};
 ```
 
-Step-by-step:
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int searchInsert(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
 
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (nums[mid] == target) {
+                return mid;
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+
+        return left;
+    }
+}
 ```
-left = 0, right = 3
-mid = 1 → nums[1] = 3 < 5 → left = 2
-
-left = 2, right = 3
-mid = 2 → nums[2] = 5 == target → return 2
-```
-
-**Answer:** `2`
-
----
-
-#### Example 2
-
-```text
-nums = [1, 3, 5, 6]
-target = 2
-```
-
-Step-by-step:
-
-```
-left = 0, right = 3
-mid = 1 → nums[1] = 3 > 2 → right = 0
-
-left = 0, right = 0
-mid = 0 → nums[0] = 1 < 2 → left = 1
-
-loop ends
-```
-
-Return `left = 1`
-
-**Insertion position:** index `1`
-
----
-
-#### Example 3
-
-```text
-nums = [1, 3, 5, 6]
-target = 7
-```
-
-Binary search progression:
-
-```
-left eventually becomes 4
-```
-
-**Insertion position:** index `4` (after last element)
-
----
-
-### Why Returning `left` Always Works
-
-After the loop:
-
-* `right < left`
-* `left` is the **first position where target can be placed**
-* This satisfies both:
-
-  * Found case
-  * Not-found insertion case
-
-This is the same logic used in **lower bound** implementations in STL and standard libraries.
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(log n)`
-* **Space Complexity:** `O(1)`
+- **Time Complexity:** $O(\log N)$ — Halves the search space at each comparison.
+- **Space Complexity:** $O(1)$ auxiliary space — Modifies and stores only pointer variables.
 
 ---
 
-### Takeaway Pattern
+### Takeaway Pattern & Interview Traps
 
-Whenever you see:
-
-* Sorted array
-* “Find position / insert index”
-* Logarithmic constraint
-
-Think:
-
-> **Binary Search → Lower Bound**
-
-This pattern appears frequently in problems like:
-
-* First/last occurrence
-* Ceiling/floor element
-* Insert position variants
-
-If you want, I can also show:
-
-* Recursive version
-* Template-based lower bound pattern
-* How this maps to `bisect_left` in Python
+- **Pattern:** Lower Bound Search ($nums[i] \ge target$).
+- **Trap:** Confusing whether to return `left` or `right` upon loop termination. Remember: when `left <= right` terminates with `left > right`, `left` has stepped onto the first element greater than or equal to `target`, making `left` the definitive insertion index.

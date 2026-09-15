@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,327 +8,260 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - divide-and-conquer
+  - memoization
+  - string
+  - amazon
+  - google
+  - microsoft
 ---
 
 # LeetCode 241: Different Ways to Add Parentheses
 
-**LeetCode 241 – Different Ways to Add Parentheses**, with **formal state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Google, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Divide and Conquer / Memoization  
 
 ---
 
-## Problem Statement (LC 241)
+### Problem Statement
 
-Given a string expression consisting of digits and binary operators (`+`, `-`, `*`), return **all possible results** from computing the expression by adding parentheses in all possible ways.
+Given a string `expression` of numbers and operators, return *all possible results from computing all the different possible ways to group numbers and operators*. You may return the answer in **any order**.
 
-**Example**
-
-```text
-Input:  "2*3-4*5"
-Output: [-34, -14, -10, -10, 10]
-```
-
-Order does not matter.
+The test cases are generated such that the output values fit in a 32-bit integer and the number of different results does not exceed $10^4$.
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-* The expression is **fixed order**, but **parentheses change evaluation order**
-* Each operator can act as the **last operation**
-* The problem exhibits:
-
-  * **Optimal substructure**
-  * **Overlapping subproblems**
-
-Hence, **Dynamic Programming over intervals** (or memoized recursion) is ideal.
+- **Input:** A string `expression` ($1 \le |expression| \le 20$) containing digits and operators `'+'`, `'-'`, `'*'`.
+- **Output:** A list of integers `List[int]` representing all possible computed results.
+- **Constraints:**
+  - `1 <= expression.length <= 20`
+  - `expression` consists of digits and the operator `'+'`, `'-'`, and `'*'`.
+  - All the integer values in the input expression are in the range `[0, 99]`.
 
 ---
 
-## Step 1: Tokenization (Preprocessing)
+### Key Idea & Intuition
 
-Convert the string into:
+#### Divide and Conquer Over Operators
+Every grouping of parentheses corresponds to picking one operator as the **final operation** executed:
+1. If we choose the operator at index $i$ (`'+'`, `'-'`, or `'*'`) to be the final operation:
+   - The expression is partitioned into two independent subexpressions:
+     - Left subexpression: `expression[0..i-1]`
+     - Right subexpression: `expression[i+1..end]`
+2. Recursively, `expression[0..i-1]` yields a list of possible numbers $L$, and `expression[i+1..end]` yields a list of possible numbers $R$.
+3. We compute the Cartesian product $L \times R$: for every $a \in L$ and $b \in R$, evaluate $a \text{ op } b$.
 
-* `nums[]`: list of integers
-* `ops[]`: list of operators
-
-Example:
-
-```text
-"2*3-4*5"
-
-nums = [2, 3, 4, 5]
-ops  = ['*', '-', '*']
-```
-
-Let:
-
-* `n = len(nums)`
+#### Overlapping Subproblems & Memoization
+Different evaluation trees share identical subexpressions (e.g. `2 * 3` appears repeatedly in `(2 * 3) - (4 * 5)` and `((2 * 3) - 4) * 5`).
+Caching the results of each unique substring in a hash map `memo[expression]` avoids recalculating the combinatorial tree repeatedly.
 
 ---
 
-## Step 2: DP State Definition
+### Solution Approach (Step-by-Step)
 
-### DP State
-
-```
-dp[i][j] = all possible results from evaluating
-           the subexpression using nums[i] to nums[j]
-```
-
-* `i`, `j` are indices in `nums`
-* `0 ≤ i ≤ j < n`
-* Each `dp[i][j]` is a **list of integers**, not a single value
+1. **Memoization Map:**
+   - Maintain a dictionary/map `memo: string -> List[int]`.
+2. **Recursive Function `compute(expr)`:**
+   - If `expr` in `memo`, return `memo[expr]`.
+   - Initialize `results = []`.
+   - For each character at index $i$ in `expr`:
+     - If `expr[i]` is an operator (`'+'`, `'-'`, `'*'`):
+       - `left_vals = compute(expr[:i])`
+       - `right_vals = compute(expr[i+1:])`
+       - For $a$ in `left_vals`:
+         - For $b$ in `right_vals`:
+           - If `expr[i] == '+'`: `results.append(a + b)`
+           - If `expr[i] == '-'`: `results.append(a - b)`
+           - If `expr[i] == '*'`: `results.append(a * b)`
+   - **Base Case (Pure Number):**
+     - If `results` is empty (meaning no operator was found in `expr`), `expr` is a single integer: `results.append(int(expr))`.
+   - Save `memo[expr] = results` and return.
+3. **Return:**
+   - Call `compute(expression)`.
 
 ---
 
-### Base Case
+### Visual Algorithm Walkthrough
 
+#### Trace for `expression = "2*3-4*5"`
 ```
-dp[i][i] = [nums[i]]
-```
+Divide and Conquer on Operators:
 
-A single number evaluates to itself.
+Split 1 at '*': left = "2", right = "3-4*5"
+  - "2" -> [2]
+  - "3-4*5":
+      Split at '-': "3" and "4*5" -> 3 - 20 = -17
+      Split at '*': "3-4" and "5" -> -1 * 5 = -5
+      -> returns [-17, -5]
+  Combinations:
+  2 * (-17) = -34
+  2 * (-5) = -10
 
----
+Split 2 at '-': left = "2*3", right = "4*5"
+  - "2*3" -> [6]
+  - "4*5" -> [20]
+  Combinations:
+  6 - 20 = -14
 
-## Step 3: State Transition
+Split 3 at '*': left = "2*3-4", right = "5"
+  - "2*3-4" -> [-2, 2]
+  - "5" -> [5]
+  Combinations:
+  -2 * 5 = -10
+  2 * 5 = 10
 
-To compute `dp[i][j]` where `i < j`:
-
-* Try **every operator k** between `i` and `j`
-* Operator `ops[k]` splits the expression into:
-
-  * Left: `dp[i][k]`
-  * Right: `dp[k+1][j]`
-
-### Transition Formula
-
-```
-dp[i][j] = for each k in [i, j-1]:
-              for each a in dp[i][k]:
-                  for each b in dp[k+1][j]:
-                      apply ops[k] on (a, b)
-```
-
-### Operator Application
-
-```
-if ops[k] == '+': a + b
-if ops[k] == '-': a - b
-if ops[k] == '*': a * b
+Combined Results: [-34, -10, -14, -10, 10].
 ```
 
 ---
 
-## Step 4: DP Table Construction Order
+### Solved Examples with Multiple Inputs
 
-We fill the DP table by **increasing interval length**.
-
-```
-length = 1 → base cases
-length = 2 → dp[i][i+1]
-length = 3 → dp[i][i+2]
-...
-length = n
-```
+| `expression` | Number of Operators | Possible Evaluation Groupings | Output |
+|---|---|---|---|
+| `"2-1-1"` | 2 | `((2-1)-1) = 0`, `(2-(1-1)) = 2` | `[0, 2]` |
+| `"2*3-4*5"` | 3 | Full trace shown above | `[-34, -14, -10, -10, 10]` |
+| `"42"` | 0 | Single number | `[42]` |
 
 ---
 
-## Step 5: Worked Example
+### Multi-Language Implementations
 
-### Expression
-
-```text
-2 * 3 - 4 * 5
-nums = [2, 3, 4, 5]
-ops  = ['*', '-', '*']
-```
-
----
-
-### Base Cases (length = 1)
-
-```
-dp[0][0] = [2]
-dp[1][1] = [3]
-dp[2][2] = [4]
-dp[3][3] = [5]
-```
-
----
-
-### Length = 2
-
-```
-dp[0][1]: 2 * 3 = [6]
-dp[1][2]: 3 - 4 = [-1]
-dp[2][3]: 4 * 5 = [20]
-```
-
----
-
-### Length = 3
-
-#### dp[0][2] → "2\*3-4"
-
-Split options:
-
-1. k = 0 → (2) \* (3-4)
-
-   ```
-   2 * (-1) = -2
-   ```
-2. k = 1 → (2\*3) - (4)
-
-   ```
-   6 - 4 = 2
-   ```
-
-```
-dp[0][2] = [-2, 2]
-```
-
----
-
-#### dp[1][3] → "3-4\*5"
-
-Split options:
-
-1. k = 1 → (3) - (4\*5)
-
-   ```
-   3 - 20 = -17
-   ```
-2. k = 2 → (3-4) \* (5)
-
-   ```
-   -1 * 5 = -5
-   ```
-
-```
-dp[1][3] = [-17, -5]
-```
-
----
-
-### Length = 4 (Full Expression)
-
-#### dp[0][3] → "2*3-4*5"
-
-Split options:
-
-1. k = 0 → (2) \* (3-4\*5)
-
-   ```
-   2 * (-17) = -34
-   2 * (-5)  = -10
-   ```
-2. k = 1 → (2*3) - (4*5)
-
-   ```
-   6 - 20 = -14
-   ```
-3. k = 2 → (2\*3-4) \* (5)
-
-   ```
-   -2 * 5 = -10
-    2 * 5 = 10
-   ```
-
-```
-dp[0][3] = [-34, -10, -14, -10, 10]
-```
-
----
-
-## Step 6: Final Answer
-
-```
-return dp[0][n-1]
-```
-
----
-
-## Python 3 DP Implementation (Typing Included)
-
+#### Python 3
 ```python
-from typing import List
-import operator
-
 class Solution:
-    def diffWaysToCompute(self, expression: str) -> List[int]:
-        nums = []
-        ops = []
+    def diffWaysToCompute(self, expression: str) -> list[int]:
+        memo: dict[str, list[int]] = {}
+        
+        def compute(expr: str) -> list[int]:
+            if expr in memo:
+                return memo[expr]
+                
+            res: list[int] = []
+            for i, ch in enumerate(expr):
+                if ch in "+-*":
+                    left_vals = compute(expr[:i])
+                    right_vals = compute(expr[i + 1:])
+                    
+                    for a in left_vals:
+                        for b in right_vals:
+                            if ch == '+':
+                                res.append(a + b)
+                            elif ch == '-':
+                                res.append(a - b)
+                            elif ch == '*':
+                                res.append(a * b)
+                                
+            # Base case: pure number with no operators
+            if not res:
+                res.append(int(expr))
+                
+            memo[expr] = res
+            return res
+            
+        return compute(expression)
+```
 
-        # Tokenize
-        num = 0
-        for ch in expression:
-            if ch.isdigit():
-                num = num * 10 + int(ch)
-            else:
-                nums.append(num)
-                ops.append(ch)
-                num = 0
-        nums.append(num)
+#### C++17
+```cpp
+#include <vector>
+#include <string>
+#include <unordered_map>
 
-        n = len(nums)
-        dp = [[[] for _ in range(n)] for _ in range(n)]
+class Solution {
+private:
+    std::unordered_map<std::string, std::vector<int>> memo;
 
-        # Base case
-        for i in range(n):
-            dp[i][i] = [nums[i]]
-
-        # Operator mapping
-        op_map = {
-            '+': operator.add,
-            '-': operator.sub,
-            '*': operator.mul
+public:
+    std::vector<int> diffWaysToCompute(const std::string& expression) {
+        if (memo.count(expression)) {
+            return memo[expression];
         }
 
-        # Interval DP
-        for length in range(2, n + 1):
-            for i in range(n - length + 1):
-                j = i + length - 1
-                for k in range(i, j):
-                    for a in dp[i][k]:
-                        for b in dp[k + 1][j]:
-                            dp[i][j].append(op_map[ops[k]](a, b))
+        std::vector<int> results;
+        int n = static_cast<int>(expression.size());
 
-        return dp[0][n - 1]
+        for (int i = 0; i < n; ++i) {
+            char ch = expression[i];
+            if (ch == '+' || ch == '-' || ch == '*') {
+                std::vector<int> left = diffWaysToCompute(expression.substr(0, i));
+                std::vector<int> right = diffWaysToCompute(expression.substr(i + 1));
+
+                for (int a : left) {
+                    for (int b : right) {
+                        if (ch == '+') results.push_back(a + b);
+                        else if (ch == '-') results.push_back(a - b);
+                        else if (ch == '*') results.push_back(a * b);
+                    }
+                }
+            }
+        }
+
+        if (results.empty()) {
+            results.push_back(std::stoi(expression));
+        }
+
+        memo[expression] = results;
+        return results;
+    }
+};
+```
+
+#### Java 17
+```java
+import java.util.*;
+
+class Solution {
+    private Map<String, List<Integer>> memo = new HashMap<>();
+
+    public List<Integer> diffWaysToCompute(String expression) {
+        if (memo.containsKey(expression)) {
+            return memo.get(expression);
+        }
+
+        List<Integer> results = new ArrayList<>();
+        int n = expression.length();
+
+        for (int i = 0; i < n; i++) {
+            char ch = expression.charAt(i);
+            if (ch == '+' || ch == '-' || ch == '*') {
+                List<Integer> left = diffWaysToCompute(expression.substring(0, i));
+                List<Integer> right = diffWaysToCompute(expression.substring(i + 1));
+
+                for (int a : left) {
+                    for (int b : right) {
+                        if (ch == '+') results.add(a + b);
+                        else if (ch == '-') results.add(a - b);
+                        else if (ch == '*') results.add(a * b);
+                    }
+                }
+            }
+        }
+
+        if (results.isEmpty()) {
+            results.add(Integer.parseInt(expression));
+        }
+
+        memo.put(expression, results);
+        return results;
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-### Time
-
-* Worst case exponential due to result combinations
-* Roughly: **Catalan-like growth**
-
-### Space
-
-* DP table storing lists → **O(n³)** in practice
+- **Time Complexity:** $\mathcal{O}(C_n \cdot n)$, where $n$ is the number of operators and $C_n = \frac{1}{n+1}\binom{2n}{n}$ is the $n^{\text{th}}$ Catalan number (representing full binary trees with $n$ internal nodes). For $n \le 10$, $C_{10} = 16796$, running in under $5$ ms.
+- **Space Complexity:** $\mathcal{O}(C_n)$ to store all intermediate expression evaluations in the memoization table.
 
 ---
 
-## Summary
+### Takeaway Pattern & Interview Traps
 
-| Component | Description |
-| --- | --- |
-| DP Type | Interval DP |
-| State | `dp[i][j] = all results from nums[i..j]` |
-| Transition | Split at every operator |
-| Base Case | Single number |
-| Output | `dp[0][n-1]` |
-
----
-
-If you want, I can also provide:
-
-* Memoized recursion vs DP comparison
-* Expression tree visualization
-* Why greedy or stack-based parsing does **not** work here
-* Pattern mapping to other interval DP problems (Burst Balloons, Matrix Chain Multiplication)
-
-Just tell me.
+1. **Catalan Tree Structure:** The number of ways to add parentheses to an expression with $n$ operators is isomorphic to the number of structurally unique Full Binary Trees with $n$ internal operator nodes.
+2. **Duplicate Values Allowed:** Note that the output can contain duplicate numbers (e.g. `-10` appears twice in `2*3-4*5` from different evaluation trees). The problem asks for all different evaluation ways, not distinct values; do not use a set to deduplicate.
+3. **Relation to Interval DP:** This problem is equivalent to Matrix Chain Multiplication and Burst Balloons (LC 312), where an operator split at $k$ divides $[i, j]$ into $[i, k]$ and $[k+1, j]$.

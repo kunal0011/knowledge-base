@@ -8,92 +8,142 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - stream
+  - design
+  - amazon
+  - google
 ---
 
 # LeetCode 703: Kth Largest Element in a Stream
 
-Below is a complete, structured explanation of **LeetCode 703 – Kth Largest Element in a Stream**, aligned with interview-ready reasoning and clean implementation.
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple  
+**Difficulty:** Easy  
+**Topic:** Priority Queue (Min-Heap) / Streaming Data / Top-K Design
 
 ---
-
-## LeetCode 703: Kth Largest Element in a Stream
 
 ### Problem Statement
 
-Design a class `KthLargest` that finds the **kth largest element** in a stream of integers.
+Design a class to find the $k^{\text{th}}$ largest element in a stream. Note that it is the $k^{\text{th}}$ largest element in the sorted order, not the $k^{\text{th}}$ distinct element.
 
-You are given:
-
-* An integer `k`
-* An initial array of integers `nums`
-
-You need to:
-
-* Initialize the object with `k` and `nums`
-* For each call to `add(val)`, insert `val` into the stream and **return the kth largest element** in the stream so far
+Implement `KthLargest` class:
+- `KthLargest(int k, int[] nums)`: Initializes the object with the integer `k` and the stream of integers `nums`.
+- `int add(int val)`: Appends the integer `val` to the stream and returns the element representing the $k^{\text{th}}$ largest element in the stream.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-We do **not** need to maintain the entire stream in sorted order.
-
-Key insights:
-
-* The kth largest element is the **smallest element among the top k largest elements**
-* If we maintain only the **k largest elements seen so far**, the kth largest is easy to retrieve
-
-This leads directly to using a **Min Heap (Priority Queue)** of size `k`.
-
----
-
-### Priority Queue Technique Used
-
-#### Why Min Heap?
-
-* A **min heap of size k** stores the top k largest elements
-* The **root (top)** of the min heap is the kth largest element
-
-#### Strategy
-
-1. Initialize a min heap
-2. Insert elements from `nums`:
-
-   * Push into heap
-   * If heap size exceeds `k`, pop the smallest element
-3. For every `add(val)`:
-
-   * Push `val`
-   * If heap size > `k`, pop
-   * Return heap[0]
-
-#### Invariant Maintained
-
-At all times:
-
-* Heap size ≤ k
-* Heap contains the k largest elements seen so far
-* `heap[0]` = kth largest element
+- **Input:**
+  - Method calls: `["KthLargest", "add", "add", ...]` with parameters `[k, nums]` followed by integers `[val]`.
+- **Output:**
+  - `int`: The $k^{\text{th}}$ largest element after each `add` invocation.
+- **Constraints:**
+  - $1 \le k \le 10^4$.
+  - $0 \le nums.length \le 10^4$.
+  - $-10^4 \le nums[i], val \le 10^4$.
+  - At most $10^4$ calls will be made to `add`.
+  - It is guaranteed that there will be at least $k$ elements in the array when you search for the $k^{\text{th}}$ element.
 
 ---
 
-### Time and Space Complexity
+### Key Idea & Intuition
 
-| Operation | Complexity |
-| --- | --- |
-| Initialization | O(n log k) |
-| add(val) | O(log k) |
-| Space | O(k) |
+Sorting the entire stream upon every new insertion takes $\mathcal{O}(N \log N)$ or $\mathcal{O}(N)$ with insertion sort, which would easily time out across $10^4$ streaming calls.
 
-This is optimal for streaming problems.
+#### The Min-Heap of Size $k$ Invariant:
+We only care about the **top $k$ largest elements** seen so far:
+- If we store the $k$ largest elements in a **Min-Heap**:
+  - The smallest among these top $k$ elements sits right at the root (`heap[0]`).
+  - By definition, the smallest of the top $k$ elements IS the $k^{\text{th}}$ largest element overall!
+- When a new value `val` arrives:
+  - Push `val` into the min-heap.
+  - If the heap size exceeds $k$, pop the root (the element smaller than the top $k$).
+  - Return `heap[0]`.
+
+This gives **$\mathcal{O}(\log k)$ time per insertion** and **$\mathcal{O}(k)$ space**.
 
 ---
 
-### Python 3 Solution (with Typing)
+### Solution Approach (Step-by-Step)
+
+1. **Constructor (`__init__(k, nums)`):**
+   - Store `self.k = k`.
+   - Initialize `self.min_heap = []`.
+   - For each number in `nums`, call `self.add(num)` (or push all and pop down to size $k$).
+2. **`add(val)`:**
+   - Push `val` to `self.min_heap`.
+   - If `len(self.min_heap) > self.k`:
+     - `heappop(self.min_heap)`.
+   - Return `self.min_heap[0]`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Initialize with $k = 3$, `nums = [4, 5, 8, 2]`:
+
+```
+1. Initialization:
+   - Insert 4: Heap = [4]
+   - Insert 5: Heap = [4, 5]
+   - Insert 8: Heap = [4, 5, 8]  (size == 3)
+   - Insert 2: Push 2 -> [2, 4, 8, 5]. Size 4 > 3! Pop 2 -> Heap = [4, 5, 8]
+   Current 3rd largest = heap[0] = 4.
+
+2. add(3):
+   - Push 3 -> Heap has 4 elements.
+   - Pop smallest (3).
+   - Heap remains: [4, 5, 8].
+   - Return heap[0] = 4.
+
+3. add(5):
+   - Push 5 -> Heap has 4 elements.
+   - Pop smallest (4).
+   - Heap becomes: [5, 5, 8].
+   - Return heap[0] = 5.
+
+4. add(10):
+   - Push 10.
+   - Pop smallest (5).
+   - Heap becomes: [5, 8, 10].
+   - Return heap[0] = 5.
+
+5. add(9):
+   - Push 9.
+   - Pop smallest (5).
+   - Heap becomes: [8, 9, 10].
+   - Return heap[0] = 8.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Stream
+
+- **Commands:** `KthLargest(3, [4, 5, 8, 2])`, `add(3)`, `add(5)`, `add(10)`, `add(9)`, `add(4)`
+- **Returns:** `4`, `5`, `5`, `8`, `8`
+
+#### Example 2: Initially Empty `nums` Array
+
+- **Commands:** `KthLargest(1, [])`, `add(-3)`, `add(-2)`, `add(-4)`, `add(0)`, `add(4)`
+- **Tracing:** $k = 1 \implies$ Always tracks the running maximum element!
+  - `add(-3)` $\implies -3$
+  - `add(-2)` $\implies -2$
+  - `add(-4)` $\implies -2$
+  - `add(0)` $\implies 0$
+  - `add(4)` $\implies 4$
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 
 ```python
-from typing import List
 import heapq
+from typing import List
 
 class KthLargest:
     def __init__(self, k: int, nums: List[int]):
@@ -101,9 +151,7 @@ class KthLargest:
         self.min_heap: List[int] = []
 
         for num in nums:
-            heapq.heappush(self.min_heap, num)
-            if len(self.min_heap) > k:
-                heapq.heappop(self.min_heap)
+            self.add(num)
 
     def add(self, val: int) -> int:
         heapq.heappush(self.min_heap, val)
@@ -112,93 +160,77 @@ class KthLargest:
         return self.min_heap[0]
 ```
 
----
+#### C++17
 
-### Worked Example (Step-by-Step)
+```cpp
+#include <vector>
+#include <queue>
 
-#### Input
+class KthLargest {
+private:
+    int k;
+    std::priority_queue<int, std::vector<int>, std::greater<int>> min_heap;
 
-```text
-k = 3
-nums = [4, 5, 8, 2]
+public:
+    KthLargest(int k, const std::vector<int>& nums) : k(k) {
+        for (int num : nums) {
+            add(num);
+        }
+    }
+
+    int add(int val) {
+        min_heap.push(val);
+        if (static_cast<int>(min_heap.size()) > k) {
+            min_heap.pop();
+        }
+        return min_heap.top();
+    }
+};
 ```
 
-#### Initialization
+#### Java
 
-| Step | Heap | Explanation |
-| --- | --- | --- |
-| add 4 | [4] | size < k |
-| add 5 | [4, 5] | size < k |
-| add 8 | [4, 5, 8] | size == k |
-| add 2 | [2, 4, 8, 5] → pop 2 → [4, 5, 8] | keep only top 3 |
+```java
+import java.util.PriorityQueue;
 
-**Current kth largest = 4**
+public class KthLargest {
+    private final int k;
+    private final PriorityQueue<Integer> minHeap;
 
----
+    public KthLargest(int k, int[] nums) {
+        this.k = k;
+        this.minHeap = new PriorityQueue<>(k);
 
-#### Stream Add Operations
+        for (int num : nums) {
+            add(num);
+        }
+    }
 
-##### add(3)
-
+    public int add(int val) {
+        minHeap.offer(val);
+        if (minHeap.size() > k) {
+            minHeap.poll();
+        }
+        return minHeap.peek();
+    }
+}
 ```
-heap = [3, 4, 8, 5] → pop 3 → [4, 5, 8]
-```
-
-**Return:** `4`
-
----
-
-##### add(5)
-
-```
-heap = [4, 5, 8, 5] → pop 4 → [5, 5, 8]
-```
-
-**Return:** `5`
-
----
-
-##### add(10)
-
-```
-heap = [5, 5, 8, 10] → pop 5 → [5, 10, 8]
-```
-
-**Return:** `5`
-
----
-
-##### add(9)
-
-```
-heap = [5, 9, 8, 10] → pop 5 → [8, 9, 10]
-```
-
-**Return:** `8`
 
 ---
 
-##### add(4)
+### Complexity Analysis
 
-```
-heap = [4, 8, 10, 9] → pop 4 → [8, 9, 10]
-```
-
-**Return:** `8`
+- **Time Complexity:**
+  - **Constructor:** $\mathcal{O}(N \log k)$ where $N$ is the number of initial elements in `nums`.
+  - **`add(val)`:** $\mathcal{O}(\log k)$ per stream insertion.
+- **Space Complexity:** $\mathcal{O}(k)$
+  - The heap retains at most $k$ elements, regardless of how many elements arrive over the lifetime of the stream.
 
 ---
 
-### Final Takeaways
+### Takeaway Pattern & Interview Traps
 
-* This is a **classic streaming + heap problem**
-* The core trick is:
-
-  > “Maintain only the top k elements using a min heap”
-* The kth largest is always at the **root of the heap**
-* This pattern generalizes to many “top k in stream” problems
-
-If you want, I can also:
-
-* Explain **why max heap is worse here**
-* Convert this into a **generic Top-K streaming template**
-* Show a **dry-run visualization** using heap trees
+1. **Why Max-Heap Fails for Streams:**
+   - A max-heap would need to store **all** incoming elements ($N$), requiring $\mathcal{O}(N)$ memory and $\mathcal{O}(k \log N)$ to extract and restore the $k^{\text{th}}$ element. A bounded min-heap keeps only $k$ elements and answers in $\mathcal{O}(1)$ peek time.
+2. **Initial Array Smaller than $k$:**
+   - The initial `nums` array can contain fewer than $k$ elements (e.g. `nums = []` and $k = 1$). Checking `if len(heap) > k` guarantees the heap safely grows until size $k$ is achieved.

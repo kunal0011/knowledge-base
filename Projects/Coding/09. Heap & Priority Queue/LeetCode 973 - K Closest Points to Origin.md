@@ -88,6 +88,34 @@ Final closest points: [[1, 3], [-2, 2]]
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Case
+- **Input:** `points = [[1,3],[-2,2]], k = 1`
+- **Tracing Table:**
+  | Point `[x, y]` | $x^2 + y^2$ | Max-Heap State (size $\le 1$) | Action / Note |
+  | :--- | :--- | :--- | :--- |
+  | Start | - | `[]` | Init heap |
+  | `[1, 3]` | $1 + 9 = 10$ | `[(10, [1, 3])]` | Push |
+  | `[-2, 2]` | $4 + 4 = 8$ | `[(8, [-2, 2])]` | Push 8, pop 10 (as $10 > 8$) |
+- **Output:** `[[-2, 2]]`
+
+#### Example 2: Tie-breaking & Mixed Coordinates
+- **Input:** `points = [[3,3],[5,-1],[-2,4]], k = 2`
+- **Distances:**
+  - `[3, 3]`: $9 + 9 = 18$
+  - `[5, -1]`: $25 + 1 = 26$
+  - `[-2, 4]`: $4 + 16 = 20$
+- **Tracing Table:**
+  | Point `[x, y]` | $x^2 + y^2$ | Max-Heap State (size $\le 2$) | Action / Note |
+  | :--- | :--- | :--- | :--- |
+  | `[3, 3]` | 18 | `[18]` | Push |
+  | `[5, -1]` | 26 | `[26 (root), 18]` | Push |
+  | `[-2, 4]` | 20 | `[20 (root), 18]` | Push 20, pop 26 (max element) |
+- **Output:** `[[3, 3], [-2, 4]]` (order does not matter)
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -174,5 +202,20 @@ class Solution {
 
 ### Complexity Analysis
 
-- **Time Complexity:** $O(N \log K)$ — Inserting into a heap of size $K$ costs $O(\log K)$, done $N$ times. Superior to full sorting ($O(N \log N)$) when $K \ll N$.
-- **Space Complexity:** $O(K)$ — Heap size bounded strictly by $K$.
+- **Time Complexity:** $\mathcal{O}(N \log K)$ — Inserting into a heap of size $K$ costs $\mathcal{O}(\log K)$, performed $N$ times. (Optimal with Quickselect in $\mathcal{O}(N)$ average, but Max-Heap is optimal for streaming data when points cannot be buffered).
+- **Space Complexity:** $\mathcal{O}(K)$ auxiliary space for the heap storing $K$ elements.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Squared Distance Avoids Precision Errors:** Never take the square root $\sqrt{x^2 + y^2}$; calculating $x^2 + y^2$ directly prevents floating point inaccuracies and execution overhead.
+2. **K Smallest vs K Largest Rule:**
+   - Finding the **$K$ smallest** $\to$ maintain a **Max-Heap** of size $K$ (so the largest of the candidate set is constantly pruned).
+   - Finding the **$K$ largest** $\to$ maintain a **Min-Heap** of size $K$.
+3. **Integer Overflow Guard:**
+   - Here coordinates are up to $10^4$, so $x^2 + y^2 \le 2 \times 10^8$, which fits safely in a standard signed 32-bit integer ($2.14 \times 10^9$). If coordinates could be $10^5$ or larger, use 64-bit integers (`long` in Java / `long long` in C++).
+4. **Streaming Scalability:**
+   - In an Amazon or Google system design follow-up: *"What if the points don't fit in memory or arrive as an infinite stream?"*
+   - Sorting or Quickselect requires all points in memory $\mathcal{O}(N)$ space.
+   - The Max-Heap approach only retains $K$ elements in memory $\mathcal{O}(K)$, making it ideal for distributed/streaming pipelines.

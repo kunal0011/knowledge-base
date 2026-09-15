@@ -8,181 +8,277 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - bucket-sort
+  - hash-map
+  - amazon
+  - google
 ---
 
 # LeetCode 347: Top K Frequent Elements
 
-Below is a complete, interview-oriented treatment of **LeetCode 347 – Top K Frequent Elements**, structured exactly as requested.
+**Target Companies:** Amazon, Google, Meta, Apple, Bloomberg, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Priority Queue (Min-Heap) / Bucket Sort (Linear Time)
 
 ---
 
-## 📌 Problem Statement — LeetCode 347
+### Problem Statement
 
-Given an integer array `nums` and an integer `k`, return the **k most frequent elements**.
+Given an integer array `nums` and an integer `k`, return the $k$ most frequent elements. You may return the answer in **any order**.
 
-* The answer can be returned in **any order**
-* It is **guaranteed** that the answer is unique
-* You must solve it in **better than O(n log n)** time
+---
 
-**Example**
+### Input & Output Formats & Constraints
 
-```text
-Input: nums = [1,1,1,2,2,3], k = 2
-Output: [1,2]
+- **Input:**
+  - `nums`: `List[int]`, where $1 \le \text{nums.length} \le 10^5$.
+  - `k`: `int`, where $1 \le k \le \text{number of unique elements in } nums$.
+  - $-10^4 \le nums[i] \le 10^4$.
+- **Output:**
+  - `List[int]`: The $k$ most frequent elements.
+- **Constraints:**
+  - The answer is guaranteed to be unique.
+  - The algorithm's time complexity must be strictly better than $\mathcal{O}(N \log N)$.
+
+---
+
+### Key Idea & Intuition
+
+Counting frequencies of all numbers takes $\mathcal{O}(N)$ using a hash map. Sorting the frequency entries takes $\mathcal{O}(U \log U)$ where $U$ is the number of unique elements ($\le N$).
+
+To beat $\mathcal{O}(N \log N)$, there are two primary methods:
+
+#### Paradigm 1: Min-Heap of Size $k$ ($\mathcal{O}(N \log k)$ Time, $\mathcal{O}(N)$ Space)
+- Construct frequency map `freq_map`.
+- Iterate through each `(num, freq)` pair.
+- Maintain a **min-heap** of size $k$ ordered by frequency: `(freq, num)`.
+- If the heap exceeds size $k$, pop the top (the lowest frequency element among the candidates).
+- After scanning all unique numbers, the heap retains the $k$ most frequent elements!
+
+#### Paradigm 2: Bucket Sort ($\mathcal{O}(N)$ Strictly Linear Time - Optimal)
+- Notice that the frequency of any element is an integer in the range $[1, N]$.
+- We can create an array of lists `buckets` of length $N + 1$, where `buckets[f]` stores all numbers that appear exactly $f$ times.
+- Populate `buckets` in $\mathcal{O}(N)$ time.
+- Traverse `buckets` backward from index $N$ down to $1$, collecting numbers into the output list until exactly $k$ elements are gathered.
+- Achieves optimal $\mathcal{O}(N)$ runtime without any heap overhead!
+
+---
+
+### Solution Approach (Step-by-Step)
+
+#### Approach 1: Bucket Sort ($\mathcal{O}(N)$ Time)
+1. Compute `count = Counter(nums)`.
+2. Create an array `buckets` of size $len(nums) + 1$, where each entry is an empty list.
+3. For each `num, freq` in `count.items()`:
+   - `buckets[freq].append(num)`
+4. Initialize `result = []`.
+5. Loop $f$ backward from $N$ down to $1$:
+   - For `num` in `buckets[f]`:
+     - `result.append(num)`
+     - If `len(result) == k`: return `result`.
+
+#### Approach 2: Min-Heap of Size $k$ ($\mathcal{O}(N \log k)$ Time)
+1. Compute `count = Counter(nums)`.
+2. `min_heap = []`.
+3. For each `num, freq` in `count.items()`:
+   - `heappush(min_heap, (freq, num))`
+   - If `len(min_heap) > k`: `heappop(min_heap)`.
+4. Return `[num for freq, num in min_heap]`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `nums = [1, 1, 1, 2, 2, 3]`, $k = 2$:
+
+```
+Step 1: Count frequencies
+  1 -> 3 times
+  2 -> 2 times
+  3 -> 1 time
+
+Step 2: Place into frequency buckets (index = frequency):
+  Bucket 0: []
+  Bucket 1: [3]
+  Bucket 2: [2]
+  Bucket 3: [1]
+  Bucket 4: []
+  Bucket 5: []
+  Bucket 6: []
+
+Step 3: Collect from highest frequency bucket down:
+  Check Bucket 6: empty
+  Check Bucket 5: empty
+  Check Bucket 4: empty
+  Check Bucket 3: [1] -> append 1 (count = 1)
+  Check Bucket 2: [2] -> append 2 (count = 2 == k!)
+
+Result: [1, 2]
 ```
 
 ---
 
-## 🔑 Key Observations
+### Solved Examples with Multiple Inputs
 
-1. **Frequency counting is mandatory**
+#### Example 1: Standard Multiset
 
-   * Raw values are irrelevant without knowing how often they appear
-   * Use a hash map: `num → frequency`
-2. **Sorting by frequency is expensive**
+- **Input:** `nums = [1, 1, 1, 2, 2, 3]`, `k = 2`
+- **Output:** `[1, 2]`
 
-   * Sorting all elements costs `O(n log n)`
-   * The problem explicitly hints at avoiding this
-3. **We only need top `k`**
+#### Example 2: Single Element
 
-   * This is a classic **Top-K problem**
-   * Priority Queue (Heap) is the correct abstraction
-4. **Use a Min-Heap of size `k`**
+- **Input:** `nums = [1]`, `k = 1`
+- **Output:** `[1]`
 
-   * Keep only the top `k` frequent elements at any time
-   * Smallest frequency stays at the top
+#### Example 3: Negative Numbers with Equal Higher Frequencies
+
+- **Input:** `nums = [-1, -1, 2, 2, 3]`, `k = 2`
+- **Output:** `[-1, 2]`
 
 ---
 
-## 🧠 Priority Queue Technique (Core Idea)
+### Multi-Language Implementations
 
-### Why Min-Heap and not Max-Heap?
+#### Python 3
 
-* Max-Heap would require pushing **all elements**
-* Min-Heap keeps heap size bounded to `k`
-* Time complexity improves
-
-### Heap Structure
-
-Each heap entry:
-
-```
-(frequency, element)
-```
-
-### Algorithm
-
-1. Count frequencies using a dictionary
-2. Iterate through `(element, frequency)` pairs
-3. Push into a min-heap
-4. If heap size exceeds `k`, pop the smallest frequency
-5. Heap now contains top `k` frequent elements
-
----
-
-## ⏱️ Time & Space Complexity
-
-| Component | Complexity |
-| --- | --- |
-| Frequency Map | `O(n)` |
-| Heap Operations | `O(n log k)` |
-| Total Time | **O(n log k)** |
-| Space | `O(n + k)` |
-
----
-
-## 🧩 Python 3 Solution (with typing)
-
+##### Optimal $\mathcal{O}(N)$ Bucket Sort
 ```python
-from typing import List
-import heapq
 from collections import Counter
+from typing import List
 
 class Solution:
     def topKFrequent(self, nums: List[int], k: int) -> List[int]:
-        # Step 1: Count frequency
-        freq_map = Counter(nums)
+        count = Counter(nums)
+        n = len(nums)
+        # buckets[i] will store all numbers that appear exactly i times
+        buckets: List[List[int]] = [[] for _ in range(n + 1)]
 
-        # Step 2: Min-heap
-        min_heap: List[tuple[int, int]] = []
+        for num, freq in count.items():
+            buckets[freq].append(num)
 
-        for num, freq in freq_map.items():
+        result = []
+        for freq in range(n, 0, -1):
+            for num in buckets[freq]:
+                result.append(num)
+                if len(result) == k:
+                    return result
+
+        return result
+```
+
+##### Priority Queue Min-Heap Approach ($\mathcal{O}(N \log k)$)
+```python
+import heapq
+from collections import Counter
+from typing import List
+
+class SolutionHeap:
+    def topKFrequent(self, nums: List[int], k: int) -> List[int]:
+        count = Counter(nums)
+        min_heap = []
+
+        for num, freq in count.items():
             heapq.heappush(min_heap, (freq, num))
-            
-            # Step 3: Maintain heap size k
             if len(min_heap) > k:
                 heapq.heappop(min_heap)
 
-        # Step 4: Extract elements
         return [num for freq, num in min_heap]
 ```
 
----
+#### C++17
 
-## 🧪 Worked Example (Step-by-Step)
+```cpp
+#include <vector>
+#include <unordered_map>
+#include <queue>
 
-### Input
+class Solution {
+public:
+    // Optimal O(N) Bucket Sort
+    std::vector<int> topKFrequent(const std::vector<int>& nums, int k) {
+        std::unordered_map<int, int> count;
+        for (int num : nums) {
+            count[num]++;
+        }
 
-```text
-nums = [1,1,1,2,2,3]
-k = 2
+        int n = static_cast<int>(nums.size());
+        std::vector<std::vector<int>> buckets(n + 1);
+
+        for (const auto& [num, freq] : count) {
+            buckets[freq].push_back(num);
+        }
+
+        std::vector<int> result;
+        result.reserve(k);
+
+        for (int f = n; f >= 1 && static_cast<int>(result.size()) < k; --f) {
+            for (int num : buckets[f]) {
+                result.push_back(num);
+                if (static_cast<int>(result.size()) == k) {
+                    return result;
+                }
+            }
+        }
+
+        return result;
+    }
+};
 ```
 
----
+#### Java
 
-### Step 1: Frequency Map
+```java
+import java.util.*;
 
-```
-{
-  1: 3,
-  2: 2,
-  3: 1
+public class Solution {
+    // Optimal O(N) Bucket Sort
+    public int[] topKFrequent(int[] nums, int k) {
+        Map<Integer, Integer> count = new HashMap<>();
+        for (int num : nums) {
+            count.put(num, count.getOrDefault(num, 0) + 1);
+        }
+
+        int n = nums.length;
+        List<Integer>[] buckets = new List[n + 1];
+        for (int i = 0; i <= n; i++) {
+            buckets[i] = new ArrayList<>();
+        }
+
+        for (Map.Entry<Integer, Integer> entry : count.entrySet()) {
+            buckets[entry.getValue()].add(entry.getKey());
+        }
+
+        int[] result = new int[k];
+        int idx = 0;
+
+        for (int f = n; f >= 1 && idx < k; f--) {
+            for (int num : buckets[f]) {
+                result[idx++] = num;
+                if (idx == k) {
+                    return result;
+                }
+            }
+        }
+
+        return result;
+    }
 }
 ```
 
 ---
 
-### Step 2: Heap Processing
+### Complexity Analysis
 
-| Operation | Heap Content (freq, num) |
-| --- | --- |
-| push (3,1) | [(3,1)] |
-| push (2,2) | [(2,2), (3,1)] |
-| push (1,3) | [(1,3), (3,1), (2,2)] |
-| pop smallest | [(2,2), (3,1)] |
-
-(heap size maintained at `k = 2`)
+- **Time Complexity:**
+  - **Bucket Sort Approach:** $\mathcal{O}(N)$. Counting frequencies takes $\mathcal{O}(N)$. Populating buckets takes $\mathcal{O}(U) \le \mathcal{O}(N)$. Scanning buckets takes at most $N + 1$ iterations. Total: strictly $\mathcal{O}(N)$.
+  - **Min-Heap Approach:** $\mathcal{O}(N \log k)$ where $U$ unique elements are pushed into a heap of size $k$.
+- **Space Complexity:** $\mathcal{O}(N)$ to store frequencies and bucket arrays.
 
 ---
 
-### Step 3: Extract Result
+### Takeaway Pattern & Interview Traps
 
-```
-[2, 1]
-```
-
-✔ Correct — elements with highest frequencies
-
----
-
-## 🎯 Key Takeaways for Interviews
-
-* Recognize **Top-K** → think **Heap**
-* Prefer **Min-Heap with bounded size**
-* Avoid full sorting when only partial order is needed
-* This pattern generalizes to:
-
-  * Top K frequent words
-  * K closest points
-  * K largest/smallest elements
-
----
-
-If you want, I can also explain:
-
-* **Bucket sort solution (O(n))**
-* **Why heap is preferred in interviews**
-* **Dry-run with negative numbers or ties**
-* **How this maps to streaming data problems**
-
-Just let me know.
+1. **Why Bucket Sort Works Here:**
+   - Bucket sort is generally risky when keys have arbitrary floating-point values. But here, frequencies are strictly integers bounded by $[1, N]$. This makes bucket sort deterministic, collision-free, and $\mathcal{O}(N)$ optimal!
+2. **Min-Heap vs Max-Heap Trade-Off:**
+   - A max-heap of all unique elements takes $\mathcal{O}(U \log U)$ to build/extract. A min-heap bounded at size $k$ takes $\mathcal{O}(U \log k)$ and consumes only $\mathcal{O}(k)$ auxiliary memory.

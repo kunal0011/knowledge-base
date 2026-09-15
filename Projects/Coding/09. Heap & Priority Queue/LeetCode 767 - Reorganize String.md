@@ -8,283 +8,302 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - greedy
+  - string
+  - amazon
+  - google
 ---
 
 # LeetCode 767: Reorganize String
 
-Below is a **complete, structured explanation** of **LeetCode 767 – Reorganize String**, aligned with how this problem is typically reasoned about in interviews and competitive programming.
+**Target Companies:** Amazon (Top Classic), Google, Meta, Microsoft, Apple  
+**Difficulty:** Medium  
+**Topic:** Priority Queue (Max-Heap) / Greedy Character Interleaving
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-**LeetCode 767 — Reorganize String**
+Given a string `s`, rearrange the characters of `s` so that any two adjacent characters are not the same.
 
-You are given a string `s`.  
-Rearrange the characters of `s` so that **no two adjacent characters are the same**.
+Return *any possible rearrangement of `s` or return `""` if not possible*.
 
-* If it is **possible**, return any valid rearrangement.
-* If it is **not possible**, return an empty string `""`.
+---
 
-### Example
+### Input & Output Formats & Constraints
 
-```text
-Input:  s = "aab"
+- **Input:**
+  - `s`: `str`, consisting of lowercase English letters ($1 \le \text{len}(s) \le 500$).
+- **Output:**
+  - `str`: Any valid rearranged string with no adjacent duplicates, or `""` if impossible.
+- **Constraints:**
+  - Lowercase English letters only.
+  - Feasibility strictly bounded by the Pigeonhole Principle.
+
+---
+
+### Key Idea & Intuition
+
+#### 1. The Mathematical Feasibility Condition (Pigeonhole Principle):
+Let $n = \text{len}(s)$, and let $M$ be the frequency of the most common character.
+Even if we place this most frequent character at every alternating index ($0, 2, 4, \dots$), the maximum number of non-adjacent slots available is:
+$$\text{max\_allowed} = \left\lfloor \frac{n + 1}{2} \right\rfloor$$
+If $M > \frac{n + 1}{2}$, it is mathematically impossible to place all copies without at least two of them touching. We must immediately return `""`.
+
+#### 2. Greedy Max-Heap Strategy:
+To guarantee that the most frequent characters do not get forced into consecutive positions near the end:
+- Always pair the **two currently most frequent distinct characters** together at each step!
+- Maintain a **Max-Heap** of pairs: `(-freq, char)`.
+- While the heap has at least 2 elements:
+  - Pop the most frequent character `(f1, c1)`.
+  - Pop the second most frequent character `(f2, c2)`.
+  - Append `c1` then `c2` to the result string.
+  - Decrement their remaining counts by 1.
+  - Push back any character that still has count $> 0$.
+- If 1 character remains at the end, pop and append it (it is guaranteed to have frequency 1 by our initial feasibility check).
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Compute `count = Counter(s)`.
+2. Check if $\max(count.values()) > (len(s) + 1) // 2$: return `""`.
+3. Construct max-heap: `max_heap = [(-freq, char) for char, freq in count.items()]`. `heapify(max_heap)`.
+4. Initialize `result = []`.
+5. While `len(max_heap) >= 2`:
+   - `f1, c1 = heappop(max_heap)`
+   - `f2, c2 = heappop(max_heap)`
+   - `result.extend([c1, c2])`
+   - If `f1 + 1 < 0`: `heappush(max_heap, (f1 + 1, c1))`
+   - If `f2 + 1 < 0`: `heappush(max_heap, (f2 + 1, c2))`
+6. If `max_heap` is non-empty:
+   - `_, c = heappop(max_heap)`
+   - `result.append(c)`
+7. Return `''.join(result)`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let $s = \text{"aab"}$:
+
+```
+Counts: {'a': 2, 'b': 1}, n = 3.
+max_freq (2) <= (3 + 1) // 2 = 2 -> Valid!
+
+Max-Heap:
+  [ (-2, 'a'), (-1, 'b') ]
+
+Step 1:
+  Pop #1: (-2, 'a')
+  Pop #2: (-1, 'b')
+  Append 'a', then 'b' -> result = ['a', 'b']
+  Remaining: 'a' has 1 left (-2 + 1 = -1). 'b' has 0 left.
+  Re-insert 'a'.
+  Heap: [ (-1, 'a') ]
+
+Step 2:
+  Heap size is 1 (< 2). Exit loop.
+  Final pop: append 'a'.
+  Result: ['a', 'b', 'a']
+
 Output: "aba"
 ```
 
-```text
-Input:  s = "aaab"
-Output: ""
-```
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Feasible Case
+
+- **Input:** `s = "aab"`
+- **Output:** `"aba"`
+
+#### Example 2: Infeasible Case (Pigeonhole Violation)
+
+- **Input:** `s = "aaab"`
+- **Tracing:** $n = 4, freq(\text{'a'}) = 3$. Threshold $= (4 + 1) // 2 = 2$. $3 > 2 \implies$ Impossible.
+- **Output:** `""`
+
+#### Example 3: Multiple High-Frequency Letters
+
+- **Input:** `s = "vvvlo"`
+- **Tracing:**
+  - $v: 3, l: 1, o: 1, n = 5$. Threshold $= 3 \le 3$ (Valid).
+  - Pair $v$ with $l \implies$ `"vl"`.
+  - Pair $v$ with $o \implies$ `"vlvo"`.
+  - Final remaining $v \implies$ `"vlvov"`.
+- **Output:** `"vlvov"`
 
 ---
 
-## 2. Key Observation (Feasibility Condition)
+### Multi-Language Implementations
 
-Let:
-
-* `n` = length of string
-* `maxFreq` = frequency of the most common character
-
-### Critical Condition
-
-A valid reorganization is possible **if and only if**:
-
-```
-maxFreq ≤ (n + 1) // 2
-```
-
-### Why?
-
-* The most frequent character must be placed with **at least one different character between each occurrence**.
-* The maximum number of “safe slots” available is `(n + 1) // 2`.
-* If one character exceeds this count, it is impossible to separate its occurrences.
-
-#### Example
-
-```
-s = "aaab" → freq(a) = 3, n = 4
-(4 + 1) // 2 = 2 → 3 > 2 → impossible
-```
-
----
-
-## 3. Why Priority Queue (Max Heap)?
-
-### Greedy Strategy
-
-At every step:
-
-* Pick the **two characters with highest remaining frequencies**
-* Place them next to each other (in alternating order)
-* Decrease their frequencies
-* Push them back if they still have remaining count
-
-### Why this works
-
-* Always using the most frequent characters first prevents them from clustering together.
-* Greedy choice is safe because future placements have fewer constraints.
-
-### Data Structure Choice
-
-Python’s `heapq` is a **min-heap**, so:
-
-* Store frequencies as **negative values** to simulate a **max-heap**
-
----
-
-## 4. Algorithm (Step-by-Step)
-
-1. Count character frequencies.
-2. Check feasibility using the `(n + 1) // 2` rule.
-3. Build a max-heap `(−frequency, character)`.
-4. While heap has **at least two elements**:
-
-   * Pop top two characters
-   * Append them to result
-   * Decrement frequencies
-   * Push back if still remaining
-5. If one character remains, append it (safe by feasibility check).
-6. Return the result string.
-
----
-
-## 5. Python 3 Solution (With Typing)
+#### Python 3
 
 ```python
-from typing import Dict
 import heapq
 from collections import Counter
 
 class Solution:
     def reorganizeString(self, s: str) -> str:
-        freq: Dict[str, int] = Counter(s)
-        n: int = len(s)
+        count = Counter(s)
+        n = len(s)
 
-        # Feasibility check
-        if max(freq.values()) > (n + 1) // 2:
+        # Mathematical feasibility check
+        if max(count.values()) > (n + 1) // 2:
             return ""
 
-        # Max heap using negative frequencies
-        max_heap = [(-count, char) for char, count in freq.items()]
+        # Max-heap storing (-freq, char)
+        max_heap = [(-freq, char) for char, freq in count.items()]
         heapq.heapify(max_heap)
 
         result = []
-
         while len(max_heap) >= 2:
-            count1, char1 = heapq.heappop(max_heap)
-            count2, char2 = heapq.heappop(max_heap)
+            f1, c1 = heapq.heappop(max_heap)
+            f2, c2 = heapq.heappop(max_heap)
 
-            result.append(char1)
-            result.append(char2)
+            result.append(c1)
+            result.append(c2)
 
-            if count1 + 1 < 0:
-                heapq.heappush(max_heap, (count1 + 1, char1))
-            if count2 + 1 < 0:
-                heapq.heappush(max_heap, (count2 + 1, char2))
+            if f1 + 1 < 0:
+                heapq.heappush(max_heap, (f1 + 1, c1))
+            if f2 + 1 < 0:
+                heapq.heappush(max_heap, (f2 + 1, c2))
 
-        # If one character remains
+        # If a single character remains, it has frequency 1
         if max_heap:
             result.append(max_heap[0][1])
 
         return "".join(result)
 ```
 
----
+#### C++17
 
-## 6. Worked Examples
+```cpp
+#include <string>
+#include <vector>
+#include <queue>
+#include <unordered_map>
+#include <algorithm>
 
----
+class Solution {
+public:
+    std::string reorganizeString(std::string s) {
+        std::vector<int> freq(26, 0);
+        int max_freq = 0;
+        for (char c : s) {
+            freq[c - 'a']++;
+            max_freq = std::max(max_freq, freq[c - 'a']);
+        }
 
-### Example 1: `s = "aab"`
+        int n = static_cast<int>(s.size());
+        if (max_freq > (n + 1) / 2) {
+            return "";
+        }
 
-#### Step 1: Frequency
+        // Max-heap storing pair of (count, char)
+        std::priority_queue<std::pair<int, char>> max_heap;
+        for (int i = 0; i < 26; ++i) {
+            if (freq[i] > 0) {
+                max_heap.emplace(freq[i], static_cast<char>('a' + i));
+            }
+        }
 
-```
-a → 2
-b → 1
-```
+        std::string result = "";
+        result.reserve(n);
 
-#### Step 2: Feasibility
+        while (max_heap.size() >= 2) {
+            auto [f1, c1] = max_heap.top(); max_heap.pop();
+            auto [f2, c2] = max_heap.top(); max_heap.pop();
 
-```
-maxFreq = 2
-(3 + 1) // 2 = 2 → OK
-```
+            result.push_back(c1);
+            result.push_back(c2);
 
-#### Step 3: Max Heap
+            if (f1 - 1 > 0) max_heap.emplace(f1 - 1, c1);
+            if (f2 - 1 > 0) max_heap.emplace(f2 - 1, c2);
+        }
 
-```
-[(-2, 'a'), (-1, 'b')]
-```
+        if (!max_heap.empty()) {
+            result.push_back(max_heap.top().second);
+        }
 
-#### Step 4: Processing
-
-* Pop: `a(2)`, `b(1)`
-* Result: `"ab"`
-* Push back: `a(1)`
-
-Heap:
-
-```
-[(-1, 'a')]
-```
-
-#### Step 5: Remaining
-
-* Append `a`
-
-#### Final Output
-
-```
-"aba"
-```
-
----
-
-### Example 2: `s = "aaab"`
-
-#### Frequency
-
-```
-a → 3
-b → 1
+        return result;
+    }
+};
 ```
 
-#### Feasibility Check
+#### Java
 
+```java
+import java.util.PriorityQueue;
+
+public class Solution {
+    public String reorganizeString(String s) {
+        int[] freq = new int[26];
+        int maxFreq = 0;
+        for (char c : s.toCharArray()) {
+            freq[c - 'a']++;
+            maxFreq = Math.max(maxFreq, freq[c - 'a']);
+        }
+
+        int n = s.length();
+        if (maxFreq > (n + 1) / 2) {
+            return "";
+        }
+
+        // Max-heap storing [count, char_code]
+        PriorityQueue<int[]> maxHeap = new PriorityQueue<>(
+            (a, b) -> Integer.compare(b[0], a[0])
+        );
+
+        for (int i = 0; i < 26; i++) {
+            if (freq[i] > 0) {
+                maxHeap.offer(new int[]{freq[i], i});
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        while (maxHeap.size() >= 2) {
+            int[] first = maxHeap.poll();
+            int[] second = maxHeap.poll();
+
+            sb.append((char) ('a' + first[1]));
+            sb.append((char) ('a' + second[1]));
+
+            if (first[0] - 1 > 0) {
+                maxHeap.offer(new int[]{first[0] - 1, first[1]});
+            }
+            if (second[0] - 1 > 0) {
+                maxHeap.offer(new int[]{second[0] - 1, second[1]});
+            }
+        }
+
+        if (!maxHeap.isEmpty()) {
+            sb.append((char) ('a' + maxHeap.poll()[1]));
+        }
+
+        return sb.toString();
+    }
+}
 ```
-maxFreq = 3
-(4 + 1) // 2 = 2 → 3 > 2
-```
-
-#### Result
-
-```
-""
-```
-
----
-
-### Example 3: `s = "vvvlo"`
-
-#### Frequency
-
-```
-v → 3
-l → 1
-o → 1
-```
-
-#### Heap Initialization
-
-```
-[(-3, 'v'), (-1, 'l'), (-1, 'o')]
-```
-
-#### Processing Steps
-
-1. Pop `v, l` → `"vl"` → push back `v(2)`
-2. Pop `v, o` → `"vlvo"` → push back `v(1)`
-3. Append remaining `v`
-
-#### Final Output
-
-```
-"vlvov"
-```
-
-(Any valid arrangement is acceptable)
-
----
-
-## 7. Complexity Analysis
-
-* **Time Complexity:**
-
-  ```
-  O(n log k)
-  ```
-
-  where `k` = number of unique characters
-* **Space Complexity:**
-
-  ```
-  O(k)
-  ```
 
 ---
 
-## 8. Key Takeaways
+### Complexity Analysis
 
-* This is a **greedy + priority queue** problem.
-* The **feasibility condition** is the most important insight.
-* Always placing the **two most frequent remaining characters** avoids adjacency violations.
-* Multiple correct answers may exist.
+- **Time Complexity:** $\mathcal{O}(N \log \Sigma) = \mathcal{O}(N)$
+  - Frequency counting takes $\mathcal{O}(N)$ where $N$ is the length of $s$.
+  - Building and extracting from a heap with at most $\Sigma = 26$ distinct letters takes $\mathcal{O}(N \log 26) = \mathcal{O}(N)$ time.
+- **Space Complexity:** $\mathcal{O}(\Sigma) = \mathcal{O}(1)$
+  - The heap and frequency table store at most 26 elements.
 
-If you want, I can also:
+---
 
-* Show a **dry-run table**
-* Explain **why a sorting-only approach fails**
-* Compare this with **bucket placement / index-filling technique**
+### Takeaway Pattern & Interview Traps
+
+1. **Pigeonhole Early Exit:**
+   - Always evaluate the mathematical threshold $(n + 1) // 2$ upfront. Returning `""` immediately avoids unnecessary heap construction and guarantees that the trailing element in the heap will never have count $> 1$.
+2. **Pairing Top Two:**
+   - Never pop only one element and try to compare it against the previous character placed in `result`. By popping the top two distinct characters simultaneously, you mathematically guarantee alternation without special-case back-tracking.

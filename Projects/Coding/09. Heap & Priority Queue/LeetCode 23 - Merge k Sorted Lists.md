@@ -8,79 +8,160 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - linked-list
+  - divide-and-conquer
+  - amazon
+  - google
 ---
 
 # LeetCode 23: Merge k Sorted Lists
 
-Below is a structured, interview-ready explanation of **LeetCode 23 – Merge k Sorted Lists**, aligned with how this problem is typically evaluated in senior-level DSA interviews.
+**Target Companies:** Amazon (Top Classic), Google, Microsoft, Meta, Apple, Bloomberg  
+**Difficulty:** Hard  
+**Topic:** Priority Queue (Min-Heap) / Divide & Conquer / K-Way Merge
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-You are given an array of `k` linked lists, where each linked list is **sorted in ascending order**.
+You are given an array of `k` linked-lists `lists`, each linked-list is sorted in ascending order.
 
-Your task is to **merge all the linked lists into one sorted linked list** and return its head.
-
-### Constraints (important for complexity reasoning)
-
-* `k` = number of linked lists
-* Total number of nodes across all lists = `N`
-* Each list may be empty
+*Merge all the linked-lists into one sorted linked-list and return it.*
 
 ---
 
-## 2. Key Observation
+### Input & Output Formats & Constraints
 
-1. Each individual linked list is already sorted.
-2. At any point during merging, the **next smallest element** must be among the **current head nodes** of the remaining lists.
-3. Therefore, we need a data structure that:
-
-   * Efficiently returns the minimum element
-   * Supports repeated insertions as we advance through lists
-
-This naturally leads to a **Min-Heap (Priority Queue)**.
-
----
-
-## 3. Why Priority Queue (Min-Heap)?
-
-A priority queue allows:
-
-* **O(log k)** insertion
-* **O(log k)** removal of the minimum element
-
-### Strategy
-
-1. Push the **head node of each non-empty list** into a min-heap.
-2. Repeatedly:
-
-   * Extract the smallest node
-   * Append it to the merged list
-   * If the extracted node has a `next`, push that `next` node into the heap
-3. Continue until the heap is empty.
-
-### Complexity
-
-* **Time Complexity:** `O(N log k)`
-
-  * Each of the `N` nodes is pushed and popped once
-* **Space Complexity:** `O(k)`
-
-  * Heap stores at most one node from each list
-
-This is optimal and expected in interviews.
+- **Input:**
+  - `lists`: `List[Optional[ListNode]]`, an array of $k$ sorted singly-linked lists.
+- **Output:**
+  - `Optional[ListNode]`: Head of the single merged sorted linked list.
+- **Constraints:**
+  - $k == \text{lists.length}$
+  - $0 \le k \le 10^4$
+  - $0 \le \text{lists}[i]\text{.length} \le 500$
+  - $-10^4 \le \text{lists}[i][j] \le 10^4$
+  - $\text{lists}[i]$ is sorted in ascending order.
+  - The total number of nodes across all lists is in the range $[0, 10^4]$.
 
 ---
 
-## 4. Python 3 Solution (with Typing)
+### Key Idea & Intuition
+
+Because each of the $k$ lists is already sorted, the globally smallest remaining node at any step must be among the **current front nodes of the $k$ lists**.
+
+This problem is the canonical **$K$-Way Merge**, solvable with two principal paradigms:
+
+#### Paradigm 1: Min-Heap / Priority Queue ($\mathcal{O}(N \log k)$ Time, $\mathcal{O}(k)$ Space)
+1. Initialize a min-heap with the head node of each non-empty linked list.
+2. In Python, store tuples `(node.val, list_index, node)` to ensure unique, comparable keys when node values tie.
+3. In each iteration:
+   - Extract the minimum node from the heap: `(val, idx, node) = heappop(min_heap)`.
+   - Append `node` to the merged list.
+   - If `node.next` exists, push `(node.next.val, idx, node.next)` into the heap.
+4. Continue until the heap is empty.
+5. Total nodes $N$, heap size at most $k \implies \mathcal{O}(N \log k)$ time.
+
+#### Paradigm 2: Divide and Conquer ($\mathcal{O}(N \log k)$ Time, $\mathcal{O}(1)$ Auxiliary Space)
+1. Pair up the $k$ lists and merge each pair using the standard 2-list merge algorithm (LeetCode 21).
+2. After the first round, $k/2$ lists remain; after the second, $k/4$, and so on.
+3. Repeat $\lceil \log_2 k \rceil$ times until a single merged list remains.
+4. Requires zero heap allocations.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+#### Priority Queue Algorithm:
+1. Create a sentinel `dummy = ListNode(0)` and `curr = dummy`.
+2. Initialize `min_heap = []`.
+3. For each list head at index $i$:
+   - If `lists[i]` is not null:
+     - Push `(lists[i].val, i, lists[i])` onto `min_heap`.
+4. While `min_heap` is non-empty:
+   - `val, i, node = heappop(min_heap)`
+   - `curr.next = node`
+   - `curr = curr.next`
+   - If `node.next` is not null:
+     - `heappush(min_heap, (node.next.val, i, node.next))`
+5. Return `dummy.next`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `lists = [L0: 1->4->5, L1: 1->3->4, L2: 2->6]`:
+
+```
+Initial Heap (heads of L0, L1, L2):
+  Heap: [ (1, 0, L0), (1, 1, L1), (2, 2, L2) ]
+
+Step 1:
+  Pop (1, 0, L0). Append 1.
+  L0.next is 4. Push (4, 0, L0_next).
+  Heap: [ (1, 1, L1), (2, 2, L2), (4, 0, L0) ]
+  Merged: 1 ->
+
+Step 2:
+  Pop (1, 1, L1). Append 1.
+  L1.next is 3. Push (3, 1, L1_next).
+  Heap: [ (2, 2, L2), (4, 0, L0), (3, 1, L1) ]
+  Merged: 1 -> 1 ->
+
+Step 3:
+  Pop (2, 2, L2). Append 2.
+  L2.next is 6. Push (6, 2, L2_next).
+  Heap: [ (3, 1, L1), (4, 0, L0), (6, 2, L2) ]
+  Merged: 1 -> 1 -> 2 ->
+
+Step 4:
+  Pop (3, 1, L1). Append 3.
+  Push 4 from L1.
+  Merged: 1 -> 1 -> 2 -> 3 ->
+
+Step 5:
+  Pop 4 (from L0). Append 4. Push 5.
+Step 6:
+  Pop 4 (from L1). Append 4. L1 exhausted.
+Step 7:
+  Pop 5 (from L0). Append 5. L0 exhausted.
+Step 8:
+  Pop 6 (from L2). Append 6. L2 exhausted.
+
+Result: 1 -> 1 -> 2 -> 3 -> 4 -> 4 -> 5 -> 6
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard 3 Lists
+
+- **Input:** `lists = [[1,4,5],[1,3,4],[2,6]]`
+- **Output:** `[1,1,2,3,4,4,5,6]`
+
+#### Example 2: Empty Array of Lists
+
+- **Input:** `lists = []`
+- **Output:** `[]` (Returns `null`)
+
+#### Example 3: Array of Empty Lists
+
+- **Input:** `lists = [[]]`
+- **Output:** `[]` (Returns `null`)
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 
 ```python
-from typing import List, Optional
 import heapq
+from typing import List, Optional
 
 class ListNode:
-    def __init__(self, val: int = 0, next: Optional["ListNode"] = None):
+    def __init__(self, val: int = 0, next: Optional['ListNode'] = None):
         self.val = val
         self.next = next
 
@@ -88,19 +169,19 @@ class Solution:
     def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
         min_heap = []
 
-        # Push the head of each non-empty list into heap
-        for i, node in enumerate(lists):
-            if node:
-                # (value, unique_index, node)
-                heapq.heappush(min_heap, (node.val, i, node))
+        # Push the head of each non-empty list
+        # Using (node.val, i, node) to safely break ties without node comparisons
+        for i, head in enumerate(lists):
+            if head:
+                heapq.heappush(min_heap, (head.val, i, head))
 
         dummy = ListNode(0)
-        current = dummy
+        curr = dummy
 
         while min_heap:
-            _, i, node = heapq.heappop(min_heap)
-            current.next = node
-            current = current.next
+            val, i, node = heapq.heappop(min_heap)
+            curr.next = node
+            curr = curr.next
 
             if node.next:
                 heapq.heappush(min_heap, (node.next.val, i, node.next))
@@ -108,145 +189,120 @@ class Solution:
         return dummy.next
 ```
 
-### Why include `i` (index)?
+#### C++17
 
-Python’s heap requires elements to be comparable.  
-If two nodes have the same value, the heap uses the next tuple element (`i`) to break ties safely.
+```cpp
+#include <vector>
+#include <queue>
 
----
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode *next) : val(x), next(next) {}
+};
 
-## 5. Worked Example (Step-by-Step)
+class Solution {
+private:
+    struct Compare {
+        bool operator()(const ListNode* a, const ListNode* b) const {
+            return a->val > b->val; // Min-heap comparator
+        }
+    };
 
-### Input
+public:
+    ListNode* mergeKLists(std::vector<ListNode*>& lists) {
+        std::priority_queue<ListNode*, std::vector<ListNode*>, Compare> min_heap;
 
-```
-lists = [
-  1 → 4 → 5,
-  1 → 3 → 4,
-  2 → 6
-]
-```
+        for (ListNode* head : lists) {
+            if (head != nullptr) {
+                min_heap.push(head);
+            }
+        }
 
-### Initial Heap (push all heads)
+        ListNode dummy(0);
+        ListNode* curr = &dummy;
 
-```
-Heap: [(1, L0), (1, L1), (2, L2)]
-```
+        while (!min_heap.empty()) {
+            ListNode* smallest = min_heap.top();
+            min_heap.pop();
 
----
+            curr->next = smallest;
+            curr = curr->next;
 
-### Iteration 1
+            if (smallest->next != nullptr) {
+                min_heap.push(smallest->next);
+            }
+        }
 
-* Pop: `1 (L0)`
-* Result: `1`
-* Push next from L0 → `4`
-
-```
-Heap: [(1, L1), (2, L2), (4, L0)]
-```
-
----
-
-### Iteration 2
-
-* Pop: `1 (L1)`
-* Result: `1 → 1`
-* Push next from L1 → `3`
-
-```
-Heap: [(2, L2), (4, L0), (3, L1)]
-```
-
----
-
-### Iteration 3
-
-* Pop: `2 (L2)`
-* Result: `1 → 1 → 2`
-* Push next from L2 → `6`
-
-```
-Heap: [(3, L1), (4, L0), (6, L2)]
+        return dummy.next;
+    }
+};
 ```
 
----
+#### Java
 
-### Iteration 4
+```java
+import java.util.PriorityQueue;
 
-* Pop: `3 (L1)`
-* Result: `1 → 1 → 2 → 3`
-* Push next from L1 → `4`
+public class Solution {
+    public static class ListNode {
+        int val;
+        ListNode next;
+        ListNode() {}
+        ListNode(int val) { this.val = val; }
+        ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+    }
 
-```
-Heap: [(4, L0), (6, L2), (4, L1)]
-```
+    public ListNode mergeKLists(ListNode[] lists) {
+        if (lists == null || lists.length == 0) return null;
 
----
+        // Min-heap ordered by node values
+        PriorityQueue<ListNode> minHeap = new PriorityQueue<>(
+            (a, b) -> Integer.compare(a.val, b.val)
+        );
 
-### Iteration 5
+        for (ListNode head : lists) {
+            if (head != null) {
+                minHeap.offer(head);
+            }
+        }
 
-* Pop: `4 (L0)`
-* Result: `1 → 1 → 2 → 3 → 4`
-* Push next from L0 → `5`
+        ListNode dummy = new ListNode(0);
+        ListNode curr = dummy;
 
-```
-Heap: [(4, L1), (6, L2), (5, L0)]
-```
+        while (!minHeap.isEmpty()) {
+            ListNode smallest = minHeap.poll();
+            curr.next = smallest;
+            curr = curr.next;
 
----
+            if (smallest.next != null) {
+                minHeap.offer(smallest.next);
+            }
+        }
 
-### Iteration 6
-
-* Pop: `4 (L1)`
-* Result: `1 → 1 → 2 → 3 → 4 → 4`
-* L1 exhausted
-
----
-
-### Iteration 7
-
-* Pop: `5 (L0)`
-* Result: `1 → 1 → 2 → 3 → 4 → 4 → 5`
-* L0 exhausted
-
----
-
-### Iteration 8
-
-* Pop: `6 (L2)`
-* Result: `1 → 1 → 2 → 3 → 4 → 4 → 5 → 6`
-
-Heap is empty → **done**.
-
----
-
-## 6. Final Output
-
-```
-1 → 1 → 2 → 3 → 4 → 4 → 5 → 6
+        return dummy.next;
+    }
+}
 ```
 
 ---
 
-## 7. Interview Notes (Important)
+### Complexity Analysis
 
-* This problem is a **classic k-way merge**, identical in concept to:
+- **Time Complexity:** $\mathcal{O}(N \log k)$
+  - Where $N$ is the total number of nodes across all $k$ lists.
+  - The heap holds at most $k$ elements. Each push and pop operation takes $\mathcal{O}(\log k)$ time.
+  - With $N$ nodes total, overall time is $\mathcal{O}(N \log k)$.
+- **Space Complexity:** $\mathcal{O}(k)$
+  - The heap contains at most one node from each of the $k$ linked lists simultaneously.
 
-  * Merging k sorted arrays
-  * External sorting
-* Alternative approach:
+---
 
-  * **Divide and Conquer** (merge lists pairwise)
-  * Same `O(N log k)` time, but more complex to implement
-* Priority Queue solution is:
+### Takeaway Pattern & Interview Traps
 
-  * Cleaner
-  * Easier to reason about
-  * Preferred in interviews
-
-If you want, I can also provide:
-
-* Divide-and-Conquer solution
-* Dry-run diagram with heap states
-* Common mistakes and edge cases
-* Comparison with LeetCode 21 (merge two lists)
+1. **Tuple Tie-Breaking in Python:**
+   - In Python, `heapq` will compare the next element in a tuple if values match. If you push `(node.val, node)`, Python crashes with `TypeError: '<' not supported between instances of 'ListNode'` when two node values match! Inserting the list index `(node.val, i, node)` guarantees a unique second comparison key.
+2. **K-Way Merge Generalization:**
+   - This exact same pattern applies to merging $k$ sorted arrays, log aggregation from $k$ server streams, and external merge sort on disk files that exceed RAM.

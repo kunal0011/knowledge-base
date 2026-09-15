@@ -8,119 +8,149 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - hash-map
+  - design
+  - amazon
+  - google
 ---
 
 # LeetCode 355: Design Twitter
 
-Below is a complete, structured treatment of **LeetCode 355 – Design Twitter**, aligned with interview-level expectations.
+**Target Companies:** Amazon, Google, Meta, Twitter/X, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Priority Queue (K-Way Merge) / Hash Map / System Design
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-Design a simplified version of Twitter that supports the following operations:
+Design a simplified version of Twitter where users can post tweets, follow/unfollow another user, and is able to see the $10$ most recent tweets in the user's news feed.
 
-1. **postTweet(userId, tweetId)**  
-   The user posts a tweet with a unique `tweetId`.
-2. **getNewsFeed(userId)**  
-   Retrieve the **10 most recent tweet IDs** in the user’s news feed.  
-   The news feed consists of tweets posted by:
-
-   * the user themself
-   * users they follow  
-     Tweets must be ordered from **most recent to least recent**.
-3. **follow(followerId, followeeId)**  
-   The follower starts following the followee.
-4. **unfollow(followerId, followeeId)**  
-   The follower stops following the followee.
+Implement the `Twitter` class:
+- `Twitter()`: Initializes your twitter object.
+- `void postTweet(int userId, int tweetId)`: Composes a new tweet with ID `tweetId` by the user `userId`. Each call to this function will be made with a unique `tweetId`.
+- `List<Integer> getNewsFeed(int userId)`: Retrieves the $10$ most recent tweet IDs in the user's news feed. Each item in the news feed must be posted by users who the user followed or by the user themself. Tweets must be **ordered from most recent to least recent**.
+- `void follow(int followerId, int followeeId)`: The user with ID `followerId` started following the user with ID `followeeId`.
+- `void unfollow(int followerId, int followeeId)`: The user with ID `followerId` started unfollowing the user with ID `followeeId`.
 
 ---
 
-## 2. Key Observations
+### Input & Output Formats & Constraints
 
-### Observation 1: Ordering is global, not per user
-
-Tweets must be ordered by **recency across all followed users**, not grouped by user.
-
-➡️ We need a **global timestamp** (monotonically increasing counter).
+- **Input:**
+  - Standard method invocations on the `Twitter` object.
+- **Output:**
+  - `List[int]` for `getNewsFeed(userId)`, `void` for others.
+- **Constraints:**
+  - $1 \le userId, followerId, followeeId \le 500$.
+  - $0 \le tweetId \le 10^4$.
+  - All the tweets have unique IDs.
+  - At most $3 \times 10^4$ calls will be made to `postTweet`, `getNewsFeed`, `follow`, and `unfollow`.
+  - A user cannot follow themselves.
 
 ---
 
-### Observation 2: Each user has their own tweet stream
+### Key Idea & Intuition
 
-Each user posts tweets over time, forming an **append-only list**:
+The challenge in designing a scalable feed generator is reconciling **recency across independent streams of events**:
+1. Every user posts tweets sequentially over time. Thus, each user's tweet history is an **already sorted list** in chronological order.
+2. Generating a user's news feed requires retrieving the $10$ most recent tweets across the user themselves and all their followees ($K$ users total).
+3. This is precisely the **$K$-Way Merge** problem (identical to LeetCode 23: Merge $k$ Sorted Lists), truncated at $10$ items:
+   - For each followed user (plus self), inspect their most recent tweet.
+   - Insert their latest tweet into a **Max-Heap** keyed on a global monotonically increasing timestamp.
+   - Extract the most recent tweet from the heap, append to the feed, and insert the next older tweet from that same user into the heap.
+   - Terminate once $10$ tweets are collected or the heap empties.
 
-```python
-user -> [(time, tweetId), (time, tweetId), ...]
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **State Tracking:**
+   - `time`: global monotonically increasing integer counter.
+   - `tweets`: map from `userId` to list of pairs `(time, tweetId)`.
+   - `following`: map from `userId` to set of `followeeId`s.
+2. **`postTweet(userId, tweetId)`:**
+   - Increment `time += 1`.
+   - Append `(time, tweetId)` to `tweets[userId]`.
+3. **`getNewsFeed(userId)`:**
+   - Union the user's following list with `{userId}` to include self.
+   - Max-heap initialization: for each user $u$, push their newest tweet: `(-time, tweetId, u, index)` where `index = len(tweets[u]) - 1`.
+   - Loop up to 10 times while heap is non-empty:
+     - Pop top tweet `(neg_time, tweetId, u, idx)`.
+     - Append `tweetId` to result.
+     - If `idx - 1 >= 0`: push next older tweet: `(-tweets[u][idx-1][0], tweets[u][idx-1][1], u, idx - 1)`.
+   - Return `result`.
+4. **`follow(followerId, followeeId)`:**
+   - If `followerId != followeeId`: add to set.
+5. **`unfollow(followerId, followeeId)`:**
+   - Discard `followeeId` from `following[followerId]`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+State:
+User 1 follows User 2
+User 1 tweets: [t1: 5], [t2: 3]
+User 2 tweets: [t3: 101], [t4: 102]
+
+getNewsFeed(1):
+Step 1: Gather latest tweet of each source
+  User 1 latest: t2 (3)
+  User 2 latest: t4 (102)
+  Heap: [ (t4, 102, User 2), (t2, 3, User 1) ]
+
+Step 2: Extract top 10
+  - Pop (t4, 102). Result = [102]. Push User 2's previous: (t3, 101).
+    Heap: [ (t3, 101, User 2), (t2, 3, User 1) ]
+  - Pop (t3, 101). Result = [102, 101]. User 2 has no older tweets.
+    Heap: [ (t2, 3, User 1) ]
+  - Pop (t2, 3). Result = [102, 101, 3]. Push User 1's previous: (t1, 5).
+    Heap: [ (t1, 5, User 1) ]
+  - Pop (t1, 5). Result = [102, 101, 3, 5]. User 1 has no older tweets.
+    Heap empty.
+
+Final News Feed: [102, 101, 3, 5] (Most recent to least recent)
 ```
 
 ---
 
-### Observation 3: News Feed = merge K sorted lists
+### Solved Examples with Multiple Inputs
 
-* Each followed user’s tweets are sorted by time.
-* We must fetch the **top 10 most recent tweets** across all these lists.
+#### Example 1: Standard Follow & Feed
 
-➡️ This is a classic **K-way merge of sorted lists**, where:
+- **Sequence:**
+  - `postTweet(1, 5)` $\implies$ User 1: `[5]`
+  - `getNewsFeed(1)` $\implies$ `[5]`
+  - `follow(1, 2)` $\implies$ 1 follows 2
+  - `postTweet(2, 6)` $\implies$ User 2: `[6]`
+  - `getNewsFeed(1)` $\implies$ `[6, 5]`
+  - `unfollow(1, 2)` $\implies$ 1 unfollows 2
+  - `getNewsFeed(1)` $\implies$ `[5]`
 
-* K = number of followed users + self
-* We only need the top 10
+#### Example 2: More Than 10 Tweets Available
 
-This strongly suggests a **Priority Queue (Heap)**.
-
----
-
-## 3. Priority Queue Technique Used
-
-### Why a Heap?
-
-We need to repeatedly extract the **most recent tweet** among multiple users.
-
-### Strategy
-
-1. For each relevant user (self + followees):
-
-   * Take their **most recent tweet**
-2. Push these into a **max heap** (simulated using min heap with negative time)
-3. Each heap entry contains:
-
-   ```
-   (timestamp, tweetId, userId, index_in_user_tweet_list)
-   ```
-4. When one tweet is popped:
-
-   * Push the **next older tweet** from the same user (if it exists)
-
-### Complexity
-
-* `getNewsFeed`:  
-  **O((F + 1) log (F + 1) + 10 log (F + 1))**  
-  where F = number of followees
-* Efficient because we only extract **10 tweets**
+- User 1 posts 15 tweets: $1 \dots 15$.
+- `getNewsFeed(1)` returns the 10 most recent: `[15, 14, 13, 12, 11, 10, 9, 8, 7, 6]`.
 
 ---
 
-## 4. Data Structures Used
+### Multi-Language Implementations
+
+#### Python 3
 
 ```python
-self.time        -> global timestamp
-self.tweets      -> Dict[userId, List[(time, tweetId)]]
-self.following   -> Dict[userId, Set[followeeId]]
-```
-
----
-
-## 5. Python 3 Solution (with typing)
-
-```python
-from typing import List, Dict, Set
 import heapq
 from collections import defaultdict
+from typing import Dict, List, Set, Tuple
 
 class Twitter:
-    def __init__(self) -> None:
-        self.time: int = 0
-        self.tweets: Dict[int, List[tuple[int, int]]] = defaultdict(list)
+    def __init__(self):
+        self.time = 0
+        # userId -> list of (timestamp, tweetId)
+        self.tweets: Dict[int, List[Tuple[int, int]]] = defaultdict(list)
+        # followerId -> set of followeeIds
         self.following: Dict[int, Set[int]] = defaultdict(set)
 
     def postTweet(self, userId: int, tweetId: int) -> None:
@@ -128,28 +158,26 @@ class Twitter:
         self.tweets[userId].append((self.time, tweetId))
 
     def getNewsFeed(self, userId: int) -> List[int]:
-        max_heap: List[tuple[int, int, int, int]] = []
+        max_heap = []
+        # Include self in sources
+        sources = self.following[userId] | {userId}
 
-        # include self
-        users = self.following[userId] | {userId}
-
-        for u in users:
+        # Initialize heap with the latest tweet from each followee
+        for u in sources:
             if self.tweets[u]:
-                time, tweet_id = self.tweets[u][-1]
-                index = len(self.tweets[u]) - 1
-                # use negative time to simulate max heap
-                heapq.heappush(max_heap, (-time, tweet_id, u, index))
+                idx = len(self.tweets[u]) - 1
+                t, tid = self.tweets[u][idx]
+                # Storing (-time, tweetId, user, index_in_user_list)
+                heapq.heappush(max_heap, (-t, tid, u, idx))
 
-        result: List[int] = []
-
+        result = []
         while max_heap and len(result) < 10:
-            neg_time, tweet_id, u, idx = heapq.heappop(max_heap)
-            result.append(tweet_id)
+            neg_t, tid, u, idx = heapq.heappop(max_heap)
+            result.append(tid)
 
-            # push next older tweet from same user
-            if idx - 1 >= 0:
-                time, tweet_id = self.tweets[u][idx - 1]
-                heapq.heappush(max_heap, (-time, tweet_id, u, idx - 1))
+            if idx > 0:
+                prev_t, prev_tid = self.tweets[u][idx - 1]
+                heapq.heappush(max_heap, (-prev_t, prev_tid, u, idx - 1))
 
         return result
 
@@ -161,109 +189,191 @@ class Twitter:
         self.following[followerId].discard(followeeId)
 ```
 
+#### C++17
+
+```cpp
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
+
+class Twitter {
+private:
+    struct Tweet {
+        int time;
+        int id;
+    };
+
+    struct HeapNode {
+        int time;
+        int tweetId;
+        int userId;
+        int index;
+
+        bool operator<(const HeapNode& other) const {
+            return time < other.time; // Max-heap ordered by time
+        }
+    };
+
+    int timer;
+    std::unordered_map<int, std::vector<Tweet>> tweets;
+    std::unordered_map<int, std::unordered_set<int>> following;
+
+public:
+    Twitter() : timer(0) {}
+
+    void postTweet(int userId, int tweetId) {
+        tweets[userId].push_back({++timer, tweetId});
+    }
+
+    std::vector<int> getNewsFeed(int userId) {
+        std::priority_queue<HeapNode> max_heap;
+
+        // Collect all target users (self + followees)
+        std::unordered_set<int> sources = following[userId];
+        sources.insert(userId);
+
+        for (int u : sources) {
+            auto it = tweets.find(u);
+            if (it != tweets.end() && !it->second.empty()) {
+                int last_idx = static_cast<int>(it->second.size()) - 1;
+                max_heap.push({it->second[last_idx].time, it->second[last_idx].id, u, last_idx});
+            }
+        }
+
+        std::vector<int> feed;
+        while (!max_heap.empty() && feed.size() < 10) {
+            HeapNode top = max_heap.top();
+            max_heap.pop();
+            feed.push_back(top.tweetId);
+
+            if (top.index > 0) {
+                int next_idx = top.index - 1;
+                max_heap.push({tweets[top.userId][next_idx].time, tweets[top.userId][next_idx].id, top.userId, next_idx});
+            }
+        }
+
+        return feed;
+    }
+
+    void follow(int followerId, int followeeId) {
+        if (followerId != followeeId) {
+            following[followerId].insert(followeeId);
+        }
+    }
+
+    void unfollow(int followerId, int followeeId) {
+        following[followerId].erase(followeeId);
+    }
+};
+```
+
+#### Java
+
+```java
+import java.util.*;
+
+public class Twitter {
+    private static class Tweet {
+        int time;
+        int id;
+        Tweet(int time, int id) {
+            this.time = time;
+            this.id = id;
+        }
+    }
+
+    private static class FeedNode {
+        int time;
+        int tweetId;
+        int userId;
+        int index;
+
+        FeedNode(int time, int tweetId, int userId, int index) {
+            this.time = time;
+            this.tweetId = tweetId;
+            this.userId = userId;
+            this.index = index;
+        }
+    }
+
+    private int timer;
+    private Map<Integer, List<Tweet>> tweets;
+    private Map<Integer, Set<Integer>> following;
+
+    public Twitter() {
+        this.timer = 0;
+        this.tweets = new HashMap<>();
+        this.following = new HashMap<>();
+    }
+
+    public void postTweet(int userId, int tweetId) {
+        tweets.computeIfAbsent(userId, k -> new ArrayList<>()).add(new Tweet(++timer, tweetId));
+    }
+
+    public List<Integer> getNewsFeed(int userId) {
+        PriorityQueue<FeedNode> maxHeap = new PriorityQueue<>((a, b) -> Integer.compare(b.time, a.time));
+
+        Set<Integer> sources = new HashSet<>(following.getOrDefault(userId, Collections.emptySet()));
+        sources.add(userId);
+
+        for (int u : sources) {
+            List<Tweet> userTweets = tweets.get(u);
+            if (userTweets != null && !userTweets.isEmpty()) {
+                int lastIdx = userTweets.size() - 1;
+                Tweet t = userTweets.get(lastIdx);
+                maxHeap.offer(new FeedNode(t.time, t.id, u, lastIdx));
+            }
+        }
+
+        List<Integer> feed = new ArrayList<>();
+        while (!maxHeap.isEmpty() && feed.size() < 10) {
+            FeedNode node = maxHeap.poll();
+            feed.add(node.tweetId);
+
+            if (node.index > 0) {
+                int nextIdx = node.index - 1;
+                Tweet prevTweet = tweets.get(node.userId).get(nextIdx);
+                maxHeap.offer(new FeedNode(prevTweet.time, prevTweet.id, node.userId, nextIdx));
+            }
+        }
+
+        return feed;
+    }
+
+    public void follow(int followerId, int followeeId) {
+        if (followerId != followeeId) {
+            following.computeIfAbsent(followerId, k -> new HashSet<>()).add(followeeId);
+        }
+    }
+
+    public void unfollow(int followerId, int followeeId) {
+        Set<Integer> set = following.get(followerId);
+        if (set != null) {
+            set.remove(followeeId);
+        }
+    }
+}
+```
+
 ---
 
-## 6. Worked Example (Step-by-Step)
+### Complexity Analysis
 
-### Operations
-
-```
-postTweet(1, 5)
-postTweet(1, 3)
-postTweet(2, 101)
-postTweet(2, 102)
-follow(1, 2)
-getNewsFeed(1)
-```
+- **Time Complexity:**
+  - `postTweet`: $\mathcal{O}(1)$ (append to dynamic array).
+  - `follow` / `unfollow`: $\mathcal{O}(1)$ (hash set insertion/deletion).
+  - `getNewsFeed`: $\mathcal{O}(F \log F + 10 \log F)$ where $F$ is the number of users followed by the user.
+    - Initializing the heap with $F + 1$ elements takes $\mathcal{O}(F \log F)$.
+    - Extracting at most 10 tweets takes $10 \times \mathcal{O}(\log F)$.
+- **Space Complexity:** $\mathcal{O}(U + T)$
+  - Storing user follows and total posted tweets $T$.
 
 ---
 
-### Internal State
+### Takeaway Pattern & Interview Traps
 
-**Global timestamps**
-
-```
-1 → (1, 5)
-2 → (1, 3)
-3 → (2, 101)
-4 → (2, 102)
-```
-
-**Tweets storage**
-
-```
-1: [(1,5), (2,3)]
-2: [(3,101), (4,102)]
-```
-
-**Following**
-
-```
-1 follows {2}
-```
-
----
-
-### Heap Initialization
-
-We add the **latest tweet** of each user:
-
-```
-User 1 → (2,3)
-User 2 → (4,102)
-```
-
-Heap (conceptually):
-
-```
-[(4,102), (2,3)]
-```
-
----
-
-### Heap Processing
-
-1️⃣ Pop `(4,102)` → result = `[102]`  
-Push next tweet from user 2 → `(3,101)`
-
-Heap:
-
-```
-[(3,101), (2,3)]
-```
-
-2️⃣ Pop `(3,101)` → result = `[102, 101]`  
-No more tweets from user 2
-
-3️⃣ Pop `(2,3)` → result = `[102, 101, 3]`  
-Push next from user 1 → `(1,5)`
-
-4️⃣ Pop `(1,5)` → result = `[102, 101, 3, 5]`
-
----
-
-### Final Output
-
-```
-[102, 101, 3, 5]
-```
-
-(Ordered from most recent to least recent)
-
----
-
-## 7. Key Interview Takeaways
-
-* Core insight: **Top-K merge of multiple sorted streams**
-* Priority Queue avoids flattening all tweets
-* Always include **self-follow**
-* Use global timestamp to avoid conflicts
-* Heap size bounded by number of followees
-
-If you want, I can also provide:
-
-* Alternate approach comparison (brute force vs heap)
-* Time/space optimization discussion
-* Follow-up constraints handling (millions of users)
-
-Just tell me.
+1. **Self-Follow Requirement:**
+   - A user's news feed must include their own tweets. Always include `userId` in `sources`.
+2. **K-Way Merge on Demand (Fan-out on Read):**
+   - In distributed systems, this is known as the **Pull model / Fan-out on Read**. It avoids duplicating tweet IDs into every follower's timeline when posting, making `postTweet` strictly $\mathcal{O}(1)$.

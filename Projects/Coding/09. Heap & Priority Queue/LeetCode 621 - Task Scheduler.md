@@ -8,118 +8,171 @@ tags:
   - leetcode
   - coding
   - heap-and-priority-queue
+  - greedy
+  - math
+  - amazon
+  - google
 ---
 
 # LeetCode 621: Task Scheduler
 
-Below is a **complete, structured explanation of LeetCode 621 – Task Scheduler**, aligned with how this problem is typically reasoned about in interviews.
+**Target Companies:** Amazon (Top Classic), Google, Meta, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Priority Queue (Max-Heap Simulation) / Greedy Math Scheduling
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-You are given a list of tasks represented by capital letters `A` to `Z`.  
-Each task takes **exactly 1 unit of time** to execute.
+Given a characters array `tasks`, representing the tasks a CPU needs to do, where each letter represents a different task. Tasks could be done in any order. Each task is done in one unit of time. For each unit of time, the CPU could complete either one task or just be idle.
 
-You are also given a non-negative integer `n` representing the **cooldown period** between two identical tasks.
+However, there is a non-negative integer `n` that represents the cooldown period between two **same tasks** (the same letter in the CPU). That is, there must be at least `n` units of time between any two occurrences of the same task.
 
-**Constraint**  
-After executing a task, you must wait for at least `n` units of time before executing the **same task again**.
-
-Idle time is allowed.
-
-**Objective**  
-Return the **minimum number of time units** required to finish all tasks.
+Return *the least number of units of times that the CPU will take to finish all the given tasks*.
 
 ---
 
-### Example
+### Input & Output Formats & Constraints
 
-```text
-Input: tasks = ["A","A","A","B","B","B"], n = 2
-Output: 8
+- **Input:**
+  - `tasks`: `List[str]`, where $1 \le \text{tasks.length} \le 10^4$. Each task is an uppercase English letter (`'A'`–`'Z'`).
+  - `n`: `int`, cooldown interval ($0 \le n \le 100$).
+- **Output:**
+  - `int`: Minimum total time units (tasks + idle slots).
+- **Constraints:**
+  - Cooldown applies strictly between identical tasks. Different tasks require 0 cooldown.
+
+---
+
+### Key Idea & Intuition
+
+The execution bottleneck is entirely determined by the task(s) with the **highest frequency** ($max\_freq$).
+Suppose task `'A'` appears $max\_freq = 3$ times, and $n = 2$:
+```
+A _ _ A _ _ A
+```
+Between each occurrence of `'A'`, there must be at least $n$ slots filled either by other tasks or by idle periods.
+
+This problem can be understood via two paradigms:
+
+#### Paradigm 1: Max-Heap Simulation ($\mathcal{O}(T \log 26) = \mathcal{O}(T)$ Time)
+1. Store frequencies in a **Max-Heap**.
+2. Work in rounds of cycle length $cycle = n + 1$:
+   - In each cycle, pop up to $n + 1$ most frequent tasks from the heap.
+   - Decrement each task's frequency and temporarily hold it in a list `temp`.
+   - If tasks still remain after the cycle, pad the cycle with idle slots up to $n + 1$.
+   - Push all tasks in `temp` with remaining counts back into the heap.
+3. Repeat until the heap is empty.
+
+#### Paradigm 2: Closed-Form Greedy Formula ($\mathcal{O}(T)$ Time, $\mathcal{O}(1)$ Space - Optimal)
+- Let $M$ be the maximum frequency of any task: $M = \max(\text{counts})$.
+- There are $M - 1$ full chunks of size $n + 1$, plus a final chunk containing all tasks that tie for maximum frequency:
+  $$\text{Chunks} = (M - 1) \times (n + 1)$$
+- Count how many distinct task types have frequency equal to $M$: let this be $C_{max}$.
+- The total slots needed by the most frequent task(s) is:
+  $$\text{Required} = (M - 1) \times (n + 1) + C_{max}$$
+- If there are enough other tasks to fill all idle slots, no idle time is needed, so the answer is simply the total number of tasks:
+  $$\text{Answer} = \max(\text{len}(tasks), (M - 1) \times (n + 1) + C_{max})$$
+
+---
+
+### Solution Approach (Step-by-Step)
+
+#### Approach 1: Closed-Form Formula ($\mathcal{O}(1)$ Auxiliary Space)
+1. Count frequencies of tasks across `'A'`–`'Z'`.
+2. Find $M = \max(freq)$.
+3. Count how many tasks have frequency equal to $M$: $C_{max} = \text{sum}(1 \text{ for } f \text{ in } freq \text{ if } f == M)$.
+4. Return $\max(\text{len}(tasks), (M - 1) \times (n + 1) + C_{max})$.
+
+#### Approach 2: Max-Heap Simulation
+1. `max_heap = [-count for count in Counter(tasks).values()]`.
+2. `heapify(max_heap)`.
+3. `time = 0`.
+4. While `max_heap`:
+   - `temp = []`
+   - For $step$ in $0 \dots n$:
+     - If `max_heap`:
+       - `count = heappop(max_heap)`
+       - If `count + 1 < 0`: `temp.append(count + 1)`
+       - `time += 1`
+     - Else if `not temp`: break
+     - Else: `time += 1` (idle slot)
+   - For `c` in `temp`: `heappush(max_heap, c)`.
+5. Return `time`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `tasks = ["A","A","A","B","B","B"]`, $n = 2$:
+
+```
+Frequencies: A: 3, B: 3.
+max_freq (M) = 3
+Tasks with max_freq (C_max) = 2 (both A and B)
+
+Formula Layout:
+  Chunk 1: [A, B, idle] -> length 3 (n + 1 = 3)
+  Chunk 2: [A, B, idle] -> length 3
+  Chunk 3: [A, B]       -> length 2 (only the 2 max tasks)
+
+Total time = (3 - 1) * (2 + 1) + 2 = 2 * 3 + 2 = 8.
+len(tasks) = 6.
+Result = max(6, 8) = 8.
 ```
 
 ---
 
-## 2. Key Observations
+### Solved Examples with Multiple Inputs
 
-### Observation 1: Greedy scheduling
+#### Example 1: Standard Idle Padding
 
-* Tasks with **higher frequency** are more restrictive.
-* We should always execute the task that has the **largest remaining count** whenever possible.
+- **Input:** `tasks = ["A","A","A","B","B","B"]`, `n = 2`
+- **Output:** `8` (Execution: `A -> B -> idle -> A -> B -> idle -> A -> B`)
 
-This immediately suggests a **max-heap / priority queue**.
+#### Example 2: Zero Cooldown ($n = 0$)
 
----
+- **Input:** `tasks = ["A","A","A","B","B","B"]`, `n = 0`
+- **Execution:** No idle time needed; tasks execute back to back.
+- **Output:** `6`
 
-### Observation 2: Cooling constraint creates “cycles”
+#### Example 3: Abundant Distinct Tasks (No Idle Slots Needed)
 
-Each cycle has length:
-
-```
-cycle_length = n + 1
-```
-
-Why?
-
-* After executing a task, you need `n` slots before repeating it.
-* Those slots can be filled by other tasks or idle time.
+- **Input:** `tasks = ["A","A","A","B","B","B","C","C","D","D","E"]`, `n = 2`
+- **Execution:** $M = 3, C_{max} = 2 \implies (3 - 1) \times 3 + 2 = 8$. But `len(tasks) = 11 > 8`.
+- **Output:** `11`
 
 ---
 
-### Observation 3: Idle time is forced, not optional
+### Multi-Language Implementations
 
-Idle time occurs **only if there are fewer distinct tasks than required to fill the cycle**.
+#### Python 3
 
-We **never choose idle** if a task is available.
-
----
-
-## 3. Priority Queue Technique
-
-### Data Structures Used
-
-1. **Max Heap** (Priority Queue)
-
-   * Stores task frequencies
-   * Always pick the task with the highest remaining count
-2. **Temporary list**
-
-   * Holds tasks executed in the current cycle
-   * Reinsert them into the heap after decrementing counts
-
----
-
-### High-Level Algorithm
-
-1. Count task frequencies.
-2. Push frequencies into a **max heap**.
-3. While heap is not empty:
-
-   * Try to execute up to `n + 1` tasks.
-   * For each execution:
-   * Pop highest frequency task
-   * Decrement and store it temporarily
-   * Increase time by 1
-   * If heap becomes empty early, stop cycle
-4. Push remaining tasks from temp list back into heap.
-5. If heap is not empty, add idle time to complete the cycle.
-
----
-
-## 4. Python 3 Solution (with typing)
-
+##### Optimal Closed-Form Formula ($\mathcal{O}(N)$ Time, $\mathcal{O}(1)$ Space)
 ```python
-from typing import List
-import heapq
 from collections import Counter
+from typing import List
 
 class Solution:
     def leastInterval(self, tasks: List[str], n: int) -> int:
         freq = Counter(tasks)
+        max_freq = max(freq.values())
+        max_count = sum(1 for f in freq.values() if f == max_freq)
 
-        # Max heap (use negative values)
+        # Formula: (max_freq - 1) full frames of size (n + 1), plus the final frame
+        min_time = (max_freq - 1) * (n + 1) + max_count
+        return max(len(tasks), min_time)
+```
+
+##### Priority Queue Simulation
+```python
+import heapq
+from collections import Counter
+from typing import List
+
+class SolutionHeap:
+    def leastInterval(self, tasks: List[str], n: int) -> int:
+        freq = Counter(tasks)
         max_heap = [-count for count in freq.values()]
         heapq.heapify(max_heap)
 
@@ -132,149 +185,95 @@ class Solution:
             for _ in range(cycle):
                 if max_heap:
                     count = heapq.heappop(max_heap)
-                    temp.append(count + 1)  # decrement frequency
+                    if count + 1 < 0:
+                        temp.append(count + 1)
                     time += 1
-                else:
+                elif not temp:
+                    # All tasks completely done; no trailing idle time
                     break
+                else:
+                    time += 1  # idle slot
 
-            for count in temp:
-                if count < 0:
-                    heapq.heappush(max_heap, count)
-
-            # If tasks still remain, account for idle time
-            if max_heap:
-                time += cycle - len(temp)
+            for item in temp:
+                heapq.heappush(max_heap, item)
 
         return time
 ```
 
----
+#### C++17
 
-## 5. Worked Example (Step-by-Step)
+```cpp
+#include <vector>
+#include <algorithm>
 
-### Example 1
+class Solution {
+public:
+    int leastInterval(const std::vector<char>& tasks, int n) {
+        std::vector<int> freq(26, 0);
+        for (char t : tasks) {
+            freq[t - 'A']++;
+        }
 
-```
-tasks = ["A","A","A","B","B","B"], n = 2
-```
+        int max_freq = *std::max_element(freq.begin(), freq.end());
+        int max_count = 0;
+        for (int f : freq) {
+            if (f == max_freq) {
+                max_count++;
+            }
+        }
 
-### Frequency
-
-```
-A → 3
-B → 3
-```
-
-### Initial Heap
-
-```
-[-3, -3]
-```
-
----
-
-### Cycle 1 (length = 3)
-
-| Slot | Action |
-| --- | --- |
-| 1 | A (remaining 2) |
-| 2 | B (remaining 2) |
-| 3 | idle |
-
-Heap after reinsertion:
-
-```
-[-2, -2]
+        int min_time = (max_freq - 1) * (n + 1) + max_count;
+        return std::max(static_cast<int>(tasks.size()), min_time);
+    }
+};
 ```
 
-Time = 3
+#### Java
 
----
+```java
+import java.util.Arrays;
 
-### Cycle 2
+public class Solution {
+    public int leastInterval(char[] tasks, int n) {
+        int[] freq = new int[26];
+        for (char c : tasks) {
+            freq[c - 'A']++;
+        }
 
-| Slot | Action |
-| --- | --- |
-| 4 | A (remaining 1) |
-| 5 | B (remaining 1) |
-| 6 | idle |
+        Arrays.sort(freq);
+        int maxFreq = freq[25];
+        int maxCount = 0;
 
-Heap:
+        for (int i = 25; i >= 0; i--) {
+            if (freq[i] == maxFreq) {
+                maxCount++;
+            } else {
+                break;
+            }
+        }
 
-```
-[-1, -1]
-```
-
-Time = 6
-
----
-
-### Cycle 3
-
-| Slot | Action |
-| --- | --- |
-| 7 | A |
-| 8 | B |
-
-Heap empty → stop  
-Final time = **8**
-
----
-
-## 6. Second Example
-
-```
-tasks = ["A","A","A","B","B","B"], n = 0
-```
-
-No cooldown constraint.
-
-Execution:
-
-```
-A B A B A B
-```
-
-Result:
-
-```
-6
+        int minTime = (maxFreq - 1) * (n + 1) + maxCount;
+        return Math.max(tasks.length, minTime);
+    }
+}
 ```
 
 ---
 
-## 7. Time and Space Complexity
+### Complexity Analysis
 
-### Time Complexity
-
-```
-O(T log K)
-```
-
-* `T` = number of tasks
-* `K` = number of distinct task types (≤ 26)
-
-### Space Complexity
-
-```
-O(K)
-```
+- **Time Complexity:** $\mathcal{O}(T)$
+  - Counting task frequencies takes $\mathcal{O}(T)$ where $T$ is the number of tasks.
+  - Finding max and summing counts across $26$ English letters takes $\mathcal{O}(26) = \mathcal{O}(1)$ time.
+  - Overall Time: $\mathcal{O}(T)$.
+- **Space Complexity:** $\mathcal{O}(1)$
+  - The frequency table stores counts for at most 26 uppercase letters.
 
 ---
 
-## 8. Why This Approach Is Optimal
+### Takeaway Pattern & Interview Traps
 
-* Greedy ensures most constrained tasks are handled first.
-* Priority Queue ensures optimal selection at every step.
-* Idle time is introduced **only when forced by constraints**, never voluntarily.
-
----
-
-If you want, I can also:
-
-* Show the **mathematical formula-based solution**
-* Compare **heap vs formula approach**
-* Draw a **cycle-based execution diagram**
-* Explain why this is equivalent to CPU scheduling with cooling constraints
-
-Just tell me how deep you want to go.
+1. **Why $\max(len(tasks), min\_time)$?**
+   - If there are many distinct tasks with lower frequencies, they can easily fill all the idle slots and even expand beyond the minimum frame without creating any cooldown violations. In that scenario, total time is simply $len(tasks)$ with zero idle time.
+2. **Trailing Idle Elimination:**
+   - In the heap simulation, never add idle slots after the very last cycle if no remaining tasks need to be reinserted into the heap.

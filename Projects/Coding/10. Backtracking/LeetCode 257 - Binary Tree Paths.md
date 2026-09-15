@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,352 +8,270 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - tree
+  - dfs
+  - binary-tree
+  - amazon
+  - google
 ---
 
 # LeetCode 257: Binary Tree Paths
 
-## Problem Statement (LeetCode 257)
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Easy  
+**Topic:** Backtracking / Depth-First Search on Binary Trees  
 
-**Title:** Binary Tree Paths
+---
 
-**Problem:**  
-Given the `root` of a binary tree, return **all root-to-leaf paths** in any order.
+### Problem Statement
 
-A **leaf** is a node with no left and no right child.
+Given the `root` of a binary tree, return *all root-to-leaf paths in **any order***.
 
-Each path should be represented as a string in the format:
+A **leaf** is a node with no children (`node.left == null` and `node.right == null`).
 
-```python
-"root->node1->node2->...->leaf"
+Each path should be formatted as a string with node values joined by `"->"`.
+
+---
+
+### Input & Output Formats & Constraints
+
+- **Input:** `root: Optional[TreeNode]`
+- **Output:** `List[str]` containing formatted path strings.
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[1, 100]$.
+  - $-100 \le \text{Node.val} \le 100$
+
+---
+
+### Key Idea & Intuition
+
+- **Root-to-Leaf Backtracking:**
+  - A path starts at the root and finishes exclusively at a leaf node.
+  - As we traverse downward, we append the node's value to our current path buffer.
+  - When we reach a leaf node (both `left` and `right` children are null), we format the current path by joining elements with `"->"` and add the resulting string to our list of results.
+  - Upon returning from exploring a subtree, we backtrack by removing the node from our path buffer (`path.pop()`), ensuring that sibling subtrees receive a clean state.
+- **Why Mutable Path Array Beats String Concatenation:**
+  - In many languages, passing a newly concatenated string (`path + "->" + str(node.val)`) down every recursive branch creates $\mathcal{O}(H)$ temporary string allocations at every single node, resulting in $\mathcal{O}(N \cdot H)$ space and GC overhead.
+  - Maintaining a single mutable list of integers or node values and formatting only at the leaf nodes is significantly more cache-friendly and space-efficient.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Edge Case:** If `root is None`, return `[]`.
+2. **Initialize:** `results = []` and a dynamic list `path = []`.
+3. **Recursive DFS `dfs(node)`:**
+   - Append `str(node.val)` to `path`.
+   - **Leaf Check:** If `node.left is None` and `node.right is None`:
+     - Append `"->".join(path)` to `results`.
+   - If `node.left` exists:
+     - `dfs(node.left)`
+   - If `node.right` exists:
+     - `dfs(node.right)`
+   - **Backtrack:** `path.pop()`.
+4. Call `dfs(root)` and return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Consider tree:
+```
+       1
+     /   \
+    2     3
+     \
+      5
+```
+
+Execution trace:
+```
+1. Visit Node(1): path = ["1"]
+2. Visit Node(2): path = ["1", "2"]
+   - Left is null.
+   - Right is Node(5):
+     3. Visit Node(5): path = ["1", "2", "5"]
+        - Leaf reached! Format: "1->2->5" -> append to results.
+        - Backtrack: pop "5", path = ["1", "2"]
+   - Backtrack: pop "2", path = ["1"]
+4. Visit Node(3): path = ["1", "3"]
+   - Leaf reached! Format: "1->3" -> append to results.
+   - Backtrack: pop "3", path = ["1"]
+5. Backtrack: pop "1", path = []
+
+Final Results: ["1->2->5", "1->3"]
 ```
 
 ---
 
-### Example
+### Solved Examples with Multiple Inputs
 
-**Input**
-
-```
-1
-       / \
-      2   3
-       \
-        5
-```
-
-**Output**
-
-```python
-["1->2->5", "1->3"]
-```
+| Test Case | Tree (`root`) | Leaf Nodes | Output Paths |
+| :--- | :--- | :--- | :--- |
+| **Standard** | `[1, 2, 3, null, 5]` | `5`, `3` | `["1->2->5", "1->3"]` |
+| **Single Node** | `[1]` | `1` | `["1"]` |
+| **Skewed Left** | `[1, 2, null, 3]` | `3` | `["1->2->3"]` |
+| **Negative Nodes** | `[-10, 5, 20]` | `5`, `20` | `["-10->5", "-10->20"]` |
 
 ---
 
-## 2. Key Observations (Very Important)
+### Multi-Language Implementations
 
-1. This is a **tree traversal problem**
-2. We must generate **all paths**, not just one → **DFS**
-3. Path grows as we go down and shrinks as we backtrack
-4. **Leaf node = termination condition**
-5. We must **remember the path so far** → classic **backtracking**
-
-👉 This immediately points to:
-
-* **DFS + Backtracking**
-* Or **DFS with path copy**
-* Or **Iterative DFS using stack**
-
----
-
-## 3. Tree Node Definition (LeetCode Standard)
-
+#### Python 3
 ```python
 from typing import Optional, List
 
+# Definition for a binary tree node.
 class TreeNode:
-    def __init__(self, val: int = 0,
-                 left: Optional['TreeNode'] = None,
-                 right: Optional['TreeNode'] = None):
+    def __init__(self, val=0, left=None, right=None):
         self.val = val
         self.left = left
         self.right = right
-```
-
----
-
-## 4. Approach 1 — DFS + Backtracking (BEST & INTERVIEW FAVORITE)
-
-### Idea
-
-* Maintain a list `path`
-* Append node value when going down
-* If leaf → convert path to string
-* Pop when returning (backtracking)
-
----
-
-### Code (Python 3 with typing)
-
-```python
-from typing import List, Optional
 
 class Solution:
     def binaryTreePaths(self, root: Optional[TreeNode]) -> List[str]:
-        result: List[str] = []
+        """
+        Returns all root-to-leaf paths using DFS backtracking.
+        """
+        if not root:
+            return []
+
+        results: List[str] = []
         path: List[str] = []
 
-        def dfs(node: Optional[TreeNode]) -> None:
-            if not node:
-                return
-
-            # Choose
+        def dfs(node: TreeNode) -> None:
             path.append(str(node.val))
 
-            # If leaf node → record path
+            # Leaf condition: neither left nor right child exists
             if not node.left and not node.right:
-                result.append("->".join(path))
+                results.append("->".join(path))
             else:
-                # Explore
-                dfs(node.left)
-                dfs(node.right)
+                if node.left:
+                    dfs(node.left)
+                if node.right:
+                    dfs(node.right)
 
-            # Un-choose (backtracking)
+            # Backtrack
             path.pop()
 
         dfs(root)
-        return result
+        return results
+```
+
+#### C++17
+```cpp
+#include <string>
+#include <vector>
+
+// Definition for a binary tree node.
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
+
+class Solution {
+public:
+    std::vector<std::string> binaryTreePaths(TreeNode* root) {
+        if (!root) return {};
+
+        std::vector<std::string> results;
+        std::vector<int> path;
+        dfs(root, path, results);
+        return results;
+    }
+
+private:
+    void dfs(TreeNode* node, std::vector<int>& path, std::vector<std::string>& results) {
+        path.push_back(node->val);
+
+        if (!node->left && !node->right) {
+            // Leaf node: format path
+            std::string path_str = std::to_string(path[0]);
+            for (size_t i = 1; i < path.size(); ++i) {
+                path_str += "->" + std::to_string(path[i]);
+            }
+            results.push_back(path_str);
+        } else {
+            if (node->left) dfs(node->left, path, results);
+            if (node->right) dfs(node->right, path, results);
+        }
+
+        // Backtrack
+        path.pop_back();
+    }
+};
+```
+
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+// Definition for a binary tree node.
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Solution {
+    public List<String> binaryTreePaths(TreeNode root) {
+        List<String> results = new ArrayList<>();
+        if (root == null) return results;
+
+        List<Integer> path = new ArrayList<>();
+        dfs(root, path, results);
+        return results;
+    }
+
+    private void dfs(TreeNode node, List<Integer> path, List<String> results) {
+        path.add(node.val);
+
+        if (node.left == null && node.right == null) {
+            // Leaf reached: construct formatted string
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < path.size(); i++) {
+                if (i > 0) sb.append("->");
+                sb.append(path.get(i));
+            }
+            results.add(sb.toString());
+        } else {
+            if (node.left != null) dfs(node.left, path, results);
+            if (node.right != null) dfs(node.right, path, results);
+        }
+
+        // Backtrack
+        path.remove(path.size() - 1);
+    }
+}
 ```
 
 ---
 
-## 5. Backtracking Explained Using Tree Diagram
+### Complexity Analysis
 
-### Tree
-
-```
-1
-       / \
-      2   3
-       \
-        5
-```
+- **Time Complexity:** $\mathcal{O}(N \cdot H)$ where $N$ is the number of nodes and $H$ is the height of the tree.
+  - Every node is visited once during the DFS traversal.
+  - When reaching each of the leaves (at most $\lceil N / 2 \rceil$), constructing the path string takes $\mathcal{O}(H)$ time.
+  - In a balanced tree, $H = \mathcal{O}(\log N) \implies \mathcal{O}(N \log N)$. In a worst-case skewed tree, $H = \mathcal{O}(N) \implies \mathcal{O}(N^2)$.
+  - Given $N \le 100$, runtime is $< 2 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(H)$ auxiliary space for the recursion call stack and `path` buffer.
+  - $H = \mathcal{O}(\log N)$ on average, $\mathcal{O}(N)$ in the worst skewed case.
 
 ---
 
-### Step-by-Step Backtracking Flow
+### Takeaway Pattern & Interview Traps
 
-#### Step 1: Start at root
-
-```
-path = []
-dfs(1)
-path = ["1"]
-```
-
----
-
-#### Step 2: Go left
-
-```
-dfs(2)
-path = ["1", "2"]
-```
-
----
-
-#### Step 3: Go right from 2
-
-```
-dfs(5)
-path = ["1", "2", "5"]
-```
-
-✔ Leaf node → Save path
-
-```python
-result = ["1->2->5"]
-```
-
----
-
-#### Step 4: Backtrack
-
-```
-path.pop() → ["1", "2"]
-path.pop() → ["1"]
-```
-
----
-
-#### Step 5: Go right from root
-
-```
-dfs(3)
-path = ["1", "3"]
-```
-
-✔ Leaf → Save path
-
-```python
-result = ["1->2->5", "1->3"]
-```
-
----
-
-#### Step 6: Final Backtrack
-
-```
-path.pop() → ["1"]
-path.pop() → []
-```
-
-✔ Done
-
----
-
-### Backtracking Tree Visualization
-
-```
-[]
-                |
-              ["1"]
-             /     \
-     ["1","2"]    ["1","3"]
-          |
-    ["1","2","5"]  (leaf → save)
-```
-
----
-
-## 6. Approach 2 — DFS with Path Copy (Simpler, Less Efficient)
-
-### Idea
-
-Instead of backtracking, pass a **new path list** to recursive calls.
-
----
-
-### Code
-
-```python
-class Solution:
-    def binaryTreePaths(self, root: Optional[TreeNode]) -> List[str]:
-        if not root:
-            return []
-
-        result: List[str] = []
-
-        def dfs(node: TreeNode, path: List[str]) -> None:
-            path.append(str(node.val))
-
-            if not node.left and not node.right:
-                result.append("->".join(path))
-                return
-
-            if node.left:
-                dfs(node.left, path.copy())
-            if node.right:
-                dfs(node.right, path.copy())
-
-        dfs(root, [])
-        return result
-```
-
----
-
-### Trade-off
-
-| Aspect | Backtracking | Path Copy |
-| --- | --- | --- |
-| Memory | Optimal | Higher |
-| Performance | Better | Slightly worse |
-| Clarity | Moderate | Very clear |
-
----
-
-## 7. Approach 3 — Iterative DFS (Stack)
-
-### Idea
-
-Simulate recursion using stack.
-
----
-
-### Code
-
-```python
-class Solution:
-    def binaryTreePaths(self, root: Optional[TreeNode]) -> List[str]:
-        if not root:
-            return []
-
-        result: List[str] = []
-        stack = [(root, str(root.val))]
-
-        while stack:
-            node, path = stack.pop()
-
-            if not node.left and not node.right:
-                result.append(path)
-
-            if node.right:
-                stack.append((node.right, path + "->" + str(node.right.val)))
-
-            if node.left:
-                stack.append((node.left, path + "->" + str(node.left.val)))
-
-        return result
-```
-
----
-
-## 8. Time & Space Complexity
-
-### Time
-
-```
-O(N) — every node visited once
-```
-
-### Space
-
-```
-O(H) recursion stack (H = tree height)
-Worst case O(N) for skewed tree
-```
-
----
-
-## 9. When to Use Which Approach
-
-| Scenario | Best Approach |
-| --- | --- |
-| Interviews | DFS + Backtracking |
-| Clean & readable | Path Copy |
-| Avoid recursion | Iterative DFS |
-
----
-
-## 10. Pattern Recognition (For DSA Rounds)
-
-This problem belongs to the pattern:
-
-> **DFS + Path Backtracking on Tree**
-
-Similar problems:
-
-* Path Sum II
-* Sum Root to Leaf Numbers
-* All Paths From Source to Target (Graph)
-* Subsets / Permutations (Backtracking)
-
----
-
-If you want, I can next:
-
-* Convert this into **LeetCode pattern notes**
-* Show **dry run using stack frames**
-* Explain **why BFS is worse here**
-* Compare with **Path Sum II**
-
-Just tell me.
+- **Leaf Definition:** Do not confuse reaching a `null` child with reaching a leaf node. If you process the leaf logic inside a `null` check, you will duplicate paths (once for `left == null` and once for `right == null`). Only format the path when `node.left == null && node.right == null`.
+- **String Backtracking Hygiene:** Always push and pop from a single vector/list rather than concatenating strings on every recursive argument call.

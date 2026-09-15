@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,199 +8,240 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - hash-table
+  - string
+  - amazon
+  - google
 ---
 
 # LeetCode 17: Letter Combinations of a Phone Number
 
-## LeetCode 17 — Letter Combinations of a Phone Number
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Backtracking / Cartesian Product Tree Traversal  
+
+---
 
 ### Problem Statement
 
-Given a string `digits` containing digits from `2` to `9`, return **all possible letter combinations** that the number could represent based on the telephone keypad mapping. Return the answer in **any order**.
+Given a string containing digits from `2-9` inclusive, return all possible letter combinations that the number could represent. Return the answer in **any order**.
 
-**Digit-to-Letter Mapping**
+A mapping of digits to letters (just like on the telephone buttons) is given below. Note that 1 does not map to any letters.
 
 ```
-2 → abc
-3 → def
-4 → ghi
-5 → jkl
-6 → mno
-7 → pqrs
-8 → tuv
-9 → wxyz
+2 -> "abc"     3 -> "def"
+4 -> "ghi"     5 -> "jkl"     6 -> "mno"
+7 -> "pqrs"    8 -> "tuv"     9 -> "wxyz"
 ```
 
-**Constraints**
+---
 
-* `0 <= digits.length <= 4`
-* `digits[i]` is a digit in the range `'2'` to `'9'`.
+### Input & Output Formats & Constraints
 
-**Example**
-
-* Input: `digits = "23"`
-* Output: `["ad","ae","af","bd","be","bf","cd","ce","cf"]`
+- **Input:** `digits: str`
+- **Output:** `List[str]`
+- **Constraints:**
+  - $0 \le \text{digits.length} \le 4$
+  - `digits[i]` is a digit in the range `['2', '9']`.
 
 ---
 
-### Key Observations
+### Key Idea & Intuition
 
-1. Each digit maps to a **set of characters**; the problem is to compute the **Cartesian product** of these sets.
-2. The order of digits is fixed; at each position, we choose **one letter** from the corresponding mapping.
-3. This is a classic **backtracking / DFS** problem:
-
-   * Depth of recursion = `len(digits)`
-   * Branching factor = number of letters for the current digit (3 or 4)
-4. If `digits` is empty, there are **no combinations** → return an empty list.
-
----
-
-### Approach (Backtracking)
-
-* Maintain a mapping of digits to letters.
-* Build the combination one character at a time.
-* At recursion depth `index`:
-
-  * Iterate through all letters for `digits[index]`.
-  * Append one letter and recurse to `index + 1`.
-* When `index == len(digits)`, a complete combination is formed.
+- **Cartesian Product of Character Sets:**
+  - Each digit in `digits` corresponds to an alphabet set of size 3 (or 4 for digits `'7'` and `'9'`).
+  - Generating all possible combinations is equivalent to finding the Cartesian product:
+    $$\text{Keys}[\text{digit}_0] \times \text{Keys}[\text{digit}_1] \times \dots \times \text{Keys}[\text{digit}_{N-1}]$$
+- **Fixed-Depth Backtracking:**
+  - The recursion depth is exactly $N = \text{len(digits)}$.
+  - At depth `idx`, we iterate over all candidate letters mapped to `digits[idx]`:
+    1. Append letter to current buffer.
+    2. Recurse to `idx + 1`.
+    3. Pop letter (backtrack).
+  - When `idx == len(digits)`, the current buffer contains a complete word of length $N$; append it to our results.
+- **Edge Case (Empty Input):**
+  - If `digits == ""`, the problem requires returning `[]`, NOT `[""]`.
 
 ---
 
-### Python 3 Solution (with Typing)
+### Solution Approach (Step-by-Step)
 
+1. If `len(digits) == 0`, immediately return `[]`.
+2. Map digits `'2'` through `'9'` to their corresponding strings.
+3. Initialize `results = []` and a mutable character buffer `path = []`.
+4. Define `backtrack(index)`:
+   - If `index == len(digits)`:
+     - Append `"".join(path)` to `results`.
+     - Return.
+   - For each character `ch` in `MAPPING[digits[index]]`:
+     - `path.append(ch)`
+     - `backtrack(index + 1)`
+     - `path.pop()` (backtrack)
+5. Call `backtrack(0)` and return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `digits = "23"`:
+- Digit `'2'` $\implies$ `'a', 'b', 'c'`
+- Digit `'3'` $\implies$ `'d', 'e', 'f'`
+
+```
+                          backtrack(0, "")
+                  /               |               \
+             Pick 'a'          Pick 'b'          Pick 'c'
+            backtrack(1)      backtrack(1)      backtrack(1)
+           /   |   \         /   |   \         /   |   \
+         'd'  'e'  'f'     'd'  'e'  'f'     'd'  'e'  'f'
+          |    |    |       |    |    |       |    |    |
+        "ad" "ae" "af"    "bd" "be" "bf"    "cd" "ce" "cf"
+```
+
+Each leaf at depth 2 contributes a valid 2-letter combination to the output.
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Test Case | `digits` | Key Mappings | Valid Combinations | Output Count |
+| :--- | :--- | :--- | :--- | :--- |
+| **Standard** | `"23"` | `2: abc`, `3: def` | `"ad","ae","af","bd","be","bf","cd","ce","cf"` | `9` |
+| **Single Digit** | `"2"` | `2: abc` | `"a","b","c"` | `3` |
+| **Four Digits (4-letter keys)** | `"79"` | `7: pqrs`, `9: wxyz` | Cartesian product $4 \times 4$ | `16` |
+| **Empty Input** | `""` | None | None | `0` (`[]`) |
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import List, Dict
+from typing import List
 
 class Solution:
     def letterCombinations(self, digits: str) -> List[str]:
+        """
+        Returns all letter combinations for the given phone digits.
+        """
         if not digits:
             return []
 
-        phone: Dict[str, str] = {
-            "2": "abc",
-            "3": "def",
-            "4": "ghi",
-            "5": "jkl",
-            "6": "mno",
-            "7": "pqrs",
-            "8": "tuv",
-            "9": "wxyz"
+        digit_map = {
+            '2': "abc", '3': "def", '4': "ghi", '5': "jkl",
+            '6': "mno", '7': "pqrs", '8': "tuv", '9': "wxyz"
         }
 
-        result: List[str] = []
+        results: List[str] = []
+        path: List[str] = []
 
-        def backtrack(index: int, path: str) -> None:
-            # Base case: one full combination formed
-            if index == len(digits):
-                result.append(path)
+        def backtrack(idx: int) -> None:
+            if idx == len(digits):
+                results.append("".join(path))
                 return
 
-            # Choose a letter for the current digit
-            for ch in phone[digits[index]]:
-                backtrack(index + 1, path + ch)
+            letters = digit_map[digits[idx]]
+            for char in letters:
+                path.append(char)
+                backtrack(idx + 1)
+                path.pop()  # Backtrack
 
-        backtrack(0, "")
-        return result
+        backtrack(0)
+        return results
 ```
 
----
+#### C++17
+```cpp
+#include <string>
+#include <vector>
 
-### Example Walkthrough (`digits = "23"`)
+class Solution {
+public:
+    std::vector<std::string> letterCombinations(const std::string& digits) {
+        if (digits.empty()) return {};
 
-Mappings:
+        const std::vector<std::string> digit_map = {
+            "",     "",     "abc",  "def", // 0, 1, 2, 3
+            "ghi",  "jkl",  "mno",         // 4, 5, 6
+            "pqrs", "tuv",  "wxyz"         // 7, 8, 9
+        };
 
-```
-2 → a b c
-3 → d e f
-```
+        std::vector<std::string> results;
+        std::string path;
+        backtrack(0, digits, digit_map, path, results);
+        return results;
+    }
 
-Steps:
+private:
+    void backtrack(int idx, const std::string& digits, const std::vector<std::string>& digit_map,
+                   std::string& path, std::vector<std::string>& results) {
+        if (idx == static_cast<int>(digits.size())) {
+            results.push_back(path);
+            return;
+        }
 
-1. Start at index `0`, digit `'2'`
-2. Choose `'a'`, move to index `1`
-3. Choose `'d'` → `"ad"` ✓
-4. Backtrack, choose `'e'` → `"ae"` ✓
-5. Backtrack, choose `'f'` → `"af"` ✓
-6. Backtrack to index `0`, choose `'b'`
-7. Repeat for `"bd"`, `"be"`, `"bf"`
-8. Repeat for `"c"` → `"cd"`, `"ce"`, `"cf"`
-
-**Final Output**
-
-```
-["ad","ae","af","bd","be","bf","cd","ce","cf"]
-```
-
----
-
-### Backtracking Tree Structure (`digits = "23"`)
-
-![https://afteracademy.com/images/letter-combination-of-a-phone-number-example-tree-89debbca4854285a.png?utm_source=chatgpt.com](https://afteracademy.com/images/letter-combination-of-a-phone-number-example-tree-89debbca4854285a.png?utm_source=chatgpt.com)
-
-![https://miro.medium.com/v2/resize%3Afit%3A1400/1%2ADe1V_tw93TN3gwLyB0SH7Q.jpeg?utm_source=chatgpt.com](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2ADe1V_tw93TN3gwLyB0SH7Q.jpeg?utm_source=chatgpt.com)
-
-**Conceptual Tree**
-
-```
-""
-                      |
-          --------------------------------
-          |              |              |
-          a              b              c
-        / | \          / | \          / | \
-       ad ae af       bd be bf       cd ce cf
+        const std::string& letters = digit_map[digits[idx] - '0'];
+        for (char c : letters) {
+            path.push_back(c);
+            backtrack(idx + 1, digits, digit_map, path, results);
+            path.pop_back(); // Backtrack
+        }
+    }
+};
 ```
 
-**Tree Characteristics**
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.List;
 
-* Each level corresponds to **one digit**.
-* Each edge corresponds to choosing **one letter**.
-* Leaf nodes represent **complete combinations**.
-* Total leaves = product of letter counts per digit.
+class Solution {
+    private static final String[] DIGIT_MAP = {
+        "",     "",     "abc",  "def", // 0, 1, 2, 3
+        "ghi",  "jkl",  "mno",         // 4, 5, 6
+        "pqrs", "tuv",  "wxyz"         // 7, 8, 9
+    };
+
+    public List<String> letterCombinations(String digits) {
+        List<String> results = new ArrayList<>();
+        if (digits == null || digits.isEmpty()) {
+            return results;
+        }
+
+        StringBuilder path = new StringBuilder();
+        backtrack(0, digits, path, results);
+        return results;
+    }
+
+    private void backtrack(int idx, String digits, StringBuilder path, List<String> results) {
+        if (idx == digits.length()) {
+            results.add(path.toString());
+            return;
+        }
+
+        String letters = DIGIT_MAP[digits.charAt(idx) - '0'];
+        for (int i = 0; i < letters.length(); i++) {
+            path.append(letters.charAt(i));
+            backtrack(idx + 1, digits, path, results);
+            path.deleteCharAt(path.length() - 1); // Backtrack
+        }
+    }
+}
+```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:**  
-  `O(3^n * 4^m)`  
-  where `n` = digits with 3 letters, `m` = digits with 4 letters.
-* **Space Complexity:**  
-  `O(n)` recursion depth (excluding output storage).
+- **Time Complexity:** $\mathcal{O}(4^N \cdot N)$ where $N$ is the number of digits ($0 \le N \le 4$).
+  - For $N$ digits, each digit branches into at most 4 letters ($3^a \times 4^b \le 4^N$).
+  - For each of the $4^N$ combinations, copying the string of length $N$ takes $\mathcal{O}(N)$ time.
+  - Since $N \le 4$, $4^4 \times 4 = 256 \times 4 = 1024$ operations $\implies < 1 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(N)$ auxiliary space for the recursion call stack and current string buffer `path`.
 
 ---
 
-### Pattern Recognition
+### Takeaway Pattern & Interview Traps
 
-This problem exemplifies the **“Fixed Depth Combinatorial Backtracking”** pattern:
-
-* Fixed number of decisions
-* Independent choices at each level
-* Cartesian product generation
-
-## Contrast with classical backtracking (where popping IS required)
-
-### Mutable state example (list)
-
-```python
-def backtrack(index: int, path: List[str]) -> None:
-    if index == len(digits):
-        result.append("".join(path))
-        return
-
-    for ch in phone[digits[index]]:
-        path.append(ch)        # modify shared state
-        backtrack(index + 1, path)
-        path.pop()             # MUST undo change
-```
-
-### Why pop is required here
-
-* `path` is a **single list object**
-* All recursive calls reference the same list
-* Without `pop()`, letters would accumulate incorrectly
-
-This is **true backtracking**:
-
-> choose → recurse → unchoose
+- **Empty String Pitfall:** Returning `[""]` instead of `[]` for `digits == ""` is the most common bug in this problem. Always check `if not digits: return []` right at the start.
+- **Buffer Backtracking vs String Copying:** In C++ and Java, appending and popping from a mutable buffer (`std::string` or `StringBuilder`) avoids allocating new intermediate string objects on every recursive call.

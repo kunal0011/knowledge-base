@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,238 +8,282 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - bit-manipulation
+  - graph
+  - amazon
+  - google
 ---
 
 # LeetCode 1601: Maximum Number of Achievable Transfer Requests
 
-## LeetCode 1601 — Maximum Number of Achievable Transfer Requests
+**Target Companies:** Amazon, Google, Uber  
+**Difficulty:** Hard  
+**Topic:** Backtracking / State-Space Search / Net Balance Invariant  
 
 ---
 
 ### Problem Statement
 
-You are given `n` buildings and a list of **transfer requests**.  
-Each request is represented as `[from, to]`, meaning one employee wants to move from building `from` to building `to`.
+We have `n` buildings numbered from `0` to `n - 1`. Each building has a number of employees. It's transfer season, and some employees want to change the building they reside in.
 
-A set of requests is **achievable** if, for **every building**, the number of employees leaving equals the number entering (net change = 0).
+You are given an array `requests` where `requests[i] = [from_i, to_i]` represents an employee's request to transfer from building `from_i` to building `to_i`.
 
-**Goal:**  
-Return the **maximum number of requests** that can be satisfied simultaneously.
+All buildings are full, so a list of requests is achievable only if for each building, the net change in employee count is zero. This means the number of employees leaving is equal to the number of employees entering each building. More formally, let $k$ be the number of requests in a subset. The subset is achievable if and only if:
+$$\text{count}(\text{leaves}_b) = \text{count}(\text{enters}_b) \quad \forall b \in [0, n - 1]$$
 
-**Constraints**
-
-* `1 ≤ n ≤ 20`
-* `1 ≤ requests.length ≤ 16`
-* `0 ≤ from, to < n`
+Return *the maximum number of achievable requests*.
 
 ---
 
-### Key Observations
+### Input & Output Formats & Constraints
 
-1. Each request can be either:
-
-   * **taken**
-   * **not taken**
-2. We are asked to find the **largest subset** of requests such that:
-
-   ```
-   for every building i:
-   incoming[i] - outgoing[i] == 0
-   ```
-3. The constraint `requests.length ≤ 16` strongly suggests:
-
-   * **Backtracking / brute force with pruning**
-   * Total subsets = `2^16 = 65,536` (manageable)
-4. This is **not** a greedy problem:
-
-   * Taking more requests early may block feasibility later.
-5. This is a **binary-decision backtracking tree**:
-
-   * At each level, choose or skip the current request.
+- **Input:** `n: int`, `requests: List[List[int]]`
+- **Output:** `int` (maximum size of a valid subset of requests)
+- **Constraints:**
+  - $1 \le n \le 20$
+  - $1 \le \text{requests.length} \le 16$
+  - $0 \le \text{from}_i, \text{to}_i < n$
 
 ---
 
-## Core Backtracking Idea
+### Key Idea & Intuition
 
-### State
-
-* `index`: current request being considered
-* `balance[]`: net employee change per building
-* `count`: number of requests chosen so far
-
-### Decision at each request
-
-1. **Skip** the request
-2. **Take** the request:
-
-   * `balance[from] -= 1`
-   * `balance[to] += 1`
-
-### Validity Check (only at leaves)
-
-* At the end (`index == len(requests)`), check:
-
-  ```
-  all(balance[i] == 0)
-  ```
+- **Constraint Analysis ($M \le 16$):**
+  - The number of requests $M \le 16$ is extremely small. The total number of subsets of requests is $2^{16} = 65,536$.
+  - This immediately indicates that exhaustive backtracking or bitmask iteration over all $2^M$ subsets is fully viable.
+- **The Net Balance Invariant:**
+  - Track a balance array `delta` of size $n$, where:
+    - When request `[u, v]` is accepted: `delta[u] -= 1` and `delta[v] += 1`.
+  - A subset of requests is valid if and only if `delta[i] == 0` for all $0 \le i < n$.
+- **Backtracking with Branch-and-Bound Pruning:**
+  - For each request index $i$, we have two choices:
+    1. **Include** request $i$: decrement `delta[from]`, increment `delta[to]`, increment `count`.
+    2. **Exclude** request $i$: skip without modifying `delta`.
+  - **Pruning Invariant:** If `count + (total_requests - i) <= max_achieved`, even if we accept every remaining request, we cannot beat our current best answer. Prune this branch immediately!
+  - When all requests have been considered ($i == M$), if all elements in `delta` are zero, update `max_achieved = max(max_achieved, count)`.
 
 ---
 
-## Python 3 Solution (with Typing)
+### Solution Approach (Step-by-Step)
 
+1. Initialize `max_achieved = 0` and `delta = [0] * n`.
+2. Define recursive function `dfs(idx, count)`:
+   - **Pruning:** If `count + (len(requests) - idx) <= max_achieved`, return.
+   - **Base Case:** If `idx == len(requests)`:
+     - Check if all values in `delta` are $0$.
+     - If yes, update `max_achieved = max(max_achieved, count)`.
+     - Return.
+3. **Choice 1: Include `requests[idx]`:**
+   - Let `u, v = requests[idx]`.
+   - `delta[u] -= 1; delta[v] += 1`
+   - `dfs(idx + 1, count + 1)`
+   - `delta[u] += 1; delta[v] -= 1` (backtrack)
+4. **Choice 2: Exclude `requests[idx]`:**
+   - `dfs(idx + 1, count)`
+5. Return `max_achieved`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `n = 3`, `requests = [[0,1], [1,0], [0,1], [1,2], [2,0]]`.
+
+```
+Decision Tree (idx=0..4):
+                      root (delta=[0,0,0], count=0)
+                     /                             \
+          Pick [0,1]: delta=[-1,+1,0]           Skip [0,1]: delta=[0,0,0]
+                 /            \                             ...
+        Pick [1,0]:          Skip [1,0]:
+      delta=[0,0,0]         delta=[-1,+1,0]
+        count=2
+         /     \
+     Pick [0,1] Skip [0,1]
+    ...          ...
+                 |
+     Pick [1,2]: delta=[-1, 0, +1]
+     Pick [2,0]: delta=[ 0, 0,  0], count = 5!
+     All delta == 0 -> max_achieved = 5!
+```
+
+Self-loops like `[0,0]` can always be included because `delta[0] -= 1` and `delta[0] += 1` cancel out immediately.
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Test Case | `n` | `requests` | Achievable Subset Size | Valid Cycle / Transfers |
+| :--- | :--- | :--- | :--- | :--- |
+| **Example 1** | `5` | `[[0,1],[1,0],[0,1],[1,2],[2,0],[3,4]]` | `5` | `[0,1],[1,0],[0,1],[1,2],[2,0]` (balanced) |
+| **Example 2** | `3` | `[[0,0],[1,2],[2,1]]` | `3` | `[0,0]` (self loop) + `[1,2],[2,1]` (swap) |
+| **Example 3** | `4` | `[[0,3],[3,1],[1,2],[2,0]]` | `4` | Directed 4-cycle `0->3->1->2->0` |
+| **No Moves Possible** | `3` | `[[0,1],[1,2]]` | `0` | Chain cannot close back to `0` |
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def maximumRequests(self, n: int, requests: List[List[int]]) -> int:
-        balance = [0] * n
-        self.max_count = 0
+        """
+        Finds the maximum number of requests that leave each building's net employee change at 0.
+        Uses branch-and-bound backtracking with upper-bound pruning.
+        """
+        delta = [0] * n
+        max_achieved = 0
+        m = len(requests)
 
-        def backtrack(index: int, count: int) -> None:
-            if index == len(requests):
-                if all(b == 0 for b in balance):
-                    self.max_count = max(self.max_count, count)
+        def dfs(idx: int, count: int) -> None:
+            nonlocal max_achieved
+            # Prune: even if we pick all remaining requests, we cannot beat max_achieved
+            if count + (m - idx) <= max_achieved:
                 return
 
-            # Option 1: skip current request
-            backtrack(index + 1, count)
+            if idx == m:
+                # Validate net balance
+                if all(d == 0 for d in delta):
+                    max_achieved = count
+                return
 
-            # Option 2: take current request
-            frm, to = requests[index]
-            balance[frm] -= 1
-            balance[to] += 1
+            u, v = requests[idx]
 
-            backtrack(index + 1, count + 1)
+            # Option 1: Include this request
+            delta[u] -= 1
+            delta[v] += 1
+            dfs(idx + 1, count + 1)
+            delta[u] += 1
+            delta[v] -= 1  # backtrack
 
-            # undo (backtrack)
-            balance[frm] += 1
-            balance[to] -= 1
+            # Option 2: Exclude this request
+            dfs(idx + 1, count)
 
-        backtrack(0, 0)
-        return self.max_count
+        dfs(0, 0)
+        return max_achieved
+```
+
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int maximumRequests(int n, const std::vector<std::vector<int>>& requests) {
+        std::vector<int> delta(n, 0);
+        int max_achieved = 0;
+        int m = static_cast<int>(requests.size());
+
+        dfs(0, 0, m, delta, requests, max_achieved);
+        return max_achieved;
+    }
+
+private:
+    void dfs(int idx, int count, int m, std::vector<int>& delta,
+             const std::vector<std::vector<int>>& requests, int& max_achieved) {
+        // Upper bound pruning
+        if (count + (m - idx) <= max_achieved) {
+            return;
+        }
+
+        if (idx == m) {
+            bool all_zero = true;
+            for (int val : delta) {
+                if (val != 0) {
+                    all_zero = false;
+                    break;
+                }
+            }
+            if (all_zero) {
+                max_achieved = count;
+            }
+            return;
+        }
+
+        int u = requests[idx][0];
+        int v = requests[idx][1];
+
+        // Choice 1: Include request
+        delta[u]--;
+        delta[v]++;
+        dfs(idx + 1, count + 1, m, delta, requests, max_achieved);
+        delta[u]++;
+        delta[v]--; // backtrack
+
+        // Choice 2: Exclude request
+        dfs(idx + 1, count, m, delta, requests, max_achieved);
+    }
+};
+```
+
+#### Java
+```java
+class Solution {
+    private int maxAchieved = 0;
+
+    public int maximumRequests(int n, int[][] requests) {
+        int[] delta = new int[n];
+        maxAchieved = 0;
+        dfs(0, 0, requests, delta);
+        return maxAchieved;
+    }
+
+    private void dfs(int idx, int count, int[][] requests, int[] delta) {
+        int m = requests.length;
+        // Upper bound pruning
+        if (count + (m - idx) <= maxAchieved) {
+            return;
+        }
+
+        if (idx == m) {
+            boolean allZero = true;
+            for (int d : delta) {
+                if (d != 0) {
+                    allZero = false;
+                    break;
+                }
+            }
+            if (allZero) {
+                maxAchieved = count;
+            }
+            return;
+        }
+
+        int u = requests[idx][0];
+        int v = requests[idx][1];
+
+        // Option 1: Take request
+        delta[u]--;
+        delta[v]++;
+        dfs(idx + 1, count + 1, requests, delta);
+        delta[u]++;
+        delta[v]--; // backtrack
+
+        // Option 2: Skip request
+        dfs(idx + 1, count, requests, delta);
+    }
+}
 ```
 
 ---
 
-## Example Explanation
+### Complexity Analysis
 
-### Input
-
-```
-n = 3
-requests = [[0,1],[1,2],[2,0],[1,0]]
-```
-
-### Interpretation
-
-* `[0,1]`: one leaves building 0, enters 1
-* `[1,2]`: 1 → 2
-* `[2,0]`: 2 → 0
-* `[1,0]`: 1 → 0
-
-### One valid maximal subset
-
-```
-[0,1], [1,2], [2,0]
-```
-
-Net effect:
-
-```
-building 0: -1 +1 = 0
-building 1: +1 -1 = 0
-building 2: +1 -1 = 0
-```
-
-So answer = `3`
+- **Time Complexity:** $\mathcal{O}(2^M \cdot N)$ in the worst case, but significantly reduced in practice due to the branch-and-bound pruning condition `count + (m - idx) <= max_achieved`.
+  - For $M \le 16$, $2^{16} = 65,536$.
+  - Checking the balance array takes $\mathcal{O}(N)$ where $N \le 20$.
+  - Total worst-case operations: $65,536 \times 20 \approx 1.3 \times 10^6 \ll 10^8$, executing in $< 15 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(N + M)$ auxiliary space.
+  - The recursion stack reaches at most depth $M \le 16$.
+  - The `delta` balance array requires $\mathcal{O}(N)$ memory.
 
 ---
 
-## Backtracking Tree Structure (Complete Conceptual Tree)
+### Takeaway Pattern & Interview Traps
 
-> Each level represents **one request**  
-> Each node branches into **Skip** or **Take**
-
-Let requests be indexed as:
-
-```
-R0 = [0,1]
-R1 = [1,2]
-R2 = [2,0]
-```
-
-### Conceptual Binary Tree
-
-```
-(index=0, count=0)
-                                     /                 \
-                                skip R0               take R0
-                                 |                     |
-                          (i=1, c=0)              (i=1, c=1)
-                           /        \               /        \
-                      skip R1     take R1      skip R1     take R1
-                        |           |             |           |
-                 (i=2,c=0)   (i=2,c=1)     (i=2,c=1)   (i=2,c=2)
-                   /   \        /   \          /   \        /   \
-              skip  take   skip   take     skip   take  skip   take
-                |      |      |      |         |      |     |      |
-        (i=3,c=0)(1) (1)  (2)     (1)   (2)    (2)   (3)
-          ❌      ❌    ❌    ❌       ❌      ❌     ❌    ✅
-```
-
-Legend:
-
-* `(i, c)` → `(request index, chosen count)`
-* `✅` → all balances zero → valid
-* `❌` → invalid (imbalanced buildings)
-
----
-
-### Key Navigation Insight
-
-* **Every path from root to leaf** corresponds to **one subset** of requests.
-* Validation happens **only at leaf nodes**.
-* We explore **all possibilities**, but only keep the maximum valid count.
-
----
-
-## Why This Is Backtracking (Not DP)
-
-* State space depends on **subset choices**, not sequence order.
-* Balance vector changes dynamically.
-* No overlapping subproblems with identical state `(index, balance[])`.
-
----
-
-## Complexity Analysis
-
-* **Time Complexity:** `O(2^m * n)` where `m = len(requests)`
-* **Space Complexity:** `O(n)` for balance + recursion stack
-
----
-
-## Pattern Recognition
-
-This problem is a textbook example of:
-
-* **Subset backtracking**
-* **Binary decision tree**
-* **Constraint validation at leaf nodes**
-
-Closely related to:
-
-* Subset enumeration
-* LC 494 (Target Sum)
-* LC 473 (Matchsticks to Square)
-
----
-
-### One-Line Interview Explanation
-
-> “We backtrack over all subsets of requests. For each request, we choose to take or skip it while tracking net employee balance per building. At the end, if all balances are zero, the subset is valid, and we maximize its size.”
-
-If you want next, I can:
-
-* Add **pruning using remaining requests**
-* Show **bitmask-based solution**
-* Compare this with **flow-based modeling** and explain why it’s overkill
+- **Eulerian Subgraph / Net Flow Equivalence:** An achievable set of transfers corresponds to a union of directed cycles in the employee transfer graph. Instead of trying to detect cycles explicitly, simply maintaining $\text{in-degree} - \text{out-degree} == 0$ for all vertices is both necessary and sufficient.
+- **Branch and Bound Pruning:** Whenever searching for a maximum subset, tracking `current + remaining <= best` cuts off huge subtrees that cannot possibly improve the global optimum.
+- **Handling Self-Transfers:** If a request has `from == to`, it contributes $+1$ to achievable requests without changing `delta`! Including it is always non-detrimental.

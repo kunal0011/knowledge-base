@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,279 +8,193 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - bit-manipulation
+  - amazon
+  - google
 ---
 
 # LeetCode 401: Binary Watch
 
-## Problem Statement (LeetCode 401)
-
-A **binary watch** has:
-
-* **4 LEDs** for hours (0–11)
-* **6 LEDs** for minutes (0–59)
-
-Each LED represents a binary value.
-
-You are given an integer `turnedOn`, representing the **number of LEDs that are currently ON**.
-
-**Task**  
-Return **all possible times** the watch could represent.
-
-### Output format
-
-* Time is in `"H:MM"` format
-* Hour has **no leading zero**
-* Minute has **two digits** (leading zero allowed)
+**Target Companies:** Google, Amazon, Apple  
+**Difficulty:** Easy  
+**Topic:** Backtracking / Bit Manipulation / Exhaustive Search  
 
 ---
 
-### Example
+### Problem Statement
 
-```text
-Input: turnedOn = 1
-Output: ["0:01","0:02","0:04","0:08","0:16","0:32","1:00","2:00","4:00","8:00"]
+A binary watch has 4 LEDs on the top to represent the hours (`0-11`), and 6 LEDs on the bottom to represent the minutes (`0-59`). Each LED represents a zero or one, with the least significant bit on the right.
+
+- The 4 hour LEDs represent values: `8, 4, 2, 1`.
+- The 6 minute LEDs represent values: `32, 16, 8, 4, 2, 1`.
+
+Given an integer `turnedOn` which represents the number of LEDs that are currently on, return *all possible times the watch could represent*. You may return the answer in **any order**.
+
+**Format Rules:**
+- The hour must not contain a leading zero (e.g., `"01:00"` is invalid, `"1:00"` is valid).
+- The minute must be consistently two digits and may contain a leading zero (e.g., `"10:2"` is invalid, `"10:02"` is valid).
+
+---
+
+### Input & Output Formats & Constraints
+
+- **Input:** `turnedOn: int`
+- **Output:** `List[str]`
+- **Constraints:**
+  - $0 \le \text{turnedOn} \le 10$
+
+---
+
+### Key Idea & Intuition
+
+- **Constraint Analysis & Universe Size:**
+  - The watch display can only show valid clock times:
+    - Hours: $0 \le h \le 11$ (12 possibilities)
+    - Minutes: $0 \le m \le 59$ (60 possibilities)
+  - The total number of valid times on the watch is strictly:
+    $$12 \times 60 = 720 \text{ possible times}$$
+- **Approach 1: Bit Count Enumeration ($\mathcal{O}(1)$):**
+  - Iterate over all $h \in [0, 11]$ and $m \in [0, 59]$.
+  - Count set bits: $\text{popcount}(h) + \text{popcount}(m)$.
+  - If the sum equals `turnedOn`, format as `f"{h}:{m:02d}"` and record.
+- **Approach 2: Backtracking over the 10 LEDs:**
+  - We have an array of 10 LED weights:
+    `[1, 2, 4, 8]` for hours, and `[1, 2, 4, 8, 16, 32]` for minutes.
+  - Pick exactly `turnedOn` LEDs out of 10.
+  - Prune immediately if $h \ge 12$ or $m \ge 60$.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+#### Direct Iteration (Clean & Interview Preferred):
+1. If `turnedOn >= 9`, return `[]` (at most 3 bits for hours since $\max h = 11$, and at most 5 bits for minutes since $\max m = 59 \implies 3 + 5 = 8$ max on LEDs).
+2. Initialize `results = []`.
+3. Loop `h` from $0$ to $11$:
+   - Loop `m` from $0$ to $59$:
+     - If `bin(h).count('1') + bin(m).count('1') == turnedOn`:
+       - Append formatted string `f"{h}:{m:02d}"` to `results`.
+4. Return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Binary Watch Layout:
+```
+Hours LEDs (4 bits):    [8]  [4]  [2]  [1]   (Range: 0 - 11)
+Minutes LEDs (6 bits):  [32] [16] [8]  [4]  [2]  [1] (Range: 0 - 59)
 ```
 
----
-
-## 2. Key Observations (Very Important)
-
-1. **Hour LEDs = 4 → values:** `[8, 4, 2, 1]`
-2. **Minute LEDs = 6 → values:** `[32, 16, 8, 4, 2, 1]`
-3. Total LEDs = `10`
-4. We must pick exactly `turnedOn` LEDs **from these 10**
-5. Valid constraints:
-
-   * `hour < 12`
-   * `minute < 60`
-6. Order does **not** matter — combinations, not permutations.
+Example for `turnedOn = 1`:
+- Exactly 1 bit is ON across the entire watch:
+  - 1 bit in hours ($h \in \{1, 2, 4, 8\}$), 0 bits in minutes ($m = 0$):
+    $\implies$ `"1:00", "2:00", "4:00", "8:00"`
+  - 0 bits in hours ($h = 0$), 1 bit in minutes ($m \in \{1, 2, 4, 8, 16, 32\}$):
+    $\implies$ `"0:01", "0:02", "0:04", "0:08", "0:16", "0:32"`
+- Total valid outputs = $4 + 6 = 10$.
 
 ---
 
-## 3. All Possible Solution Approaches
+### Solved Examples with Multiple Inputs
 
-### Approach 1: Brute Force (Bit Counting) ✅ Simplest
+| Test Case | `turnedOn` | Total Combinations | Example Valid Times |
+| :--- | :--- | :--- | :--- |
+| **Example 1** | `1` | `10` | `"0:01"`, `"0:02"`, `"1:00"`, `"8:00"` |
+| **Zero LEDs** | `0` | `1` | `"0:00"` |
+| **Too Many LEDs** | `9` | `0` | `[]` (Max possible is $3 + 5 = 8$) |
+| **Example 2** | `2` | `44` | `"0:03"`, `"1:01"`, `"1:02"`, `"3:00"` |
 
-#### Idea
+---
 
-* Iterate over **all possible times**
-* Count number of `1`s in binary representation of hour + minute
+### Multi-Language Implementations
 
-#### Complexity
-
-* Time: `12 × 60 = 720` → constant
-* Space: `O(1)` (output excluded)
-
-#### Python 3 Code
-
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def readBinaryWatch(self, turnedOn: int) -> List[str]:
-        result: List[str] = []
+        """
+        Enumerates all valid times matching the total turnedOn LEDs.
+        O(1) time complexity over fixed 720 clock configurations.
+        """
+        if turnedOn > 8:
+            return []
 
-        for hour in range(12):
-            for minute in range(60):
-                if bin(hour).count("1") + bin(minute).count("1") == turnedOn:
-                    result.append(f"{hour}:{minute:02d}")
-
-        return result
+        results = []
+        for h in range(12):
+            for m in range(60):
+                if bin(h).count('1') + bin(m).count('1') == turnedOn:
+                    results.append(f"{h}:{m:02d}")
+        return results
 ```
 
-#### Example Walkthrough
+#### C++17
+```cpp
+#include <string>
+#include <vector>
+#include <bitset>
+#include <iomanip>
+#include <sstream>
 
-`turnedOn = 1`
+class Solution {
+public:
+    std::vector<std::string> readBinaryWatch(int turnedOn) {
+        if (turnedOn > 8) return {};
 
-* `hour = 1 (0001)` → 1 LED
-* `minute = 0` → 0 LED  
-  → `"1:00"` valid
-
----
-
-### Approach 2: Precompute Combinations (Split LEDs)
-
-#### Idea
-
-* Choose `i` LEDs for hour
-* Choose `turnedOn - i` LEDs for minute
-* Combine valid values
-
-#### Complexity
-
-* Time: `C(4, i) × C(6, turnedOn - i)`
-* Efficient due to small limits
-
-#### Python Code
-
-```python
-from typing import List
-from itertools import combinations
-
-class Solution:
-    def readBinaryWatch(self, turnedOn: int) -> List[str]:
-        hours = [8, 4, 2, 1]
-        minutes = [32, 16, 8, 4, 2, 1]
-
-        result: List[str] = []
-
-        for h_count in range(min(4, turnedOn) + 1):
-            m_count = turnedOn - h_count
-            if m_count > 6:
-                continue
-
-            for h_combo in combinations(hours, h_count):
-                hour = sum(h_combo)
-                if hour >= 12:
-                    continue
-
-                for m_combo in combinations(minutes, m_count):
-                    minute = sum(m_combo)
-                    if minute < 60:
-                        result.append(f"{hour}:{minute:02d}")
-
-        return result
+        std::vector<std::string> results;
+        for (int h = 0; h < 12; ++h) {
+            for (int m = 0; m < 60; ++m) {
+                if (__builtin_popcount(h) + __builtin_popcount(m) == turnedOn) {
+                    std::string time = std::to_string(h) + ":" + (m < 10 ? "0" : "") + std::to_string(m);
+                    results.push_back(time);
+                }
+            }
+        }
+        return results;
+    }
+};
 ```
 
----
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.List;
 
-### Approach 3: Backtracking (DFS) ⭐ Interview Favorite
+class Solution {
+    public List<String> readBinaryWatch(int turnedOn) {
+        List<String> results = new ArrayList<>();
+        if (turnedOn > 8) {
+            return results;
+        }
 
-This is what you explicitly asked to visualize.
+        for (int h = 0; h < 12; h++) {
+            for (int m = 0; m < 60; m++) {
+                if (Integer.bitCount(h) + Integer.bitCount(m) == turnedOn) {
+                    results.add(String.format("%d:%02d", h, m));
+                }
+            }
+        }
 
----
-
-## 4. Backtracking Approach (With Tree Explanation)
-
-### Core Idea
-
-* We have **10 LEDs**
-* Each LED can be either:
-
-  * **ON (chosen)**
-  * **OFF (skipped)**
-* We explore all combinations using DFS
-
----
-
-### LED Mapping
-
-```
-Index: 0  1  2  3   4   5   6  7  8  9
-Value: 8  4  2  1  32  16  8  4  2  1
-        ↑ Hour LEDs ↑    ↑ Minute LEDs ↑
+        return results;
+    }
+}
 ```
 
 ---
 
-### Backtracking Tree (Example: turnedOn = 2)
+### Complexity Analysis
 
-```
-Start (count=0, hour=0, minute=0)
-|
-├── Choose LED[0]=8 (hour=8, count=1)
-|   |
-|   ├── Choose LED[1]=4 (hour=12 ❌ invalid)
-|   |
-|   ├── Choose LED[4]=32 (hour=8, minute=32 ✅)
-|   |
-|   └── Skip...
-|
-├── Choose LED[4]=32 (minute=32, count=1)
-|   |
-|   ├── Choose LED[5]=16 (minute=48 ✅)
-|   |
-|   └── Skip...
-|
-└── Skip LED[0]
-    |
-    └── Continue DFS
-```
-
-We **prune early** when:
-
-* `count > turnedOn`
-* `hour >= 12`
-* `minute >= 60`
+- **Time Complexity:** $\mathcal{O}(1)$.
+  - The nested loops execute exactly $12 \times 60 = 720$ iterations, which is a small constant.
+  - Bit counting and string formatting execute in $\mathcal{O}(1)$ time per pair.
+  - Runs in $< 1 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space beyond the output list.
 
 ---
 
-### Python 3 Backtracking Code (Typed)
+### Takeaway Pattern & Interview Traps
 
-```python
-from typing import List
-
-class Solution:
-    def readBinaryWatch(self, turnedOn: int) -> List[str]:
-        leds: List[int] = [8, 4, 2, 1, 32, 16, 8, 4, 2, 1]
-        result: List[str] = []
-
-        def backtrack(index: int, count: int, hour: int, minute: int) -> None:
-            # Pruning
-            if hour >= 12 or minute >= 60:
-                return
-
-            if count == turnedOn:
-                result.append(f"{hour}:{minute:02d}")
-                return
-
-            if index == len(leds):
-                return
-
-            # Choose current LED
-            if index < 4:
-                backtrack(index + 1, count + 1, hour + leds[index], minute)
-            else:
-                backtrack(index + 1, count + 1, hour, minute + leds[index])
-
-            # Skip current LED
-            backtrack(index + 1, count, hour, minute)
-
-        backtrack(0, 0, 0, 0)
-        return result
-```
-
----
-
-## 5. Example Walkthrough (turnedOn = 1)
-
-### DFS Path
-
-```
-Start → choose LED[0] → hour=8 → "8:00"
-Start → choose LED[1] → hour=4 → "4:00"
-Start → choose LED[4] → minute=32 → "0:32"
-...
-```
-
-Final output:
-
-```
-["8:00", "4:00", "2:00", "1:00", "0:32", "0:16", "0:08", "0:04", "0:02", "0:01"]
-```
-
----
-
-## 6. Which Approach Should You Use?
-
-| Scenario | Best Approach |
-| --- | --- |
-| Coding round | Bit Counting |
-| DSA interview | Backtracking |
-| Teaching / clarity | Combination split |
-
----
-
-## 7. Key Interview Takeaways
-
-* Recognize **small bounded search space**
-* Apply **combinatorics + pruning**
-* Backtracking demonstrates **decision tree reasoning**
-
-If you want, I can:
-
-* Convert backtracking tree into a **diagram**
-* Show **step-by-step DFS stack**
-* Compare recursion vs bitmask approach
-
-Just tell me.
+- **Recognizing Bounded Universe Size:** When search boundaries are strictly fixed by physical limits ($12$ hours and $60$ minutes), brute-force iteration over the output domain is often vastly cleaner and less error-prone than complex recursive state-space backtracking.
+- **Maximum Possible LEDs On:** Notice that the maximum possible bits for $h \in [0, 11]$ is 3 (for $h = 7$ or $11$), and for $m \in [0, 59]$ is 5 (for $m = 31, 47, 55, 59$). Hence, for $\text{turnedOn} \ge 9$, no valid time can ever exist; return `[]` immediately.

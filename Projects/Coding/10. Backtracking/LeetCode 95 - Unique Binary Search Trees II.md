@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,101 +8,144 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - tree
+  - binary-search-tree
+  - dynamic-programming
+  - amazon
+  - google
 ---
 
 # LeetCode 95: Unique Binary Search Trees II
 
-## LeetCode 95 — Unique Binary Search Trees II
+**Target Companies:** Amazon, Google, Meta, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Backtracking / Divide and Conquer / Catalan Trees / Memoization  
 
 ---
 
 ### Problem Statement
 
-Given an integer `n`, return **all structurally unique BSTs (Binary Search Trees)** that store values `1` to `n`.
+Given an integer `n`, return *all the structurally unique **BST**'s (binary search trees), which has exactly `n` nodes of unique values from `1` to `n`*. Return the answer in **any order**.
 
-Each BST must satisfy:
+---
 
-* Left subtree values `< root`
-* Right subtree values `> root`
+### Input & Output Formats & Constraints
 
-Return the answer in **any order**.
+- **Input:** `n: int`
+- **Output:** `List[Optional[TreeNode]]` containing the root pointers to all unique BST topologies.
+- **Constraints:**
+  - $1 \le n \le 8$
 
-**Constraints**
+---
 
-* `1 ≤ n ≤ 8`
+### Key Idea & Intuition
 
-**Example**
+- **BST Structural Invariant:**
+  - In any Binary Search Tree, all values in the left subtree must be strictly less than the root, and all values in the right subtree must be strictly greater than the root.
+- **Recursive Decomposition by Interval $[start, end]$:**
+  - For an interval $[start, end]$ of candidate values:
+    - Pick any value $i \in [start, end]$ to act as the root.
+    - All values in $[start, i - 1]$ must form valid BSTs for the left subtree.
+    - All values in $[i + 1, end]$ must form valid BSTs for the right subtree.
+  - Recursively generate:
+    - $\mathcal{L} = \text{generate}(start, i - 1)$
+    - $\mathcal{R} = \text{generate}(i + 1, end)$
+- **Cartesian Product Assembly:**
+  - Every valid left subtree $L \in \mathcal{L}$ can pair with every valid right subtree $R \in \mathcal{R}$.
+  - For each pair $(L, R)$, instantiate a new node `TreeNode(i, left=L, right=R)`.
+- **Base Case Formulation:**
+  - If $start > end$, there are no values in this subtree $\implies$ return `[None]`. Having `[None]` ensures that the nested loop executes at least once for nodes missing a left or right child.
+- **Memoization (`memo[(start, end)]`):**
+  - Sub-intervals $[start, end]$ are repeatedly requested across different subtrees. Caching `memo[(start, end)]` eliminates redundant construction.
 
-```text
-Input: n = 3
-Output:
-[
-  [1,null,2,null,3],
-  [1,null,3,2],
-  [2,1,3],
-  [3,1,null,null,2],
-  [3,2,null,1]
-]
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Create a memoization dictionary `memo = {}`.
+2. Define `generate_trees(start, end)`:
+   - If `start > end`: return `[None]`.
+   - If `(start, end)` in `memo`: return `memo[(start, end)]`.
+   - Initialize `all_trees = []`.
+   - For `root_val` from `start` to `end`:
+     - `left_subtrees = generate_trees(start, root_val - 1)`
+     - `right_subtrees = generate_trees(root_val + 1, end)`
+     - For `left_tree` in `left_subtrees`:
+       - For `right_tree` in `right_subtrees`:
+         - Create `curr_root = TreeNode(root_val, left_tree, right_tree)`.
+         - Append `curr_root` to `all_trees`.
+   - Store `memo[(start, end)] = all_trees`.
+   - Return `all_trees`.
+3. Call `generate_trees(1, n)` and return the list.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For $n = 3$, candidate roots: $\{1, 2, 3\}$.
+
+```
+1. Root = 1:
+   - Left: [] -> None
+   - Right: [2, 3] -> (2->3) and (3->2)
+   => 1             1
+       \             \
+        2             3
+         \           /
+          3         2
+
+2. Root = 2:
+   - Left: [1] -> 1
+   - Right: [3] -> 3
+   =>   2
+       / \
+      1   3
+
+3. Root = 3:
+   - Left: [1, 2] -> (1->2) and (2->1)
+   - Right: [] -> None
+   =>     3            3
+         /            /
+        1            2
+         \          /
+          2        1
+
+Total structurally unique BSTs = C_3 = 5 trees!
 ```
 
 ---
 
-## Key Observations (Critical)
+### Solved Examples with Multiple Inputs
 
-1. This is **not** about counting trees (that’s LeetCode 96), but **constructing all trees**.
-2. For any range `[start, end]`:
-
-   * Choose each value `i` in `[start, end]` as root
-   * Left subtree comes from `[start, i-1]`
-   * Right subtree comes from `[i+1, end]`
-3. **Cartesian product**:
-
-   * Every left subtree can pair with every right subtree
-4. This is **recursive tree construction + backtracking**
-5. Same subproblems repeat → **memoization (DP)** is highly effective
+| Test Case | `n` | Number of BSTs ($C_n$) | Topologies Generated |
+| :--- | :--- | :--- | :--- |
+| **n = 1** | `1` | $C_1 = 1$ | `[[1]]` |
+| **n = 2** | `2` | $C_2 = 2$ | `1->2` and `2->1` |
+| **n = 3** | `3` | $C_3 = 5$ | 5 distinct trees |
+| **n = 4** | `4` | $C_4 = 14$ | 14 distinct trees |
+| **n = 8 (Max)** | `8` | $C_8 = 1430$ | 1,430 distinct trees |
 
 ---
 
-## Core Recursive Definition
+### Multi-Language Implementations
 
-Let:
-
-```
-build(start, end) → list of all BSTs using values [start..end]
-```
-
-Then:
-
-```
-For each root i in [start..end]:
-    leftTrees  = build(start, i - 1)
-    rightTrees = build(i + 1, end)
-
-    For each L in leftTrees:
-        For each R in rightTrees:
-            root = TreeNode(i)
-            root.left = L
-            root.right = R
-            add root to result
-```
-
----
-
-## Python 3 Solution (with Typing + Memoization)
-
+#### Python 3
 ```python
-from typing import List, Optional, Dict, Tuple
+from typing import Optional, List, Dict, Tuple
 
+# Definition for a binary tree node.
 class TreeNode:
-    def __init__(self, val: int = 0,
-                 left: Optional["TreeNode"] = None,
-                 right: Optional["TreeNode"] = None):
+    def __init__(self, val=0, left=None, right=None):
         self.val = val
         self.left = left
         self.right = right
 
 class Solution:
     def generateTrees(self, n: int) -> List[Optional[TreeNode]]:
+        """
+        Generates all structurally unique BSTs with values 1 to n.
+        Uses divide-and-conquer with memoization on interval [start, end].
+        """
         if n == 0:
             return []
 
@@ -115,404 +158,150 @@ class Solution:
             if (start, end) in memo:
                 return memo[(start, end)]
 
-            all_trees: List[Optional[TreeNode]] = []
+            trees: List[Optional[TreeNode]] = []
 
             for root_val in range(start, end + 1):
+                # All possible left and right subtrees
                 left_trees = build(start, root_val - 1)
                 right_trees = build(root_val + 1, end)
 
+                # Cartesian product assembly
                 for left in left_trees:
                     for right in right_trees:
-                        root = TreeNode(root_val)
-                        root.left = left
-                        root.right = right
-                        all_trees.append(root)
+                        root = TreeNode(root_val, left, right)
+                        trees.append(root)
 
-            memo[(start, end)] = all_trees
-            return all_trees
+            memo[(start, end)] = trees
+            return trees
 
         return build(1, n)
 ```
 
----
+#### C++17
+```cpp
+#include <vector>
+#include <map>
 
-## Example Explanation (`n = 3`)
+// Definition for a binary tree node.
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode() : val(0), left(nullptr), right(nullptr) {}
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+    TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
+};
 
-Values: `{1, 2, 3}`
+class Solution {
+public:
+    std::vector<TreeNode*> generateTrees(int n) {
+        if (n == 0) return {};
+        std::map<std::pair<int, int>, std::vector<TreeNode*>> memo;
+        return build(1, n, memo);
+    }
 
----
+private:
+    std::vector<TreeNode*> build(int start, int end,
+                                 std::map<std::pair<int, int>, std::vector<TreeNode*>>& memo) {
+        if (start > end) {
+            return {nullptr};
+        }
 
-### Case 1: Root = 1
+        auto key = std::make_pair(start, end);
+        if (memo.count(key)) {
+            return memo[key];
+        }
 
-* Left: `[]`
-* Right: trees from `[2,3]`
+        std::vector<TreeNode*> trees;
 
-Produces:
+        for (int root_val = start; root_val <= end; ++root_val) {
+            std::vector<TreeNode*> left_trees = build(start, root_val - 1, memo);
+            std::vector<TreeNode*> right_trees = build(root_val + 1, end, memo);
 
-```
-1           1
- \           \
-  2           3
-   \         /
-    3       2
-```
+            for (TreeNode* left : left_trees) {
+                for (TreeNode* right : right_trees) {
+                    TreeNode* root = new TreeNode(root_val, left, right);
+                    trees.push_back(root);
+                }
+            }
+        }
 
----
-
-### Case 2: Root = 2
-
-* Left: `[1]`
-* Right: `[3]`
-
-Produces:
-
-```
-2
-  / \
- 1   3
-```
-
----
-
-### Case 3: Root = 3
-
-* Left: trees from `[1,2]`
-* Right: `[]`
-
-Produces:
-
-```
-3          3
-   /          /
-  1          2
-   \        /
-    2      1
-```
-
----
-
-## Backtracking Tree Structure (Construction Flow)
-
-![https://i.ytimg.com/vi/m907FlQa2Yc/sddefault.jpg?utm_source=chatgpt.com](https://i.ytimg.com/vi/m907FlQa2Yc/sddefault.jpg?utm_source=chatgpt.com)
-
-![https://media.geeksforgeeks.org/wp-content/uploads/20200206162306/Untitled-Diagram311.jpg?utm_source=chatgpt.com](https://media.geeksforgeeks.org/wp-content/uploads/20200206162306/Untitled-Diagram311.jpg?utm_source=chatgpt.com)
-
-![https://media.geeksforgeeks.org/wp-content/uploads/20250904151404252799/bst2.webp?utm_source=chatgpt.com](https://media.geeksforgeeks.org/wp-content/uploads/20250904151404252799/bst2.webp?utm_source=chatgpt.com)
-
-### Conceptual Recursion Tree (`build(1,3)`)
-
-```
-build(1,3)
- ├─ root=1
- │   ├─ left: build(1,0) → [None]
- │   └─ right: build(2,3)
- │       ├─ root=2
- │       │   └─ right=3
- │       └─ root=3
- │           └─ left=2
- │
- ├─ root=2
- │   ├─ left: build(1,1)
- │   └─ right: build(3,3)
- │
- └─ root=3
-     ├─ left: build(1,2)
-     │   ├─ root=1
-     │   └─ root=2
-     └─ right: build(4,3) → [None]
+        memo[key] = trees;
+        return trees;
+    }
+};
 ```
 
----
+#### Java
+```java
+import java.util.*;
 
-## Why `[None]` Is Returned for Empty Range
+// Definition for a binary tree node.
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
 
-This is **extremely important**.
+class Solution {
+    public List<TreeNode> generateTrees(int n) {
+        if (n == 0) return new ArrayList<>();
+        Map<String, List<TreeNode>> memo = new HashMap<>();
+        return build(1, n, memo);
+    }
 
-If `start > end`:
+    private List<TreeNode> build(int start, int end, Map<String, List<TreeNode>> memo) {
+        List<TreeNode> trees = new ArrayList<>();
+        if (start > end) {
+            trees.add(null);
+            return trees;
+        }
 
-```
-return [None]
-```
+        String key = start + "-" + end;
+        if (memo.containsKey(key)) {
+            return memo.get(key);
+        }
 
-Reason:
+        for (int rootVal = start; rootVal <= end; rootVal++) {
+            List<TreeNode> leftTrees = build(start, rootVal - 1, memo);
+            List<TreeNode> rightTrees = build(rootVal + 1, end, memo);
 
-* Allows pairing:
+            for (TreeNode left : leftTrees) {
+                for (TreeNode right : rightTrees) {
+                    TreeNode root = new TreeNode(rootVal, left, right);
+                    trees.add(root);
+                }
+            }
+        }
 
-  * `(root.left = None)`
-  * `(root.right = None)`
-* Without this, valid BSTs would never be formed
-
----
-
-## Complexity Analysis
-
-* **Number of trees:** Catalan number `Cₙ`
-* **Time Complexity:** `O(Cₙ)`
-* **Space Complexity:** `O(Cₙ)` (memo + result storage)
-
----
-
-## Pattern Recognition
-
-This problem is a **canonical example** of:
-
-* Divide & Conquer on intervals
-* Tree DP
-* Cartesian product of sub-results
-
-Related problems:
-
-* LC 96 — Count Unique BSTs
-* LC 241 — Different Ways to Add Parentheses
-* LC 894 — All Possible Full Binary Trees
-
----
-
-## One-Line Interview Explanation
-
-> “For every value as root, we recursively generate all left and right subtrees from valid ranges and combine them using Cartesian product to construct all unique BSTs.”
-
----
-
-If you want next, I can:
-
-* Show **LC 95 vs LC 96** side-by-side
-* Serialize these trees for easy visualization
-* Explain **why Catalan numbers appear here**
-* Convert this into a **generic interval-DP template**
-
-Cartesian product: Every left subtree can pair with every right subtree. Expalin this with example
-
-Below is a **clear, concrete explanation** of *Cartesian product* in the context of **LeetCode 95 (Unique BSTs)**, with a **step-by-step example** and a **tree-pairing view**.
-
----
-
-## What “Cartesian Product” Means Here
-
-In general math:
-
-```
-A × B = all possible pairs (a, b) where a ∈ A and b ∈ B
-```
-
-In **LeetCode 95**:
-
-* `A` = all possible **left subtrees**
-* `B` = all possible **right subtrees**
-
-**Every left subtree must be paired with every right subtree** to form all valid BSTs for a chosen root.
-
----
-
-## Concrete Example (n = 3)
-
-### Choose root = 2
-
-Remaining values:
-
-```
-Left range  = [1]
-Right range = [3]
+        memo.put(key, trees);
+        return trees;
+    }
+}
 ```
 
 ---
 
-### Step 1: Generate subtrees
+### Complexity Analysis
 
-**Left subtrees from [1]:**
-
-```
-L = [  Tree(1)  ]
-```
-
-**Right subtrees from [3]:**
-
-```
-R = [  Tree(3)  ]
-```
+- **Time Complexity:** $\mathcal{O}(C_n \cdot n) = \mathcal{O}\left(\frac{4^n}{\sqrt{n}}\right)$.
+  - The number of structurally unique trees generated is the $n$-th Catalan number $C_n = \frac{1}{n+1}\binom{2n}{n}$.
+  - Copying and allocating each tree with $n$ nodes takes $\mathcal{O}(n)$ time.
+  - For $n = 8$, $C_8 = 1430$, yielding $1430 \times 8 \approx 1.1 \times 10^4$ operations, completing in $< 5 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(C_n \cdot n)$ to store all constructed tree nodes in memory, with recursion stack depth $\mathcal{O}(n)$.
 
 ---
 
-### Step 2: Cartesian Product L × R
+### Takeaway Pattern & Interview Traps
 
-```
-L × R = [
-  (Tree(1), Tree(3))
-]
-```
-
-### Construct BST
-
-```
-2
-   / \
-  1   3
-```
-
-Only **one pairing**, so only **one tree**.
-
----
-
-## More Interesting Example (n = 4, root = 2)
-
-### Values
-
-```
-Left range  = [1]
-Right range = [3,4]
-```
-
----
-
-### Left Subtrees
-
-```
-L = [
-  Tree(1)
-]
-```
-
-### Right Subtrees
-
-From `[3,4]`, two possible BSTs:
-
-```
-R1:   3        R2:   4
-        \          /
-         4        3
-```
-
-So:
-
-```
-R = [R1, R2]
-```
-
----
-
-### Cartesian Product L × R
-
-```
-(Tree(1), R1)
-(Tree(1), R2)
-```
-
-### Resulting Trees
-
-```
-Tree A:              Tree B:
-
-    2                    2
-   / \                  / \
-  1   3                1   4
-       \                  /
-        4                3
-```
-
-**1 left × 2 right = 2 BSTs**
-
----
-
-## Larger Example (Key Insight)
-
-If:
-
-```
-Left subtrees  = 3
-Right subtrees = 4
-```
-
-Then:
-
-```
-Total BSTs = 3 × 4 = 12
-```
-
-This multiplication is **not optional** — skipping any pairing would miss valid BSTs.
-
----
-
-## Visual Pairing Table (Cartesian Product)
-
-| Left | Right | Resulting Tree |
-| --- | --- | --- |
-| L1 | R1 | Tree |
-| L1 | R2 | Tree |
-| L2 | R1 | Tree |
-| L2 | R2 | Tree |
-
-Each row is **one unique BST**.
-
----
-
-## Why `[None]` Is Part of the Cartesian Product
-
-When a subtree is empty:
-
-```
-Left = [None]
-```
-
-Example (root = 1, n = 3):
-
-```
-Left  = [None]
-Right = [Tree(2→3), Tree(3←2)]
-```
-
-Cartesian product:
-
-```
-(None, R1)
-(None, R2)
-```
-
-Produces:
-
-```
-1        1
- \        \
-  2        3
-   \      /
-    3    2
-```
-
-Without `[None]`, **no trees would be built**.
-
----
-
-## Code Mapping (Exact Line)
-
-```
-for left in left_trees:
-    for right in right_trees:
-        root = TreeNode(root_val)
-        root.left = left
-        root.right = right
-        all_trees.append(root)
-```
-
-This **double loop IS the Cartesian product**.
-
----
-
-## Mental Model (Important)
-
-> “Fix the root.  
-> Try **every possible left shape** with **every possible right shape**.”
-
-That is exactly what “Cartesian product” means in this problem.
-
----
-
-## One-Line Interview Explanation
-
-> “For a chosen root, we generate all possible left and right subtrees and combine them using Cartesian product so that every left structure is paired with every right structure.”
-
----
-
-If you want next:
-
-* Why this leads to **Catalan numbers**
-* A **diagram of all pairings for n = 3**
-* How this pattern appears in **LC 241 / LC 894**
+- **Base Case `[None]` vs `[]`:**
+  - If you return `[]` when `start > end`, the nested loops `for left in left_trees:` or `for right in right_trees:` will execute 0 times, completely dropping valid trees where a node has only one child!
+  - Returning `[None]` ensures the product loops execute with a `None` pointer for empty subtrees.
+- **Node Cloning in Tree Reuse:** When using memoization, identical subtree pointers are shared across multiple parent trees. This is standard in DAG tree representations, but in environments requiring deep clones, make copies during assignment.

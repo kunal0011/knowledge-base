@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,213 +8,220 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - array
+  - bit-manipulation
+  - amazon
+  - google
 ---
 
 # LeetCode 90: Subsets II
 
-## LeetCode 90 — Subsets II
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Backtracking / Subsets with Duplicates / Sibling Pruning  
 
 ---
 
 ### Problem Statement
 
-Given an integer array `nums` that **may contain duplicates**, return **all possible subsets (the power set)**.
+Given an integer array `nums` that may contain duplicates, return *all possible subsets (the power set)*.
 
-The solution set **must not contain duplicate subsets**.  
-Return the solution in **any order**.
+The solution set **must not contain duplicate subsets**. Return the solution in **any order**.
 
-**Constraints**
+---
 
-* `1 ≤ nums.length ≤ 10`
-* `-10 ≤ nums[i] ≤ 10`
+### Input & Output Formats & Constraints
 
-**Example**
+- **Input:** `nums: List[int]`
+- **Output:** `List[List[int]]` containing all unique subsets.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10$
+  - $-10 \le \text{nums}[i] \le 10$
 
-```text
-Input: nums = [1,2,2]
-Output:
-[
-  [],
-  [1],
-  [1,2],
-  [1,2,2],
-  [2],
-  [2,2]
-]
+---
+
+### Key Idea & Intuition
+
+- **The Duplicate Dilemma:**
+  - When `nums` contains duplicate values (e.g. `[1, 2, 2]`), naive power-set generation produces identical subsets (e.g. picking the 1st `'2'` yields `[1, 2]`, and picking the 2nd `'2'` yields `[1, 2]`).
+- **The Horizontal Pruning Invariant (`i > start`):**
+  - First, sort `nums` in ascending order so duplicate numbers become adjacent.
+  - In the recursive function `backtrack(start)`:
+    - Loop `i` from `start` to $N - 1$:
+      - If `i > start and nums[i] == nums[i - 1]`: **continue!**
+  - **First Principles Rationale:**
+    - `i == start`: We are making the *first* decision at this recursion depth. Choosing duplicate value `nums[i]` is valid because it represents vertical tree descent (e.g., forming `[2, 2]`).
+    - `i > start`: We already explored an entire subtree starting with this exact same value at the *same position* during an earlier iteration of the loop. Exploring it again would generate an identical family of subsets. Skipping it eliminates all duplicates without hash sets.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Sort `nums`** in ascending order.
+2. Initialize `results = []` and `path = []`.
+3. Define `backtrack(start)`:
+   - **Record current node:** `results.append(list(path))` (every node is a valid subset).
+   - Loop `i` from `start` to `len(nums) - 1`:
+     - If `i > start` and `nums[i] == nums[i - 1]`:
+       - Continue (skip duplicate sibling branch).
+     - **Choose:** `path.append(nums[i])`
+     - **Explore:** `backtrack(i + 1)`
+     - **Backtrack:** `path.pop()`
+4. Call `backtrack(0)` and return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `nums = [1, 2, 2]` (sorted).
+
+```
+Level 0: backtrack(start=0, path=[]) -> Record []
+├── i=0, num=1: path=[1] -> Record [1]
+│   └── Level 1: backtrack(start=1, path=[1])
+│       ├── i=1, num=2 (first '2'): path=[1, 2] -> Record [1, 2]
+│       │   └── Level 2: backtrack(start=2, path=[1, 2])
+│       │       └── i=2, num=2: path=[1, 2, 2] -> Record [1, 2, 2]
+│       └── i=2, num=2: SKIPPED! (i > start && nums[2] == nums[1])
+│           Prunes duplicate [1, 2]!
+│
+├── i=1, num=2 (first '2' at Level 0): path=[2] -> Record [2]
+│   └── Level 1: backtrack(start=2, path=[2])
+│       └── i=2, num=2: path=[2, 2] -> Record [2, 2]
+│
+└── i=2, num=2: SKIPPED! (i > start && nums[2] == nums[1])
+    Prunes duplicate [2]!
+
+Unique Subsets: [], [1], [1, 2], [1, 2, 2], [2], [2, 2].
 ```
 
 ---
 
-## Key Observations
+### Solved Examples with Multiple Inputs
 
-1. This is a **subset (power set)** problem → each element is either chosen or not.
-2. **Duplicates in input** cause duplicate subsets if handled naively.
-3. To eliminate duplicates:
-
-   * **Sort the array**
-   * Skip duplicates **at the same recursion level**
-4. Unlike permutations, **order does not matter**.
-5. Every node in the backtracking tree represents a **valid subset**.
+| Test Case | `nums` | Sorted Input | Unique Subsets | Output Count |
+| :--- | :--- | :--- | :--- | :--- |
+| **Standard** | `[1, 2, 2]` | `[1, 2, 2]` | `[], [1], [1,2], [1,2,2], [2], [2,2]` | `6` |
+| **All Identical** | `[0, 0, 0]` | `[0, 0, 0]` | `[], [0], [0,0], [0,0,0]` | `4` |
+| **No Duplicates** | `[4, 1, 0]` | `[0, 1, 4]` | Full power set $2^3$ | `8` |
+| **Single Element** | `[1]` | `[1]` | `[], [1]` | `2` |
 
 ---
 
-## Core Duplicate-Skipping Rule
+### Multi-Language Implementations
 
-```
-if i > start and nums[i] == nums[i - 1]:
-    continue
-```
-
-Meaning:
-
-> “If we already considered this value at this tree level, skip it.”
-
----
-
-## Approach (Backtracking)
-
-### State Definition
-
-* `start`: index from which we can choose elements
-* `path`: current subset
-
-### Steps
-
-1. Add the current `path` to the result (every node is valid).
-2. For each index `i` from `start` to end:
-
-   * Skip duplicates at the same level
-   * Include `nums[i]`
-   * Recurse with `start = i + 1`
-   * Backtrack
-
----
-
-## Python 3 Solution (with Typing)
-
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def subsetsWithDup(self, nums: List[int]) -> List[List[int]]:
+        """
+        Returns all unique subsets of nums containing duplicates.
+        Uses sorting and the `i > start` horizontal duplicate filter.
+        """
         nums.sort()
-        result: List[List[int]] = []
+        results: List[List[int]] = []
         path: List[int] = []
 
         def backtrack(start: int) -> None:
-            # Every path is a valid subset
-            result.append(path.copy())
+            # Record subset at current node
+            results.append(list(path))
 
             for i in range(start, len(nums)):
-                # Skip duplicates at the same recursion level
+                # Skip duplicate choices at the same recursion depth
                 if i > start and nums[i] == nums[i - 1]:
                     continue
 
                 path.append(nums[i])
                 backtrack(i + 1)
-                path.pop()
+                path.pop()  # Backtrack
 
         backtrack(0)
-        return result
+        return results
+```
+
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    std::vector<std::vector<int>> subsetsWithDup(std::vector<int>& nums) {
+        std::sort(nums.begin(), nums.end());
+        std::vector<std::vector<int>> results;
+        std::vector<int> path;
+        backtrack(0, nums, path, results);
+        return results;
+    }
+
+private:
+    void backtrack(int start, const std::vector<int>& nums,
+                   std::vector<int>& path,
+                   std::vector<std::vector<int>>& results) {
+        results.push_back(path);
+
+        for (size_t i = start; i < nums.size(); ++i) {
+            // Prune duplicate sibling branch
+            if (i > static_cast<size_t>(start) && nums[i] == nums[i - 1]) {
+                continue;
+            }
+
+            path.push_back(nums[i]);
+            backtrack(i + 1, nums, path, results);
+            path.pop_back(); // Backtrack
+        }
+    }
+};
+```
+
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+class Solution {
+    public List<List<Integer>> subsetsWithDup(int[] nums) {
+        Arrays.sort(nums);
+        List<List<Integer>> results = new ArrayList<>();
+        List<Integer> path = new ArrayList<>();
+        backtrack(0, nums, path, results);
+        return results;
+    }
+
+    private void backtrack(int start, int[] nums, List<Integer> path, List<List<Integer>> results) {
+        results.add(new ArrayList<>(path));
+
+        for (int i = start; i < nums.length; i++) {
+            // Skip duplicate choices at the current tree level
+            if (i > start && nums[i] == nums[i - 1]) {
+                continue;
+            }
+
+            path.add(nums[i]);
+            backtrack(i + 1, nums, path, results);
+            path.remove(path.size() - 1); // Backtrack
+        }
+    }
+}
 ```
 
 ---
 
-## Example Walkthrough (`nums = [1,2,2]`)
+### Complexity Analysis
 
-### Sorted Input
-
-```
-[1,2,2]
-```
-
----
-
-### Generated Subsets (in order of traversal)
-
-1. `[]`
-2. `[1]`
-3. `[1,2]`
-4. `[1,2,2]`
-5. `[2]`
-6. `[2,2]`
+- **Time Complexity:** $\mathcal{O}(N \cdot 2^N)$.
+  - Sorting takes $\mathcal{O}(N \log N)$.
+  - In the worst case (all elements distinct), exactly $2^N$ subsets are generated.
+  - For each subset, copying the path takes $\mathcal{O}(N)$ time.
+  - For $N \le 10$, $10 \times 1024 \approx 10^4$ operations, completing in $< 1 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(N)$ auxiliary space for the recursion call stack and `path` buffer (excluding the returned subsets list).
 
 ---
 
-## Backtracking Tree Structure
+### Takeaway Pattern & Interview Traps
 
-![https://i.ytimg.com/vi/xIlOhGmfOqc/hq720.jpg?rs=AOn4CLA7cVDTa41LjfhEwaEYa4bMD2CqTQ&sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&utm_source=chatgpt.com](https://i.ytimg.com/vi/xIlOhGmfOqc/hq720.jpg?rs=AOn4CLA7cVDTa41LjfhEwaEYa4bMD2CqTQ&sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&utm_source=chatgpt.com)
-
-![https://afteracademy.com/images/print-all-subsets-of-a-given-set-recursion-tree-9bbcd4be963c54c8.jpg?utm_source=chatgpt.com](https://afteracademy.com/images/print-all-subsets-of-a-given-set-recursion-tree-9bbcd4be963c54c8.jpg?utm_source=chatgpt.com)
-
-![https://adeveloperdiary.com/assets/img/subset.jpg?utm_source=chatgpt.com](https://adeveloperdiary.com/assets/img/subset.jpg?utm_source=chatgpt.com)
-
-### Conceptual Tree
-
-```
-[]
-                --------------------------------
-                |                              |
-               [1]                            [2]
-            ----------                       ----------
-            |        |                       |        |
-         [1,2]     ❌ [1,2]               [2,2]      ❌
-            |
-        [1,2,2]
-```
-
-### Explanation of Pruning
-
-* The second `2` at the same level is skipped
-* Vertical duplicates (deeper levels) are allowed
-
----
-
-## Why This Works
-
-### Horizontal vs Vertical Duplicates
-
-| Direction | Allowed | Reason |
-| --- | --- | --- |
-| Vertical (downwards) | ✅ | Builds valid larger subsets |
-| Horizontal (same level) | ❌ | Causes duplicate subsets |
-
----
-
-## Complexity Analysis
-
-* **Time Complexity:** `O(2^n)` (each subset generated once)
-* **Space Complexity:** `O(n)` recursion depth
-
----
-
-## Comparison with Related Problems
-
-| Problem | Output Type | Duplicate Handling |
-| --- | --- | --- |
-| LC 78 | Subsets | No duplicates in input |
-| LC 90 | Subsets | Skip duplicates |
-| LC 40 | Combination Sum | Skip duplicates + sum constraint |
-| LC 47 | Permutations | used[] + duplicate check |
-
----
-
-## Pattern Recognition
-
-LeetCode 90 exemplifies the **“Subset with Duplicates (Level Pruning)”** pattern:
-
-* Sort input
-* Skip duplicates at the same recursion level
-* Add path at every node
-
----
-
-### One-Line Interview Explanation
-
-> “We sort the array and generate subsets using backtracking, skipping duplicate elements at the same recursion level to avoid repeated subsets.”
-
-If you want next, I can:
-
-* Show **binary include/exclude** formulation and why it fails with duplicates
-* Compare **LC 77 vs LC 90** trees
-* Provide a **generic subset backtracking template**
+- **The `i > start` Filter:** Compare `i > start` with `nums[i] == nums[i - 1]`. Never check `i > 0` alone! Checking `i > 0` without `start` would prevent taking duplicate elements deeper in the recursion, erroneously skipping subsets like `[2, 2]`.
+- **Node-Collecting Invariant:** In Subsets problems, `results.append(list(path))` happens unconditionally on every invocation of `backtrack()`, not just when `len(path) == n`.

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,247 +8,220 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - array
+  - bit-manipulation
+  - amazon
+  - google
 ---
 
 # LeetCode 78: Subsets
 
-## LeetCode 78 — Subsets
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg, Uber  
+**Difficulty:** Medium  
+**Topic:** Backtracking / Power Set / Bitmasking  
 
 ---
 
 ### Problem Statement
 
-Given an integer array `nums` of **unique elements**, return **all possible subsets** (the power set).
+Given an integer array `nums` of **unique** elements, return *all possible subsets (the power set)*.
 
-The solution set must **not contain duplicate subsets**.  
-You may return the answer in **any order**.
+The solution set **must not contain duplicate subsets**. Return the solution in **any order**.
 
-**Constraints**
+---
 
-* `1 ≤ nums.length ≤ 10`
-* All elements in `nums` are **distinct**
+### Input & Output Formats & Constraints
 
-**Example**
+- **Input:** `nums: List[int]`
+- **Output:** `List[List[int]]` containing all $2^N$ subsets.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10$
+  - $-10 \le \text{nums}[i] \le 10$
+  - All numbers of `nums` are **unique**.
 
-```text
-Input: nums = [1,2,3]
-Output:
-[
-  [],
-  [1],
-  [2],
-  [3],
-  [1,2],
-  [1,3],
-  [2,3],
-  [1,2,3]
-]
+---
+
+### Key Idea & Intuition
+
+- **The Power Set Size:**
+  - For an array of $N$ distinct elements, each element has exactly two possibilities: either present in the subset or absent.
+  - The total number of subsets is strictly:
+    $$|\mathcal{P}(nums)| = 2^N$$
+- **Node-Collecting DFS (The Combination Pattern):**
+  - Unlike permutation problems where solutions exist only at the leaves of the recursion tree, in the power set, **every node in the recursion tree represents a valid subset**!
+  - We append a snapshot of `path` to `results` at the very start of each call to `backtrack(start)`.
+  - Then, we loop $i$ from `start` to $N - 1$:
+    - Append `nums[i]`
+    - Recurse on `i + 1`
+    - Pop `nums[i]` (backtrack)
+- **Alternative Perspective: Bitmasking:**
+  - Each integer from $0$ to $2^N - 1$ represents a unique subset. The $j$-th bit of mask $m$ is $1$ if `nums[j]` is included.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Initialize `results = []` and `path = []`.
+2. Define `backtrack(start)`:
+   - **Record current node:** `results.append(list(path))`.
+   - Loop `i` from `start` to `len(nums) - 1`:
+     - **Choose:** `path.append(nums[i])`
+     - **Explore:** `backtrack(i + 1)`
+     - **Backtrack:** `path.pop()`
+3. Call `backtrack(0)`.
+4. Return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `nums = [1, 2, 3]`:
+
+```
+                       backtrack(start=0, path=[])
+                              Record: []
+                 /                 |                 \
+           Pick 1 (start=1)   Pick 2 (start=2)   Pick 3 (start=3)
+            path = [1]         path = [2]         path = [3]
+            Record: [1]        Record: [2]        Record: [3]
+            /        \             |
+       Pick 2        Pick 3      Pick 3
+      path=[1,2]    path=[1,3]  path=[2,3]
+     Record:[1,2]  Record:[1,3] Record:[2,3]
+          |
+       Pick 3
+     path=[1,2,3]
+    Record:[1,2,3]
+
+Total recorded subsets = 2^3 = 8:
+[], [1], [1, 2], [1, 2, 3], [1, 3], [2], [2, 3], [3].
 ```
 
 ---
 
-## Key Observations
+### Solved Examples with Multiple Inputs
 
-1. Each element has **two choices**: include it or exclude it.
-2. Order inside a subset does **not matter**.
-3. Total number of subsets = `2^n`.
-4. This problem is the **foundation of all combination problems**.
-5. Backtracking works by **adding current state at every node**, not only at leaves.
-
----
-
-## Approach 1 — Backtracking (DFS)
-
-### Idea
-
-* Start with an empty subset.
-* At each index:
-
-  * Add the current subset to the result.
-  * Try adding each remaining element and recurse.
+| Test Case | `nums` | Power Set Size $2^N$ | Subsets Generated | Output |
+| :--- | :--- | :--- | :--- | :--- |
+| **Standard** | `[1, 2, 3]` | $2^3 = 8$ | `[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]` | 8 subsets |
+| **Single Element** | `[0]` | $2^1 = 2$ | `[], [0]` | `[[], [0]]` |
+| **Two Elements** | `[1, 2]` | $2^2 = 4$ | `[], [1], [2], [1, 2]` | `[[], [1], [2], [1,2]]` |
 
 ---
 
-### Python 3 Solution (with Typing)
+### Multi-Language Implementations
 
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def subsets(self, nums: List[int]) -> List[List[int]]:
-        result: List[List[int]] = []
+        """
+        Generates all subsets (power set) of unique numbers.
+        Uses node-collecting DFS backtracking.
+        """
+        results: List[List[int]] = []
         path: List[int] = []
-
-        def backtrack(start: int) -> None:
-            # Every node is a valid subset
-            result.append(path.copy())
-
-            for i in range(start, len(nums)):
-                path.append(nums[i])
-                backtrack(i + 1)
-                path.pop()
-
-        backtrack(0)
-        return result
-```
-
----
-
-## Example Walkthrough (`nums = [1,2,3]`)
-
-Traversal order:
-
-1. `[]`
-2. `[1]`
-3. `[1,2]`
-4. `[1,2,3]`
-5. `[1,3]`
-6. `[2]`
-7. `[2,3]`
-8. `[3]`
-
----
-
-## Backtracking Tree Structure
-
-![https://i.ytimg.com/vi/VdnvmfzA1pw/maxresdefault.jpg?utm_source=chatgpt.com](https://i.ytimg.com/vi/VdnvmfzA1pw/maxresdefault.jpg?utm_source=chatgpt.com)
-
-![https://media.geeksforgeeks.org/wp-content/uploads/20230911132238/print-all-subsets.png?utm_source=chatgpt.com](https://media.geeksforgeeks.org/wp-content/uploads/20230911132238/print-all-subsets.png?utm_source=chatgpt.com)
-
-![https://adeveloperdiary.com/assets/img/subset.jpg?utm_source=chatgpt.com](https://adeveloperdiary.com/assets/img/subset.jpg?utm_source=chatgpt.com)
-
-### Conceptual Tree
-
-```
-[]
-              --------------------------------
-              |              |              |
-            [1]            [2]            [3]
-           --------        --------         |
-           |      |        |      |         |
-        [1,2]   [1,3]   [2,3]   (end)      (end)
-           |
-        [1,2,3]
-```
-
-### Key Insight
-
-* Every node is added to the result.
-* Depth-first traversal ensures all subsets are covered.
-
----
-
-## Approach 2 — Binary Decision (Include / Exclude)
-
-### Idea
-
-At each index:
-
-* Either include the element
-* Or skip it
-
----
-
-### Python Code
-
-```python
-from typing import List
-
-class Solution:
-    def subsets(self, nums: List[int]) -> List[List[int]]:
-        result: List[List[int]] = []
-
-        def backtrack(index: int, path: List[int]) -> None:
-            if index == len(nums):
-                result.append(path.copy())
-                return
-
-            # Exclude
-            backtrack(index + 1, path)
-
-            # Include
-            path.append(nums[index])
-            backtrack(index + 1, path)
-            path.pop()
-
-        backtrack(0, [])
-        return result
-```
-
----
-
-## Binary Tree View
-
-```
-[]
-                 /        \
-              skip 1      take 1
-               /              \
-           skip 2            take 2
-           /    \             /    \
-        skip3  take3       skip3  take3
-```
-
-Leaves = final subsets.
-
----
-
-## Approach 3 — Bitmasking
-
-### Idea
-
-* Each subset corresponds to a binary number of length `n`.
-
----
-
-### Python Code
-
-```python
-from typing import List
-
-class Solution:
-    def subsets(self, nums: List[int]) -> List[List[int]]:
-        result: List[List[int]] = []
         n = len(nums)
 
-        for mask in range(1 << n):
-            subset: List[int] = []
-            for i in range(n):
-                if mask & (1 << i):
-                    subset.append(nums[i])
-            result.append(subset)
+        def backtrack(start: int) -> None:
+            # Every node in the recursion tree represents a valid subset
+            results.append(list(path))
 
-        return result
+            for i in range(start, n):
+                path.append(nums[i])
+                backtrack(i + 1)
+                path.pop()  # Backtrack
+
+        backtrack(0)
+        return results
+
+    def subsetsBitmask(self, nums: List[int]) -> List[List[int]]:
+        """
+        Alternative: Bit manipulation approach.
+        Generates all 2^n subsets via integer masks.
+        """
+        n = len(nums)
+        total_subsets = 1 << n
+        results = []
+
+        for mask in range(total_subsets):
+            subset = []
+            for j in range(n):
+                if mask & (1 << j):
+                    subset.append(nums[j])
+            results.append(subset)
+
+        return results
+```
+
+#### C++17
+```cpp
+#include <vector>
+
+class Solution {
+public:
+    std::vector<std::vector<int>> subsets(std::vector<int>& nums) {
+        std::vector<std::vector<int>> results;
+        std::vector<int> path;
+        backtrack(0, nums, path, results);
+        return results;
+    }
+
+private:
+    void backtrack(int start, const std::vector<int>& nums,
+                   std::vector<int>& path,
+                   std::vector<std::vector<int>>& results) {
+        results.push_back(path);
+
+        for (size_t i = start; i < nums.size(); ++i) {
+            path.push_back(nums[i]);
+            backtrack(i + 1, nums, path, results);
+            path.pop_back(); // Backtrack
+        }
+    }
+};
+```
+
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+class Solution {
+    public List<List<Integer>> subsets(int[] nums) {
+        List<List<Integer>> results = new ArrayList<>();
+        List<Integer> path = new ArrayList<>();
+        backtrack(0, nums, path, results);
+        return results;
+    }
+
+    private void backtrack(int start, int[] nums, List<Integer> path, List<List<Integer>> results) {
+        results.add(new ArrayList<>(path));
+
+        for (int i = start; i < nums.length; i++) {
+            path.add(nums[i]);
+            backtrack(i + 1, nums, path, results);
+            path.remove(path.size() - 1); // Backtrack
+        }
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-| Approach | Time | Space |
-| --- | --- | --- |
-| Backtracking | `O(n × 2^n)` | `O(n)` |
-| Binary recursion | `O(n × 2^n)` | `O(n)` |
-| Bitmasking | `O(n × 2^n)` | `O(1)` |
-
----
-
-## Pattern Recognition
-
-LeetCode 78 represents the **Power Set / Subset Pattern**, which extends to:
-
-* LeetCode 90 (Subsets II – duplicates)
-* LeetCode 77 (Combinations)
-* LeetCode 39 / 40 (Combination Sum)
+- **Time Complexity:** $\mathcal{O}(N \cdot 2^N)$.
+  - The recursion generates exactly $2^N$ nodes.
+  - At each node, copying the current `path` of average length $N / 2$ takes $\mathcal{O}(N)$ time.
+  - For $N \le 10$, $10 \times 2^{10} = 10,240$ operations, which finishes in $< 1 \text{ ms}$.
+- **Space Complexity:** $\mathcal{O}(N)$ auxiliary space for the recursion call stack and `path` vector (excluding the $2^N$ output subsets).
 
 ---
 
-### One-Line Interview Explanation
+### Takeaway Pattern & Interview Traps
 
-> “We generate all subsets by exploring each element with include/exclude decisions, producing `2^n` subsets.”
-
-If you want next:
-
-* Subsets **with duplicates (LC 90)** tree comparison
-* Relationship between **subsets and combinations**
-* A unified **backtracking decision tree template**
+- **Node-Collecting vs Leaf-Collecting:** Notice there is **no base case condition** like `if len(path) == n: return` before adding to results. The subset is added unconditionally on entry to the function, capturing subsets of all lengths $0$ to $N$.
+- **Index Advancement (`i + 1`):** Ensure the recursive call advances the search range to `i + 1` (not `start + 1`), guaranteeing that elements are only selected in strictly increasing order of their indices.

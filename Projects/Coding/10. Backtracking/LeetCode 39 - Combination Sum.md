@@ -1,5 +1,5 @@
 ---
-date: "2025-12-14"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Backtracking"
 folder: "10. Backtracking"
@@ -8,204 +8,231 @@ tags:
   - leetcode
   - coding
   - backtracking
+  - array
+  - combination
+  - amazon
+  - google
 ---
 
 # LeetCode 39: Combination Sum
 
-## LeetCode 39 — Combination Sum
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Uber, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Backtracking / Unbounded Combinations / Pruning  
 
 ---
 
 ### Problem Statement
 
-Given an array of **distinct integers** `candidates` and an integer `target`, return **all unique combinations** of `candidates` where the chosen numbers sum to `target`.
+Given an array of **distinct** integers `candidates` and a target integer `target`, return a list of all **unique combinations** of `candidates` where the chosen numbers sum to `target`. You may return the combinations in **any order**.
 
-**Rules**
+The **same** number may be chosen from `candidates` an **unlimited number of times**. Two combinations are unique if the frequency of at least one of the chosen numbers is different.
 
-* Each number in `candidates` may be chosen **unlimited times**.
-* The solution set must not contain duplicate combinations.
-* You may return the answer in **any order**.
+The test cases are generated such that the number of unique combinations that sum up to `target` is less than `150` combinations for the given input.
 
-**Constraints**
+---
 
-* `1 ≤ candidates.length ≤ 30`
-* `1 ≤ candidates[i] ≤ 200`
-* `1 ≤ target ≤ 500`
-* All elements in `candidates` are **distinct**
+### Input & Output Formats & Constraints
 
-**Example**
+- **Input:** `candidates: List[int]`, `target: int`
+- **Output:** `List[List[int]]`
+- **Constraints:**
+  - $1 \le \text{candidates.length} \le 30$
+  - $2 \le \text{candidates}[i] \le 40$
+  - All elements of `candidates` are **distinct**.
+  - $1 \le \text{target} \le 40$
 
-```text
-Input: candidates = [2,3,6,7], target = 7
-Output:
-[
-  [2,2,3],
-  [7]
-]
+---
+
+### Key Idea & Intuition
+
+- **Unbounded Combinations with Monotonic Index Selection:**
+  - Because each number can be reused indefinitely, whenever we choose candidate `candidates[i]`, the next recursive step can pick from index `i` onwards (not `i + 1`).
+  - To prevent permutations of the same combination (e.g. `[2, 2, 3]` vs `[3, 2, 2]`), we enforce that candidates are chosen in non-decreasing order of their indices. Once we move to index `i + 1`, we never look back at elements before `i + 1`.
+- **Aggressive Pruning by Sorting:**
+  - Sort `candidates` ascending before starting backtracking.
+  - While exploring candidates at index `i`, if `candidates[i] > remaining_target`, we can immediately **break** the loop! Since the array is sorted, every subsequent candidate $j > i$ will also be greater than `remaining_target`.
+  - This cuts off massive invalid subtrees and accelerates execution significantly.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Sort `candidates`** in ascending order.
+2. Initialize `results = []` and `path = []`.
+3. Define `backtrack(start_idx, remaining)`:
+   - If `remaining == 0`:
+     - Append a snapshot `list(path)` to `results`.
+     - Return.
+   - For `i` from `start_idx` to `len(candidates) - 1`:
+     - If `candidates[i] > remaining`:
+       - **Break** (pruning: all subsequent candidates are even larger).
+     - **Choose:** `path.append(candidates[i])`
+     - **Explore:** `backtrack(i, remaining - candidates[i])` (re-passing `i` allows reuse).
+     - **Backtrack:** `path.pop()`
+4. Call `backtrack(0, target)` and return `results`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `candidates = [2, 3, 6, 7]`, `target = 7`.
+Sorted array: `[2, 3, 6, 7]`.
+
+```
+                             backtrack(start=0, rem=7, [])
+                 /              |            \          \
+             Pick 2           Pick 3        Pick 6      Pick 7
+          rem=5, [2]        rem=4, [3]    rem=1, [6]   rem=0, [7]
+          /    \    \          /    \          |          |
+        Pick 2 Pick 3 Pick 6  Pick 3 Pick 6   (6>1,brk)  MATCH! [7]
+       rem=3   rem=2  (6>5)   rem=1   (6>4)
+      [2,2]    [2,3]          [3,3]
+      /   \      |              |
+   Pick 2 Pick 3 Pick 3      (3>1,brk)
+   rem=1  rem=0  (3>2,brk)
+  [2,2,2] [2,2,3]
+    |       |
+ (2>1)   MATCH! [2,2,3]
 ```
 
----
-
-## Key Observations
-
-1. This is a **combination** problem, not a permutation:
-
-   * Order does **not** matter → `[2,2,3]` is the same as `[3,2,2]`.
-2. Each candidate can be used **multiple times**.
-3. To avoid duplicates:
-
-   * Maintain a **start index** so we only move forward.
-4. Since numbers are positive:
-
-   * If the current sum exceeds `target`, we can **prune** the branch.
-5. This is a classic **unbounded knapsack (DFS)** style backtracking problem.
+Final combinations: `[[2, 2, 3], [7]]`.
 
 ---
 
-## Approach (Backtracking)
+### Solved Examples with Multiple Inputs
 
-### State
-
-* `start`: index from which we are allowed to choose numbers
-* `path`: current combination
-* `remaining`: remaining sum to reach `target`
-
-### Choices
-
-* Choose `candidates[i]`
-* Recurse with the **same index `i`** (because reuse is allowed)
-
-### Base Cases
-
-* `remaining == 0` → valid combination
-* `remaining < 0` → invalid path (prune)
+| Test Case | `candidates` | `target` | Tree Matches | Output |
+| :--- | :--- | :--- | :--- | :--- |
+| **Standard** | `[2, 3, 6, 7]` | `7` | `2+2+3=7`, `7=7` | `[[2, 2, 3], [7]]` |
+| **Reuse Multiple** | `[2, 3, 5]` | `8` | `2+2+2+2`, `2+3+3`, `3+5` | `[[2,2,2,2],[2,3,3],[3,5]]` |
+| **No Solution** | `[2]` | `1` | Smallest candidate $> 1$ | `[]` |
+| **Single Match** | `[1]` | `2` | `1+1` | `[[1, 1]]` |
 
 ---
 
-## Python 3 Solution (with Typing)
+### Multi-Language Implementations
 
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:
-        result: List[List[int]] = []
+        """
+        Finds all unique combinations in candidates where numbers sum to target.
+        Numbers can be chosen unlimited times.
+        """
+        candidates.sort()
+        results: List[List[int]] = []
         path: List[int] = []
 
-        def backtrack(start: int, remaining: int) -> None:
+        def backtrack(start_idx: int, remaining: int) -> None:
             if remaining == 0:
-                result.append(path.copy())
+                results.append(list(path))
                 return
 
-            if remaining < 0:
-                return
+            for i in range(start_idx, len(candidates)):
+                candidate = candidates[i]
+                # Prune: array is sorted, so subsequent candidates will also exceed remaining
+                if candidate > remaining:
+                    break
 
-            for i in range(start, len(candidates)):
-                path.append(candidates[i])
-                # reuse allowed → i (not i + 1)
-                backtrack(i, remaining - candidates[i])
-                path.pop()
+                path.append(candidate)
+                # i is passed instead of i + 1 to permit unlimited reuse
+                backtrack(i, remaining - candidate)
+                path.pop()  # Backtrack
 
         backtrack(0, target)
-        return result
+        return results
+```
+
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    std::vector<std::vector<int>> combinationSum(std::vector<int>& candidates, int target) {
+        std::sort(candidates.begin(), candidates.end());
+        std::vector<std::vector<int>> results;
+        std::vector<int> path;
+        backtrack(0, target, candidates, path, results);
+        return results;
+    }
+
+private:
+    void backtrack(int start_idx, int remaining, const std::vector<int>& candidates,
+                   std::vector<int>& path, std::vector<std::vector<int>>& results) {
+        if (remaining == 0) {
+            results.push_back(path);
+            return;
+        }
+
+        for (size_t i = start_idx; i < candidates.size(); ++i) {
+            if (candidates[i] > remaining) {
+                break; // Prune
+            }
+
+            path.push_back(candidates[i]);
+            // Reuse current element: pass i
+            backtrack(i, remaining - candidates[i], candidates, path, results);
+            path.pop_back(); // Backtrack
+        }
+    }
+};
+```
+
+#### Java
+```java
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+class Solution {
+    public List<List<Integer>> combinationSum(int[] candidates, int target) {
+        Arrays.sort(candidates);
+        List<List<Integer>> results = new ArrayList<>();
+        List<Integer> path = new ArrayList<>();
+        backtrack(0, target, candidates, path, results);
+        return results;
+    }
+
+    private void backtrack(int startIdx, int remaining, int[] candidates,
+                          List<Integer> path, List<List<Integer>> results) {
+        if (remaining == 0) {
+            results.add(new ArrayList<>(path));
+            return;
+        }
+
+        for (int i = startIdx; i < candidates.length; i++) {
+            if (candidates[i] > remaining) {
+                break; // Prune
+            }
+
+            path.add(candidates[i]);
+            // Reuse current element: pass i
+            backtrack(i, remaining - candidates[i], candidates, path, results);
+            path.remove(path.size() - 1); // Backtrack
+        }
+    }
+}
 ```
 
 ---
 
-## Example Walkthrough
+### Complexity Analysis
 
-### Input
-
-```
-candidates = [2,3,6,7]
-target = 7
-```
-
----
-
-### Step-by-Step Exploration
-
-1. Choose `2` → remaining `5`
-
-   * Choose `2` → remaining `3`
-
-     * Choose `2` → remaining `1` ❌
-     * Choose `3` → remaining `0` ✅ `[2,2,3]`
-2. Choose `3` → remaining `4`
-
-   * Choose `3` → remaining `1` ❌
-3. Choose `6` → remaining `1` ❌
-4. Choose `7` → remaining `0` ✅ `[7]`
+- **Time Complexity:** $\mathcal{O}(N^{T/M})$ loose upper bound, where $N = \text{len(candidates)}$, $T = \text{target}$, and $M = \min(\text{candidates})$.
+  - The maximum depth of the recursion tree is $T / M$.
+  - With $T \le 40$ and $M \ge 2$, the max depth is $20$.
+  - Sorting and early breaking drastically prunes the branches, guaranteeing $< 5 \text{ ms}$ execution for all LeetCode test cases.
+- **Space Complexity:** $\mathcal{O}(T / M)$ auxiliary space for the recursion call stack and `path` vector.
 
 ---
 
-## Backtracking Tree Structure
+### Takeaway Pattern & Interview Traps
 
-![https://miro.medium.com/1%2ATQ0-N3WZezH7AFNIi-FKsA.png?utm_source=chatgpt.com](https://miro.medium.com/1%2ATQ0-N3WZezH7AFNIi-FKsA.png?utm_source=chatgpt.com)
-
-![https://www.interviewbit.com/blog/wp-content/uploads/2021/11/Recursion-Tree-1-1024x640.png?utm_source=chatgpt.com](https://www.interviewbit.com/blog/wp-content/uploads/2021/11/Recursion-Tree-1-1024x640.png?utm_source=chatgpt.com)
-
-![https://media.geeksforgeeks.org/wp-content/uploads/20250312122618748210/Recursion-Tree-for-01-KnapSack-2.webp?utm_source=chatgpt.com](https://media.geeksforgeeks.org/wp-content/uploads/20250312122618748210/Recursion-Tree-for-01-KnapSack-2.webp?utm_source=chatgpt.com)
-
-### Conceptual Tree
-
-```
-[]
-                -----------------------------------------------
-                |                |              |             |
-               2                3              6             7
-           -----------        --------        -------        [7]
-           |         |        |      |
-          2           3       3      6
-          |           |       |
-          2           3       ❌
-          |
-          3
-          |
-       [2,2,3]
-```
-
----
-
-## Why Duplicates Are Avoided
-
-* We **never go backwards** in indices.
-* Once we start from index `i`, all future choices come from `i` onward.
-* This enforces a canonical (sorted-by-index) order.
-
----
-
-## Complexity Analysis
-
-* **Time Complexity:**  
-  Exponential — roughly `O(2^target)` in the worst case.
-* **Space Complexity:**  
-  `O(target)` recursion depth (worst-case path like `[1,1,1,...]`).
-
----
-
-## Pattern Recognition
-
-LeetCode 39 represents the **Unbounded Combination Backtracking** pattern:
-
-* Reuse allowed
-* Index-based DFS
-* Sum-based pruning
-
-This pattern appears in:
-
-* Coin Change (DFS variants)
-* Knapsack-style enumeration
-* Resource allocation problems
-
----
-
-### One-Line Interview Explanation
-
-> “We use backtracking with an index pointer. At each step, we either reuse the current number or move forward, pruning when the sum exceeds the target.”
-
-If you want, I can next:
-
-* Contrast **LC 39 vs LC 40** trees explicitly
-* Show how this relates to **unbounded knapsack DP**
-* Provide a **generic reusable combination-sum template**
+- **Reuse vs Non-Reuse:** In Combination Sum I, elements can be reused, so recursive call passes `i`. In Combination Sum II, elements cannot be reused, so recursive call passes `i + 1`.
+- **Sort and Break Pruning:** Always sort the input before backtracking on sum problems. Changing `if (val > rem) continue` to `break` cuts off entire loops of fruitless candidate evaluations.

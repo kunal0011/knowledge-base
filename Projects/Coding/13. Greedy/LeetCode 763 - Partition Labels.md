@@ -1,5 +1,5 @@
 ---
-date: "2025-12-17"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,226 +8,234 @@ tags:
   - leetcode
   - coding
   - greedy
+  - two-pointers
+  - string
+  - amazon
+  - google
+  - meta
+  - microsoft
 ---
 
 # LeetCode 763: Partition Labels
 
-Below is a **complete, structured, interview-grade explanation** of **LeetCode 763 – Partition Labels**, aligned with your usual learning preference (problem → observation → greedy trick → code → step-by-step dry run).
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Uber  
+**Difficulty:** Medium  
+**Topic:** Greedy / Two Pointers / String  
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-**LeetCode 763 – Partition Labels**
+You are given a string `s`. We want to partition the string into as many parts as possible so that each letter appears in at most one part.
 
-You are given a string `s`.  
-Your task is to partition the string into as many parts as possible such that:
+Note that the partition is done so that after concatenating all the parts in order, the resultant string should be `s`.
 
-* Each letter appears in **at most one partition**
-* After partitioning, concatenate all parts in order to obtain the original string
+Return a list of integers representing the size of these parts.
 
-Return a list of integers representing the **size of each partition**.
+---
 
-### Example
+### Input & Output Formats & Constraints
 
-```text
-Input:  s = "ababcbacadefegdehijhklij"
-Output: [9, 7, 8]
+- **Input:** A string `s` of length $1 \le |s| \le 500$.
+- **Output:** A list of integers `List[int]` representing the lengths of each partition in order.
+- **Constraints:**
+  - `1 <= s.length <= 500`
+  - `s` consists of lowercase English letters.
+
+---
+
+### Key Idea & Intuition
+
+#### Interval Expansion & Invariant
+For each unique character $c$ present in `s`, all occurrences of $c$ must be confined to the exact same partition. Thus, if a partition includes the first occurrence of $c$, it must extend **at least** to the last occurrence of $c$.
+
+Let $\text{last}[c]$ be the highest index where character $c$ appears in $s$.
+As we iterate through $s$ from left to right:
+1. Every time we encounter character $s[i]$, the right boundary of the current partition must be at least $\text{last}[s[i]]$.
+2. We maintain a running boundary:
+   $$\text{end} = \max(\text{end}, \text{last}[s[i]])$$
+3. If our current index $i$ reaches $\text{end}$ ($i == \text{end}$), then every character encountered in the current segment $[ \text{start}, \text{end} ]$ has all of its occurrences contained completely within this range. No character within this window appears beyond index $i$.
+4. Therefore, index $\text{end}$ represents the earliest valid partition cut point! By cutting here, we maximize the number of partitions.
+
+#### Why Greedy is Globally Optimal
+A partition cannot terminate before $\text{end}$. Terminating at the exact moment $i == \text{end}$ creates a valid partition using the minimum necessary length, leaving the largest remaining suffix for subsequent partitions. This choice satisfies the greedy-choice property and optimal substructure.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Precompute Last Occurrences:**
+   - Create an array `last` of size 26 (for `'a'` through `'z'`).
+   - Iterate $i$ from $0$ to $|s|-1$, setting $\text{last}[s[i] - \text{'a'}] = i$.
+2. **Greedy Traversal:**
+   - Initialize `start = 0`, `end = 0`, and an empty list `result`.
+   - Iterate $i$ from $0$ to $|s|-1$:
+     - Update $\text{end} = \max(\text{end}, \text{last}[s[i] - \text{'a'}])$.
+     - If $i == \text{end}$:
+       - Append the partition length $\text{end} - \text{start} + 1$ to `result`.
+       - Update $\text{start} = i + 1$.
+3. **Return:**
+   - Return `result`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+#### Trace of $s = \text{"ababcbacadefegdehijhklij"}$
+```
+Precomputed last occurrence for each character:
+a: 8,  b: 5,  c: 7,  d: 14, e: 15, f: 11, g: 13,
+h: 19, i: 22, j: 23, k: 20, l: 21
+
+Index:    0 1 2 3 4 5 6 7 8 | 9 10 11 12 13 14 15 | 16 17 18 19 20 21 22 23
+Char:     a b a b c b a c a | d  e  f  e  g  d  e |  h  i  j  h  k  l  i  j
+                      
+Partition 1:
+i = 0, char 'a': end = max(0, 8) = 8
+i = 1, char 'b': end = max(8, 5) = 8
+...
+i = 8, char 'a': end = 8. Since i == end (8 == 8):
+  -> Cut Partition 1!
+  -> Size: 8 - 0 + 1 = 9
+  -> New start = 9
+
+Partition 2:
+i = 9,  char 'd': end = max(8, 14) = 14
+i = 10, char 'e': end = max(14, 15) = 15
+...
+i = 15, char 'e': end = 15. Since i == end (15 == 15):
+  -> Cut Partition 2!
+  -> Size: 15 - 9 + 1 = 7
+  -> New start = 16
+
+Partition 3:
+i = 16, char 'h': end = max(15, 19) = 19
+i = 17, char 'i': end = max(19, 22) = 22
+i = 18, char 'j': end = max(22, 23) = 23
+...
+i = 23, char 'j': end = 23. Since i == end (23 == 23):
+  -> Cut Partition 3!
+  -> Size: 23 - 16 + 1 = 8
+  -> New start = 24
+
+Result: [9, 7, 8]
 ```
 
 ---
 
-## 2. Key Observation (Most Important Insight)
+### Solved Examples with Multiple Inputs
 
-> **If a character appears multiple times, all its occurrences must lie in the same partition.**
-
-Therefore:
-
-* A partition must extend **at least** until the **last occurrence** of every character inside it.
-* Once we include a character, we are *forced* to include all characters until its last position.
-
-This directly hints toward a **greedy boundary expansion** strategy.
+| Input String $s$ | Last Occurrences | Partitions Identified | Slices | Output Lengths |
+|---|---|---|---|---|
+| `"ababcbacadefegdehijhklij"` | a:8, b:5, c:7, d:14, e:15, ... | [0..8], [9..15], [16..23] | `"ababcbaca"`, `"defegde"`, `"hijhklij"` | `[9, 7, 8]` |
+| `"eccbbbbdec"` | e:8, c:9, b:6, d:7 | [0..9] | `"eccbbbbdec"` | `[10]` |
+| `"abcdef"` | a:0, b:1, c:2, d:3, e:4, f:5 | [0..0], [1..1], [2..2], [3..3], [4..4], [5..5] | 6 single-character partitions | `[1, 1, 1, 1, 1, 1]` |
+| `"a"` | a:0 | [0..0] | `"a"` | `[1]` |
 
 ---
 
-## 3. Greedy Strategy (Why This Works)
+### Multi-Language Implementations
 
-### Core Greedy Idea
-
-1. **Precompute the last occurrence index of every character**
-2. Traverse the string from left to right
-3. Maintain:
-
-   * `start` → start index of current partition
-   * `end` → farthest last occurrence of characters seen so far
-4. When current index `i == end`:
-
-   * We have safely completed a partition
-   * No character inside this segment appears later
-   * Cut the partition
-
-### Why Greedy is Optimal
-
-* We always close a partition **as early as possible**
-* Closing earlier gives **maximum number of partitions**
-* Delaying the cut never increases the count
-
-This is a classic **interval expansion greedy pattern**.
-
----
-
-## 4. Algorithm Steps
-
-1. Build a map: `last[c] = last index of character c`
-2. Initialize:
-
-   * `start = 0`
-   * `end = 0`
-   * `result = []`
-3. Iterate over string with index `i`:
-
-   * Update `end = max(end, last[s[i]])`
-   * If `i == end`:
-
-     * Partition size = `end - start + 1`
-     * Append to result
-     * Move `start = i + 1`
-
----
-
-## 5. Python 3 Solution (With Typing)
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def partitionLabels(self, s: str) -> List[int]:
-        # Step 1: Record last occurrence of each character
-        last = {}
-        for i, ch in enumerate(s):
-            last[ch] = i
-
-        result: List[int] = []
-        start = 0
-        end = 0
-
-        # Step 2: Greedy scan
+    def partitionLabels(self, s: str) -> list[int]:
+        # Precompute last occurrence of each character
+        last: dict[str, int] = {ch: i for i, ch in enumerate(s)}
+        
+        result: list[int] = []
+        start: int = 0
+        end: int = 0
+        
+        # Greedy scan to extend partition boundaries
         for i, ch in enumerate(s):
             end = max(end, last[ch])
-
-            # If current index reaches the end of partition
             if i == end:
                 result.append(end - start + 1)
                 start = i + 1
-
+                
         return result
 ```
 
----
+#### C++17
+```cpp
+#include <vector>
+#include <string>
+#include <algorithm>
 
-## 6. Complete Worked Example (Step-by-Step)
-
-### Input
-
+class Solution {
+public:
+    std::vector<int> partitionLabels(const std::string& s) {
+        int last[26] = {0};
+        int n = static_cast<int>(s.size());
+        
+        // Record the last seen index for each character
+        for (int i = 0; i < n; ++i) {
+            last[s[i] - 'a'] = i;
+        }
+        
+        std::vector<int> result;
+        int start = 0;
+        int end = 0;
+        
+        // Linear scan to identify earliest safe partition cuts
+        for (int i = 0; i < n; ++i) {
+            end = std::max(end, last[s[i] - 'a']);
+            if (i == end) {
+                result.push_back(end - start + 1);
+                start = i + 1;
+            }
+        }
+        
+        return result;
+    }
+};
 ```
-s = "ababcbacadefegdehijhklij"
-```
 
-### Step 1: Last Occurrence Map
+#### Java 17
+```java
+import java.util.ArrayList;
+import java.util.List;
 
-```
-a → 8
-b → 5
-c → 7
-d → 14
-e → 15
-f → 11
-g → 13
-h → 19
-i → 22
-j → 23
-k → 20
-l → 21
-```
-
----
-
-### Step 2: Traverse and Expand Partition
-
-| i | s[i] | last[s[i]] | end | action |
-| --- | --- | --- | --- | --- |
-| 0 | a | 8 | 8 | expand |
-| 1 | b | 5 | 8 | expand |
-| 2 | a | 8 | 8 | expand |
-| 3 | b | 5 | 8 | expand |
-| 4 | c | 7 | 8 | expand |
-| 5 | b | 5 | 8 | expand |
-| 6 | a | 8 | 8 | expand |
-| 7 | c | 7 | 8 | expand |
-| 8 | a | 8 | 8 | **cut partition** |
-
-**Partition 1:** indices `[0..8]`, size = `9`
-
----
-
-| i | s[i] | last[s[i]] | end | action |
-| --- | --- | --- | --- | --- |
-| 9 | d | 14 | 14 | expand |
-| 10 | e | 15 | 15 | expand |
-| 11 | f | 11 | 15 | expand |
-| 12 | e | 15 | 15 | expand |
-| 13 | g | 13 | 15 | expand |
-| 14 | d | 14 | 15 | expand |
-| 15 | e | 15 | 15 | **cut partition** |
-
-**Partition 2:** indices `[9..15]`, size = `7`
-
----
-
-| i | s[i] | last[s[i]] | end | action |
-| --- | --- | --- | --- | --- |
-| 16 | h | 19 | 19 | expand |
-| 17 | i | 22 | 22 | expand |
-| 18 | j | 23 | 23 | expand |
-| 19 | h | 19 | 23 | expand |
-| 20 | k | 20 | 23 | expand |
-| 21 | l | 21 | 23 | expand |
-| 22 | i | 22 | 23 | expand |
-| 23 | j | 23 | 23 | **cut partition** |
-
-**Partition 3:** indices `[16..23]`, size = `8`
-
----
-
-### Final Output
-
-```
-[9, 7, 8]
+class Solution {
+    public List<Integer> partitionLabels(String s) {
+        int[] last = new int[26];
+        int n = s.length();
+        
+        // Record the last occurrence of each character
+        for (int i = 0; i < n; i++) {
+            last[s.charAt(i) - 'a'] = i;
+        }
+        
+        List<Integer> result = new ArrayList<>();
+        int start = 0;
+        int end = 0;
+        
+        // Greedily expand boundaries until current index meets furthest bound
+        for (int i = 0; i < n; i++) {
+            end = Math.max(end, last[s.charAt(i) - 'a']);
+            if (i == end) {
+                result.add(end - start + 1);
+                start = i + 1;
+            }
+        }
+        
+        return result;
+    }
+}
 ```
 
 ---
 
-## 7. Pattern Recognition (Interview Tip)
+### Complexity Analysis
 
-This problem belongs to the **Greedy – Interval Expansion** pattern.
-
-You will see the same logic in:
-
-* Merge Intervals
-* Task Scheduling
-* Range covering problems
-
-**Key signal**:
-
-> “A constraint that forces elements to stay together → track last occurrence → greedy cut when safe”
+- **Time Complexity:** $\mathcal{O}(N)$, where $N = |s|$. We iterate through the string twice: once to populate the `last` array and once to compute partition boundaries. Both passes take $\mathcal{O}(N)$ time.
+- **Space Complexity:** $\mathcal{O}(|\Sigma|) = \mathcal{O}(1)$ auxiliary space, where $\Sigma$ is the alphabet size ($|\Sigma| = 26$ lowercase English letters). The output list occupies $\mathcal{O}(K)$ space where $K \le 26$.
 
 ---
 
-If you want, I can also:
+### Takeaway Pattern & Interview Traps
 
-* Explain this using **interval merging analogy**
-* Show a **wrong greedy approach and why it fails**
-* Convert this into a **general reusable greedy template**
-* Compare with **two-pointer vs greedy framing**
-
-Just tell me.
+1. **Equivalence to Interval Merging:** This problem can also be viewed as merging overlapping intervals: each distinct character defines an interval $[\text{first}(c), \text{last}(c)]$. Finding non-overlapping connected components is equivalent to interval merging, but tracking running `end` achieves this in $\mathcal{O}(N)$ without sorting!
+2. **Fixed Alphabet Space Optimization:** Use a direct array `int last[26]` rather than a hash map in C++/Java for cache locality and guaranteed $\mathcal{O}(1)$ lookups.
+3. **Partition Cut Condition:** The partition is finalized precisely when $i == \text{end}$. Remember to reset $\text{start} = i + 1$ immediately after adding the length $\text{end} - \text{start} + 1$.

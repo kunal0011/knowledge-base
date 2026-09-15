@@ -1,5 +1,5 @@
 ---
-date: "2025-12-18"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,101 +8,154 @@ tags:
   - leetcode
   - coding
   - greedy
+  - array
+  - simulation
+  - amazon
+  - google
+  - bloomberg
 ---
 
 # LeetCode 860: Lemonade Change
 
-Below is a complete, structured explanation for **LeetCode 860 — Lemonade Change**, aligned with your usual learning format.
+**Target Companies:** Amazon, Google, Bloomberg, Microsoft  
+**Difficulty:** Easy  
+**Topic:** Greedy / Array / Simulation  
 
 ---
-
-## LeetCode 860 — Lemonade Change
 
 ### Problem Statement
 
-At a lemonade stand, each lemonade costs **$5**.
+At a lemonade stand, each lemonade costs `$5`. Customers are standing in a queue to buy from you and order one at a time (in the order specified by integer array `bills`). Each customer will only buy one lemonade and pay with either a `$5`, `$10`, or `$20` bill. You must provide the correct change to each customer so that the net transaction is that the customer pays `$5`.
 
-You are given an integer array `bills`, where `bills[i]` is the bill the *i-th* customer pays with.  
-Customers are served **in order**, and each customer buys exactly **one** lemonade.
+Note that you begin with no change in hand.
 
-Accepted bill denominations are **$5, $10, and $20**.
-
-You must provide **correct change** to each customer at the time of purchase.  
-Initially, you have **no money**.
-
-Return `True` if you can provide change to every customer, otherwise return `False`.
+Given an integer array `bills` where `bills[i]` is the bill the $i^{\text{th}}$ customer pays with, return `true` *if you can provide every customer with the correct change, or* `false` *otherwise*.
 
 ---
 
-### Key Observations
+### Input & Output Formats & Constraints
 
-1. **Sequential constraint**
-
-   * You must process customers **left to right**.
-   * You cannot reorder customers or delay change.
-2. **Limited denominations**
-
-   * Only `$5`, `$10`, `$20` are involved.
-   * Change needed is deterministic:
-
-     * `$5` → no change
-     * `$10` → need `$5`
-     * `$20` → need `$15`
-3. **No need to track total money**
-
-   * Only the **count of $5 and $10 bills** matters.
-   * `$20` bills are never useful for future change.
-4. **Greedy choice matters**
-
-   * When giving `$15` change:
-
-     * Prefer **$10 + $5** over **$5 + $5 + $5**
-     * Reason: `$5` bills are more flexible and critical for future `$10` payments.
+- **Input:** An integer array `bills` ($1 \le |bills| \le 10^5$), where each $\text{bills}[i] \in \{5, 10, 20\}$.
+- **Output:** A boolean (`true` or `false`).
+- **Constraints:**
+  - `1 <= bills.length <= 10^5`
+  - `bills[i]` is either `5`, `10`, or `20`.
 
 ---
 
-### Greedy Strategy (Core Trick)
+### Key Idea & Intuition
 
-Maintain:
+#### Bill Versatility & Change Invariant
+Each customer requires exact change:
+1. Customer pays **$5**: Change required is **$0**. Keep the $5 bill.
+2. Customer pays **$10**: Change required is **$5**. Must provide one $5 bill.
+3. Customer pays **$20**: Change required is **$15**.
+   - Option A: One $10 bill + one $5 bill ($10 + $5 = $15$).
+   - Option B: Three $5 bills ($5 + 5 + 5 = $15$).
 
-* `five`: count of `$5` bills
-* `ten`: count of `$10` bills
+#### Why Greedy Prioritization is Strictly Optimal
+Notice the asymmetry in utility between $5 bills and $10 bills:
+- A **$5 bill** can be used to make change for both a $10 bill and a $20 bill.
+- A **$10 bill** can **only** be used to make change for a $20 bill (never for a $10 bill).
+- A **$20 bill** can never be used to make change at all.
 
-Process each bill:
-
-| Customer Pays | Action |
-| --- | --- |
-| `$5` | Increment `five` |
-| `$10` | Must have `five >= 1` → decrement `five`, increment `ten` |
-| `$20` | Prefer `ten >= 1 and five >= 1` → decrement both |
-|  | Else if `five >= 3` → decrement `five` by 3 |
-|  | Else → return `False` |
-
-This greedy ordering ensures future feasibility.
+Therefore, the $5 bill is strictly more versatile than the $10 bill. When making $15 change for a $20 bill, we must **greedily prioritize spending the $10 bill first** (Option A). Conserving $5 bills maximizes our ability to satisfy upcoming $10 transactions.
 
 ---
 
-### Python 3 Solution (With Typing)
+### Solution Approach (Step-by-Step)
 
+1. **State Tracking:**
+   - Maintain two integer counters: `five = 0` and `ten = 0`.
+2. **Process Each Bill in Sequence:**
+   - If `bill == 5`:
+     - Increment `five += 1`.
+   - Else if `bill == 10`:
+     - If `five == 0`, return `false` (cannot make change).
+     - Decrement `five -= 1` and increment `ten += 1`.
+   - Else (`bill == 20`):
+     - If `ten > 0` and `five > 0`:
+       - Use one $10 and one $5: `ten -= 1`, `five -= 1`.
+     - Else if `five >= 3`:
+       - Use three $5 bills: `five -= 3`.
+     - Else:
+       - Return `false` (insufficient bills to return $15).
+3. **Completion:**
+   - If all customers are served successfully, return `true`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+#### Trace for `bills = [5, 5, 5, 10, 20]`
+```
+Initial: five = 0, ten = 0
+
+1. Customer pays 5:
+   five = 1, ten = 0
+
+2. Customer pays 5:
+   five = 2, ten = 0
+
+3. Customer pays 5:
+   five = 3, ten = 0
+
+4. Customer pays 10:
+   Needs 5 change -> Give 1x $5 bill.
+   five = 2, ten = 1
+
+5. Customer pays 20:
+   Needs 15 change -> Greedily prefer (1x $10 + 1x $5) over (3x $5).
+   Give 1x $10 and 1x $5.
+   five = 1, ten = 0
+
+All customers served successfully! -> Return true.
+```
+
+#### Trace for `bills = [5, 5, 10, 10, 20]`
+```
+1. Customer pays 5: five = 1, ten = 0
+2. Customer pays 5: five = 2, ten = 0
+3. Customer pays 10: Needs 5 -> five = 1, ten = 1
+4. Customer pays 10: Needs 5 -> five = 0, ten = 2
+5. Customer pays 20: Needs 15 ->
+   - Check Option A (10 + 5): We have ten = 2, but five = 0 -> Cannot!
+   - Check Option B (5 + 5 + 5): We have five = 0 -> Cannot!
+   Change cannot be provided -> Return false.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| Input `bills` | Simulation Tracing (`five`, `ten`) | Final Result | Explanation |
+|---|---|---|---|
+| `[5, 5, 5, 10, 20]` | $5 \to (1,0); 5 \to (2,0); 5 \to (3,0); 10 \to (2,1); 20 \to (1,0)$ | `true` | Standard successful greedy change |
+| `[5, 5, 10, 10, 20]` | $5 \to (1,0); 5 \to (2,0); 10 \to (1,1); 10 \to (0,2); 20 \to$ fails | `false` | Ran out of \$5 bills for \$20 change |
+| `[10]` | Needs \$5 immediately; `five == 0` | `false` | First customer cannot receive change |
+| `[5, 5, 5, 20]` | $5 \to (1,0); 5 \to (2,0); 5 \to (3,0); 20 \to (0,0)$ | `true` | Fallback to three \$5 bills works |
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def lemonadeChange(self, bills: List[int]) -> bool:
-        five = 0
-        ten = 0
-
+    def lemonadeChange(self, bills: list[int]) -> bool:
+        five: int = 0
+        ten: int = 0
+        
         for bill in bills:
             if bill == 5:
                 five += 1
-
             elif bill == 10:
                 if five == 0:
                     return False
                 five -= 1
                 ten += 1
-
             else:  # bill == 20
+                # Greedily give one $10 and one $5 to preserve $5 bills
                 if ten > 0 and five > 0:
                     ten -= 1
                     five -= 1
@@ -110,137 +163,90 @@ class Solution:
                     five -= 3
                 else:
                     return False
-
+                    
         return True
 ```
 
----
+#### C++17
+```cpp
+#include <vector>
 
-### Complete Worked Example (Step-by-Step)
-
-#### Example Input
-
-```
-bills = [5, 5, 5, 10, 20]
-```
-
-#### Initial State
-
-```
-five = 0
-ten = 0
-```
-
----
-
-#### Customer 1 pays `$5`
-
-* No change needed
-* Collect `$5`
-
-```
-five = 1
-ten = 0
-```
-
----
-
-#### Customer 2 pays `$5`
-
-* No change needed
-* Collect `$5`
-
-```
-five = 2
-ten = 0
+class Solution {
+public:
+    bool lemonadeChange(const std::vector<int>& bills) {
+        int five = 0;
+        int ten = 0;
+        
+        for (int bill : bills) {
+            if (bill == 5) {
+                five++;
+            } else if (bill == 10) {
+                if (five == 0) return false;
+                five--;
+                ten++;
+            } else { // bill == 20
+                // Greedily use 10 + 5 first
+                if (ten > 0 && five > 0) {
+                    ten--;
+                    five--;
+                } else if (five >= 3) {
+                    five -= 3;
+                } else {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+};
 ```
 
----
-
-#### Customer 3 pays `$5`
-
-* No change needed
-* Collect `$5`
-
+#### Java 17
+```java
+class Solution {
+    public boolean lemonadeChange(int[] bills) {
+        int five = 0;
+        int ten = 0;
+        
+        for (int bill : bills) {
+            if (bill == 5) {
+                five++;
+            } else if (bill == 10) {
+                if (five == 0) {
+                    return false;
+                }
+                five--;
+                ten++;
+            } else { // bill == 20
+                // Prioritize spending larger denomination $10 bill
+                if (ten > 0 && five > 0) {
+                    ten--;
+                    five--;
+                } else if (five >= 3) {
+                    five -= 3;
+                } else {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+}
 ```
-five = 3
-ten = 0
-```
-
----
-
-#### Customer 4 pays `$10`
-
-* Needs `$5` change
-* Use one `$5`
-
-```
-five = 2
-ten = 1
-```
-
----
-
-#### Customer 5 pays `$20`
-
-* Needs `$15` change
-* Prefer `$10 + $5`
-
-```
-five = 1
-ten = 0
-```
-
----
-
-#### All customers served successfully
-
-```
-Return True
-```
-
----
-
-### Failure Case Example
-
-#### Input
-
-```
-bills = [5, 10, 20]
-```
-
-#### Processing
-
-* `$5` → OK (`five = 1`)
-* `$10` → give `$5` (`five = 0`, `ten = 1`)
-* `$20` → need `$15`
-
-  * No `$5` available
-  * Cannot give change
-
-```
-Return False
-```
-
----
-
-### Why This Is a Greedy Problem
-
-* Each decision impacts future feasibility.
-* Choosing `$10 + $5` over `$5 + $5 + $5` preserves **critical low-value bills**.
-* Local optimal choices lead to a global solution.
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(1)` (constant counters)
+- **Time Complexity:** $\mathcal{O}(N)$, where $N = |bills|$. We traverse the array once, performing $\mathcal{O}(1)$ arithmetic and condition checks per transaction.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space, as only two scalar integer counters (`five`, `ten`) are maintained.
 
 ---
 
-If you want, I can also provide:
+### Takeaway Pattern & Interview Traps
 
-* A **counterexample showing why wrong greedy choices fail**
-* A **state-transition table**
-* Or a **visual greedy-decision tree** for interviews
+1. **Why No $20 Counter?** A $20 bill can never be given as change because the maximum change for any transaction is $15. Tracking $20 bills is redundant.
+2. **Greedy Dominance:** Giving three $5 bills instead of one $10 and one $5 when both are available is suboptimal because saving the $5 bill protects against future $10 customers.
+3. **Queue Order:** Customers must be served strictly in sequential order; sorting the queue or reordering is illegal per problem specifications.

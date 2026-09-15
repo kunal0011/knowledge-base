@@ -1,5 +1,5 @@
 ---
-date: "2025-12-18"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,207 +8,226 @@ tags:
   - leetcode
   - coding
   - greedy
+  - string
+  - stack
+  - meta
+  - amazon
+  - bloomberg
+  - google
 ---
 
 # LeetCode 921: Minimum Add to Make Parentheses Valid
 
-Below is a complete, structured explanation of **LeetCode 921 – Minimum Add to Make Parentheses Valid**, aligned with how this problem is typically reasoned in interviews and competitive programming.
+**Target Companies:** Meta, Amazon, Bloomberg, Microsoft, Google  
+**Difficulty:** Medium  
+**Topic:** Greedy / String / Stack  
 
 ---
 
-## 1. Problem Statement
+### Problem Statement
 
-**LeetCode 921 — Minimum Add to Make Parentheses Valid**
+A parentheses string is **valid** if and only if:
+1. It is the empty string,
+2. It can be written as `AB` (`A` concatenated with `B`), where `A` and `B` are valid strings, or
+3. It can be written as `(A)`, where `A` is a valid string.
 
-You are given a string `s` consisting only of the characters `'('` and `')'`.
+You are given a parentheses string `s`. In one move, you can insert a parenthesis at any position of the string.
 
-A parentheses string is **valid** if:
-
-1. Every opening parenthesis `'('` has a corresponding closing parenthesis `')'`.
-2. Parentheses are closed in the correct order.
-
-You may add parentheses at **any position** in the string.
-
-**Return the minimum number of parentheses you must add to make the string valid.**
+Return *the minimum number of moves required to make `s` valid*.
 
 ---
 
-### Example
+### Input & Output Formats & Constraints
 
-```text
-Input:  s = "()))(("
-Output: 4
+- **Input:** A string `s` ($1 \le |s| \le 1000$) composed solely of characters `'('` and `')'`.
+- **Output:** An integer representing the minimum number of insertions required.
+- **Constraints:**
+  - `1 <= s.length <= 1000`
+  - `s[i]` is either `'('` or `')'`.
+
+---
+
+### Key Idea & Intuition
+
+#### Balance Invariant & Two Types of Deficits
+A parentheses string is valid if and only if:
+1. **Prefix Invariant:** In every prefix of the string, the number of closing brackets `')'` never exceeds the number of opening brackets `'('`.
+2. **Total Balance Invariant:** The total count of `'('` equals the total count of `')'`.
+
+When traversing `s` from left to right, we encounter two distinct categories of violations:
+1. **Underflow Deficit (Unmatched `')'`):**
+   - If we encounter a `')'` when there are currently no available unmatched `'('` to pair with, this `')'` can never be matched by any future `'('`.
+   - We are forced to insert an opening parenthesis `'('` before it.
+   - We record this immediately in `inserts_needed`.
+2. **Overflow Deficit (Unmatched `'('`):**
+   - If we have remaining unmatched `'('` after processing the entire string, each of these must be closed by inserting a corresponding `')'` at the end.
+   - This count is simply our remaining `open_count`.
+
+#### Why Greedy Counting is Optimal
+Because an unmatched `')'` can never be salvaged by future characters, resolving it immediately with an inserted `'('` is necessary and minimal. Similarly, unmatched `'('` must each receive their own `')'`. The total insertions required is strictly:
+$$\text{Total Moves} = \text{inserts\_needed} + \text{open\_count}$$
+
+This avoids allocating an explicit stack, running in $\mathcal{O}(N)$ time and $\mathcal{O}(1)$ space.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Initialize Counters:**
+   - `open_count = 0` (unmatched `'('` available for pairing)
+   - `inserts_needed = 0` (unmatched `')'` requiring an inserted `'('`)
+2. **Linear Scan:**
+   - Iterate through each character `ch` in `s`:
+     - If `ch == '('`:
+       - Increment `open_count += 1`.
+     - Else (`ch == ')'`):
+       - If `open_count > 0`:
+         - Decrement `open_count -= 1` (valid pair formed).
+       - Else:
+         - Increment `inserts_needed += 1` (orphan `')'`).
+3. **Combine Deficits:**
+   - Return `inserts_needed + open_count`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+#### Trace for `s = "()))(("`
+```
+Index:         0    1    2    3    4    5
+Char:          (    )    )    )    (    (
+
+Initial: open_count = 0, inserts_needed = 0
+
+i = 0, char '(':
+  open_count = 1, inserts_needed = 0
+
+i = 1, char ')':
+  open_count > 0 -> Matched!
+  open_count = 0, inserts_needed = 0
+
+i = 2, char ')':
+  open_count == 0 -> No open bracket available!
+  Must insert '(' before this ')'
+  inserts_needed = 1, open_count = 0
+
+i = 3, char ')':
+  open_count == 0 -> No open bracket available!
+  Must insert '(' before this ')'
+  inserts_needed = 2, open_count = 0
+
+i = 4, char '(':
+  open_count = 1, inserts_needed = 2
+
+i = 5, char '(':
+  open_count = 2, inserts_needed = 2
+
+End of String:
+- inserts_needed = 2 (two '(' needed to fix early ')')
+- open_count = 2 (two ')' needed to close trailing '(')
+
+Total moves = 2 + 2 = 4.
+Valid string formed: "(())()(())" (4 additions).
 ```
 
 ---
 
-## 2. Key Observation
+### Solved Examples with Multiple Inputs
 
-A valid parentheses string satisfies **two invariants**:
-
-1. At no point should closing parentheses exceed opening ones  
-   → prefix condition
-2. Total number of `'('` must equal total number of `')'`  
-   → global balance condition
-
-This naturally suggests **tracking balance while scanning the string once**.
-
----
-
-## 3. Greedy Insight (Core Trick)
-
-We process the string from left to right and apply the following greedy logic:
-
-### State Variables
-
-* `balance`: number of unmatched `'('` seen so far
-* `additions`: number of parentheses we must insert
-
-### Greedy Rules
-
-1. If we see `'('`  
-   → increment `balance`
-2. If we see `')'`:
-
-   * If `balance > 0`  
-     → match it with an existing `'('` → decrement `balance`
-   * Else (`balance == 0`)  
-     → this `')'` has no matching `'('`  
-     → **we must add one `'('`** before it  
-     → increment `additions`
-
-### After full traversal
-
-* Any remaining `balance` represents unmatched `'('`
-* Each requires one `')'` to close
-
-```
-Total additions = additions + balance
-```
+| Input `s` | Step-by-Step Simulation | Unmatched `')'` (`inserts_needed`) | Unmatched `'('` (`open_count`) | Output |
+|---|---|---|---|---|
+| `"())"` | `'(' \to 1; ')' \to 0; ')' \to` underflow | `1` | `0` | `1` |
+| `"((("` | `'(' \to 1; '(' \to 2; '(' \to 3` | `0` | `3` | `3` |
+| `"()))(("` | Trace shown above | `2` | `2` | `4` |
+| `"()"` | Perfectly balanced | `0` | `0` | `0` |
+| `""` | Empty string | `0` | `0` | `0` |
 
 ---
 
-## 4. Why Greedy Works
+### Multi-Language Implementations
 
-* Every unmatched `')'` **must** be fixed immediately (you cannot match it later).
-* Delaying fixes only increases future work.
-* Matching whenever possible minimizes insertions.
-* Remaining `'('` can only be closed by adding `')'`.
-
-This is a classic **local-optimal ⇒ global-optimal** greedy structure.
-
----
-
-## 5. Python 3 Solution (with Typing)
-
+#### Python 3
 ```python
-from typing import *
-
 class Solution:
     def minAddToMakeValid(self, s: str) -> int:
-        balance: int = 0      # unmatched '('
-        additions: int = 0    # required insertions
+        open_count: int = 0
+        inserts_needed: int = 0
         
         for ch in s:
             if ch == '(':
-                balance += 1
+                open_count += 1
             else:  # ch == ')'
-                if balance > 0:
-                    balance -= 1
+                if open_count > 0:
+                    open_count -= 1
                 else:
-                    additions += 1  # need to add '(' before this ')'
+                    inserts_needed += 1
+                    
+        return inserts_needed + open_count
+```
+
+#### C++17
+```cpp
+#include <string>
+
+class Solution {
+public:
+    int minAddToMakeValid(const std::string& s) {
+        int open_count = 0;
+        int inserts_needed = 0;
         
-        # remaining '(' need ')'
-        return additions + balance
+        for (char ch : s) {
+            if (ch == '(') {
+                open_count++;
+            } else { // ch == ')'
+                if (open_count > 0) {
+                    open_count--;
+                } else {
+                    inserts_needed++;
+                }
+            }
+        }
+        
+        return inserts_needed + open_count;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int minAddToMakeValid(String s) {
+        int openCount = 0;
+        int insertsNeeded = 0;
+        
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == '(') {
+                openCount++;
+            } else { // ch == ')'
+                if (openCount > 0) {
+                    openCount--;
+                } else {
+                    insertsNeeded++;
+                }
+            }
+        }
+        
+        return insertsNeeded + openCount;
+    }
+}
 ```
 
 ---
 
-## 6. Complete Worked Example (Step-by-Step)
+### Complexity Analysis
 
-### Input
-
-```
-s = "()))(("
-```
-
-### Initialization
-
-```
-balance = 0
-additions = 0
-```
+- **Time Complexity:** $\mathcal{O}(N)$, where $N = |s|$. We iterate through the string in a single linear pass with constant-time updates.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space. Unlike stack-based parentheses problems, we only store two integer counters (`open_count` and `inserts_needed`).
 
 ---
 
-### Step-by-step Processing
+### Takeaway Pattern & Interview Traps
 
-| Index | Char | Action | balance | additions | Explanation |
-| --- | --- | --- | --- | --- | --- |
-| 0 | '(' | balance += 1 | 1 | 0 | New open |
-| 1 | ')' | balance -= 1 | 0 | 0 | Matched |
-| 2 | ')' | additions += 1 | 0 | 1 | No '(' to match |
-| 3 | ')' | additions += 1 | 0 | 2 | No '(' to match |
-| 4 | '(' | balance += 1 | 1 | 2 | Open |
-| 5 | '(' | balance += 1 | 2 | 2 | Open |
-
----
-
-### After Traversal
-
-```
-balance = 2   # two unmatched '('
-additions = 2 # two unmatched ')'
-```
-
-### Final Calculation
-
-```
-Total = additions + balance
-      = 2 + 2
-      = 4
-```
-
----
-
-## 7. Visual Interpretation
-
-Original:
-
-```
-()))((
-```
-
-Fixes needed:
-
-```
-( ( ) ) ) ( ( )
-^   ^           ^
-add '('     add ')'
-```
-
----
-
-## 8. Time & Space Complexity
-
-* **Time:** `O(n)` — single pass
-* **Space:** `O(1)` — constant extra space
-
----
-
-## 9. Interview Takeaways
-
-* This problem is **not a stack problem**, despite appearances.
-* Balance tracking is sufficient.
-* Greedy works because invalid `')'` cannot be fixed later.
-* Very common question to test prefix constraints and greedy reasoning.
-
----
-
-If you want, I can also:
-
-* Show a **stack-based solution and why it’s inferior**
-* Convert this into a **formal invariant-based proof**
-* Compare with **LeetCode 1541 / 1249 variations**
-
-Just tell me how deep you want to go.
+1. **Stack vs. Counter:** While general bracket-matching problems with multiple types (`()`, `[]`, `{}`) require an explicit $\mathcal{O}(N)$ stack to enforce LIFO type matching, a single bracket type only requires tracking balance. Mentioning this reduction highlights algorithmic maturity.
+2. **Underflow vs. Overflow:** Be careful to separate `inserts_needed` (underflow caused by `')'`) from `open_count` (overflow caused by `'('`). They represent insertions in opposite directions.
+3. **Relation to LeetCode 1249 & 1541:** LC 1249 asks to *remove* minimum parentheses to make valid, while LC 1541 requires each `'('` to match two consecutive `')'`. The two-counter greedy tracking pattern forms the core foundation for both.

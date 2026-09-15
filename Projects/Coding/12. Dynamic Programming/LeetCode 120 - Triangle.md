@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,253 +8,196 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - array
+  - amazon
+  - apple
+  - google
+  - bloomberg
 ---
 
 # LeetCode 120: Triangle
 
-**LeetCode 120 – Triangle**, with **explicit state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Apple, Google, Bloomberg, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Array  
 
 ---
-
-## LeetCode 120 – Triangle
 
 ### Problem Statement
 
-You are given a triangle array. Starting from the top, you may move to **adjacent numbers** on the row below.
+Given a `triangle` array, return the minimum path sum from top to bottom.
 
-Return the **minimum path sum** from top to bottom.
-
-**Adjacent rule**:  
-From `triangle[i][j]`, you may move to:
-
-* `triangle[i+1][j]`
-* `triangle[i+1][j+1]`
+For each step, you may move to an **adjacent number** of the row below. More formally, if you are on index `i` on the current row, you may move to either index `i` or index `i + 1` on the next row.
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-At every cell `(i, j)`:
-
-* The minimum path to reach this cell depends **only on the minimum paths to its parents** from the previous row.
-* This naturally fits **Dynamic Programming on a triangle grid**.
-
----
-
-## DP State Definition
-
-Let:
-
-```
-dp[i][j] = minimum path sum to reach cell (i, j)
-```
-
-Where:
-
-* `i` → row index (0-based)
-* `j` → column index (0 ≤ j ≤ i)
+- **Input:** A triangular 2D array of integers `triangle` where $triangle[i]$ contains $i + 1$ integers.
+- **Output:** An integer representing the minimum path sum from top to bottom.
+- **Constraints:**
+  - `1 <= triangle.length <= 200`
+  - `triangle[0].length == 1`
+  - `triangle[i].length == triangle[i - 1].length + 1`
+  - `-10^4 <= triangle[i][j] <= 10^4`
+  - **Follow up:** Could you do this using only $\mathcal{O}(n)$ extra space, where $n$ is the total number of rows in the triangle?
 
 ---
 
-## Base Case
+### Key Idea & Intuition
 
-Top of the triangle:
+#### Top-Down vs. Bottom-Up DP
+- **Top-Down Approach:**
+  Moving from $(0, 0)$ down to row $n - 1$ requires handling special edge cases for the leftmost column ($j = 0$) and rightmost column ($j = i$). Furthermore, after reaching row $n - 1$, we must scan the entire bottom row to find $\min_{0 \le j < n} dp[n-1][j]$.
+- **Bottom-Up (Inverted) Approach:**
+  Starting at the bottom row $n - 1$ and moving **upward** to $(0, 0)$ is dramatically simpler:
+  1. For any element at row $r$, column $c$, the only two choices to continue downward were $(r+1, c)$ and $(r+1, c+1)$.
+  2. Therefore, the minimum path sum starting from $(r, c)$ down to the base is:
+     $$dp[r][c] = triangle[r][c] + \min(dp[r+1][c], dp[r+1][c+1])$$
+  3. Notice that there are **no boundary conditions or edge cases** when working upward; every cell $(r, c)$ has valid transitions to both $(r+1, c)$ and $(r+1, c+1)$.
+  4. At the end of the calculation, the answer naturally converges to the single apex cell:
+     $$\text{Answer} = dp[0][0]$$
 
-```
-dp[0][0] = triangle[0][0]
-```
-
----
-
-## State Transition
-
-For row `i > 0`:
-
-### Case 1: Left edge (`j == 0`)
-
-Can only come from directly above:
-
-```
-dp[i][0] = dp[i-1][0] + triangle[i][0]
-```
+#### Space Optimization to $\mathcal{O}(n)$
+Calculating row $r$ only requires the values of row $r + 1$. We can maintain a single 1D array of size $n$, initialized with the bottom row of the triangle, and overwrite values in-place from bottom to top.
 
 ---
 
-### Case 2: Right edge (`j == i`)
+### Solution Approach (Step-by-Step)
 
-Can only come from top-left:
-
-```
-dp[i][i] = dp[i-1][i-1] + triangle[i][i]
-```
-
----
-
-### Case 3: Middle cells (`0 < j < i`)
-
-Can come from **two parents**:
-
-```
-dp[i][j] = min(
-    dp[i-1][j-1],
-    dp[i-1][j]
-) + triangle[i][j]
-```
+1. **Initialize 1D DP Array:**
+   - Let $n = len(triangle)$.
+   - Initialize `dp` as a copy of the bottom row: `dp = list(triangle[-1])`.
+2. **Bottom-Up Transitions:**
+   - For row $r$ from $n - 2$ down to 0:
+     - For col $c$ from 0 to $r$:
+       - $dp[c] = triangle[r][c] + \min(dp[c], dp[c + 1])$.
+3. **Return Apex Value:**
+   - Return `dp[0]`.
 
 ---
 
-## Final Answer
+### Visual Algorithm Walkthrough
 
-The path may end at **any cell in the last row**, so:
-
+#### Trace for `triangle = [[2], [3, 4], [6, 5, 7], [4, 1, 8, 3]]`
 ```
-answer = min(dp[n-1])
+Initial Triangle:
+       [2]
+      [3, 4]
+    [6, 5, 7]
+   [4, 1, 8, 3]
+
+Step 1: Initialize DP with base row (r = 3):
+dp = [4, 1, 8, 3]
+
+Step 2: Move up to row r = 2 ([6, 5, 7]):
+c = 0: dp[0] = 6 + min(dp[0], dp[1]) = 6 + min(4, 1) = 6 + 1 = 7
+c = 1: dp[1] = 5 + min(dp[1], dp[2]) = 5 + min(1, 8) = 5 + 1 = 6
+c = 2: dp[2] = 7 + min(dp[2], dp[3]) = 7 + min(8, 3) = 7 + 3 = 10
+dp array state: [7, 6, 10, 3]
+
+Step 3: Move up to row r = 1 ([3, 4]):
+c = 0: dp[0] = 3 + min(dp[0], dp[1]) = 3 + min(7, 6) = 3 + 6 = 9
+c = 1: dp[1] = 4 + min(dp[1], dp[2]) = 4 + min(6, 10) = 4 + 6 = 10
+dp array state: [9, 10, 10, 3]
+
+Step 4: Move up to apex r = 0 ([2]):
+c = 0: dp[0] = 2 + min(dp[0], dp[1]) = 2 + min(9, 10) = 2 + 9 = 11
+dp array state: [11, 10, 10, 3]
+
+Final Minimum Path Sum: dp[0] = 11
+Path taken: 2 -> 3 -> 5 -> 1 (sum = 11)
 ```
 
 ---
 
-## DP Table Construction (Example)
+### Solved Examples with Multiple Inputs
 
-### Input Triangle
-
-```
-[
- [2],
- [3, 4],
- [6, 5, 7],
- [4, 1, 8, 3]
-]
-```
+| Triangle Input | Bottom-Up Compression Stages | Final Apex `dp[0]` | Optimal Path |
+|---|---|---|---|
+| `[[2],[3,4],[6,5,7],[4,1,8,3]]` | `[4,1,8,3]` $\to$ `[7,6,10]` $\to$ `[9,10]` $\to$ `[11]` | `11` | $2 \to 3 \to 5 \to 1$ |
+| `[[-10]]` | `[-10]` | `-10` | Single element |
+| `[[-1],[2,3],[1,-1,-3]]` | `[1,-1,-3]` $\to$ `[1,0]` $\to$ `[-1]` | `-1` | $-1 \to 3 \to -3$ |
 
 ---
 
-### Step-by-Step DP Table
+### Multi-Language Implementations
 
-Initialize DP table with same structure:
-
-```
-dp = [
- [2],
- [0, 0],
- [0, 0, 0],
- [0, 0, 0, 0]
-]
-```
-
----
-
-### Row 1 (`i = 1`)
-
-```
-dp[1][0] = 2 + 3 = 5
-dp[1][1] = 2 + 4 = 6
-```
-
-```
-[
- [2],
- [5, 6],
- [0, 0, 0],
- [0, 0, 0, 0]
-]
-```
-
----
-
-### Row 2 (`i = 2`)
-
-```
-dp[2][0] = 5 + 6 = 11
-dp[2][1] = min(5, 6) + 5 = 10
-dp[2][2] = 6 + 7 = 13
-```
-
-```
-[
- [2],
- [5, 6],
- [11, 10, 13],
- [0, 0, 0, 0]
-]
-```
-
----
-
-### Row 3 (`i = 3`)
-
-```
-dp[3][0] = 11 + 4 = 15
-dp[3][1] = min(11, 10) + 1 = 11
-dp[3][2] = min(10, 13) + 8 = 18
-dp[3][3] = 13 + 3 = 16
-```
-
-```
-[
- [2],
- [5, 6],
- [11, 10, 13],
- [15, 11, 18, 16]
-]
-```
-
----
-
-## Final Answer
-
-```
-min(dp[3]) = min(15, 11, 18, 16) = 11
-```
-
-### Minimum Path:
-
-```
-2 → 3 → 5 → 1 = 11
-```
-
----
-
-## Python 3 DP Solution (With Typing)
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def minimumTotal(self, triangle: List[List[int]]) -> int:
+    def minimumTotal(self, triangle: list[list[int]]) -> int:
         n = len(triangle)
-        dp = [[0] * (i + 1) for i in range(n)]
+        # Initialize 1D DP table with the bottom-most row
+        dp = list(triangle[-1])
+        
+        # Traverse from second-to-last row up to the top
+        for r in range(n - 2, -1, -1):
+            for c in range(r + 1):
+                dp[c] = triangle[r][c] + min(dp[c], dp[c + 1])
+                
+        return dp[0]
+```
 
-        dp[0][0] = triangle[0][0]
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
 
-        for i in range(1, n):
-            for j in range(i + 1):
-                if j == 0:
-                    dp[i][j] = dp[i - 1][j] + triangle[i][j]
-                elif j == i:
-                    dp[i][j] = dp[i - 1][j - 1] + triangle[i][j]
-                else:
-                    dp[i][j] = min(
-                        dp[i - 1][j - 1],
-                        dp[i - 1][j]
-                    ) + triangle[i][j]
+class Solution {
+public:
+    int minimumTotal(std::vector<std::vector<int>>& triangle) {
+        int n = static_cast<int>(triangle.size());
+        // Initialize DP array with bottom row
+        std::vector<int> dp = triangle.back();
+        
+        // Bottom-up DP: move upwards to apex
+        for (int r = n - 2; r >= 0; --r) {
+            for (int c = 0; c <= r; ++c) {
+                dp[c] = triangle[r][c] + std::min(dp[c], dp[c + 1]);
+            }
+        }
+        
+        return dp[0];
+    }
+};
+```
 
-        return min(dp[-1])
+#### Java 17
+```java
+class Solution {
+    public int minimumTotal(java.util.List<java.util.List<Integer>> triangle) {
+        int n = triangle.size();
+        int[] dp = new int[n];
+        
+        // Copy bottom row into 1D DP array
+        for (int c = 0; c < n; c++) {
+            dp[c] = triangle.get(n - 1).get(c);
+        }
+        
+        // Bottom-up upward aggregation
+        for (int r = n - 2; r >= 0; r--) {
+            for (int c = 0; c <= r; c++) {
+                dp[c] = triangle.get(r).get(c) + Math.min(dp[c], dp[c + 1]);
+            }
+        }
+        
+        return dp[0];
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-* **Time Complexity:** `O(n²)`
-* **Space Complexity:** `O(n²)`
-
-  * Can be optimized to `O(n)` using bottom-up 1D DP if required.
+- **Time Complexity:** $\mathcal{O}(n^2)$, where $n$ is the number of rows in `triangle`. The total number of elements processed is $\frac{n(n + 1)}{2}$. Each cell does an $\mathcal{O}(1)$ minimum and addition operation.
+- **Space Complexity:** $\mathcal{O}(n)$ auxiliary space to store the 1D DP array representing a single row of size at most $n$.
 
 ---
 
-If you want, I can next provide:
+### Takeaway Pattern & Interview Traps
 
-* Space-optimized 1D DP version
-* Bottom-up (reverse traversal) explanation
-* Recursion → Memoization → DP transformation  
-  Just tell me which one you want.
+1. **Why Bottom-Up Dominates Top-Down:** In top-down, boundary elements ($c = 0$ and $c = r$) only have one parent, requiring branching logic. Moving bottom-up guarantees that every cell $(r, c)$ has exactly two children $(r+1, c)$ and $(r+1, c+1)$, completely removing edge cases.
+2. **No Post-Processing Search:** Top-down requires scanning all $n$ cells of the bottom row with $\min$ at the end. Bottom-up naturally condenses the optimal answer into $dp[0]$.
+3. **In-Place Modification Consideration:** While you can modify `triangle` in-place for $\mathcal{O}(1)$ space, mutating input parameters is often considered bad practice in production systems. The $\mathcal{O}(n)$ 1D array is the clean, non-destructive standard.

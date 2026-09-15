@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,217 +8,275 @@ tags:
   - leetcode
   - coding
   - greedy
+  - two-pointers
+  - dynamic-programming
+  - string
+  - amazon
+  - google
 ---
 
 # LeetCode 44: Wildcard Matching
 
-**LeetCode 44 – Wildcard Matching**, covering the problem statement, key observations, the greedy strategy (why it works), a Python 3 implementation with typing, and a fully worked example.
+**Target Companies:** Google, Amazon, Meta, Microsoft, Apple, ByteDance  
+**Difficulty:** Hard  
+**Topic:** Greedy / Two Pointers / String / Dynamic Programming  
 
 ---
 
-## 1. Problem Statement (LeetCode 44 – Wildcard Matching)
+### Problem Statement
 
-You are given:
+Given an input string (`s`) and a pattern (`p`), implement wildcard pattern matching with support for `'?'` and `'*'` where:
+- `'?'` Matches any single character.
+- `'*'` Matches any sequence of characters (including the empty sequence).
 
-* A string `s`
-* A pattern `p`
-
-The pattern supports two special wildcard characters:
-
-* `?` → matches **exactly one** character
-* `*` → matches **any sequence of characters** (including the empty sequence)
-
-### Objective
-
-Return `True` if the pattern `p` matches the **entire** string `s`. Otherwise, return `False`.
-
-### Constraints (important for solution choice)
-
-* `1 ≤ len(s), len(p) ≤ 2000`
-* Must match the **whole string**, not a substring
+The matching should cover the **entire** input string (not partial).
 
 ---
 
-## 2. Key Observations
+### Input & Output Formats & Constraints
 
-1. This is **not regex matching**  
-   Only `?` and `*` are supported, with very specific semantics.
-2. `*` is the only character that introduces ambiguity
-
-   * It can match zero characters
-   * Or one
-   * Or many
-3. A naive recursive or DP solution works but:
-
-   * DP is `O(n × m)` time and space
-   * Can be optimized, but still heavy
-4. A **greedy two-pointer approach** works in linear time  
-   This is non-trivial but relies on a crucial observation:
-
-   * Only `*` can “absorb” mismatches
-   * The **last seen `*`** can always be expanded if needed
+- **Input:**
+  - `s`: `str` / `string` ($0 \le |s| \le 2000$).
+  - `p`: `str` / `string` ($0 \le |p| \le 2000$).
+- **Output:**
+  - `bool` — `true` if pattern `p` matches string `s` completely, else `false`.
+- **Constraints:**
+  - $0 \le \text{s.length}, \text{p.length} \le 2000$
+  - `s` contains only lowercase English letters.
+  - `p` contains only lowercase English letters, `'?'` or `'*'`.
 
 ---
 
-## 3. Greedy Strategy – Core Insight
+### Key Idea & Intuition
 
-### Idea
+While 2D Dynamic Programming solves this problem in $\mathcal{O}(|s| \times |p|)$ time and $\mathcal{O}(|s| \times |p|)$ space, a **Greedy Two-Pointer with Last-Star Backtracking** algorithm achieves **$\mathcal{O}(1)$ auxiliary space** and runs in near-linear time in practice!
 
-Use two pointers:
+#### The Greedy Last-Star Invariant:
+When matching $s$ against $p$:
+1. If $p[\text{p\_idx}] == s[\text{s\_idx}]$ or $p[\text{p\_idx}] == '?'$:
+   - Direct match. Advance both pointers `s_idx += 1`, `p_idx += 1`.
+2. If $p[\text{p\_idx}] == '*' $:
+   - A wildcard `*` can match zero or more characters.
+   - Greedily assume the `*` matches **zero** characters initially.
+   - Record checkpoints: `star_idx = p_idx`, and `s_match = s_idx`.
+   - Advance pattern pointer: `p_idx += 1`.
+3. If a mismatch occurs:
+   - If a previous `'*'` was seen (`star_idx != -1`):
+     - The assumption that `'*'` matched fewer characters failed.
+     - Backtrack: let `'*'` consume one additional character of $s$ by incrementing `s_match += 1`.
+     - Reset `s_idx = s_match`, and restart matching the pattern right after the star: `p_idx = star_idx + 1`.
+   - If no previous `'*'` exists:
+     - The mismatch cannot be absorbed $\rightarrow$ return `False`.
+4. After traversing $s$:
+   - Any trailing characters in $p$ must be `'*'` to match the empty suffix.
 
-* `i` → pointer for string `s`
-* `j` → pointer for pattern `p`
-
-Additionally:
-
-* `star_idx` → index of the **last `*`** seen in `p`
-* `match` → index in `s` where the last `*` started matching
-
-### Matching Rules
-
-1. **Exact match or `?`**
-
-   * If `p[j] == s[i]` or `p[j] == '?'`
-   * Move both pointers forward
-2. **Encounter `*`**
-
-   * Record:
-
-     * `star_idx = j`
-     * `match = i`
-   * Move pattern pointer `j` forward
-   * Initially assume `*` matches **empty**
-3. **Mismatch**
-
-   * If we have seen a `*` before:
-
-     * Backtrack:
-
-       * Let the `*` match **one more character**
-       * Increment `match`
-       * Set `i = match`
-       * Set `j = star_idx + 1`
-   * Else:
-
-     * No way to fix mismatch → return `False`
-4. **End of string**
-
-   * Remaining pattern characters must all be `*`
+#### Why We Only Need the Most Recent `'*'` Checkpoint:
+If pattern contains multiple stars (e.g. `*abc*def`), any failure after the second star only needs to backtrack to the second star. The second star has already superseded the first star because it can consume any suffix that the first star could have consumed. Thus, storing only the single most recent `star_idx` is mathematically sufficient!
 
 ---
 
-## 4. Why the Greedy Works
+### Solution Approach (Step-by-Step)
 
-* Only `*` can compensate for mismatches
-* Always expanding the **most recent `*`** is sufficient
-* Earlier `*` choices do not need reconsideration
-* This avoids exponential backtracking
-
-Time Complexity: **O(n + m)**  
-Space Complexity: **O(1)**
+1. Initialize `s_idx = 0`, `p_idx = 0`, `star_idx = -1`, and `s_match = 0`.
+2. While `s_idx < len(s)`:
+   - If `p_idx < len(p)` and `p[p_idx] in (s[s_idx], '?')`:
+     - Both match: `s_idx += 1`, `p_idx += 1`.
+   - Else if `p_idx < len(p)` and `p[p_idx] == '*'`:
+     - Record star position: `star_idx = p_idx`, `s_match = s_idx`.
+     - Advance pattern: `p_idx += 1`.
+   - Else if `star_idx != -1`:
+     - Backtrack to star: `s_match += 1`, `s_idx = s_match`, `p_idx = star_idx + 1`.
+   - Else:
+     - Mismatch without any star: return `False`.
+3. Check remaining pattern characters: while `p_idx < len(p)` and `p[p_idx] == '*'`: `p_idx += 1`.
+4. Return `p_idx == len(p)`.
 
 ---
 
-## 5. Python 3 Solution (with Typing)
+### Visual Algorithm Walkthrough
 
+For `s = "acdcb"`, `p = "a*c?b"`:
+
+```
+s = a  c  d  c  b
+p = a  *  c  ?  b
+
+1. s[0]='a', p[0]='a' -> Match! s_idx=1, p_idx=1
+2. p[1]='*' -> Star found! star_idx=1, s_match=1, p_idx=2 (try matching 0 chars for '*')
+3. s[1]='c', p[2]='c' -> Match! s_idx=2, p_idx=3
+4. s[2]='d', p[3]='?' -> Match ('?' matches 'd')! s_idx=3, p_idx=4
+5. s[3]='c', p[4]='b' -> MISMATCH ('c' != 'b')!
+   Previous star exists at star_idx=1!
+   Backtrack:
+     s_match = 1 + 1 = 2 ('*' now absorbs s[1]='c')
+     s_idx = 2 (points to 'd')
+     p_idx = star_idx + 1 = 2 (points to 'c')
+6. s[2]='d', p[2]='c' -> MISMATCH ('d' != 'c')!
+   Previous star exists at star_idx=1!
+   Backtrack:
+     s_match = 2 + 1 = 3 ('*' absorbs s[1]='c' and s[2]='d')
+     s_idx = 3 (points to second 'c')
+     p_idx = 2 (points to 'c')
+7. s[3]='c', p[2]='c' -> Match! s_idx=4, p_idx=3
+8. s[4]='b', p[3]='?' -> Match ('?' matches 'b')! s_idx=5, p_idx=4
+9. End of s reached (s_idx = 5).
+   Check p: remaining is p[4]='b', not '*'.
+   p_idx != len(p) -> False.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `s = "aa"`, `p = "a"`
+- **Output:** `false`
+
+#### Example 2:
+- **Input:** `s = "aa"`, `p = "*"`
+- **Output:** `true`
+
+#### Example 3:
+- **Input:** `s = "cb"`, `p = "?a"`
+- **Output:** `false`
+
+#### Example 4:
+- **Input:** `s = "adceb"`, `p = "*a*b"`
+- **Tracing:** `*` matches `""`, `'a'` matches `'a'`, `*` matches `"dce"`, `'b'` matches `'b'`.
+- **Output:** `true`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import *
-
 class Solution:
     def isMatch(self, s: str, p: str) -> bool:
-        i: int = 0  # pointer for s
-        j: int = 0  # pointer for p
-        star_idx: int = -1
-        match: int = 0
-
-        while i < len(s):
-            # Case 1: exact match or '?'
-            if j < len(p) and (p[j] == s[i] or p[j] == '?'):
-                i += 1
-                j += 1
-
-            # Case 2: '*'
-            elif j < len(p) and p[j] == '*':
-                star_idx = j
-                match = i
-                j += 1
-
-            # Case 3: mismatch but we have seen '*'
+        s_idx, p_idx = 0, 0
+        star_idx = -1
+        s_match = 0
+        
+        len_s, len_p = len(s), len(p)
+        
+        while s_idx < len_s:
+            # Case 1: Characters match or pattern has '?'
+            if p_idx < len_p and (p[p_idx] == s[s_idx] or p[p_idx] == '?'):
+                s_idx += 1
+                p_idx += 1
+            # Case 2: Pattern has '*', record checkpoint
+            elif p_idx < len_p and p[p_idx] == '*':
+                star_idx = p_idx
+                s_match = s_idx
+                p_idx += 1
+            # Case 3: Mismatch, but a previous '*' can absorb more characters
             elif star_idx != -1:
-                j = star_idx + 1
-                match += 1
-                i = match
-
-            # Case 4: mismatch and no '*'
+                p_idx = star_idx + 1
+                s_match += 1
+                s_idx = s_match
+            # Case 4: Mismatch without any star
             else:
                 return False
+                
+        # Consume any trailing '*' characters in pattern
+        while p_idx < len_p and p[p_idx] == '*':
+            p_idx += 1
+            
+        return p_idx == len_p
+```
 
-        # Remaining pattern characters must be all '*'
-        while j < len(p) and p[j] == '*':
-            j += 1
+#### C++17
+```cpp
+#include <string>
 
-        return j == len(p)
+class Solution {
+public:
+    bool isMatch(const std::string& s, const std::string& p) {
+        int s_idx = 0, p_idx = 0;
+        int star_idx = -1;
+        int s_match = 0;
+        
+        int len_s = static_cast<int>(s.size());
+        int len_p = static_cast<int>(p.size());
+        
+        while (s_idx < len_s) {
+            if (p_idx < len_p && (p[p_idx] == s[s_idx] || p[p_idx] == '?')) {
+                s_idx++;
+                p_idx++;
+            } else if (p_idx < len_p && p[p_idx] == '*') {
+                star_idx = p_idx;
+                s_match = s_idx;
+                p_idx++;
+            } else if (star_idx != -1) {
+                p_idx = star_idx + 1;
+                s_match++;
+                s_idx = s_match;
+            } else {
+                return false;
+            }
+        }
+        
+        while (p_idx < len_p && p[p_idx] == '*') {
+            p_idx++;
+        }
+        
+        return p_idx == len_p;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public boolean isMatch(String s, String p) {
+        int sIdx = 0, pIdx = 0;
+        int starIdx = -1;
+        int sMatch = 0;
+        
+        int lenS = s.length();
+        int lenP = p.length();
+        
+        while (sIdx < lenS) {
+            if (pIdx < lenP && (p.charAt(pIdx) == s.charAt(sIdx) || p.charAt(pIdx) == '?')) {
+                sIdx++;
+                pIdx++;
+            } else if (pIdx < lenP && p.charAt(pIdx) == '*') {
+                starIdx = pIdx;
+                sMatch = sIdx;
+                pIdx++;
+            } else if (starIdx != -1) {
+                pIdx = starIdx + 1;
+                sMatch++;
+                sIdx = sMatch;
+            } else {
+                return false;
+            }
+        }
+        
+        while (pIdx < lenP && p.charAt(pIdx) == '*') {
+            pIdx++;
+        }
+        
+        return pIdx == lenP;
+    }
+}
 ```
 
 ---
 
-## 6. Complete Worked Example
+### Complexity Analysis
 
-### Example
-
-```
-s = "adceb"
-p = "*a*b"
-```
-
-### Step-by-step Execution
-
-| i (s) | j (p) | s[i] | p[j] | Action |
-| --- | --- | --- | --- | --- |
-| 0 | 0 | a | \* | star\_idx = 0, match = 0 |
-| 0 | 1 | a | a | match → i=1, j=2 |
-| 1 | 2 | d | \* | star\_idx = 2, match = 1 |
-| 1 | 3 | d | b | mismatch → expand `*` |
-| 2 | 3 | c | b | mismatch → expand `*` |
-| 3 | 3 | e | b | mismatch → expand `*` |
-| 4 | 3 | b | b | match → i=5, j=4 |
-
-Now:
-
-* `i == len(s)`
-* `j == len(p)`
-
-### Result
-
-```
-True
-```
-
-The second `*` successfully absorbed `"dce"`.
+- **Time Complexity:** Average $\mathcal{O}(|s| + |p|)$, Worst Case $\mathcal{O}(|s| \times |p|)$
+  - In ordinary text with wildcards, the pointers advance forward with minimal backtracking, running in linear time.
+  - Pathological cases (e.g. `s = "aaaaa"`, `p = "*a*a*a"`) run in at most $\mathcal{O}(|s| \times |p|)$ iterations.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Unlike dynamic programming which requires an $\mathcal{O}(|s| \times |p|)$ table or $\mathcal{O}(|p|)$ rolling row, this greedy two-pointer algorithm uses strictly 4 scalar integer pointers.
 
 ---
 
-## 7. Common Pitfalls
+### Takeaway Pattern & Interview Traps
 
-1. Forgetting to skip remaining `*` at the end of pattern
-2. Trying to backtrack multiple `*` levels (unnecessary)
-3. Assuming greedy fails — this specific problem is proven greedy-solvable
-
----
-
-## 8. When to Prefer DP Instead
-
-* If wildcard rules change
-* If partial matching is allowed
-* If constraints include additional operators
-
-For the given problem, **greedy is optimal and preferred**.
-
----
-
-If you want, I can also:
-
-* Provide the **DP solution with table visualization**
-* Compare **DP vs Greedy**
-* Explain **why greedy fails for regex but works here**
-* Add **dry-run diagrams for multiple cases**
+- **Contrast with Regular Expression Matching (LeetCode 10):**
+  - In Wildcard Matching, `'*'` stands alone and matches any sequence, so only the **most recent** `'*'` needs to be remembered.
+  - In Regex Matching, `'*'` modifies the preceding character (e.g., `a*`), meaning older wildcards cannot freely subsume subsequent constraints, requiring full DP or backtracking.
+- **Trailing Stars:** Always clean up trailing `'*'` characters after `s_idx` reaches the end of the string.

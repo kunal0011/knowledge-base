@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,199 +8,226 @@ tags:
   - leetcode
   - coding
   - greedy
+  - array
+  - dynamic-programming
+  - amazon
+  - google
 ---
 
 # LeetCode 55: Jump Game
 
-**LeetCode 55 (Jump Game)**, structured exactly as requested.
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Greedy / Array / Reachability Frontier  
 
 ---
-
-## LeetCode 55 — Jump Game
 
 ### Problem Statement
 
-You are given an integer array `nums`.  
-You are initially positioned at index `0`.
+You are given an integer array `nums`. You are initially positioned at the array's **first index**, and each element in the array represents your maximum jump length at that position.
 
-Each element `nums[i]` represents the **maximum jump length** you can make from index `i`.
-
-Your goal is to determine whether you can reach the **last index** of the array.
-
-**Return `true` if you can reach the last index, otherwise return `false`.**
+Return `true` if you can reach the last index, or `false` otherwise.
 
 ---
 
-### Key Observation (Most Important Insight)
+### Input & Output Formats & Constraints
 
-You **do not need to try all jump combinations**.
-
-Instead, the problem reduces to this single question:
-
-> **At every index, is it still possible to reach or pass that index from previous jumps?**
-
-If at any index `i`, your maximum reachable position is **less than `i`**, then:
-
-* You are stuck
-* The last index is unreachable
-
-This turns the problem into a **reachability check**, not a path enumeration problem.
+- **Input:**
+  - `nums`: `List[int]` / `vector<int>` / `int[]` ($1 \le \text{nums.length} \le 10^4$).
+- **Output:**
+  - `bool` — `true` if the last index $n - 1$ is reachable, else `false`.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 10^4$
+  - $0 \le \text{nums}[i] \le 10^5$
 
 ---
 
-### Greedy Strategy (Core Trick)
+### Key Idea & Intuition
 
-Maintain a variable:
+Rather than simulating individual jumps or testing all path branches via backtracking/DP ($\mathcal{O}(2^n)$ or $\mathcal{O}(n^2)$), observe the continuous reachability property:
+
+#### Approach 1: Forward Greedy Frontier Expansion
+Maintain a variable `max_reach` denoting the **furthest index reachable so far**:
+- Start at $i = 0$ with `max_reach = 0`.
+- As we iterate through each index $i$:
+  - If $i > \text{max\_reach}$:
+    - We have reached an index that was unreachable from any previous position!
+    - We are permanently stuck $\rightarrow$ return `False`.
+  - Otherwise, index $i$ is reachable. From index $i$, we can jump up to $i + \text{nums}[i]$.
+  - Update the frontier:
+    $$\text{max\_reach} = \max(\text{max\_reach}, i + \text{nums}[i])$$
+  - If $\text{max\_reach} \ge n - 1$:
+    - The last index is already reachable $\rightarrow$ return `True` immediately!
+
+#### Approach 2: Backward Target Shift
+Start from the end and work backwards:
+- Initialize `target = n - 1`.
+- For $i$ from $n - 2$ down to $0$:
+  - If $i + \text{nums}[i] \ge target$:
+    - Being at index $i$ is sufficient to jump to (or past) `target`.
+    - We can shift the goal closer: `target = i`.
+- If `target == 0` at the end, the start can reach the destination $\rightarrow$ return `True`.
+
+---
+
+### Solution Approach (Step-by-Step: Forward Greedy)
+
+1. Initialize `max_reach = 0` and $n = \text{len}(nums)$.
+2. Iterate $i$ from $0$ to $n - 1$:
+   - If $i > max\_reach$:
+     - Return `False` (gap detected, cannot step onto $i$).
+   - `max_reach = max(max_reach, i + nums[i])`
+   - If `max_reach >= n - 1`:
+     - Return `True` (destination reachable).
+3. Return `True`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `nums = [2, 3, 1, 1, 4]`:
 
 ```
-maxReach = the farthest index you can reach so far
+i = 0 (val = 2):
+  i <= max_reach (0 <= 0): OK
+  max_reach = max(0, 0 + 2) = 2
+
+i = 1 (val = 3):
+  i <= max_reach (1 <= 2): OK
+  max_reach = max(2, 1 + 3) = 4
+  max_reach (4) >= n - 1 (4) -> REACHED!
+  Return True immediately.
 ```
 
-Iterate through the array:
+For `nums = [3, 2, 1, 0, 4]`:
 
-1. If the current index `i` is **greater than `maxReach`**, return `False`
-2. Otherwise, update:
+```
+i = 0 (val = 3):
+  max_reach = max(0, 0 + 3) = 3
 
-   ```
-   maxReach = max(maxReach, i + nums[i])
-   ```
-3. If `maxReach` reaches or exceeds the last index, return `True`
+i = 1 (val = 2):
+  max_reach = max(3, 1 + 2) = 3
 
-Why this is greedy:
+i = 2 (val = 1):
+  max_reach = max(3, 2 + 1) = 3
 
-* At each step, you **choose the jump that maximizes future reach**
-* No backtracking or DP table is needed
+i = 3 (val = 0):
+  max_reach = max(3, 3 + 0) = 3
 
----
-
-### Why Greedy Works (Intuition)
-
-* Jump choices **overlap**
-* Only the **farthest reachable boundary** matters
-* Smaller jumps are irrelevant if a larger jump already covers them
-
-Once a region is reachable, **how you reached it does not matter**.
+i = 4 (val = 4):
+  i > max_reach (4 > 3) -> STUCK!
+  Cannot reach index 4 from any previous position.
+  Return False.
+```
 
 ---
 
-### Python 3 Solution (with Typing)
+### Solved Examples with Multiple Inputs
 
+#### Example 1:
+- **Input:** `nums = [2, 3, 1, 1, 4]`
+- **Output:** `true`
+
+#### Example 2:
+- **Input:** `nums = [3, 2, 1, 0, 4]`
+- **Output:** `false`
+
+#### Example 3 (Single Element):
+- **Input:** `nums = [0]`
+- **Tracing:** Already at the final index (index 0). $0 \ge 0 \rightarrow \text{true}$.
+- **Output:** `true`
+
+#### Example 4 (Large Jump at Start):
+- **Input:** `nums = [5, 0, 0, 0, 0]`
+- **Tracing:** Index 0 can jump to index 5 $\ge 4$.
+- **Output:** `true`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
 from typing import List
 
 class Solution:
     def canJump(self, nums: List[int]) -> bool:
         max_reach = 0
-
-        for i in range(len(nums)):
-            # If current index is not reachable
+        n = len(nums)
+        
+        for i, jump in enumerate(nums):
             if i > max_reach:
                 return False
-
-            # Update farthest reachable index
-            max_reach = max(max_reach, i + nums[i])
-
-            # Early exit if we can reach the last index
-            if max_reach >= len(nums) - 1:
+            max_reach = max(max_reach, i + jump)
+            if max_reach >= n - 1:
                 return True
-
+                
         return True
 ```
 
----
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
 
-### Complete Worked Example (Step-by-Step)
-
-#### Input
-
-```text
-nums = [2, 3, 1, 1, 4]
+class Solution {
+public:
+    bool canJump(const std::vector<int>& nums) {
+        int max_reach = 0;
+        int n = static_cast<int>(nums.size());
+        
+        for (int i = 0; i < n; ++i) {
+            if (i > max_reach) {
+                return false;
+            }
+            max_reach = std::max(max_reach, i + nums[i]);
+            if (max_reach >= n - 1) {
+                return true;
+            }
+        }
+        
+        return true;
+    }
+};
 ```
 
-#### Goal
-
-Reach index `4`
-
----
-
-### Step-by-Step Processing
-
-| Index (`i`) | `nums[i]` | `maxReach` before | Check (`i > maxReach`) | New `maxReach` |
-| --- | --- | --- | --- | --- |
-| 0 | 2 | 0 | No | max(0, 0+2) = 2 |
-| 1 | 3 | 2 | No | max(2, 1+3) = 4 |
-| 2 | 1 | 4 | No | max(4, 2+1) = 4 |
-| 3 | 1 | 4 | No | max(4, 3+1) = 4 |
-| 4 | 4 | 4 | No | max(4, 4+4) = 8 |
-
----
-
-### Key Moment
-
-At **index 1**, we jump far enough to reach the **last index**:
-
+#### Java 17
+```java
+class Solution {
+    public boolean canJump(int[] nums) {
+        int maxReach = 0;
+        int n = nums.length;
+        
+        for (int i = 0; i < n; i++) {
+            if (i > maxReach) {
+                return false;
+            }
+            maxReach = Math.max(maxReach, i + nums[i]);
+            if (maxReach >= n - 1) {
+                return true;
+            }
+        }
+        
+        return true;
+    }
+}
 ```
-maxReach = 4
-```
-
-Since:
-
-```
-maxReach >= last index
-```
-
-→ **Return `True`**
-
----
-
-### Failure Example (Why It Can Fail)
-
-#### Input
-
-```text
-nums = [3, 2, 1, 0, 4]
-```
-
-#### Processing
-
-| Index | `maxReach` |
-| --- | --- |
-| 0 | 3 |
-| 1 | 3 |
-| 2 | 3 |
-| 3 | 3 |
-| 4 | ❌ unreachable |
-
-At index `4`:
-
-```
-i (4) > maxReach (3)
-```
-
-→ **Return `False`**
 
 ---
 
-### Time and Space Complexity
+### Complexity Analysis
 
-* **Time:** `O(n)`
-* **Space:** `O(1)`
-
-Optimal and interview-preferred.
-
----
-
-### Interview Summary (One-Line Explanation)
-
-> *Track the farthest reachable index while traversing; if you ever reach an index beyond that range, the jump is impossible.*
+- **Time Complexity:** $\mathcal{O}(n)$
+  - A single linear pass through the array. Early returns when `max_reach >= n - 1` or when reaching a dead end `i > max_reach`.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Uses only a single integer tracking `max_reach`.
 
 ---
 
-If you want, I can also provide:
+### Takeaway Pattern & Interview Traps
 
-* Backward greedy version (right-to-left)
-* Visual reach boundary diagram
-* Common greedy mistakes
-* Comparison with DP approach (and why DP is inferior here)
-
-Just tell me.
+- **Forward Frontier vs. Backward Target:**
+  - Forward: Tracks the maximum reachable index. Fails if $i > max\_reach$.
+  - Backward: Shifts `target` to $i$ whenever $i + nums[i] \ge target$. Succeeds if `target == 0`.
+  Both are clean $\mathcal{O}(n)$ time and $\mathcal{O}(1)$ space.
+- **Trap: Single Element `[0]`:** Notice that if $n = 1$, the loop checks index $0$: $0 \le 0$ and $0 \ge 0$, returning `true` immediately without getting stuck on 0.

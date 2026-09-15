@@ -1,240 +1,222 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
-title: "LeetCode 118: Pascal’s Triangle"
+title: "LeetCode 118: Pascal's Triangle"
 tags:
   - leetcode
   - coding
   - dynamic-programming
+  - array
+  - math
+  - amazon
+  - google
+  - apple
+  - microsoft
 ---
 
-# LeetCode 118: Pascal’s Triangle
+# LeetCode 118: Pascal's Triangle
 
-**LeetCode 118 – Pascal’s Triangle**, with **clear state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Apple, Google, Bloomberg, Microsoft, Meta  
+**Difficulty:** Easy  
+**Topic:** Dynamic Programming / Array / Math  
 
 ---
-
-## LeetCode 118 – Pascal’s Triangle
 
 ### Problem Statement
 
-Given an integer `numRows`, return the first `numRows` of Pascal’s Triangle.
+Given an integer `numRows`, return the first `numRows` of **Pascal's triangle**.
 
-**Pascal’s Triangle rules**
-
-* First and last element of every row is `1`
-* Any inner element is the **sum of the two elements directly above it**
-
----
-
-## Why this is a Dynamic Programming problem
-
-Each value depends on **previously computed values** (from the row above).  
-Hence:
-
-* **Overlapping subproblems**
-* **Optimal substructure**
-
----
-
-## DP Formulation
-
-### 1. State Definition
-
-Let
-
+In **Pascal's triangle**, each number is the sum of the two numbers directly above it:
 ```
-dp[i][j] = value at row i and column j (0-indexed)
-```
-
-Where:
-
-* `0 ≤ i < numRows`
-* `0 ≤ j ≤ i`
-
----
-
-### 2. Base Case
-
-```
-dp[i][0] = 1
-dp[i][i] = 1
-```
-
-First and last elements of every row are always `1`.
-
----
-
-### 3. State Transition
-
-For inner elements:
-
-```
-dp[i][j] = dp[i-1][j-1] + dp[i-1][j]
-```
-
-This follows directly from Pascal’s Triangle definition.
-
----
-
-### 4. DP Table Size
-
-The DP table is **triangular**:
-
-```
-Row 0 → 1 element
-Row 1 → 2 elements
-Row 2 → 3 elements
-...
-Row n-1 → n elements
-```
-
-Total elements ≈ `numRows * (numRows + 1) / 2`
-
----
-
-## Example Walkthrough (numRows = 5)
-
-### Step-by-step DP table construction
-
-Initialize empty DP table:
-
-```
-dp = []
+        1
+       1 1
+      1 2 1
+     1 3 3 1
+    1 4 6 4 1
 ```
 
 ---
 
-### Row 0
+### Input & Output Formats & Constraints
 
-```
-dp[0] = [1]
-```
-
----
-
-### Row 1
-
-```
-dp[1][0] = 1
-dp[1][1] = 1
-
-dp[1] = [1, 1]
-```
+- **Input:** An integer `numRows` ($1 \le numRows \le 30$).
+- **Output:** A list of lists of integers `List[List[int]]` where the $i^{\text{th}}$ list contains the $i + 1$ integers of the $i^{\text{th}}$ row of Pascal's triangle.
+- **Constraints:**
+  - `1 <= numRows <= 30`
 
 ---
 
-### Row 2
+### Key Idea & Intuition
 
-```
-dp[2][0] = 1
-dp[2][1] = dp[1][0] + dp[1][1] = 1 + 1 = 2
-dp[2][2] = 1
+#### Recurrence & Optimal Substructure
+Pascal's Triangle is the canonical geometric illustration of dynamic programming:
+1. Each element in the triangle represents the binomial coefficient $\binom{i}{j}$, read as "the number of ways to choose $j$ elements from $i$ elements".
+2. Pascal's Identity:
+   $$\binom{i}{j} = \binom{i-1}{j-1} + \binom{i-1}{j}$$
+3. Boundary Conditions:
+   - For every row $i \ge 0$, the first element ($j = 0$) and the last element ($j = i$) are always $1$:
+     $$dp[i][0] = 1, \quad dp[i][i] = 1$$
+4. Inner Elements ($1 \le j < i$):
+   $$dp[i][j] = dp[i-1][j-1] + dp[i-1][j]$$
 
-dp[2] = [1, 2, 1]
-```
-
----
-
-### Row 3
-
-```
-dp[3][0] = 1
-dp[3][1] = dp[2][0] + dp[2][1] = 1 + 2 = 3
-dp[3][2] = dp[2][1] + dp[2][2] = 2 + 1 = 3
-dp[3][3] = 1
-
-dp[3] = [1, 3, 3, 1]
-```
+Each row is constructed purely from the adjacent elements of the immediately preceding row.
 
 ---
 
-### Row 4
+### Solution Approach (Step-by-Step)
 
-```
-dp[4][0] = 1
-dp[4][1] = 1 + 3 = 4
-dp[4][2] = 3 + 3 = 6
-dp[4][3] = 3 + 1 = 4
-dp[4][4] = 1
-
-dp[4] = [1, 4, 6, 4, 1]
-```
+1. **Initialize Triangular List:**
+   - Create an empty list `triangle`.
+2. **Iterate Through Row Indices:**
+   - For $i$ from 0 to $numRows - 1$:
+     - Initialize a new row of size $i + 1$ filled with $1$s: `row = [1] * (i + 1)`.
+     - For $j$ from 1 to $i - 1$:
+       - `row[j] = triangle[i - 1][j - 1] + triangle[i - 1][j]`.
+     - Append `row` to `triangle`.
+3. **Return:**
+   - Return `triangle`.
 
 ---
 
-### Final DP Table
+### Visual Algorithm Walkthrough
 
+#### Trace for `numRows = 5`
 ```
+Row 0 (i = 0):
+  Size = 1 -> [1]
+
+Row 1 (i = 1):
+  Size = 2 -> [1, 1]
+
+Row 2 (i = 2):
+  Size = 3 -> [1, ?, 1]
+  j = 1: row[1] = triangle[1][0] + triangle[1][1] = 1 + 1 = 2
+  Row 2 = [1, 2, 1]
+
+Row 3 (i = 3):
+  Size = 4 -> [1, ?, ?, 1]
+  j = 1: row[1] = triangle[2][0] + triangle[2][1] = 1 + 2 = 3
+  j = 2: row[2] = triangle[2][1] + triangle[2][2] = 2 + 1 = 3
+  Row 3 = [1, 3, 3, 1]
+
+Row 4 (i = 4):
+  Size = 5 -> [1, ?, ?, ?, 1]
+  j = 1: row[1] = triangle[3][0] + triangle[3][1] = 1 + 3 = 4
+  j = 2: row[2] = triangle[3][1] + triangle[3][2] = 3 + 3 = 6
+  j = 3: row[3] = triangle[3][2] + triangle[3][3] = 3 + 1 = 4
+  Row 4 = [1, 4, 6, 4, 1]
+
+Result:
 [
- [1],
- [1, 1],
- [1, 2, 1],
- [1, 3, 3, 1],
- [1, 4, 6, 4, 1]
+  [1],
+  [1, 1],
+  [1, 2, 1],
+  [1, 3, 3, 1],
+  [1, 4, 6, 4, 1]
 ]
 ```
 
 ---
 
-## Python 3 DP Implementation (with typing)
+### Solved Examples with Multiple Inputs
 
+| `numRows` | Generated Triangle Rows | Number of Total Elements |
+|---|---|---|
+| `1` | `[[1]]` | 1 |
+| `2` | `[[1], [1, 1]]` | 3 |
+| `3` | `[[1], [1, 1], [1, 2, 1]]` | 6 |
+| `5` | `[[1], [1, 1], [1, 2, 1], [1, 3, 3, 1], [1, 4, 6, 4, 1]]` | 15 |
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def generate(self, numRows: int) -> List[List[int]]:
-        dp: List[List[int]] = []
-
+    def generate(self, numRows: int) -> list[list[int]]:
+        triangle: list[list[int]] = []
+        
         for i in range(numRows):
-            # initialize row with 1s
-            row = [1] * (i + 1)
-
-            # fill inner elements using DP transition
+            # Pre-populate row with 1s of length (i + 1)
+            row: list[int] = [1] * (i + 1)
+            
+            # Compute inner elements
             for j in range(1, i):
-                row[j] = dp[i - 1][j - 1] + dp[i - 1][j]
+                row[j] = triangle[i - 1][j - 1] + triangle[i - 1][j]
+                
+            triangle.append(row)
+            
+        return triangle
+```
 
-            dp.append(row)
+#### C++17
+```cpp
+#include <vector>
 
-        return dp
+class Solution {
+public:
+    std::vector<std::vector<int>> generate(int numRows) {
+        std::vector<std::vector<int>> triangle;
+        triangle.reserve(numRows);
+        
+        for (int i = 0; i < numRows; ++i) {
+            std::vector<int> row(i + 1, 1);
+            
+            for (int j = 1; j < i; ++j) {
+                row[j] = triangle[i - 1][j - 1] + triangle[i - 1][j];
+            }
+            
+            triangle.push_back(std::move(row));
+        }
+        
+        return triangle;
+    }
+};
+```
+
+#### Java 17
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+class Solution {
+    public List<List<Integer>> generate(int numRows) {
+        List<List<Integer>> triangle = new ArrayList<>(numRows);
+        
+        for (int i = 0; i < numRows; i++) {
+            List<Integer> row = new ArrayList<>(i + 1);
+            
+            for (int j = 0; j <= i; j++) {
+                if (j == 0 || j == i) {
+                    row.add(1);
+                } else {
+                    int val = triangle.get(i - 1).get(j - 1) + triangle.get(i - 1).get(j);
+                    row.add(val);
+                }
+            }
+            
+            triangle.add(row);
+        }
+        
+        return triangle;
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-### Time Complexity
-
-```
-O(numRows²)
-```
-
-Each row computes up to `i` elements.
-
-### Space Complexity
-
-```
-O(numRows²)
-```
-
-Full DP table stored (required by problem output).
+- **Time Complexity:** $\mathcal{O}(numRows^2)$. The total number of elements generated across all rows is $\sum_{i=1}^{numRows} i = \frac{numRows \times (numRows + 1)}{2}$. Each element is calculated in $\mathcal{O}(1)$ time. For $numRows = 30$, this is only $465$ operations.
+- **Space Complexity:** $\mathcal{O}(numRows^2)$ required to store and return the full triangular structure. Beyond the returned output, auxiliary memory is $\mathcal{O}(1)$.
 
 ---
 
-## Key Takeaways
+### Takeaway Pattern & Interview Traps
 
-* **State:** `dp[i][j]`
-* **Transition:** `dp[i-1][j-1] + dp[i-1][j]`
-* **Edges:** Always `1`
-* Classic example of **bottom-up DP with table construction**
-
----
-
-If you want next:
-
-* Space-optimized explanation
-* Relation to **binomial coefficients**
-* Visual dependency graph
-* Or contrast with **LeetCode 119 (Pascal’s Triangle II)**
+1. **Pre-filling with $1$s:** Initializing each row as `[1] * (i + 1)` automatically sets the boundary values `row[0] = 1` and `row[i] = 1`, completely avoiding special boundary checks in the inner loop.
+2. **0-indexed vs. 1-indexed:** Be clear on whether row counting starts from 0 or 1. Here, $numRows$ rows means indices $0$ to $numRows - 1$.
+3. **Contrast with LC 119:** LeetCode 119 asks for only the $k^{\text{th}}$ row, which can be solved in $\mathcal{O}(k)$ space in-place using a single 1D array traversed backwards.

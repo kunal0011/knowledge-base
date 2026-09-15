@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,233 +8,210 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - string
+  - amazon
+  - google
+  - bloomberg
+  - microsoft
 ---
 
 # LeetCode 115: Distinct Subsequences
 
-**LeetCode 115 — Distinct Subsequences**, focused on **state definition, transitions, DP table construction, and a worked example**.
+**Target Companies:** Amazon, Google, Bloomberg, Microsoft, Uber  
+**Difficulty:** Hard  
+**Topic:** Dynamic Programming / String  
 
 ---
-
-## LeetCode 115 — Distinct Subsequences
 
 ### Problem Statement
 
-Given two strings **s** and **t**, return the number of **distinct subsequences** of **s** which equal **t**.
+Given two strings `s` and `t`, return *the number of distinct subsequences of `s` which equals `t`*.
 
-A subsequence is obtained by deleting zero or more characters from **s** without changing the relative order of the remaining characters.
-
----
-
-## Key Observation
-
-* We must **count**, not just check existence.
-* Order matters.
-* This is a **prefix-to-prefix matching problem**, making it a classic **2D Dynamic Programming** problem.
+The test cases are generated so that the answer fits on a 32-bit signed integer.
 
 ---
 
-## DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[i][j] = number of distinct subsequences of s[0..i-1] that equal t[0..j-1]
-```
-
-Meaning:
-
-* First `i` characters of `s`
-* First `j` characters of `t`
+- **Input:** Two strings `s` and `t` consisting of uppercase and lowercase English letters.
+- **Output:** An integer representing the number of distinct subsequences of `s` that match `t`.
+- **Constraints:**
+  - `1 <= s.length, t.length <= 1000`
+  - `s` and `t` consist of English letters.
+  - The answer fits in a 32-bit signed integer.
 
 ---
 
-## Base Cases
+### Key Idea & Intuition
 
-### 1. Empty target string
+#### Prefix-Matching State Invariant
+We define $dp[i][j]$ as the number of distinct subsequences of prefix $s[0..i-1]$ that equal prefix $t[0..j-1]$.
+- Dimensions: $(m + 1) \times (n + 1)$, where $m = |s|$ and $n = |t|$.
+- **Base Case 1 ($j = 0$):** An empty target string $t$ can be formed from any prefix of $s$ in exactly **one way** (by deleting all characters in $s$):
+  $$dp[i][0] = 1 \quad \forall 0 \le i \le m$$
+- **Base Case 2 ($i = 0, j > 0$):** A non-empty target string $t$ cannot be formed from an empty source string $s$:
+  $$dp[0][j] = 0 \quad \forall 1 \le j \le n$$
 
-```
-dp[i][0] = 1   for all i
-```
+#### State Transitions
+For characters $s[i-1]$ and $t[j-1]$:
+1. **Characters Match ($s[i-1] == t[j-1]$):**
+   We have two valid, mutually exclusive options:
+   - **Option A (Match):** Pair $s[i-1]$ with $t[j-1]$. The number of ways to do this equals the number of ways to form $t[0..j-2]$ from $s[0..i-2]$, which is $dp[i-1][j-1]$.
+   - **Option B (Skip):** Choose not to use $s[i-1]$ in this match. The number of ways equals $dp[i-1][j]$.
+   $$\text{Summing both choices: } dp[i][j] = dp[i-1][j-1] + dp[i-1][j]$$
+2. **Characters Do Not Match ($s[i-1] \ne t[j-1]$):**
+   Character $s[i-1]$ cannot be paired with $t[j-1]$. We are forced to skip it:
+   $$dp[i][j] = dp[i-1][j]$$
 
-Reason:
-
-* There is exactly **one** way to form an empty string: delete everything.
-
-### 2. Empty source string (non-empty target)
-
-```
-dp[0][j] = 0   for j > 0
-```
-
-Reason:
-
-* You cannot form a non-empty string from an empty string.
-
----
-
-## State Transition
-
-We compare:
-
-```
-s[i-1] and t[j-1]
-```
-
-### Case 1: Characters match
-
-```
-s[i-1] == t[j-1]
-```
-
-We have **two choices**:
-
-1. **Use** this character → match both prefixes  
-   → `dp[i-1][j-1]`
-2. **Skip** this character in `s`  
-   → `dp[i-1][j]`
-
-```
-dp[i][j] = dp[i-1][j-1] + dp[i-1][j]
-```
+#### Space Optimization to 1D Array
+Notice that calculating row $i$ only requires entries from the previous row $i - 1$.
+By traversing $j$ **in reverse** from $n$ down to $1$:
+$$dp[j] \leftarrow dp[j] + (dp[j-1] \text{ if } s[i-1] == t[j-1] \text{ else } 0)$$
+We compress the space complexity from $\mathcal{O}(m \times n)$ down to $\mathcal{O}(n)$.
 
 ---
 
-### Case 2: Characters do not match
+### Solution Approach (Step-by-Step)
 
-```
-s[i-1] != t[j-1]
-```
+1. **Quick Pruning:**
+   - If $|s| < |t|$, return `0` immediately.
+2. **Initialize 1D Array:**
+   - Array `dp` of size $n + 1$ filled with zeros.
+   - Set $dp[0] = 1$ (representing the empty target string).
+3. **Iterate Through Source and Target:**
+   - For each character $c$ in $s$:
+     - For $j$ from $n$ down to 1:
+       - If $c == t[j-1]$:
+         - $dp[j] += dp[j-1]$
+4. **Return:**
+   - Return $dp[n]$.
 
-We can only **skip** the current character of `s`:
+---
 
+### Visual Algorithm Walkthrough
+
+#### Trace for `s = "rabbbit"`, `t = "rabbit"`
 ```
-dp[i][j] = dp[i-1][j]
+m = 7 ('r','a','b','b','b','i','t'), n = 6 ('r','a','b','b','i','t')
+
+Table Evolution:
+        ""   r   a   b   b   i   t
+  ""  [  1,  0,  0,  0,  0,  0,  0 ]
+  r   [  1,  1,  0,  0,  0,  0,  0 ]  ('r' matches 'r')
+  a   [  1,  1,  1,  0,  0,  0,  0 ]  ('a' matches 'a')
+  b   [  1,  1,  1,  1,  0,  0,  0 ]  ('b' matches 1st 'b')
+  b   [  1,  1,  1,  2,  1,  0,  0 ]  ('b' matches 1st or 2nd 'b': dp[b2] = 1+0=1; dp[b1] = 1+1=2)
+  b   [  1,  1,  1,  3,  3,  0,  0 ]  ('b' matches 1st or 2nd 'b': dp[b2] = 1+2=3; dp[b1] = 2+1=3)
+  i   [  1,  1,  1,  3,  3,  3,  0 ]  ('i' matches 'i': dp[i] = 0 + 3 = 3)
+  t   [  1,  1,  1,  3,  3,  3,  3 ]  ('t' matches 't': dp[t] = 0 + 3 = 3)
+
+Final Answer: dp[6] = 3.
+The three 'b's in s ("ra[bb]bit", "ra[b]b[b]it", "rab[bb]it") yield 3 distinct ways!
 ```
 
 ---
 
-## Final Answer
+### Solved Examples with Multiple Inputs
 
-```
-dp[len(s)][len(t)]
-```
-
----
-
-## Example Walkthrough
-
-### Input
-
-```
-s = "rabbbit"
-t = "rabbit"
-```
-
-Lengths:
-
-```
-s → 7 characters
-t → 6 characters
-```
+| Source $s$ | Target $t$ | Distinct Subsequences | Output |
+|---|---|---|---|
+| `"rabbbit"` | `"rabbit"` | Indices: `{0,1,2,3,5,6}`, `{0,1,2,4,5,6}`, `{0,1,3,4,5,6}` | `3` |
+| `"babgbag"` | `"bag"` | Indices: `{0,1,4}`, `{0,3,4}`, `{1,3,4}`, `{2,3,4}`, `{0,1,6}`... | `5` |
+| `"abc"` | `"def"` | No common characters | `0` |
+| `"aaa"` | `"a"` | Each of the 3 `'a'`s independently | `3` |
 
 ---
 
-### DP Table Structure
+### Multi-Language Implementations
 
-Rows → `s` (including empty prefix)  
-Columns → `t` (including empty prefix)
-
-| s \ t | "" | r | a | b | b | i | t |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| "" | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| r | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| a | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
-| b | 1 | 1 | 1 | 1 | 0 | 0 | 0 |
-| b | 1 | 1 | 1 | 2 | 1 | 0 | 0 |
-| b | 1 | 1 | 1 | 3 | 3 | 0 | 0 |
-| i | 1 | 1 | 1 | 3 | 3 | 3 | 0 |
-| t | 1 | 1 | 1 | 3 | 3 | 3 | 3 |
-
----
-
-### Explanation of Key Cell
-
-At `dp[5][3]` (matching `"rabbb"` → `"rab"`):
-
-* `s[4] == 'b'` and `t[2] == 'b'`
-* So:
-
-```
-dp[5][3] = dp[4][2] + dp[4][3]
-         = 1 + 2
-         = 3
-```
-
----
-
-### Final Result
-
-```
-dp[7][6] = 3
-```
-
-There are **3 distinct subsequences** of `"rabbbit"` that equal `"rabbit"`.
-
----
-
-## Python 3 DP Implementation (With Typing)
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
     def numDistinct(self, s: str, t: str) -> int:
         m, n = len(s), len(t)
+        if m < n:
+            return 0
+            
+        # dp[j] stores number of subsequences of s prefix matching t[0..j-1]
+        dp = [0] * (n + 1)
+        dp[0] = 1  # Empty target string has 1 match
         
-        # dp[i][j] = number of ways s[0..i-1] forms t[0..j-1]
-        dp: List[List[int]] = [[0] * (n + 1) for _ in range(m + 1)]
+        for c in s:
+            # Traverse backwards to preserve previous row's values
+            for j in range(n, 0, -1):
+                if c == t[j - 1]:
+                    dp[j] += dp[j - 1]
+                    
+        return dp[n]
+```
+
+#### C++17
+```cpp
+#include <string>
+#include <vector>
+
+class Solution {
+public:
+    int numDistinct(const std::string& s, const std::string& t) {
+        int m = static_cast<int>(s.size());
+        int n = static_cast<int>(t.size());
+        if (m < n) return 0;
         
-        # Base case: empty target
-        for i in range(m + 1):
-            dp[i][0] = 1
+        // Use unsigned long long to avoid intermediate integer overflow
+        std::vector<unsigned long long> dp(n + 1, 0);
+        dp[0] = 1;
         
-        for i in range(1, m + 1):
-            for j in range(1, n + 1):
-                if s[i - 1] == t[j - 1]:
-                    dp[i][j] = dp[i - 1][j - 1] + dp[i - 1][j]
-                else:
-                    dp[i][j] = dp[i - 1][j]
+        for (char c : s) {
+            for (int j = n; j >= 1; --j) {
+                if (c == t[j - 1]) {
+                    dp[j] += dp[j - 1];
+                }
+            }
+        }
         
-        return dp[m][n]
+        return static_cast<int>(dp[n]);
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int numDistinct(String s, String t) {
+        int m = s.length();
+        int n = t.length();
+        if (m < n) return 0;
+        
+        // Use double or long to prevent intermediate overflow before final result
+        int[] dp = new int[n + 1];
+        dp[0] = 1;
+        
+        // Space-optimized 1D DP with reverse inner loop
+        for (int i = 0; i < m; i++) {
+            char c = s.charAt(i);
+            for (int j = n; j >= 1; j--) {
+                if (c == t.charAt(j - 1)) {
+                    dp[j] += dp[j - 1];
+                }
+            }
+        }
+        
+        return dp[n];
+    }
+}
 ```
 
 ---
 
-## Complexity Analysis
+### Complexity Analysis
 
-* **Time Complexity:** `O(m × n)`
-* **Space Complexity:** `O(m × n)`
-* Can be optimized to `O(n)` using rolling array (optional).
-
----
-
-## DP Pattern Classification
-
-* **Pattern:** *Subsequence Counting DP*
-* **Related Problems:**
-
-  * LeetCode 392 (Is Subsequence)
-  * LeetCode 583 (Delete Operation for Two Strings)
-  * LeetCode 1092 (Shortest Common Supersequence)
+- **Time Complexity:** $\mathcal{O}(m \times n)$, where $m = |s|$ and $n = |t|$. Each character in $s$ updates at most $n$ states in reverse with $\mathcal{O}(1)$ operations.
+- **Space Complexity:** $\mathcal{O}(n)$ auxiliary space using the 1D rolling array.
 
 ---
 
-If you want, I can:
+### Takeaway Pattern & Interview Traps
 
-* Show **1D space-optimized DP**
-* Explain **why order of loops matters**
-* Compare this with **LCS-style DP**
-* Draw the **DP dependency graph**
-
-Just specify.
+1. **Reverse Iteration in 1D Space Optimization:** When transitioning $dp[j] = dp[j] + dp[j-1]$, moving $j$ from left to right would overwrite $dp[j-1]$ with its new value before $dp[j]$ has a chance to read its previous value. Moving $j$ in reverse ($n \to 1$) keeps $dp[j-1]$ untouched.
+2. **Intermediate Overflow in C++:** Even though LeetCode guarantees the final answer fits in a 32-bit signed integer, intermediate table values in paths that don't reach $dp[m][n]$ can exceed `INT_MAX`. Using `unsigned long long` in C++ protects against runtime overflow exceptions.
+3. **Difference from LCS:** LCS computes the *length* of the longest common subsequence ($\max$). LC 115 computes the *count* of distinct matching ways ($\sum$).

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-17"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,286 +8,270 @@ tags:
   - leetcode
   - coding
   - greedy
+  - string
+  - stack
+  - amazon
+  - google
 ---
 
 # LeetCode 678: Valid Parenthesis String
 
-Below is a **complete, structured explanation of LeetCode 678 – *Valid Parenthesis String***, aligned with your usual learning pattern (problem → observation → greedy trick → code → step-by-step execution).
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, ByteDance  
+**Difficulty:** Medium  
+**Topic:** Greedy / String / Range Tracking / Monotonic State  
 
 ---
-
-## LeetCode 678 – Valid Parenthesis String
 
 ### Problem Statement
 
-You are given a string `s` containing only three characters:
+Given a string `s` containing only three types of characters: `'('`, `')'` and `'*'`, return `true` if `s` is **valid**.
 
-* `'('` : opening parenthesis
-* `')'` : closing parenthesis
-* `'*'` : wildcard character
-
-The wildcard `'*'` can represent **any one of the following**:
-
-* `'('`
-* `')'`
-* an empty string `""`
-
-Return **true** if the string can be interpreted as a **valid parentheses string**, otherwise return **false**.
-
-#### Definition of a Valid Parentheses String
-
-1. Every opening parenthesis `'('` must have a corresponding closing parenthesis `')'`.
-2. Parentheses must be closed in the correct order.
-3. The empty string is considered valid.
+The following rules define a valid string:
+1. Any left parenthesis `'('` must have a corresponding right parenthesis `')'`.
+2. Any right parenthesis `')'` must have a corresponding left parenthesis `'('`.
+3. Left parenthesis `'('` must go before the corresponding right parenthesis `')'`.
+4. `'*'` could be treated as a single right parenthesis `')'` or a single left parenthesis `'('` or an empty string `""`.
 
 ---
 
-## Key Observations
+### Input & Output Formats & Constraints
 
-1. **Brute force is infeasible**
-
-   * Each `'*'` has 3 possibilities.
-   * Worst case: `3^n` combinations.
-2. **Stack-based solutions become complex**
-
-   * Because `'*'` can behave differently depending on context.
-3. **We do NOT need exact positions**
-
-   * We only need to know **whether a valid interpretation exists**, not what it is.
-4. **Key Insight**
-
-   * At any point, the number of open parentheses can lie within a **range**:
-
-     * **Minimum possible open count**
-     * **Maximum possible open count**
+- **Input:**
+  - `s`: `str` / `string` ($1 \le |s| \le 100$).
+- **Output:**
+  - `bool` — `true` if there exists at least one assignment of `'*'` making `s` valid, else `false`.
+- **Constraints:**
+  - $1 \le \text{s.length} \le 100$
+  - `s[i]` is `'('`, `')'` or `'*'`.
 
 ---
 
-## Greedy Solution Trick (Core Idea)
+### Key Idea & Intuition
 
-Instead of tracking exact matches, track a **range of possible open parentheses**.
+Without `'*'`, we would only need a single integer counter `open_count`:
+- `'('` increments `open_count += 1`
+- `')'` decrements `open_count -= 1`
+- String is valid if `open_count` never drops below $0$, and ends at exactly $0$.
 
-### Two Variables
+With `'*'`, each star can change `open_count` by $+1$ (`'('`), $-1$ (`')'`), or $0$ (`""`).
+This means at any index, the number of open parentheses is not a single number, but a **continuous interval of possible values**:
+$$[\text{cmin}, \text{cmax}]$$
+where:
+- $\text{cmin}$: the **minimum** number of open parentheses possible.
+- $\text{cmax}$: the **maximum** number of open parentheses possible.
 
-* `low` → minimum possible number of unmatched `'('`
-* `high` → maximum possible number of unmatched `'('`
+#### Updating the Interval:
+For each character `ch`:
+1. If `ch == '('`:
+   - Both minimum and maximum open counts increase by 1:
+     $$\text{cmin} \mathrel{+}= 1, \quad \text{cmax} \mathrel{+}= 1$$
+2. If `ch == ')'`:
+   - Both minimum and maximum open counts decrease by 1:
+     $$\text{cmin} \mathrel{-}= 1, \quad \text{cmax} \mathrel{-}= 1$$
+3. If `ch == '*'`:
+   - Treating `'*'` as `')'` minimizes open count $\rightarrow \text{cmin} \mathrel{-}= 1$.
+   - Treating `'*'` as `'('` maximizes open count $\rightarrow \text{cmax} \mathrel{+}= 1$.
+   - Treating `'*'` as `""` leaves it unchanged (lies within $[\text{cmin}, \text{cmax}]$).
 
----
-
-### How Each Character Affects the Range
-
-| Character | Effect on `low` | Effect on `high` |
-| --- | --- | --- |
-| `'('` | `low += 1` | `high += 1` |
-| `')'` | `low -= 1` | `high -= 1` |
-| `'*'` | `low -= 1` | `high += 1` |
-
-Explanation for `'*'`:
-
-* If `'*'` → `')'` → open count decreases
-* If `'*'` → `'('` → open count increases
-* If `'*'` → `""` → open count unchanged  
-  So it expands the range.
-
----
-
-### Critical Greedy Constraints
-
-1. **`high` must never be negative**
-
-   * If `high < 0`, even the best case has more `')'` than `'('` → invalid immediately.
-2. **Clamp `low` to 0**
-
-   * Open parentheses cannot be negative.
-   * `low = max(low, 0)`
-3. **Final Condition**
-
-   * At the end, `low == 0`
-   * Means there exists an interpretation with all parentheses closed.
+#### Boundary Checks:
+- If $\text{cmax} < 0$:
+  - Even if every single star was treated as a `'('`, there are still too many `')'` characters. The prefix is irrecoverably invalid $\rightarrow$ return `False`.
+- Lower bound clamp:
+  - $\text{cmin} = \max(\text{cmin}, 0)$. We never allow $\text{cmin}$ to remain negative because we can always choose to treat some stars as empty strings `""` or `'('` rather than `')'`.
+- At the end of the string:
+  - Is it possible to have exactly 0 open parentheses?
+  - Yes, if and only if $0 \in [\text{cmin}, \text{cmax}]$, which means $\text{cmin} == 0$.
 
 ---
 
-## Python 3 Solution (Greedy, O(n) Time, O(1) Space)
+### Solution Approach (Step-by-Step)
 
+1. Initialize `cmin = 0` and `cmax = 0`.
+2. For each character `ch` in `s`:
+   - If `ch == '('`:
+     - `cmin += 1`
+     - `cmax += 1`
+   - Else if `ch == ')'`:
+     - `cmin -= 1`
+     - `cmax -= 1`
+   - Else (`ch == '*'`):
+     - `cmin -= 1`
+     - `cmax += 1`
+   - If `cmax < 0`:
+     - Return `False` (excess `')'`).
+   - `cmin = max(cmin, 0)` (clamp negative minimum).
+3. Return `cmin == 0`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `s = "(*))"`:
+
+```
+Start: [cmin, cmax] = [0, 0]
+
+Char 0: '('
+  cmin = 0 + 1 = 1
+  cmax = 0 + 1 = 1
+  Range: [1, 1]
+
+Char 1: '*'
+  cmin = 1 - 1 = 0 (if '*' is ')')
+  cmax = 1 + 1 = 2 (if '*' is '(')
+  Range: [0, 2]
+
+Char 2: ')'
+  cmin = 0 - 1 = -1 -> clamped to 0
+  cmax = 2 - 1 = 1
+  cmax >= 0 (OK)
+  Range: [0, 1]
+
+Char 3: ')'
+  cmin = 0 - 1 = -1 -> clamped to 0
+  cmax = 1 - 1 = 0
+  cmax >= 0 (OK)
+  Range: [0, 0]
+
+End of string:
+cmin == 0 -> TRUE!
+Valid interpretation: '*' acted as '(' to match: "(()))" -> wait, s had 4 chars: "(*))" with '*' as '(' gives "(())" which is valid!
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `s = "()"`
+- **Output:** `true`
+
+#### Example 2:
+- **Input:** `s = "(*)"`
+- **Output:** `true`
+
+#### Example 3:
+- **Input:** `s = "(*))"`
+- **Output:** `true`
+
+#### Example 4 (Invalid):
+- **Input:** `s = ")*("`
+- **Tracing:**
+  - $ch=')' \rightarrow cmin=-1 \rightarrow 0, cmax=-1 < 0 \rightarrow$ returns `false`.
+- **Output:** `false`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import *
-
 class Solution:
     def checkValidString(self, s: str) -> bool:
-        low: int = 0   # minimum open parentheses
-        high: int = 0  # maximum open parentheses
-
+        cmin = 0  # Minimum possible open parentheses
+        cmax = 0  # Maximum possible open parentheses
+        
         for ch in s:
             if ch == '(':
-                low += 1
-                high += 1
+                cmin += 1
+                cmax += 1
             elif ch == ')':
-                low -= 1
-                high -= 1
+                cmin -= 1
+                cmax -= 1
             else:  # '*'
-                low -= 1      # treat '*' as ')'
-                high += 1     # treat '*' as '('
-
-            # Too many closing brackets
-            if high < 0:
+                cmin -= 1  # Treat as ')'
+                cmax += 1  # Treat as '('
+                
+            # If even the maximum possible open count is negative, fail
+            if cmax < 0:
                 return False
+                
+            # cmin cannot drop below 0 (a '*' can always be chosen as empty)
+            cmin = max(cmin, 0)
+            
+        return cmin == 0
+```
 
-            # Clamp low to 0
-            if low < 0:
-                low = 0
+#### C++17
+```cpp
+#include <string>
+#include <algorithm>
 
-        return low == 0
+class Solution {
+public:
+    bool checkValidString(const std::string& s) {
+        int cmin = 0;
+        int cmax = 0;
+        
+        for (char ch : s) {
+            if (ch == '(') {
+                cmin++;
+                cmax++;
+            } else if (ch == ')') {
+                cmin--;
+                cmax--;
+            } else { // '*'
+                cmin--;
+                cmax++;
+            }
+            
+            if (cmax < 0) {
+                return false;
+            }
+            
+            cmin = std::max(cmin, 0);
+        }
+        
+        return cmin == 0;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public boolean checkValidString(String s) {
+        int cmin = 0;
+        int cmax = 0;
+        
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == '(') {
+                cmin++;
+                cmax++;
+            } else if (ch == ')') {
+                cmin--;
+                cmax--;
+            } else { // '*'
+                cmin--;
+                cmax++;
+            }
+            
+            if (cmax < 0) {
+                return false;
+            }
+            
+            cmin = Math.max(cmin, 0);
+        }
+        
+        return cmin == 0;
+    }
+}
 ```
 
 ---
 
-## Complete Worked Example (Step-by-Step)
+### Complexity Analysis
 
-### Example
-
-```
-s = "(*))"
-```
-
----
-
-### Initialization
-
-```
-low = 0
-high = 0
-```
+- **Time Complexity:** $\mathcal{O}(n)$
+  - A single linear scan through the string of length $n$.
+  - All arithmetic and range updates take $\mathcal{O}(1)$ time.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Uses only two scalar integer registers (`cmin`, `cmax`).
 
 ---
 
-### Step 1: Character `'('`
+### Takeaway Pattern & Interview Traps
 
-```
-low += 1  → 1
-high += 1 → 1
-```
-
-Range:
-
-```
-[1, 1]
-```
-
----
-
-### Step 2: Character `'*'`
-
-```
-low -= 1  → 0   (treat '*' as ')')
-high += 1 → 2   (treat '*' as '(')
-```
-
-Range:
-
-```
-[0, 2]
-```
-
-Interpretations:
-
-* `'*' = ')'` → "()"
-* `'*' = '('` → "(("
-* `'*' = ""` → "("
-
-All are still valid possibilities.
-
----
-
-### Step 3: Character `')'`
-
-```
-low -= 1  → -1
-high -= 1 → 1
-```
-
-Clamp:
-
-```
-low = max(0, -1) → 0
-```
-
-Range:
-
-```
-[0, 1]
-```
-
----
-
-### Step 4: Character `')'`
-
-```
-low -= 1  → -1
-high -= 1 → 0
-```
-
-Clamp:
-
-```
-low = 0
-```
-
-Range:
-
-```
-[0, 0]
-```
-
----
-
-### Final Check
-
-```
-low == 0 → True
-```
-
-There exists a valid interpretation:
-
-```
-"(*))" → "(())"
-```
-
----
-
-## Why This Greedy Works
-
-* We **never commit early** to what `'*'` means.
-* We maintain **all feasible states simultaneously** via a range.
-* If **any valid path exists**, it survives within `[low, high]`.
-* If all paths fail, the range collapses.
-
----
-
-## Complexity Analysis
-
-| Metric | Value |
-| --- | --- |
-| Time | O(n) |
-| Space | O(1) |
-| Technique | Greedy + Range Tracking |
-
----
-
-## Pattern Classification (Useful for Interviews)
-
-* **Greedy with State Range**
-* Similar to:
-
-  * Interval DP optimization
-  * Feasibility tracking problems
-  * “Exists a valid configuration” problems
-
----
-
-If you want, next we can:
-
-* Compare this with **stack-based approaches** and explain why they are inferior here
-* Convert this into a **proof-style explanation**
-* Show **why two-pass greedy also works** for this problem
-
-Tell me how deep you want to go.
+- **Range Invariant Technique:** When non-deterministic choices (like wildcards) make branching exponential ($3^N$), ask: *Is the reachable state space a contiguous interval $[L, R]$?* Because wildcards increment/decrement by 1, the set of all reachable open counts forms an unbroken integer range.
+- **The Clamp `cmin = max(cmin, 0)`:** Forgetting to clamp `cmin` to 0 will cause false negatives: an earlier `cmin < 0` does not mean the prefix is invalid, since a star could have simply been empty (`""`).

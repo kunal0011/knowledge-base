@@ -1,5 +1,5 @@
 ---
-date: "2025-12-17"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,212 +8,214 @@ tags:
   - leetcode
   - coding
   - greedy
+  - dynamic-programming
+  - state-machine
+  - array
+  - amazon
+  - google
 ---
 
 # LeetCode 714: Best Time to Buy and Sell Stock with Transaction Fee
 
-**LeetCode 714 – Best Time to Buy and Sell Stock with Transaction Fee**, structured exactly as requested.
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Greedy / State Machine Dynamic Programming / Array  
 
 ---
 
-## LeetCode 714 — Best Time to Buy and Sell Stock with Transaction Fee
+### Problem Statement
+
+You are given an array `prices` where `prices[i]` is the price of a given stock on the $i$-th day, and an integer `fee` representing a transaction fee.
+
+Find the maximum profit you can achieve. You may complete as many transactions as you like, but you need to pay the transaction fee for each transaction.
+
+Note:
+- You may not engage in multiple transactions simultaneously (i.e., you must sell the stock before you buy again).
+- The transaction fee is only charged once for each stock purchase and sale.
 
 ---
 
-## 1. Problem Statement
+### Input & Output Formats & Constraints
 
-You are given an integer array `prices` where `prices[i]` is the price of a stock on day `i`, and an integer `fee` representing a **transaction fee**.
-
-You may complete as many transactions as you like, but **you must pay the transaction fee for each sale**.
-
-**Constraints**
-
-* You may not engage in multiple transactions at the same time.
-* You must sell the stock before you buy again.
-
-**Goal**  
-Return the **maximum profit** you can achieve.
+- **Input:**
+  - `prices`: `List[int]` / `vector<int>` / `int[]` ($1 \le \text{prices.length} \le 5 \times 10^4$).
+  - `fee`: `int` ($0 \le fee \le 5 \times 10^4$).
+- **Output:**
+  - `int` — maximum total profit after deducting transaction fees.
+- **Constraints:**
+  - $1 \le \text{prices.length} \le 5 \times 10^4$
+  - $1 \le \text{prices}[i] < 5 \times 10^4$
+  - $0 \le \text{fee} < 5 \times 10^4$
 
 ---
 
-## 2. Key Observation
+### Key Idea & Intuition
 
-This is an **unlimited transactions** stock problem with a **cost per transaction**.
+Unlike LeetCode 122 (where transactions are free and we can capture every single positive daily price difference), each transaction here costs `fee`. Micro-fluctuations where the price increase is $\le fee$ are unprofitable and should not trigger transactions.
 
-### Without fee:
+We can view this problem through two equivalent paradigms:
 
-* We greedily take every upward movement.
+#### Approach 1: State Machine DP with $\mathcal{O}(1)$ Space
+At the end of each day $i$, we are in one of two states:
+1. `cash`: Maximum profit achievable if we **do not hold** stock at the end of day $i$.
+2. `hold`: Maximum profit achievable if we **are holding** 1 share of stock at the end of day $i$.
 
-### With fee:
+Transitions:
+- `cash = max(cash, hold + prices[i] - fee)`:
+  Either stay without stock, or sell the stock held previously for `prices[i]` minus `fee`.
+- `hold = max(hold, cash - prices[i])`:
+  Either keep holding the stock, or buy today's stock at cost `prices[i]` using existing cash.
 
-* Small profits can become **unprofitable**.
-* We must **delay selling** until profit exceeds the transaction fee.
+#### Approach 2: Pure Greedy with Virtual Buy Price
+Maintain an effective purchase cost:
+$$\text{buy} = \text{prices}[0] + \text{fee}$$
+For each day $i$:
+1. If $\text{prices}[i] + \text{fee} < \text{buy}$:
+   - A cheaper buying opportunity has appeared $\rightarrow$ lower $\text{buy} = \text{prices}[i] + \text{fee}$.
+2. Else if $\text{prices}[i] > \text{buy}$:
+   - Selling today is profitable:
+     $$\text{profit} \mathrel{+}= \text{prices}[i] - \text{buy}$$
+   - **The Greedy Rollback Trick:** Set $\text{buy} = \text{prices}[i]$!
+     - Why? If the price increases even further tomorrow to $\text{prices}[i+1]$, selling tomorrow instead of today would yield $\text{prices}[i+1] - \text{prices}[i]$ additional profit without paying another fee.
+     - By setting $\text{buy} = \text{prices}[i]$ (without fee), subsequent gains accumulate continuously as part of the same transaction!
 
----
-
-## 3. Greedy Insight (Critical Trick)
-
-Instead of tracking every buy/sell explicitly, we track **two states**:
-
-### State Definitions
-
-* `cash`: Maximum profit if **we do not hold a stock** at the end of day `i`
-* `hold`: Maximum profit if **we hold a stock** at the end of day `i`
-
----
-
-## 4. Greedy Transitions
-
-For each price `p`:
-
-### Option 1: Do nothing
-
-* Keep current state
-
-### Option 2: Perform an action
-
-* Buy (from `cash`)
-* Sell (from `hold` and pay fee)
+Both approaches achieve strict $\mathcal{O}(n)$ time and $\mathcal{O}(1)$ auxiliary space.
 
 ---
 
-### Transition Formulas
+### Solution Approach (Step-by-Step: State Machine)
+
+1. Initialize `cash = 0` and `hold = -prices[0]`.
+2. Iterate `price` across `prices[1:]`:
+   - `cash = max(cash, hold + price - fee)`
+   - `hold = max(hold, cash - price)`
+3. Return `cash`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+For `prices = [1, 3, 2, 8, 4, 9]`, `fee = 2`:
 
 ```
-hold = max(hold, cash - price)
-cash = max(cash, hold + price - fee)
+Day 0 (price = 1):
+  cash = 0
+  hold = -1
+
+Day 1 (price = 3):
+  cash = max(0, -1 + 3 - 2) = max(0, 0) = 0
+  hold = max(-1, 0 - 3) = -1
+
+Day 2 (price = 2):
+  cash = max(0, -1 + 2 - 2) = 0
+  hold = max(-1, 0 - 2) = -1
+
+Day 3 (price = 8):
+  cash = max(0, -1 + 8 - 2) = 5 (Sell held stock at 8!)
+  hold = max(-1, 5 - 8) = -1
+
+Day 4 (price = 4):
+  cash = max(5, -1 + 4 - 2) = 5
+  hold = max(-1, 5 - 4) = 1 (Buy stock at 4 with existing 5 profit!)
+
+Day 5 (price = 9):
+  cash = max(5, 1 + 9 - 2) = 8 (Sell held stock at 9!)
+  hold = max(1, 8 - 9) = 1
+
+Final Result: cash = 8.
+Trades: Buy at 1, sell at 8 (profit = 8 - 1 - 2 = 5); Buy at 4, sell at 9 (profit = 9 - 4 - 2 = 3). Total = 8.
 ```
-
-### Why this works
-
-* `hold` represents the **best effective buy price so far**
-* `cash` represents realized profit after selling (with fee applied)
-* This implicitly **merges multiple transactions** into a single greedy process
 
 ---
 
-## 5. Initialization
+### Solved Examples with Multiple Inputs
 
-```
-cash = 0
-hold = -prices[0]
-```
+#### Example 1:
+- **Input:** `prices = [1, 3, 2, 8, 4, 9]`, `fee = 2`
+- **Output:** `8`
 
-* On day 0:
+#### Example 2:
+- **Input:** `prices = [1, 3, 7, 5, 10, 3]`, `fee = 3`
+- **Tracing:** Buy at 1, sell at 10 $\rightarrow$ profit $10 - 1 - 3 = 6$.
+- **Output:** `6`
 
-  * No stock → profit = 0
-  * Buy stock → profit = -prices[0]
+#### Example 3 (No Profitable Trade):
+- **Input:** `prices = [1, 2, 3]`, `fee = 5`
+- **Tracing:** Max increase is $2 < 5$. Zero transactions made.
+- **Output:** `0`
 
 ---
 
-## 6. Python 3 Solution (with typing)
+### Multi-Language Implementations
 
+#### Python 3 (State Machine DP)
 ```python
 from typing import List
 
 class Solution:
     def maxProfit(self, prices: List[int], fee: int) -> int:
-        cash = 0
-        hold = -prices[0]
-
+        cash = 0             # Max profit without holding stock
+        hold = -prices[0]    # Max profit while holding stock
+        
         for price in prices[1:]:
-            # store previous cash before update
-            prev_cash = cash
-
-            # sell or do nothing
             cash = max(cash, hold + price - fee)
-
-            # buy or do nothing
-            hold = max(hold, prev_cash - price)
-
+            hold = max(hold, cash - price)
+            
         return cash
 ```
 
----
+#### C++17 (State Machine DP)
+```cpp
+#include <vector>
+#include <algorithm>
 
-## 7. Complete Worked Example (Step-by-Step)
-
-### Input
-
+class Solution {
+public:
+    int maxProfit(const std::vector<int>& prices, int fee) {
+        int cash = 0;
+        int hold = -prices[0];
+        int n = static_cast<int>(prices.size());
+        
+        for (int i = 1; i < n; ++i) {
+            cash = std::max(cash, hold + prices[i] - fee);
+            hold = std::max(hold, cash - prices[i]);
+        }
+        
+        return cash;
+    }
+};
 ```
-prices = [1, 3, 2, 8, 4, 9]
-fee = 2
-```
 
----
-
-### Day-by-Day State Evolution
-
-| Day | Price | Action Considered | hold | cash |
-| --- | --- | --- | --- | --- |
-| 0 | 1 | Buy | -1 | 0 |
-| 1 | 3 | Sell? → profit = 3 - 1 - 2 = 0 | -1 | 0 |
-| 2 | 2 | No sell (profit negative) | -1 | 0 |
-| 3 | 8 | Sell → profit = 8 - 1 - 2 = 5 | -1 | 5 |
-| 4 | 4 | Buy again | 1 | 5 |
-| 5 | 9 | Sell → profit = 9 - 4 - 2 = 3 | 1 | 8 |
-
----
-
-### Explanation of Key Steps
-
-#### Day 3 (Price = 8)
-
-* Selling now yields:
-
-  ```
-  profit = 8 - 1 - 2 = 5
-  ```
-* This is better than holding → sell
-
-#### Day 4 (Price = 4)
-
-* Buying again:
-
-  ```
-  effective cost = 5 - 4 = 1
-  ```
-
-#### Day 5 (Price = 9)
-
-* Selling yields:
-
-  ```
-  profit = 9 - 4 - 2 = 3
-  total profit = 5 + 3 = 8
-  ```
-
----
-
-## 8. Final Answer
-
-```
-Maximum Profit = 8
+#### Java 17 (State Machine DP)
+```java
+class Solution {
+    public int maxProfit(int[] prices, int fee) {
+        int cash = 0;
+        int hold = -prices[0];
+        
+        for (int i = 1; i < prices.length; i++) {
+            cash = Math.max(cash, hold + prices[i] - fee);
+            hold = Math.max(hold, cash - prices[i]);
+        }
+        
+        return cash;
+    }
+}
 ```
 
 ---
 
-## 9. Why This Is Greedy (Not DP Table)
+### Complexity Analysis
 
-* We **collapse DP states** into two rolling variables
-* We **delay selling** until fee is covered
-* We **reuse profits** to simulate continuous reinvestment
-* Time Complexity: **O(n)**
-* Space Complexity: **O(1)**
-
----
-
-## 10. Interview Summary (One-Liner)
-
-> Treat the transaction fee as part of the sell operation and maintain the best effective buy price using `hold`, while `cash` tracks realized profit greedily.
+- **Time Complexity:** $\mathcal{O}(n)$
+  - A single linear scan through `prices`.
+  - Constant number of arithmetic operations and max comparisons per day.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Only two primitive integer variables `cash` and `hold` are tracked.
 
 ---
 
-If you want, I can also provide:
+### Takeaway Pattern & Interview Traps
 
-* DP table version (for intuition)
-* Visual state machine diagram
-* Comparison with LeetCode 122 and 309
-* Common pitfalls and wrong greedy approaches
-
-Just tell me.
+- **Deducting the Fee:** You can deduct the fee upon selling (`hold + price - fee`) OR upon buying (`cash - price - fee`), but **never both**. Deducting on selling is standard because selling is when the transaction completes.
+- **Selling and Re-buying on Same Day:** Notice in DP transitions, updating `cash` then `hold` using the new `cash` represents selling and immediately buying again. Since the fee is subtracted, same-day buy-sell is never strictly optimal, so the order of updates does not produce invalid profits.

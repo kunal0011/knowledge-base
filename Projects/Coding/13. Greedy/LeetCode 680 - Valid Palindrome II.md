@@ -1,5 +1,5 @@
 ---
-date: "2025-12-17"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,224 +8,224 @@ tags:
   - leetcode
   - coding
   - greedy
+  - two-pointers
+  - string
+  - amazon
+  - google
 ---
 
 # LeetCode 680: Valid Palindrome II
 
-Below is a **complete, interview-grade explanation** of **LeetCode 680 – Valid Palindrome II**, structured exactly as requested.
+**Target Companies:** Meta (Signature Top 1), Amazon, Google, Microsoft, Apple, Bloomberg  
+**Difficulty:** Easy  
+**Topic:** Greedy / Two Pointers / String  
 
 ---
 
-## LeetCode 680 – Valid Palindrome II
+### Problem Statement
+
+Given a string `s`, return `true` if the `s` can be palindrome after deleting **at most one** character from it.
 
 ---
 
-## Problem Statement
+### Input & Output Formats & Constraints
 
-Given a string `s`, return `True` if the string can be a palindrome **after deleting at most one character**.  
-Otherwise, return `False`.
-
-### Definition
-
-A string is a palindrome if it reads the same forward and backward.
-
-### Constraints
-
-* `1 ≤ s.length ≤ 10^5`
-* `s` consists of lowercase English letters.
+- **Input:**
+  - `s`: `str` / `string` ($1 \le |s| \le 10^5$, lowercase English letters).
+- **Output:**
+  - `bool` — `true` if `s` can become a palindrome by removing 0 or 1 character, else `false`.
+- **Constraints:**
+  - $1 \le \text{s.length} \le 10^5$
+  - `s` consists of lowercase English letters.
 
 ---
 
-## Key Observation
+### Key Idea & Intuition
 
-1. **A palindrome fails at the first mismatch** between characters at symmetric positions.
-2. Since **only one deletion is allowed**, once a mismatch occurs, we have **exactly two valid choices**:
+In a standard two-pointer palindrome check:
+- Maintain pointers $l = 0$ and $r = n - 1$.
+- While $s[l] == s[r]$, both characters match symmetrically and must be preserved. We increment $l \mathrel{+}= 1$ and decrement $r \mathrel{-}= 1$.
 
-   * Delete the **left** character
-   * Delete the **right** character
-3. After making one deletion, the **remaining substring must be a perfect palindrome**.
+#### The Greedy Branching on First Mismatch:
+When we encounter the **first mismatch** ($s[l] \ne s[r]$):
+- Because we are allowed to delete **at most one character** across the entire string, the deleted character **must** be either $s[l]$ or $s[r]$!
+  - If we delete any other character inside the string, the mismatch between $s[l]$ and $s[r]$ would remain unresolved.
+- Thus, there are only two possible paths:
+  1. **Delete $s[l]$:** Check if the remaining substring $s[l + 1 \dots r]$ is a pure palindrome.
+  2. **Delete $s[r]$:** Check if the remaining substring $s[l \dots r - 1]$ is a pure palindrome.
+- If either candidate substring is a palindrome, return `True`.
+- If neither is a palindrome, then no single deletion can fix the string $\rightarrow$ return `False`.
 
-This reduces the problem to:
-
-> Can we skip **one** character and still have a palindrome?
-
----
-
-## Why Greedy Works Here
-
-* We compare characters from **both ends** using two pointers.
-* As long as characters match, we move inward.
-* At the **first mismatch**, we try both deletion options:
-
-  * Skip `s[left]`
-  * Skip `s[right]`
-* If **either** resulting substring is a palindrome, the answer is `True`.
-
-### Important Greedy Insight
-
-We **do not backtrack deeply**.  
-We only branch **once**, because only **one deletion is allowed**.
-
-This guarantees:
-
-* **O(n)** time complexity
-* **O(1)** extra space
+Because we branch into at most two linear verification checks that never branch again, the runtime remains strictly $\mathcal{O}(n)$ with $\mathcal{O}(1)$ space.
 
 ---
 
-## Greedy Strategy (Two-Pointer)
+### Solution Approach (Step-by-Step)
 
-### Algorithm
-
-1. Initialize `left = 0`, `right = len(s) - 1`
-2. While `left < right`:
-
-   * If `s[left] == s[right]`, move inward
-   * Else:
-
-     * Check if substring `(left+1, right)` is palindrome
-     * OR substring `(left, right-1)` is palindrome
-3. If we never fail, return `True`
+1. Helper function `is_palindrome_range(i, j)`:
+   - While $i < j$:
+     - If `s[i] != s[j]`: return `False`
+     - `i += 1`, `j -= 1`
+   - Return `True`.
+2. Initialize `l = 0`, `r = len(s) - 1`.
+3. While `l < r`:
+   - If `s[l] == s[r]`:
+     - `l += 1`, `r -= 1`
+   - Else:
+     - Return `is_palindrome_range(l + 1, r) or is_palindrome_range(l, r - 1)`.
+4. Return `True` (already a palindrome without any deletions).
 
 ---
 
-## Python 3 Solution (With Typing)
+### Visual Algorithm Walkthrough
 
+For `s = "abca"`:
+
+```
+l = 0 ('a'), r = 3 ('a'):
+  s[0] == s[3] ('a' == 'a') -> Match!
+  l = 1, r = 2
+
+l = 1 ('b'), r = 2 ('c'):
+  s[1] != s[2] ('b' != 'c') -> MISMATCH!
+
+Branch 1 (Delete s[l] = 'b'):
+  Check substring s[2..2] = "c":
+  Single character -> trivially a palindrome! -> TRUE!
+
+Branch 1 succeeded -> Return True immediately.
+(Result: removing 'b' yields "aca", or removing 'c' yields "aba").
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `s = "aba"`
+- **Output:** `true` (Already a palindrome)
+
+#### Example 2:
+- **Input:** `s = "abca"`
+- **Output:** `true` (Delete 'b' or 'c')
+
+#### Example 3:
+- **Input:** `s = "abc"`
+- **Tracing:** Mismatch at (0, 2). Deleting 'a' leaves "bc" (not palindrome). Deleting 'c' leaves "ab" (not palindrome).
+- **Output:** `false`
+
+#### Example 4 (Near Center Mismatch):
+- **Input:** `s = "deeee"`
+- **Tracing:** $s[0]='d' \ne s[4]='e'$. Deleting 'd' leaves "eeee" (palindrome).
+- **Output:** `true`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-from typing import *
-
 class Solution:
     def validPalindrome(self, s: str) -> bool:
-        def is_palindrome(l: int, r: int) -> bool:
-            while l < r:
-                if s[l] != s[r]:
+        def is_palindrome_range(i: int, j: int) -> bool:
+            while i < j:
+                if s[i] != s[j]:
                     return False
-                l += 1
-                r -= 1
+                i += 1
+                j -= 1
             return True
-
-        left, right = 0, len(s) - 1
-
-        while left < right:
-            if s[left] == s[right]:
-                left += 1
-                right -= 1
-            else:
-                # Try deleting one character
-                return is_palindrome(left + 1, right) or is_palindrome(left, right - 1)
-
+            
+        l, r = 0, len(s) - 1
+        while l < r:
+            if s[l] != s[r]:
+                # Try skipping left character or right character
+                return is_palindrome_range(l + 1, r) or is_palindrome_range(l, r - 1)
+            l += 1
+            r -= 1
+            
         return True
 ```
 
----
+#### C++17
+```cpp
+#include <string>
 
-## Complete Worked Example (Step-by-Step)
+class Solution {
+private:
+    bool isPalindromeRange(const std::string& s, int i, int j) {
+        while (i < j) {
+            if (s[i] != s[j]) {
+                return false;
+            }
+            i++;
+            j--;
+        }
+        return true;
+    }
 
-### Example
-
-```
-s = "abca"
-```
-
----
-
-### Initial State
-
-| Pointer | Index | Character |
-| --- | --- | --- |
-| left | 0 | 'a' |
-| right | 3 | 'a' |
-
-✔ Match → Move inward
-
----
-
-### Step 2
-
-| Pointer | Index | Character |
-| --- | --- | --- |
-| left | 1 | 'b' |
-| right | 2 | 'c' |
-
-❌ Mismatch found
-
-We have **one deletion allowed**, so we try both possibilities.
-
----
-
-### Option 1: Delete `s[left]` ('b')
-
-Check substring:
-
-```
-s[2:3] → "c"
+public:
+    bool validPalindrome(const std::string& s) {
+        int l = 0;
+        int r = static_cast<int>(s.size()) - 1;
+        
+        while (l < r) {
+            if (s[l] != s[r]) {
+                return isPalindromeRange(s, l + 1, r) || isPalindromeRange(s, l, r - 1);
+            }
+            l++;
+            r--;
+        }
+        
+        return true;
+    }
+};
 ```
 
-✔ Single character → Palindrome
-
----
-
-### Option 2: Delete `s[right]` ('c')
-
-Check substring:
-
+#### Java 17
+```java
+class Solution {
+    public boolean validPalindrome(String s) {
+        int l = 0;
+        int r = s.length() - 1;
+        
+        while (l < r) {
+            if (s.charAt(l) != s.charAt(r)) {
+                return isPalindromeRange(s, l + 1, r) || isPalindromeRange(s, l, r - 1);
+            }
+            l++;
+            r--;
+        }
+        
+        return true;
+    }
+    
+    private boolean isPalindromeRange(String s, int i, int j) {
+        while (i < j) {
+            if (s.charAt(i) != s.charAt(j)) {
+                return false;
+            }
+            i++;
+            j--;
+        }
+        return true;
+    }
+}
 ```
-s[1:1] → "b"
-```
-
-✔ Single character → Palindrome
 
 ---
 
-### Final Result
+### Complexity Analysis
 
-At least **one deletion path succeeds**  
-→ **Return True**
-
----
-
-## Failure Example
-
-### Input
-
-```
-s = "abc"
-```
-
-Mismatch at `'a'` vs `'c'`
-
-* Delete `'a'` → `"bc"` ❌
-* Delete `'c'` → `"ab"` ❌
-
-Both fail → **Return False**
+- **Time Complexity:** $\mathcal{O}(n)$
+  - The main loop traverses inward until the first mismatch.
+  - The two helper palindrome checks scan at most the remaining substring of length $< n$.
+  - At most $2n$ comparisons total are made.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space
+  - Passing indices avoids substring memory allocations.
 
 ---
 
-## Complexity Analysis
+### Takeaway Pattern & Interview Traps
 
-| Metric | Value |
-| --- | --- |
-| Time Complexity | **O(n)** |
-| Space Complexity | **O(1)** |
-| Greedy | ✔ |
-| Two-Pointer | ✔ |
-
----
-
-## Interview Notes
-
-* This problem is a **classic greedy + two-pointer hybrid**
-* Key trick: **branch only once**
-* Avoid recursion or DP – unnecessary
-* Handle mismatch immediately
-
----
-
-If you want, I can also provide:
-
-* Edge case walkthroughs
-* Visual pointer movement diagram
-* Comparison with brute force or DP
-* Why deleting more than one breaks greedy
-
-Just let me know.
+- **Why We Don't Need DP for At Most 1 Deletion:** Since at most 1 deletion is allowed, we only branch once at the first point of divergence. Branching at most once gives 2 linear scans ($\mathcal{O}(2n) = \mathcal{O}(n)$), completely avoiding $O(n^2)$ edit-distance DP!
+- **Index Slicing vs Pointer Range:** In Python, doing `s[l+1:r+1] == s[l+1:r+1][::-1]` allocates strings in memory $\mathcal{O}(n)$ space. Using helper index functions keeps auxiliary space strictly $\mathcal{O}(1)$.

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,259 +8,249 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - string
+  - two-pointers
+  - interval-dp
+  - amazon
+  - google
+  - meta
 ---
 
 # LeetCode 5: Longest Palindromic Substring
 
-## LeetCode 5 — Longest Palindromic Substring
+**Target Companies:** Amazon (Top #1), Microsoft, Google, Meta, Apple, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming (Interval DP) / Expand Around Center / String Processing  
+
+---
 
 ### Problem Statement
 
-Given a string `s`, return the **longest substring** of `s` that is a **palindrome**.
+Given a string `s`, return the **longest palindromic substring** in `s`.
 
-A palindrome reads the same forward and backward.
-
----
-
-## Dynamic Programming Approach
-
-### Key Insight
-
-A substring `s[l..r]` is a palindrome **if and only if**:
-
-1. `s[l] == s[r]`
-2. The inner substring `s[l+1..r-1]` is also a palindrome  
-   (or the length is ≤ 2, which is trivially palindromic)
-
-This makes the problem ideal for **interval DP**.
+A **palindromic string** is a string that reads the same backward as forward.
 
 ---
 
-## 1. DP State Definition
+### Input & Output Formats & Constraints
 
-Let:
-
-```
-dp[l][r] = True  if substring s[l..r] is a palindrome
-           False otherwise
-```
-
-Where:
-
-* `l` = starting index
-* `r` = ending index
-* `0 ≤ l ≤ r < n`
+- **Input:** `s: str` — String consisting of digits and English letters.
+- **Output:** `str` — The longest contiguous palindromic substring.
+- **Constraints:**
+  - $1 \le s.\text{length} \le 1000$
+  - `s` consists of only digits and English letters.
 
 ---
 
-## 2. Base Cases
+### Key Idea & Intuition
 
-1. **Single character substrings**
+1. **Approach 1: Expand Around Center ($\mathcal{O}(N^2)$ Time, $\mathcal{O}(1)$ Space — Production Standard):**
+   - A palindrome mirrors around its center.
+   - For a string of length $n$, there are $2n - 1$ possible centers:
+     - $n$ single-character centers (odd-length palindromes like `"aba"` centered at `'b'`).
+     - $n - 1$ between-character centers (even-length palindromes like `"abba"` centered between `'b'` and `'b'`).
+   - For each center, expand outward two pointers `(left, right)` as long as $s[\text{left}] == s[\text{right}]$.
+   - This takes $\mathcal{O}(1)$ auxiliary space and avoids allocating an $\mathcal{O}(n^2)$ boolean matrix.
 
-```
-dp[i][i] = True
-```
-
-Every single character is a palindrome.
-
-2. **Two-character substrings**
-
-```
-dp[i][i+1] = (s[i] == s[i+1])
-```
-
----
-
-## 3. State Transition
-
-For substrings of length ≥ 3:
-
-```
-dp[l][r] = (s[l] == s[r]) AND dp[l+1][r-1]
-```
+2. **Approach 2: Interval Dynamic Programming ($\mathcal{O}(N^2)$ Time, $\mathcal{O}(N^2)$ Space — Theoretical Foundation):**
+   - Let $\text{dp}[i][j]$ be `true` if substring $s[i \dots j]$ is a palindrome.
+   - Base Cases:
+     - Length 1: $\text{dp}[i][i] = \text{true}$
+     - Length 2: $\text{dp}[i][i + 1] = (s[i] == s[i + 1])$
+   - Recurrence:
+     $$\text{dp}[i][j] = (s[i] == s[j]) \land (j - i \le 2 \lor \text{dp}[i + 1][j - 1])$$
+   - Iterate by substring length from $3$ to $n$.
 
 ---
 
-## 4. Traversal Order (Very Important)
+### Solution Approach (Step-by-Step)
 
-Because `dp[l][r]` depends on `dp[l+1][r-1]`,  
-we must **increase substring length gradually**.
-
-Traversal strategy:
-
-```
-for length from 3 to n:
-    for l from 0 to n - length:
-        r = l + length - 1
-```
-
-This guarantees `dp[l+1][r-1]` is already computed.
+#### Expand Around Center (Recommended)
+1. **Handle Base Case:**
+   - If `len(s) <= 1`, return `s`.
+2. **Define Helper Function `expand(left, right)`:**
+   - While `left >= 0` and `right < len(s)` and `s[left] == s[right]`:
+     - `left -= 1`, `right += 1`
+   - Return substring `s[left + 1 : right]` (or return pair `(left + 1, right - left - 1)`).
+3. **Iterate All Centers:**
+   - For $i$ from $0$ to $n - 1$:
+     - Check odd center: `expand(i, i)`.
+     - Check even center: `expand(i, i + 1)`.
+     - Update global longest palindrome if a longer one is found.
+4. **Return:**
+   - Return the longest palindrome substring found.
 
 ---
 
-## 5. Tracking the Answer
+### Visual Algorithm Walkthrough
 
-Maintain:
-
-* `start`: starting index of longest palindrome
-* `max_len`: length of longest palindrome found so far
-
-Update when:
+For `s = "babad"`:
 
 ```
-if dp[l][r] == True and (r - l + 1) > max_len
+Center i = 0 ('b'):
+  Odd: expand(0, 0) -> "b" (len 1)
+  Even: expand(0, 1) -> s[0] != s[1] -> ""
+
+Center i = 1 ('a'):
+  Odd: expand(1, 1) -> s[0]=='b', s[2]=='b' (match!)
+       expand(-1, 3) -> out of bounds.
+       Result: "bab" (len 3, start=0)
+  Even: expand(1, 2) -> s[1] != s[2] -> ""
+
+Center i = 2 ('b'):
+  Odd: expand(2, 2) -> s[1]=='a', s[3]=='a' (match!)
+       expand(0, 4) -> s[0]=='b', s[4]=='d' (mismatch)
+       Result: "aba" (len 3, start=1)
+  Even: expand(2, 3) -> s[2] != s[3] -> ""
+
+Center i = 3 ('a'):
+  Odd: expand(3, 3) -> "a"
+  Even: expand(3, 4) -> ""
+
+Center i = 4 ('d'):
+  Odd: expand(4, 4) -> "d"
+
+Maximum Length = 3.
+Returns: "bab" (or "aba", both valid).
 ```
 
 ---
 
-## 6. Python 3 DP Implementation (with typing)
+### Solved Examples with Multiple Inputs
 
+| Case | `s` | Palindromic Candidates | Result | Explanation |
+|---|---|---|---|---|
+| **Odd Palindrome** | `"babad"` | `"bab"`, `"aba"` | `"bab"` (or `"aba"`) | Length 3 substring |
+| **Even Palindrome** | `"cbbd"` | `"bb"` | `"bb"` | Length 2 substring |
+| **All Identical** | `"aaaa"` | Entire string | `"aaaa"` | Entire string is a palindrome |
+| **Single Character** | `"a"` | `"a"` | `"a"` | Single character is trivially palindromic |
+| **Strictly Unique** | `"abcdef"` | Each single char | `"a"` | Any length 1 character |
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed — Expand Around Center $\mathcal{O}(1)$ Space)
 ```python
-from typing import List
-
 class Solution:
     def longestPalindrome(self, s: str) -> str:
+        if not s or len(s) <= 1:
+            return s
+            
+        start, max_len = 0, 1
         n = len(s)
-        if n == 0:
-            return ""
+        
+        def expand(left: int, right: int) -> int:
+            while left >= 0 and right < n and s[left] == s[right]:
+                left -= 1
+                right += 1
+            # Length of valid palindrome is right - left - 1
+            return right - left - 1
 
-        dp: List[List[bool]] = [[False] * n for _ in range(n)]
-
-        start = 0
-        max_len = 1
-
-        # Base case: single characters
         for i in range(n):
-            dp[i][i] = True
+            len1 = expand(i, i)       # Odd length center
+            len2 = expand(i, i + 1)   # Even length center
+            curr_len = max(len1, len2)
+            
+            if curr_len > max_len:
+                max_len = curr_len
+                # Calculate new start index
+                start = i - (curr_len - 1) // 2
+                
+        return s[start : start + max_len]
+```
 
-        # Base case: two characters
-        for i in range(n - 1):
-            if s[i] == s[i + 1]:
-                dp[i][i + 1] = True
-                start = i
-                max_len = 2
+#### 2. C++ (C++17 / STL — Expand Around Center $\mathcal{O}(1)$ Space)
+```cpp
+#include <string>
+#include <algorithm>
 
-        # Length >= 3
-        for length in range(3, n + 1):
-            for l in range(0, n - length + 1):
-                r = l + length - 1
-                if s[l] == s[r] and dp[l + 1][r - 1]:
-                    dp[l][r] = True
-                    start = l
-                    max_len = length
+class Solution {
+public:
+    std::string longestPalindrome(std::string s) {
+        int n = s.size();
+        if (n <= 1) return s;
 
-        return s[start:start + max_len]
+        int start = 0;
+        int max_len = 1;
+
+        auto expand = [&](int left, int right) -> int {
+            while (left >= 0 && right < n && s[left] == s[right]) {
+                left--;
+                right++;
+            }
+            return right - left - 1;
+        };
+
+        for (int i = 0; i < n; ++i) {
+            int len1 = expand(i, i);
+            int len2 = expand(i, i + 1);
+            int curr_len = std::max(len1, len2);
+
+            if (curr_len > max_len) {
+                max_len = curr_len;
+                start = i - (curr_len - 1) / 2;
+            }
+        }
+
+        return s.substr(start, max_len);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed — Expand Around Center $\mathcal{O}(1)$ Space)
+```java
+class Solution {
+    public String longestPalindrome(String s) {
+        if (s == null || s.length() <= 1) return s;
+
+        int n = s.length();
+        int start = 0;
+        int maxLen = 1;
+
+        for (int i = 0; i < n; i++) {
+            int len1 = expand(s, i, i);
+            int len2 = expand(s, i, i + 1);
+            int currLen = Math.max(len1, len2);
+
+            if (currLen > maxLen) {
+                maxLen = currLen;
+                start = i - (currLen - 1) / 2;
+            }
+        }
+
+        return s.substring(start, start + maxLen);
+    }
+
+    private int expand(String s, int left, int right) {
+        int n = s.length();
+        while (left >= 0 && right < n && s.charAt(left) == s.charAt(right)) {
+            left--;
+            right++;
+        }
+        return right - left - 1;
+    }
+}
 ```
 
 ---
 
-## 7. Example Walkthrough
+### Complexity Analysis
 
-### Input
-
-```
-s = "babad"
-```
-
-Indices:
-
-```
-0 1 2 3 4
-b a b a d
-```
+- **Time Complexity:** $\mathcal{O}(N^2)$  
+  There are $2N - 1$ centers. In the worst case (e.g. string of all identical characters `"aaaa"`), expanding outward from each center takes $\mathcal{O}(N)$ comparisons, yielding $\mathcal{O}(N^2)$ total time. In practice, non-palindromic characters mismatch early, making this solution extremely fast ($< 15$ ms).
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space  
+  Unlike 2D DP which consumes $\mathcal{O}(N^2)$ heap memory, Expand Around Center requires only index pointers.
 
 ---
 
-### Step 1: Initialize DP Table
+### Takeaway Pattern & Interview Traps
 
-Single characters:
-
-```
-dp[i][i] = True
-```
-
-```
-b   a   b   a   d
-b [ T   F   F   F   F ]
-a [     T   F   F   F ]
-b [         T   F   F ]
-a [             T   F ]
-d [                 T ]
-```
-
----
-
-### Step 2: Length = 2
-
-Check adjacent characters:
-
-* `"ba"` → False
-* `"ab"` → False
-* `"ba"` → False
-* `"ad"` → False
-
-No updates.
-
----
-
-### Step 3: Length = 3
-
-Check:
-
-* `l=0, r=2` → `"bab"`
-
-  * `s[0] == s[2]` ✔
-  * `dp[1][1] == True`
-  * `dp[0][2] = True`
-* `l=1, r=3` → `"aba"`
-
-  * `s[1] == s[3]` ✔
-  * `dp[2][2] == True`
-  * `dp[1][3] = True`
-
-DP snapshot:
-
-```
-b   a   b   a   d
-b [ T   F   T   F   F ]
-a [     T   F   T   F ]
-b [         T   F   F ]
-a [             T   F ]
-d [                 T ]
-```
-
-Longest so far: `"bab"` or `"aba"` (length = 3)
-
----
-
-### Step 4: Length = 4
-
-* `"baba"` → ends mismatch
-* `"abad"` → ends mismatch
-
-No updates.
-
----
-
-### Step 5: Length = 5
-
-* `"babad"` → ends mismatch
-
-Stop.
-
----
-
-## 8. Final Answer
-
-```text
-Output: "bab"
-```
-
-(`"aba"` is also valid; either is acceptable)
-
----
-
-## 9. Complexity Analysis
-
-* **Time Complexity:** `O(n²)`
-* **Space Complexity:** `O(n²)`
+1. **Center Calculation Formula:**
+   - For a palindrome of length $L$ centered around index $i$:
+     $$\text{start} = i - \left\lfloor \frac{L - 1}{2} \right\rfloor$$
+   - This single unified formula works identically for both odd and even lengths!
+     - Odd: $i = 1, L = 3 \implies \text{start} = 1 - (2 // 2) = 0$.
+     - Even: $i = 1, L = 4 \implies \text{start} = 1 - (3 // 2) = 0$.
+2. **Linear Time (Manacher's Algorithm):**
+   - For competitive programming or follow-up discussions, Manacher's Algorithm achieves strictly $\mathcal{O}(N)$ time by exploiting previously computed symmetry boundaries. However, in standard coding interviews, Expand Around Center is the industry-preferred solution due to its brevity and bug-free implementation.

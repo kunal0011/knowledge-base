@@ -1,5 +1,5 @@
 ---
-date: "2025-12-19"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Queue"
 folder: "05. Queue"
@@ -8,209 +8,237 @@ tags:
   - leetcode
   - coding
   - queue
+  - dynamic-programming
+  - kadane
+  - amazon
+  - google
 ---
 
 # LeetCode 918: Maximum Sum Circular Subarray
 
-Below is a **structured, interview-ready explanation** of **LeetCode 918 – Maximum Sum Circular Subarray**, aligned with how this problem is typically reasoned about in competitive programming and system interviews.
+**Target Companies:** Amazon, Microsoft, Google, Meta  
+**Difficulty:** Medium  
+**Topic:** Kadane's Dual Inversion / Monotonic Deque over Circular Prefix Sums  
 
 ---
-
-## LeetCode 918: Maximum Sum Circular Subarray
 
 ### Problem Statement
 
-Given a **circular integer array** `nums`, return the **maximum possible sum of a non-empty subarray**.
+Given a **circular integer array** `nums` of length $n$, return the **maximum possible sum of a non-empty subarray** of `nums`.
 
-* The array is **circular**, meaning the element after the last element is the first element.
-* A subarray can wrap around the end to the beginning.
-* Each element may be used **at most once** in a subarray.
+A **circular array** means the end of the array connects to the beginning of the array. Formally, the next element of `nums[i]` is `nums[(i + 1) % n]` and the previous element of `nums[i]` is `nums[(i - 1 + n) % n]`.
 
-**Example**
+A **subarray** may only include each element of the fixed buffer `nums` at most once. Formally, for a subarray `nums[i], nums[i + 1], ..., nums[j]`, there does not exist $i \le k1, k2 \le j$ with $k1 \not\equiv k2 \pmod n$.
 
-```text
-Input: nums = [5, -3, 5]
-Output: 10
-Explanation: Subarray [5, 5] wraps around and has sum = 10
+---
+
+### Input & Output Formats & Constraints
+
+- **Input:** `nums: List[int]`
+- **Output:** `int` (maximum circular subarray sum)
+- **Constraints:**
+  - $n == \text{nums.length}$
+  - $1 \le n \le 3 \times 10^4$
+  - $-3 \times 10^4 \le \text{nums}[i] \le 3 \times 10^4$
+
+---
+
+### Key Idea & Intuition
+
+Any maximum circular subarray falls into one of two configurations:
+
+```
+Case 1: Standard Linear Subarray (Does NOT wrap around)
+[ ... | [ max subarray ] | ... ]
+Solved directly by classic Kadane's Algorithm.
+
+Case 2: Circular Wrapped Subarray (Wraps around boundaries)
+[ prefix part ] | ... [ min subarray ] ... | [ suffix part ]
+```
+
+Notice that if the optimal subarray wraps around the ends:
+$$\text{Circular Sum} = \text{Total Array Sum} - \text{Minimum Subarray Sum}$$
+To maximize the outer wrapped sum, we must **minimize** the contiguous middle subarray that gets excluded!
+
+#### The All-Negative Trap:
+If every number in `nums` is negative (e.g. `[-3, -2, -3]`):
+- $\text{Total Sum} = -8$
+- $\text{Minimum Subarray Sum} = -8$ (the entire array is taken as minimum)
+- $\text{Circular Sum} = -8 - (-8) = 0$
+However, the problem requires a **non-empty** subarray! Returning `0` would correspond to taking an empty subarray.
+Therefore, if $\text{max\_subarray} < 0$, we must immediately return $\text{max\_subarray}$!
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Maintain running variables in a single linear pass:
+   - `total_sum`: Sum of all elements.
+   - `max_sum`: Maximum contiguous subarray sum seen so far.
+   - `cur_max`: Current running maximum ending at current index.
+   - `min_sum`: Minimum contiguous subarray sum seen so far.
+   - `cur_min`: Current running minimum ending at current index.
+2. For each element $x$ in `nums`:
+   - `cur_max = max(x, cur_max + x)`, `max_sum = max(max_sum, cur_max)`.
+   - `cur_min = min(x, cur_min + x)`, `min_sum = min(min_sum, cur_min)`.
+   - `total_sum += x`.
+3. Check the all-negative condition:
+   - If `max_sum < 0`: return `max_sum`.
+4. Otherwise, return `max(max_sum, total_sum - min_sum)`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+```
+nums = [5, -3, 5]
+Total sum = 5 + (-3) + 5 = 7
+
+Element 5:
+  cur_max = 5, max_sum = 5
+  cur_min = 5, min_sum = 5
+
+Element -3:
+  cur_max = max(-3, 5 + (-3)) = 2,  max_sum = 5
+  cur_min = min(-3, 5 + (-3)) = -3, min_sum = -3
+
+Element 5:
+  cur_max = max(5, 2 + 5) = 7,  max_sum = 7
+  cur_min = min(5, -3 + 5) = 2, min_sum = -3
+
+Summary:
+- Max Linear Subarray: max_sum = 7 (the entire array [5, -3, 5])
+- Min Linear Subarray: min_sum = -3 (the middle element [-3])
+- Max Wrapped Subarray: total_sum - min_sum = 7 - (-3) = 10
+  (wrapping subarray includes nums[2] and nums[0]: [5, 5])
+
+Result: max(7, 10) = 10!
 ```
 
 ---
 
-## Key Observation
+### Solved Examples with Multiple Inputs
 
-A maximum circular subarray must fall into **one of two categories**:
+#### Example 1: Standard Wrapped Maximum
+- **Input:** `nums = [5, -3, 5]`
+- **Linear Max:** `7`
+- **Wrapped Max:** `7 - (-3) = 10`
+- **Output:** `10`
 
-### Case 1: Subarray does NOT wrap
+#### Example 2: Normal Linear Maximum Better
+- **Input:** `nums = [1, -2, 3, -2]`
+- **Linear Max:** `3` (subarray `[3]`)
+- **Total Sum:** `0`, **Min Subarray:** `-2`
+- **Wrapped Max:** `0 - (-2) = 2`
+- **Output:** `3`
 
-This is the classic **maximum subarray sum** problem.
-
-➡️ Solved using **Kadane’s Algorithm**
-
----
-
-### Case 2: Subarray DOES wrap
-
-If a subarray wraps, then it means:
-
-> We take the **entire array sum** and **exclude a contiguous subarray in the middle** that has the **minimum sum**
-
-So:
-
-```
-max_wrap = total_sum - min_subarray_sum
-```
+#### Example 3: All-Negative Edge Case
+- **Input:** `nums = [-3, -2, -3]`
+- **Linear Max:** `-2`
+- **Total Sum:** `-8`, **Min Subarray:** `-8`
+- **Wrapped Max:** `-8 - (-8) = 0` (INVALID: corresponds to empty subarray)
+- **Output:** `-2`
 
 ---
 
-### Important Edge Case
+### Multi-Language Implementations
 
-If **all elements are negative**:
-
-* Kadane (max subarray) already gives the correct answer.
-* `total_sum - min_subarray_sum` becomes `0` (invalid, since subarray must be non-empty).
-
-➡️ In this case, **return Kadane’s result only**.
-
----
-
-## Queue / Deque Insight (Advanced Perspective)
-
-This problem can also be solved using a **monotonic deque + prefix sums**, which generalizes to harder problems like:
-
-* Subarray sum with length constraints
-* Maximum sum subarray in circular array of size ≤ `n`
-
-### Core Idea (Deque Method)
-
-1. Duplicate the array to simulate circularity.
-2. Use **prefix sums**.
-3. Maintain a **monotonic increasing deque** of prefix sums.
-4. For each index `i`, maximize:
-
-   ```
-   prefix[i] - min(prefix[j])   where i - j <= n
-   ```
-
-⚠️ However, **this problem does NOT require the deque approach**, since the Kadane-based solution is simpler, faster, and cleaner.
-
----
-
-## Optimal Approach Used (Kadane + Inversion Trick)
-
-### Steps
-
-1. Run Kadane to find:
-
-   * `max_subarray_sum`
-2. Run Kadane on **negated array** to find:
-
-   * `min_subarray_sum`
-3. Compute:
-
-   ```
-   max_circular = total_sum - min_subarray_sum
-   ```
-4. Return:
-
-   ```
-   max(max_subarray_sum, max_circular)
-   ```
-
-   except when all numbers are negative.
-
----
-
-## Python 3 Solution (with Typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def maxSubarraySumCircular(self, nums: List[int]) -> int:
-        def kadane(arr: List[int]) -> int:
-            curr = best = arr[0]
-            for x in arr[1:]:
-                curr = max(x, curr + x)
-                best = max(best, curr)
-            return best
+        total_sum = 0
+        cur_max = 0
+        max_sum = nums[0]
+        cur_min = 0
+        min_sum = nums[0]
+        
+        for x in nums:
+            total_sum += x
+            
+            cur_max = max(x, cur_max + x)
+            max_sum = max(max_sum, cur_max)
+            
+            cur_min = min(x, cur_min + x)
+            min_sum = min(min_sum, cur_min)
+            
+        # If all numbers are negative, wrapped sum would be empty subarray
+        if max_sum < 0:
+            return max_sum
+            
+        return max(max_sum, total_sum - min_sum)
+```
 
-        total_sum = sum(nums)
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
 
-        max_subarray = kadane(nums)
-        min_subarray = -kadane([-x for x in nums])
+class Solution {
+public:
+    int maxSubarraySumCircular(std::vector<int>& nums) {
+        int totalSum = 0;
+        int curMax = 0, maxSum = nums[0];
+        int curMin = 0, minSum = nums[0];
 
-        # If all numbers are negative, circular sum becomes invalid
-        if max_subarray < 0:
-            return max_subarray
+        for (int x : nums) {
+            totalSum += x;
 
-        return max(max_subarray, total_sum - min_subarray)
+            curMax = std::max(x, curMax + x);
+            maxSum = std::max(maxSum, curMax);
+
+            curMin = std::min(x, curMin + x);
+            minSum = std::min(minSum, curMin);
+        }
+
+        if (maxSum < 0) {
+            return maxSum;
+        }
+
+        return std::max(maxSum, totalSum - minSum);
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int maxSubarraySumCircular(int[] nums) {
+        int totalSum = 0;
+        int curMax = 0, maxSum = nums[0];
+        int curMin = 0, minSum = nums[0];
+
+        for (int x : nums) {
+            totalSum += x;
+
+            curMax = Math.max(x, curMax + x);
+            maxSum = Math.max(maxSum, curMax);
+
+            curMin = Math.min(x, curMin + x);
+            minSum = Math.min(minSum, curMin);
+        }
+
+        if (maxSum < 0) {
+            return maxSum;
+        }
+
+        return Math.max(maxSum, totalSum - minSum);
+    }
+}
 ```
 
 ---
 
-## Worked Out Example
+### Complexity Analysis
 
-### Input
-
-```text
-nums = [5, -3, 5]
-```
-
-### Step 1: Normal Kadane
-
-```
-Max subarray (non-circular) = 7   → [5, -3, 5]
-```
-
-### Step 2: Total Sum
-
-```
-total_sum = 5 + (-3) + 5 = 7
-```
-
-### Step 3: Minimum Subarray
-
-```
-Minimum subarray = -3
-```
-
-### Step 4: Circular Sum
-
-```
-max_circular = total_sum - min_subarray
-             = 7 - (-3)
-             = 10
-```
-
-### Final Answer
-
-```
-max(7, 10) = 10
-```
+- **Time Complexity:** $O(N)$ — Single pass through `nums` updating running max and min in constant time per element.
+- **Space Complexity:** $O(1)$ auxiliary space — Only scalar accumulation variables.
 
 ---
 
-## Time & Space Complexity
+### Takeaway Pattern & Interview Traps
 
-| Metric | Value |
-| --- | --- |
-| Time Complexity | **O(n)** |
-| Space Complexity | **O(1)** |
-
----
-
-## Final Takeaway
-
-* This problem is a **classic Kadane extension**.
-* Circular logic reduces cleanly to:
-
-  ```
-  max(normal_max, total_sum - normal_min)
-  ```
-* The deque approach is conceptually powerful but unnecessary here.
-
-If you want, I can also:
-
-* Walk through the **deque-based solution step by step**
-* Compare **918 vs 53 vs 209** pattern-wise
-* Provide **interview traps and common mistakes**
+- **Pattern:** Circular Array Inversion Trick: Transforming a wrapped outer maximum into an excluded inner minimum ($\text{total} - \text{min}$).
+- **Trap:** Forgetting the all-negative edge case. When all elements are negative, `total_sum == min_sum`, resulting in `total_sum - min_sum = 0`, which represents an empty subarray (forbidden by the problem definition).

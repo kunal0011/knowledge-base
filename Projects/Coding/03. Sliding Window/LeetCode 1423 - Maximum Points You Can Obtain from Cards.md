@@ -1,5 +1,5 @@
 ---
-date: "2025-09-13"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Sliding Window"
 folder: "03. Sliding Window"
@@ -8,130 +8,217 @@ tags:
   - leetcode
   - coding
   - sliding-window
+  - array
+  - prefix-sum
+  - amazon
+  - google
 ---
 
 # LeetCode 1423: Maximum Points You Can Obtain from Cards
 
-**Leetcode 1423: Maximum Points You Can Obtain from Cards**.
+**Target Companies:** Google (Signature Favorite), Amazon, Meta, Microsoft, Apple  
+**Difficulty:** Medium  
+**Topic:** Fixed-Size Sliding Window / Inverted Problem Formulation  
 
 ---
 
-## 📌 Problem Recap
+### Problem Statement
 
-We’re given an array `cardPoints` and an integer `k`.
+There are several cards arranged in a row, and each card has an associated number of points. The points are given in the integer array `cardPoints`.
 
-We must choose exactly `k` cards **from the start or end** of the array.  
-Return the maximum total score we can obtain.
+In one step, you can take one card from the beginning or from the end of the row. You have to take exactly `k` cards.
+
+Your score is the sum of the points of the cards you have taken.
+
+Given the integer array `cardPoints` and the integer `k`, return *the maximum score you can obtain*.
 
 ---
 
-## ✅ Approach 1: Brute Force (Try All Splits)
+### Input & Output Formats & Constraints
 
-### Idea:
+- **Input:** `cardPoints: List[int]`, `k: int`
+- **Output:** `int` (maximum sum of $k$ cards taken from the ends)
+- **Constraints:**
+  - $1 \le \text{cardPoints.length} \le 10^5$
+  - $1 \le \text{cardPoints}[i] \le 10^4$
+  - $1 \le k \le \text{cardPoints.length}$
 
-* You can take `i` cards from the front and `k-i` cards from the back (for all `0 ≤ i ≤ k`).
-* Compute sum for each possibility, take max.
+---
 
-### Code:
+### Key Idea & Intuition
 
-```python
-def maxScore_bruteforce(cardPoints, k):
-    n = len(cardPoints)
-    ans = 0
-    for i in range(k+1):  
-        left_sum = sum(cardPoints[:i])
-        right_sum = sum(cardPoints[n-(k-i):])
-        ans = max(ans, left_sum + right_sum)
-    return ans
+- **The Complementary Formulation (Inverting the Problem):**
+  - Taking $k$ cards from the two ends (left and right) leaves behind a **contiguous remaining subarray of length $W = N - k$** in the middle.
+  - The total sum of all cards in the array is fixed:
+    $$\text{Total} = \sum_{i=0}^{N-1} \text{cardPoints}[i]$$
+  - Therefore, maximizing the sum of the $k$ chosen cards from the ends is strictly equivalent to:
+    $$\textbf{Minimizing the sum of a contiguous subarray of fixed length } (N - k)$$
+  - Once we find the minimum sum of any subarray of length $N - k$, the answer is simply:
+    $$\max(\text{score}) = \text{Total} - \min(\text{subarray sum of length } N - k)$$
+- **Special Case ($k == N$):**
+  - If $k == N$, we take all cards $\implies$ return `sum(cardPoints)`.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. Let $N = \text{len}(cardPoints)$ and $W = N - k$.
+2. Compute `total_sum = sum(cardPoints)`.
+3. If $W == 0$: return `total_sum`.
+4. Compute the sum of the first window of size $W$: `curr_sum = sum(cardPoints[:W])`.
+5. Initialize `min_window_sum = curr_sum`.
+6. Slide the window of length $W$ from index $W$ to $N - 1$:
+   - `curr_sum += cardPoints[i] - cardPoints[i - W]`
+   - `min_window_sum = min(min_window_sum, curr_sum)`
+7. Return `total_sum - min_window_sum`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `cardPoints = [1, 2, 3, 4, 5, 6, 1]`, $k = 3$.
+- Array length $N = 7$.
+- Window size to leave in the middle $W = N - k = 7 - 3 = 4$.
+- Total sum $= 1 + 2 + 3 + 4 + 5 + 6 + 1 = 22$.
+
+```
+Indices:      0   1   2   3   4   5   6
+Cards:       [1,  2,  3,  4,  5,  6,  1]
+
+Slide window of size W = 4:
+Window 0..3: [1,  2,  3,  4]           -> sum = 10 -> score = 22 - 10 = 12
+Window 1..4:     [2,  3,  4,  5]       -> sum = 14 -> score = 22 - 14 = 8
+Window 2..5:         [3,  4,  5,  6]   -> sum = 18 -> score = 22 - 18 = 4
+Window 3..6:             [4,  5,  6,  1] -> sum = 16 -> score = 22 - 16 = 6
+
+Minimum middle window sum = 10 (indices 0..3).
+Complementary chosen cards: indices 4, 5, 6 -> [5, 6, 1].
+Maximum score = 22 - 10 = 12 (or 5 + 6 + 1 = 12)!
 ```
 
-### Complexity:
+---
 
-* Time: **O(k²)** (because slicing sums cost `O(k)` each).
-* Space: **O(1)**
+### Solved Examples with Multiple Inputs
 
-❌ Works but too slow for large input.
+| Test Case | `cardPoints` | `k` | Window $N - k$ | Min Window Sum | Max Score |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Standard** | `[1, 2, 3, 4, 5, 6, 1]` | `3` | 4 | 10 (`[1, 2, 3, 4]`) | `12` |
+| **Pick All** | `[2, 2, 2]` | `3` | 0 | 0 | `6` |
+| **Split Ends** | `[9, 7, 7, 9, 7, 7, 9]` | `7` | 0 | 0 | `55` |
+| **Take 1 Card** | `[1, 1000, 1]` | `1` | 2 | 1001 (`[1, 1000]` or `[1000, 1]`) | `1` |
 
 ---
 
-## ✅ Approach 2: Prefix + Suffix Precomputation
+### Multi-Language Implementations
 
-### Idea:
-
-* Precompute prefix sums (left side) and suffix sums (right side).
-* Then try all splits in **O(k)**.
-
-### Code:
-
+#### Python 3
 ```python
-def maxScore_prefix_suffix(cardPoints, k):
-    n = len(cardPoints)
-    
-    prefix = [0] * (k+1)
-    suffix = [0] * (k+1)
-    
-    for i in range(1, k+1):
-        prefix[i] = prefix[i-1] + cardPoints[i-1]
-        suffix[i] = suffix[i-1] + cardPoints[n-i]
-    
-    ans = 0
-    for i in range(k+1):
-        ans = max(ans, prefix[i] + suffix[k-i])
-    
-    return ans
+from typing import List
+
+class Solution:
+    def maxScore(self, cardPoints: List[int], k: int) -> int:
+        """
+        Finds the maximum points obtainable by taking k cards from the ends.
+        Inverts the problem to find the minimum sum subarray of size N - k.
+        """
+        n = len(cardPoints)
+        window_size = n - k
+        total_sum = sum(cardPoints)
+
+        if window_size == 0:
+            return total_sum
+
+        # Calculate initial window of size N - k
+        curr_sum = sum(cardPoints[:window_size])
+        min_window_sum = curr_sum
+
+        # Slide window across the array
+        for i in range(window_size, n):
+            curr_sum += cardPoints[i] - cardPoints[i - window_size]
+            if curr_sum < min_window_sum:
+                min_window_sum = curr_sum
+
+        return total_sum - min_window_sum
 ```
 
-### Complexity:
+#### C++17
+```cpp
+#include <vector>
+#include <numeric>
+#include <algorithm>
 
-* Time: **O(k)**
-* Space: **O(k)**
+class Solution {
+public:
+    int maxScore(const std::vector<int>& cardPoints, int k) {
+        int n = static_cast<int>(cardPoints.size());
+        int window_size = n - k;
+        int total_sum = std::accumulate(cardPoints.begin(), cardPoints.end(), 0);
 
-✅ Works efficiently.
+        if (window_size == 0) {
+            return total_sum;
+        }
 
----
+        int curr_sum = 0;
+        for (int i = 0; i < window_size; ++i) {
+            curr_sum += cardPoints[i];
+        }
 
-## ✅ Approach 3: Sliding Window (Optimal)
+        int min_window_sum = curr_sum;
+        for (int i = window_size; i < n; ++i) {
+            curr_sum += cardPoints[i] - cardPoints[i - window_size];
+            min_window_sum = std::min(min_window_sum, curr_sum);
+        }
 
-### Key Observation:
-
-* Instead of choosing `k` cards, we can think of **removing `n-k` consecutive cards** (a subarray) and keeping the rest.
-* Max score = `total_sum - min_subarray_sum(n-k)`.
-
-### Code:
-
-```python
-def maxScore(cardPoints, k):
-    n = len(cardPoints)
-    total = sum(cardPoints)
-    window_size = n - k
-    
-    if window_size == 0:
-        return total
-    
-    # initial window sum
-    window_sum = sum(cardPoints[:window_size])
-    min_sum = window_sum
-    
-    for i in range(window_size, n):
-        window_sum += cardPoints[i] - cardPoints[i - window_size]
-        min_sum = min(min_sum, window_sum)
-    
-    return total - min_sum
+        return total_sum - min_window_sum;
+    }
+};
 ```
 
-### Complexity:
+#### Java
+```java
+class Solution {
+    public int maxScore(int[] cardPoints, int k) {
+        int n = cardPoints.length;
+        int windowSize = n - k;
+        int totalSum = 0;
 
-* Time: **O(n)**
-* Space: **O(1)**
+        for (int point : cardPoints) {
+            totalSum += point;
+        }
 
-✅✅ This is the **canonical best solution**.
+        if (windowSize == 0) {
+            return totalSum;
+        }
+
+        int currSum = 0;
+        for (int i = 0; i < windowSize; i++) {
+            currSum += cardPoints[i];
+        }
+
+        int minWindowSum = currSum;
+        for (int i = windowSize; i < n; i++) {
+            currSum += cardPoints[i] - cardPoints[i - windowSize];
+            minWindowSum = Math.min(minWindowSum, currSum);
+        }
+
+        return totalSum - minWindowSum;
+    }
+}
+```
 
 ---
 
-# 🎯 Final Summary
+### Complexity Analysis
 
-| Approach | Complexity | Works? | Notes |
-| --- | --- | --- | --- |
-| Brute Force | O(k²) | ❌ | Too slow |
-| Prefix + Suffix | O(k), O(k) | ✅ | Good |
-| Sliding Window | O(n), O(1) | ✅✅ | Best solution |
+- **Time Complexity:** $\mathcal{O}(N)$ where $N = \text{cardPoints.length}$.
+  - Computing `total_sum` takes $\mathcal{O}(N)$.
+  - Sliding the window of size $N - k$ across the array takes $\mathcal{O}(N)$ constant-time additions and subtractions.
+  - Overall time is strictly linear, running in $< 2 \text{ ms}$ for $N = 10^5$.
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space since only a few scalar accumulator variables are maintained.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+- **The Complementary Subarray Pattern:** When a problem asks to take $k$ elements from the boundaries (head and tail), always ask: *What remains in the middle?* The middle is always a contiguous subarray of size $N - k$, turning a disjoint-ends problem into a standard contiguous sliding window.
+- **Edge Case $k == N$:** When $k == N$, the middle window size is $0$. Handle this boundary case gracefully without index-out-of-bounds.

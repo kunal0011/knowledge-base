@@ -1,5 +1,5 @@
 ---
-date: "2025-09-13"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Sliding Window"
 folder: "03. Sliding Window"
@@ -8,145 +8,239 @@ tags:
   - leetcode
   - coding
   - sliding-window
+  - two-pointers
+  - array
+  - amazon
+  - google
 ---
 
 # LeetCode 2760: Longest Even Odd Subarray With Threshold
 
-**LeetCode 2760 – Longest Even Odd Subarray With Threshold** in detail with all approaches.
+**Target Companies:** Amazon, Google, Microsoft, Adobe  
+**Difficulty:** Easy  
+**Topic:** Sliding Window / Two Pointers / Linear Scan  
 
 ---
 
-## 🔹 Problem Restatement
+### Problem Statement
 
-You are given:
+You are given a 0-indexed integer array `nums` and an integer `threshold`.
 
-* An integer array `nums`.
-* An integer `threshold`.
+Find the length of the longest subarray of `nums` starting at index $l$ and ending at index $r$ ($0 \le l \le r < \text{nums.length}$) that satisfies the following conditions:
 
-Find the **longest subarray** that:
+1. `nums[l] % 2 == 0` (the first element must be even).
+2. For all indices $i$ in the range $[l, r - 1]$, `nums[i] % 2 != nums[i + 1] % 2` (adjacent elements alternate parity).
+3. For all indices $i$ in the range $[l, r]$, `nums[i] <= threshold` (all elements are $\le \text{threshold}$).
 
-1. Starts with an **even** number.
-2. Alternates between **even and odd** numbers.
-3. Every element is ≤ `threshold`.
-
-Return the length of the longest such subarray. If none exists, return `0`.
+Return an integer denoting the length of the longest such subarray. If no such subarray exists, return $0$.
 
 ---
 
-## 🔹 Key Observations
+### Input & Output Formats & Constraints
 
-1. The subarray must **start with an even number**.
-2. Once it starts, it must follow a strict **even → odd → even → odd ...** alternating pattern.
-3. All numbers must be ≤ `threshold`.
-4. The problem reduces to: **scan linearly, reset when conditions break**.
-
----
-
-## 🔹 Approaches
-
-### **1. Brute Force (Check all subarrays)**
-
-* Try all subarrays starting at `i`.
-* Verify conditions (even start, alternation, ≤ threshold).
-* Track max length.
-
-⏱ Complexity: **O(n²)**  
-✅ Works (but too slow for `n=1000`).
+- **Input:**
+  - `nums`: `List[int]` / `vector<int>` / `int[]` — array of integers ($1 \le \text{nums.length} \le 100$).
+  - `threshold`: `int` ($1 \le \text{threshold} \le 100$).
+- **Output:**
+  - `int` — the maximum length of a valid alternating even-odd subarray $\le \text{threshold}$.
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 100$
+  - $1 \le \text{nums}[i] \le 100$
+  - $1 \le \text{threshold} \le 100$
 
 ---
 
-### **2. Greedy Linear Scan (Optimal)**
+### Key Idea & Intuition
 
-* Traverse from left to right.
-* Maintain `cur_len` = length of current valid subarray.
-* If current number breaks the rule:
+The problem asks for the maximum length of a contiguous subarray that:
+1. Starts with an even number $\le \text{threshold}$.
+2. Continues as long as each subsequent element is $\le \text{threshold}$ AND alternates parity with the preceding element: `nums[r] % 2 != nums[r - 1] % 2`.
 
-  * Reset `cur_len` (start new subarray if current number is even and ≤ threshold).
-* Update `ans` with maximum length seen.
+When an alternation or threshold condition is violated at index $r$, the subarray starting at $l$ cannot be extended further.
+Crucially, where does the next potential subarray start?
+- If `nums[r]` is odd or `nums[r] > threshold`, `nums[r]` itself cannot start a valid subarray, so we scan forward for the next even number $\le \text{threshold}$.
+- If `nums[r]` is even and $\le \text{threshold}$, `nums[r]` could potentially start a new valid subarray right at $r$.
 
-⏱ Complexity: **O(n)**  
-✅ Works efficiently.
+Using a sliding window / two-pointer approach:
+- We iterate $l$ through `nums`.
+- Whenever `nums[l] % 2 == 0` and `nums[l] <= threshold`, we expand $r$ from $l$:
+  - While $r + 1 < n$, `nums[r + 1] <= threshold`, and `nums[r] % 2 != nums[r + 1] % 2`, advance $r$.
+  - Record $\max(\text{ans}, r - l + 1)$.
+  - We can then safely advance $l = r$ (or $l = r + 1$), running in strict $\mathcal{O}(n)$ time.
 
 ---
 
-## 🔹 Implementation
+### Solution Approach (Step-by-Step)
 
-### Brute Force (for clarity)
+1. Initialize `max_len = 0`, `n = len(nums)`, and pointer `l = 0`.
+2. While `l < n`:
+   - Check if `nums[l] % 2 == 0` and `nums[l] <= threshold`:
+     - If yes, initialize `r = l`.
+     - Expand `r` while $r + 1 < n$, `nums[r + 1] <= threshold`, and `(nums[r] % 2) != (nums[r + 1] % 2)`.
+     - Update `max_len = max(max_len, r - l + 1)`.
+     - Set `l = r + 1` (or if `nums[r + 1] <= threshold` and `nums[r + 1] % 2 == 0`, $r + 1$ will be checked on next iteration).
+   - If no, simply increment `l += 1`.
+3. Return `max_len`.
 
+---
+
+### Visual Algorithm Walkthrough
+
+For `nums = [3, 2, 5, 4], threshold = 5`:
+
+```
+Array:      [ 3,    2,    5,    4 ]
+Indices:      0     1     2     3
+
+l = 0: nums[0] = 3 (Odd) -> Cannot start. l moves to 1.
+
+l = 1: nums[1] = 2 (Even <= 5) -> Valid start!
+  r = 1
+  Check r+1 = 2 (nums[2] = 5):
+    5 <= 5 (Threshold OK)
+    2 % 2 (0) != 5 % 2 (1) (Parity alternates OK)
+    -> r advances to 2 (Window: [2, 5], length 2)
+  Check r+1 = 3 (nums[3] = 4):
+    4 <= 5 (Threshold OK)
+    5 % 2 (1) != 4 % 2 (0) (Parity alternates OK)
+    -> r advances to 3 (Window: [2, 5, 4], length 3)
+  Check r+1 = 4 (Out of bounds)
+  -> Max len updated to 3.
+  l advances to 4.
+
+Loop terminates.
+Result = 3.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1:
+- **Input:** `nums = [3, 2, 5, 4]`, `threshold = 5`
+- **Tracing:** Valid window `[2, 5, 4]` of length 3.
+- **Output:** `3`
+
+#### Example 2:
+- **Input:** `nums = [1, 2]`, `threshold = 2`
+- **Tracing:** `nums[0] = 1` (odd). `nums[1] = 2` (even $\le 2$), length 1.
+- **Output:** `1`
+
+#### Example 3:
+- **Input:** `nums = [2, 3, 4, 5]`, `threshold = 4`
+- **Tracing:**
+  - $l = 0$: `[2, 3, 4]` -> at index 3, `nums[3] = 5 > 4` (fails threshold). Window is `[2, 3, 4]`, length 3.
+- **Output:** `3`
+
+#### Example 4 (All Exceed Threshold or All Odd):
+- **Input:** `nums = [7, 9, 11]`, `threshold = 5`
+- **Output:** `0`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 ```python
-def longestAlternatingSubarray(nums, threshold):
-    n = len(nums)
-    ans = 0
+from typing import List
 
-    for i in range(n):
-        if nums[i] % 2 == 0 and nums[i] <= threshold:  # must start with even
-            length = 1
-            for j in range(i+1, n):
-                if nums[j] > threshold:  # violates threshold
-                    break
-                if nums[j] % 2 != nums[j-1] % 2:  # alternates parity
-                    length += 1
-                    ans = max(ans, length)
-                else:
-                    break
-            ans = max(ans, length)
+class Solution:
+    def longestAlternatingSubarray(self, nums: List[int], threshold: int) -> int:
+        n = len(nums)
+        max_len = 0
+        l = 0
+        
+        while l < n:
+            # Subarray must start with an even number <= threshold
+            if nums[l] % 2 == 0 and nums[l] <= threshold:
+                r = l
+                # Greedily expand r while conditions are satisfied
+                while (r + 1 < n and 
+                       nums[r + 1] <= threshold and 
+                       nums[r] % 2 != nums[r + 1] % 2):
+                    r += 1
+                
+                max_len = max(max_len, r - l + 1)
+                # Next potential start can begin at r (if even) or r + 1
+                l = r
+            l += 1
+            
+        return max_len
+```
 
-    return ans
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int longestAlternatingSubarray(const std::vector<int>& nums, int threshold) {
+        int n = static_cast<int>(nums.size());
+        int max_len = 0;
+        int l = 0;
+        
+        while (l < n) {
+            // Must start with an even number <= threshold
+            if (nums[l] % 2 == 0 && nums[l] <= threshold) {
+                int r = l;
+                while (r + 1 < n && 
+                       nums[r + 1] <= threshold && 
+                       (nums[r] % 2 != nums[r + 1] % 2)) {
+                    ++r;
+                }
+                max_len = std::max(max_len, r - l + 1);
+                l = r; // Skip ahead
+            }
+            ++l;
+        }
+        
+        return max_len;
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int longestAlternatingSubarray(int[] nums, int threshold) {
+        int n = nums.length;
+        int maxLen = 0;
+        int l = 0;
+        
+        while (l < n) {
+            // Must begin with an even integer <= threshold
+            if (nums[l] % 2 == 0 && nums[l] <= threshold) {
+                int r = l;
+                while (r + 1 < n && 
+                       nums[r + 1] <= threshold && 
+                       (nums[r] % 2 != nums[r + 1] % 2)) {
+                    r++;
+                }
+                maxLen = Math.max(maxLen, r - l + 1);
+                l = r; // Skip evaluated segment
+            }
+            l++;
+        }
+        
+        return maxLen;
+    }
+}
 ```
 
 ---
 
-### Greedy Linear (Final Solution)
+### Complexity Analysis
 
-```python
-def longestAlternatingSubarray(nums, threshold):
-    n = len(nums)
-    ans = 0
-    cur_len = 0
-
-    for i in range(n):
-        if nums[i] > threshold:  # invalid number
-            cur_len = 0
-            continue
-
-        if cur_len == 0:  # potential start
-            if nums[i] % 2 == 0:
-                cur_len = 1
-                ans = max(ans, cur_len)
-        else:
-            if nums[i] % 2 != nums[i-1] % 2:  # alternates
-                cur_len += 1
-                ans = max(ans, cur_len)
-            else:  # restart
-                cur_len = 1 if nums[i] % 2 == 0 else 0
-                ans = max(ans, cur_len)
-
-    return ans
-```
+- **Time Complexity:** $\mathcal{O}(n)$
+  - Pointer `l` advances monotonically and pointer `r` traverses contiguous alternating segments. By setting `l = r`, each element is inspected at most twice throughout the entire execution.
+- **Space Complexity:** $\mathcal{O}(1)$
+  - Only a few scalar integer variables (`l`, `r`, `max_len`, `n`) are used.
 
 ---
 
-## 🔹 Example Walkthrough
+### Takeaway Pattern & Interview Traps
 
-Input:
-
-```text
-nums = [3, 2, 5, 4], threshold = 5
-```
-
-Steps:
-
-* `3` (odd, ≤ 5) → invalid start.
-* `2` (even, ≤ 5) → start → `cur_len = 1`.
-* `5` (odd, ≤ 5, alternates) → `cur_len = 2`.
-* `4` (even, ≤ 5, alternates) → `cur_len = 3`.
-
-✅ Answer = 3.
-
----
-
-## 🔹 Which Works / Fails?
-
-* **Brute force O(n²)** → Works but slower.
-* **Greedy O(n)** → Works efficiently.
-* **DP not needed** since greedy already handles pattern.
+- **Trap: Forgetting the Even Start Requirement:** It is easy to miss condition 1 (`nums[l] % 2 == 0`). Even if alternating parity holds, the segment cannot start on an odd number.
+- **Trap: Forgetting Threshold on the First Element:** `nums[l] <= threshold` is required for the start; checking only alternating pairs will fail if the initial even number exceeds `threshold`.
+- **Optimal Skipping:** After expanding to `r`, no index $k \in (l, r]$ can start a longer valid subarray than $r - l + 1$ unless we jump forward, because parity is rigidly fixed. Skipping $l = r$ gives clean $\mathcal{O}(n)$ without redundant inner checks.

@@ -8,13 +8,14 @@ tags:
   - leetcode
   - coding
   - stack
+  - design
   - amazon
   - google
 ---
 
 # LeetCode 155: Min Stack
 
-**Target Companies:** Amazon (Top Classic), Google, Microsoft, Apple, Meta  
+**Target Companies:** Amazon, Google, Microsoft, Apple, Meta, Bloomberg  
 **Difficulty:** Medium  
 **Topic:** Stack Design / Prefix Minimum Invariant
 
@@ -31,13 +32,14 @@ Implement the `MinStack` class:
 - `int top()`: gets the top element of the stack.
 - `int getMin()`: retrieves the minimum element in the stack.
 
-You must implement a solution with **$O(1)$ time complexity** for each function.
+You must implement a solution with **$\mathcal{O}(1)$ time complexity** for each function.
 
 ---
 
 ### Input & Output Formats & Constraints
 
 - **Input Operations:** `MinStack()`, `push(val)`, `pop()`, `top()`, `getMin()`
+- **Output:** Standard return values (`null`, `int`, or `void`).
 - **Constraints:**
   - $-2^{31} \le \text{val} \le 2^{31} - 1$
   - Methods `pop`, `top` and `getMin` operations will always be called on **non-empty** stacks.
@@ -47,22 +49,86 @@ You must implement a solution with **$O(1)$ time complexity** for each function.
 
 ### Key Idea & Intuition
 
-- **The Fundamental Challenge:**
-  - A standard stack provides $O(1)$ push/pop/top. But tracking the minimum requires finding the smallest across all elements.
-- **Prefix Minimum State Invariant:**
-  - The minimum of elements currently in the stack depends **only** on the elements below it in the stack.
-  - If we store `(val, current_min)` as a pair on the stack, each stack element remembers the exact minimum of the stack up to that height!
-  - When an element is popped, the previous minimum is automatically restored with zero overhead.
+A standard stack gives $\mathcal{O}(1)$ operations for `push`, `pop`, and `top`. However, finding the minimum across all elements typically takes $\mathcal{O}(N)$.
+
+#### Prefix Minimum Invariant
+The minimum of elements currently in the stack depends **only** on the elements below it in the stack.
+If we store `(val, min_so_far)` as a pair on the stack:
+- Each stack frame records the value of the node alongside the exact minimum of the entire stack at that height.
+- When an element is pushed:
+  $$\text{current\_min} = \min(val, \text{stack[-1].min})$$
+- When an element is popped, the stack naturally reverts to the previous frame's minimum without any search or recalculation.
+- Thus, `getMin()` simply reads `stack[-1].min` in strictly $\mathcal{O}(1)$ time.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Suppose we perform: `push(-2) -> push(0) -> push(-3) -> getMin() -> pop() -> top() -> getMin()`
+
+```
+1. push(-2):
+   Stack is empty. min_so_far = -2.
+   Stack: [ (-2, -2) ]
+
+2. push(0):
+   min_so_far = min(0, -2) = -2.
+   Stack: [ (-2, -2), (0, -2) ]
+
+3. push(-3):
+   min_so_far = min(-3, -2) = -3.
+   Stack: [ (-2, -2), (0, -2), (-3, -3) ]
+
+4. getMin():
+   Read stack.top().min -> returns -3.
+
+5. pop():
+   Pop (-3, -3).
+   Stack becomes: [ (-2, -2), (0, -2) ]
+
+6. top():
+   Read stack.top().val -> returns 0.
+
+7. getMin():
+   Read stack.top().min -> returns -2.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Push and Pop Interleaving
+
+- **Calls:** `["MinStack","push","push","push","getMin","pop","top","getMin"]`
+- **Arguments:** `[[],[-2],[0],[-3],[],[],[],[]]`
+- **Step Tracing:**
+
+| Call | Stack Frame `(val, min)` | Returned Value | Description |
+|:---:|:---:|:---:|:---:|
+| `push(-2)` | `[(-2, -2)]` | `null` | -2 is first element |
+| `push(0)` | `[(-2, -2), (0, -2)]` | `null` | Minimum remains -2 |
+| `push(-3)` | `[(-2, -2), (0, -2), (-3, -3)]` | `null` | New minimum is -3 |
+| `getMin()` | `[(-2, -2), (0, -2), (-3, -3)]` | `-3` | Top frame min is -3 |
+| `pop()` | `[(-2, -2), (0, -2)]` | `null` | Restores previous frame |
+| `top()` | `[(-2, -2), (0, -2)]` | `0` | Top value is 0 |
+| `getMin()` | `[(-2, -2), (0, -2)]` | `-2` | Restores previous min -2 |
+
+#### Example 2: Monotonically Decreasing Pushes
+
+- `push(5) -> push(4) -> push(3) -> push(2)`
+- Each node records itself as the new minimum.
+- Each subsequent `pop()` cleanly peels off the corresponding minimum.
 
 ---
 
 ### Multi-Language Implementations
 
-#### 1. Python 3 (Clean, Typed)
+#### Python 3
+
 ```python
 class MinStack:
     def __init__(self):
-        # stack stores pairs of (val, min_so_far)
+        # stack stores tuples of (value, min_so_far)
         self.stack = []
 
     def push(self, val: int) -> None:
@@ -79,46 +145,57 @@ class MinStack:
         return self.stack[-1][1]
 ```
 
-#### 2. C++ (C++17 / STL)
+#### C++17
+
 ```cpp
-#include <stack>
+#include <vector>
 #include <algorithm>
 
 class MinStack {
 private:
-    std::stack<std::pair<int, int>> st; // pair<val, minSoFar>
+    struct Node {
+        int val;
+        int min_val;
+    };
+    std::vector<Node> stack;
 
 public:
     MinStack() {}
 
     void push(int val) {
-        int currMin = st.empty() ? val : std::min(val, st.top().second);
-        st.push({val, currMin});
+        int curr_min = stack.empty() ? val : std::min(val, stack.back().min_val);
+        stack.push_back({val, curr_min});
     }
 
     void pop() {
-        st.pop();
+        stack.pop_back();
     }
 
     int top() {
-        return st.top().first;
+        return stack.back().val;
     }
 
     int getMin() {
-        return st.top().second;
+        return stack.back().min_val;
     }
 };
 ```
 
-#### 3. Java (Modern, Typed)
+#### Java
+
 ```java
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-class MinStack {
+public class MinStack {
     private static class Element {
-        int val, min;
-        Element(int val, int min) { this.val = val; this.min = min; }
+        int val;
+        int minVal;
+
+        Element(int val, int minVal) {
+            this.val = val;
+            this.minVal = minVal;
+        }
     }
 
     private final Deque<Element> stack;
@@ -128,7 +205,7 @@ class MinStack {
     }
 
     public void push(int val) {
-        int currentMin = stack.isEmpty() ? val : Math.min(val, stack.peek().min);
+        int currentMin = stack.isEmpty() ? val : Math.min(val, stack.peek().minVal);
         stack.push(new Element(val, currentMin));
     }
 
@@ -141,7 +218,7 @@ class MinStack {
     }
 
     public int getMin() {
-        return stack.peek().min;
+        return stack.peek().minVal;
     }
 }
 ```
@@ -150,5 +227,19 @@ class MinStack {
 
 ### Complexity Analysis
 
-- **Time Complexity:** Strict $O(1)$ for `push`, `pop`, `top`, and `getMin`.
-- **Space Complexity:** $O(N)$ auxiliary space for paired storage.
+- **Time Complexity:** Strict $\mathcal{O}(1)$ time for every operation:
+  - `push`: $\mathcal{O}(1)$ (one comparison and append)
+  - `pop`: $\mathcal{O}(1)$ (one pop)
+  - `top`: $\mathcal{O}(1)$ (indexing top)
+  - `getMin`: $\mathcal{O}(1)$ (indexing top)
+- **Space Complexity:** $\mathcal{O}(N)$ auxiliary space to store $N$ elements and their running minima.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Space Optimization Follow-Up (Single Stack with Value Encoding):**
+   - Interviewers often ask: *"Can you do this without storing a pair at every node?"*
+   - Yes, by storing the difference `val - min` or only pushing to a secondary `min_stack` when `val <= min_stack.top()`. The paired approach, however, avoids 32-bit integer arithmetic overflow (`diff = val - min` can overflow standard signed 32-bit ints when `val = INT_MAX` and `min = INT_MIN`).
+2. **Empty Stack Preconditions:**
+   - Always clarify with the interviewer whether `pop()` or `getMin()` can be invoked on an empty stack. Per LeetCode constraints, they are always called on non-empty stacks.

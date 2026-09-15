@@ -8,173 +8,251 @@ tags:
   - leetcode
   - coding
   - stack
+  - monotonic-stack
+  - amazon
+  - google
 ---
 
 # LeetCode 84: Largest Rectangle in Histogram
 
-Below is a **complete, structured explanation of LeetCode 84 – Largest Rectangle in Histogram**, aligned with interview expectations and competitive programming rigor.
+**Target Companies:** Amazon (Top Classic), Google, Microsoft, Meta, Apple, Bloomberg  
+**Difficulty:** Hard  
+**Topic:** Monotonic Increasing Stack / Histogram Area
 
 ---
-
-## LeetCode 84: Largest Rectangle in Histogram
 
 ### Problem Statement
 
-You are given an array `heights` of length `n`, where each element represents the height of a bar in a histogram.  
-Each bar has a width of **1**.
-
-Return the **area of the largest rectangle** that can be formed within the histogram.
+Given an array of integers `heights` representing the histogram's bar height where the width of each bar is `1`, return *the area of the largest rectangle in the histogram*.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-A rectangle in the histogram is defined by:
-
-* **Height** = height of the *shortest bar* in the rectangle
-* **Width** = number of contiguous bars where all heights ≥ this height
-
-Brute force checking all rectangles is **O(n²)** and will time out.
-
-The critical insight:
-
-> For each bar, treat it as the **minimum height** of a rectangle and expand **left and right** until a smaller bar is found.
-
-To do this efficiently, we need to know:
-
-* The **first smaller element on the left**
-* The **first smaller element on the right**
-
-This is where a **monotonic stack** becomes essential.
+- **Input:**
+  - `heights`: `List[int]`, where $n = \text{len}(heights)$.
+- **Output:**
+  - `int`: The maximum rectangular area formed by contiguous bars.
+- **Constraints:**
+  - $1 \le \text{heights.length} \le 10^5$.
+  - $0 \le heights[i] \le 10^4$.
 
 ---
 
-### Stack Key Insight (Core Idea)
+### Key Idea & Intuition
 
-We maintain a **monotonic increasing stack** of indices.
+Any valid rectangle in a histogram is constrained vertically by the **shortest bar** within its horizontal span.
 
-Why increasing?
+Therefore, for every bar $i$ with height $h = heights[i]$:
+- What is the maximum width of a rectangle where bar $i$ is the bottleneck (shortest) bar?
+- It extends to the left until it encounters the first bar strictly shorter than $heights[i]$ ($L$).
+- It extends to the right until it encounters the first bar strictly shorter than $heights[i]$ ($R$).
+- The maximal area with $heights[i]$ as the limiting height is:
+  $$\text{Area} = heights[i] \times (R - L - 1)$$
 
-* It allows us to detect when a bar can no longer extend to the right.
-
-When processing a bar `h[i]`:
-
-* If `h[i] < h[stack.top]`, then:
-
-  * The bar at `stack.top` has found its **right boundary**
-  * Pop it and compute the rectangle area using:
-
-    * Height = popped bar height
-    * Width = `current_index - previous_smaller_index - 1`
-
-Each bar is:
-
-* **Pushed once**
-* **Popped once**
-
-⇒ Overall **O(n)** time.
+Finding the **first smaller element to the left** and the **first smaller element to the right** for all elements simultaneously is solved in linear $\mathcal{O}(N)$ time using a **Monotonic Increasing Stack**:
+1. The stack stores indices of bars in strictly non-decreasing height order.
+2. When scanning index $i$ with $heights[i]$:
+   - If $heights[i] < heights[stack.top()]$, the bar at $stack.top()$ cannot extend any further to the right!
+   - We pop $stack.top()$ as the bottleneck bar $h$.
+   - The right boundary $R$ is the current index $i$.
+   - The left boundary $L$ is the new top of the stack (or $-1$ if the stack is now empty).
+   - Width is $i - L - 1$.
+   - Area is $h \times (i - L - 1)$.
+3. By appending a dummy sentinel $0$ at the end of the array, all remaining bars in the stack are cleanly flushed out and evaluated before terminating.
 
 ---
 
-### Algorithm Steps
+### Solution Approach (Step-by-Step)
 
-1. Append a `0` to `heights` (forces stack cleanup).
-2. Initialize an empty stack (stores indices).
-3. Iterate through all indices:
-
-   * While stack is not empty and current height is smaller:
-
-     * Pop the top index
-     * Compute rectangle area
-   * Push current index into the stack.
-4. Track the maximum area.
+1. Initialize `stack = []` and `max_area = 0`.
+2. Loop $i$ from $0$ to $n$ (inclusive, treating $i = n$ as height $0$ to flush):
+   - `curr_height = heights[i] if i < n else 0`
+   - While `stack` is non-empty and `curr_height < heights[stack[-1]]`:
+     - `h = heights[stack.pop()]`
+     - `w = i if not stack else (i - stack[-1] - 1)`
+     - `max_area = max(max_area, h * w)`
+   - `stack.append(i)`
+3. Return `max_area`.
 
 ---
 
-### Python 3 Solution (With Typing)
+### Visual Algorithm Walkthrough
+
+Let `heights = [2, 1, 5, 6, 2, 3]`:
+
+```
+Indices:    0  1  2  3  4  5  (and virtual 6 with height 0)
+Heights:    2  1  5  6  2  3  [0]
+
+-------------------------------------------------------------------------
+i = 0, h = 2:
+  Push 0. Stack: [0]
+
+i = 1, h = 1:
+  1 < 2! Pop 0:
+    h = 2, stack empty -> w = 1. Area = 2 * 1 = 2.
+  Push 1. Stack: [1]
+
+i = 2, h = 5:
+  5 > 1. Push 2. Stack: [1, 2]
+
+i = 3, h = 6:
+  6 > 5. Push 3. Stack: [1, 2, 3]
+
+i = 4, h = 2:
+  2 < 6! Pop 3:
+    h = 6, left = 2. w = 4 - 2 - 1 = 1. Area = 6 * 1 = 6.
+  2 < 5! Pop 2:
+    h = 5, left = 1. w = 4 - 1 - 1 = 2. Area = 5 * 2 = 10! <-- MAX!
+  2 >= 1. Stop popping.
+  Push 4. Stack: [1, 4]
+
+i = 5, h = 3:
+  3 > 2. Push 5. Stack: [1, 4, 5]
+
+i = 6 (Sentinel h = 0):
+  0 < 3! Pop 5: h = 3, left = 4. w = 6 - 4 - 1 = 1. Area = 3 * 1 = 3.
+  0 < 2! Pop 4: h = 2, left = 1. w = 6 - 1 - 1 = 4. Area = 2 * 4 = 8.
+  0 < 1! Pop 1: h = 1, left = -1. w = 6. Area = 1 * 6 = 6.
+
+Max Area Found: 10 (bars at index 2 and 3: heights [5, 6] with width 2).
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+#### Example 1: Standard Histogram
+
+- **Input:** `heights = [2, 1, 5, 6, 2, 3]`
+- **Output:** `10`
+
+#### Example 2: Uniform Height
+
+- **Input:** `heights = [2, 2, 2, 2]`
+- **Tracing:** Stack pushes all 4 bars. Sentinel flushes all bars with width 4 $\implies 2 \times 4 = 8$.
+- **Output:** `8`
+
+#### Example 3: Strictly Increasing
+
+- **Input:** `heights = [1, 2, 3, 4, 5]`
+- **Tracing:** Every bar pushed. Sentinel flushes:
+  - $h=5, w=1 \implies 5$
+  - $h=4, w=2 \implies 8$
+  - $h=3, w=3 \implies 9$
+  - $h=2, w=4 \implies 8$
+  - $h=1, w=5 \implies 5$
+- **Output:** `9`
+
+---
+
+### Multi-Language Implementations
+
+#### Python 3
 
 ```python
 from typing import List
 
 class Solution:
     def largestRectangleArea(self, heights: List[int]) -> int:
-        # Add sentinel to flush stack at the end
-        heights.append(0)
-        stack: List[int] = []
+        stack = []  # stores indices of bars in monotonic increasing order
         max_area = 0
+        n = len(heights)
 
-        for i in range(len(heights)):
-            while stack and heights[i] < heights[stack[-1]]:
+        # Loop up to n (inclusive) to use virtual height 0 as sentinel flush
+        for i in range(n + 1):
+            curr_height = heights[i] if i < n else 0
+
+            while stack and curr_height < heights[stack[-1]]:
                 h = heights[stack.pop()]
-                left = stack[-1] if stack else -1
-                width = i - left - 1
-                max_area = max(max_area, h * width)
+                w = i if not stack else i - stack[-1] - 1
+                max_area = max(max_area, h * w)
+
             stack.append(i)
 
         return max_area
 ```
 
----
+#### C++17
 
-### Worked Example
+```cpp
+#include <vector>
+#include <stack>
+#include <algorithm>
 
-#### Input
+class Solution {
+public:
+    int largestRectangleArea(const std::vector<int>& heights) {
+        std::vector<int> stack;
+        int max_area = 0;
+        int n = static_cast<int>(heights.size());
 
-```
-heights = [2, 1, 5, 6, 2, 3]
-```
+        for (int i = 0; i <= n; ++i) {
+            int curr_height = (i < n) ? heights[i] : 0;
 
-We append `0`:
+            while (!stack.empty() && curr_height < heights[stack.back()]) {
+                int h = heights[stack.back()];
+                stack.pop_back();
+                int w = stack.empty() ? i : (i - stack.back() - 1);
+                max_area = std::max(max_area, h * w);
+            }
 
-```
-[2, 1, 5, 6, 2, 3, 0]
-```
+            stack.push_back(i);
+        }
 
----
-
-#### Step-by-Step Stack Processing
-
-| Index | Height | Action | Stack | Area Computed |
-| --- | --- | --- | --- | --- |
-| 0 | 2 | push | [0] | — |
-| 1 | 1 | pop 2 | [] | 2 × 1 = 2 |
-|  |  | push | [1] |  |
-| 2 | 5 | push | [1,2] | — |
-| 3 | 6 | push | [1,2,3] | — |
-| 4 | 2 | pop 6 | [1,2] | 6 × 1 = 6 |
-|  |  | pop 5 | [1] | 5 × 2 = **10** |
-|  |  | push | [1,4] |  |
-| 5 | 3 | push | [1,4,5] | — |
-| 6 | 0 | pop 3 | [1,4] | 3 × 1 = 3 |
-|  |  | pop 2 | [1] | 2 × 4 = 8 |
-|  |  | pop 1 | [] | 1 × 6 = 6 |
-
----
-
-### Final Answer
-
-```
-Maximum Area = 10
+        return max_area;
+    }
+};
 ```
 
-(Rectangle using heights `[5,6]` with height `5` and width `2`)
+#### Java
+
+```java
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+public class Solution {
+    public int largestRectangleArea(int[] heights) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        int maxArea = 0;
+        int n = heights.length;
+
+        for (int i = 0; i <= n; i++) {
+            int currHeight = (i < n) ? heights[i] : 0;
+
+            while (!stack.isEmpty() && currHeight < heights[stack.peek()]) {
+                int h = heights[stack.pop()];
+                int w = stack.isEmpty() ? i : (i - stack.peek() - 1);
+                maxArea = Math.max(maxArea, h * w);
+            }
+
+            stack.push(i);
+        }
+
+        return maxArea;
+    }
+}
+```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity:** `O(n)`
-* **Space Complexity:** `O(n)` (stack)
+- **Time Complexity:** $\mathcal{O}(N)$
+  - Each index $0 \dots N$ is pushed onto the stack exactly once and popped at most once.
+  - Computing the area during each pop takes $\mathcal{O}(1)$ arithmetic.
+  - Overall Time: $\mathcal{O}(N)$, where $N$ is the number of bars.
+- **Space Complexity:** $\mathcal{O}(N)$
+  - In the worst case (strictly increasing bars), the stack holds all $N$ indices.
+  - Overall Space: $\mathcal{O}(N)$.
 
 ---
 
-### Interview Summary (One-Liner)
+### Takeaway Pattern & Interview Traps
 
-> Use a monotonic increasing stack to compute, for each bar, the maximum rectangle where it is the minimum height by finding its nearest smaller bars on both sides in linear time.
-
-If you want, I can also provide:
-
-* Stack visualization diagrams
-* Left/Right Smaller Element derivation
-* Common mistakes & edge cases
-* Comparison with brute force and divide-and-conquer approaches
+1. **The Sentinel $0$ Technique:**
+   - Appending or virtualizing a bar of height $0$ at index $N$ ensures that any unpopped elements remaining in the stack are evaluated and flushed. This avoids writing duplicate cleanup loops after the main loop.
+2. **Width Calculation Invariant:**
+   - If the stack is empty after popping, the popped bar was the shortest bar seen so far from index $0$ to $i-1$, meaning it spans the entire width $i$.
+   - If the stack is not empty, the bar spans from `stack.top() + 1` to `i - 1`, giving width $i - \text{stack.top()} - 1$.

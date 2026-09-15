@@ -8,108 +8,173 @@ tags:
   - leetcode
   - coding
   - stack
+  - monotonic-stack
+  - design
+  - amazon
+  - google
 ---
 
 # LeetCode 901: Online Stock Span
 
-Below is a complete, structured explanation of **LeetCode 901 – Online Stock Span**, aligned with interview expectations and stack-based reasoning.
+**Target Companies:** Amazon, Google, Microsoft, Bloomberg, Meta  
+**Difficulty:** Medium  
+**Topic:** Monotonic Decreasing Stack / Online Stream / Span Compression
 
 ---
-
-## LeetCode 901: Online Stock Span
 
 ### Problem Statement
 
-Design a class `StockSpanner` that collects daily stock prices and returns the **span** of the stock’s price for the current day.
+Design an algorithm that collects daily price quotes for some stock and returns the **span** of that stock's price for the current day.
 
-The **span** of today’s price is defined as the maximum number of **consecutive days (ending today)** for which the price of the stock was **less than or equal to today’s price**.
+The **span** of the stock's price in one day is the maximum number of consecutive days (starting from that day and going backward) for which the stock price was less than or equal to the price of that day.
 
-You will receive prices **one by one**, and for each price you must return the span.
+- For example, if the prices of the stock in the last four days is `[7, 2, 1, 2]` and the price of the stock today is `2`, then the span of today is `4` because starting from today, the price of the stock was less than or equal to `2` for `4` consecutive days.
+- Also, if the prices of the stock in the last four days is `[7, 34, 1, 2]` and the price of the stock today is `8`, then the span of today is `3` because starting from today, the price of the stock was less than or equal to `8` for `3` consecutive days.
 
-**Function signature**
+Implement the `StockSpanner` class:
+- `StockSpanner()`: Initializes the object of the class.
+- `int next(int price)`: Returns the span of the stock's price given that today's price is `price`.
 
-```python
-StockSpanner()
-next(price: int) -> int
+---
+
+### Input & Output Formats & Constraints
+
+- **Input:**
+  - Method calls: `["StockSpanner", "next", "next", ...]` with arguments `[[price], ...]`.
+- **Output:**
+  - `int`: The span for the current day's price.
+- **Constraints:**
+  - $1 \le price \le 10^5$.
+  - At most $10^4$ calls will be made to `next`.
+
+---
+
+### Key Idea & Intuition
+
+A brute force approach would record all past prices in a list and scan backward on each call to `next(price)`, which takes $\mathcal{O}(N)$ per query, resulting in $\mathcal{O}(N^2)$ overall time.
+
+#### Monotonic Decreasing Stack with Span Compression:
+Notice that if today's price is higher than or equal to yesterday's price, today's price "dominates" yesterday's price for all future queries. Any future day that is $\ge$ today's price will automatically be $\ge$ yesterday's price as well!
+
+Therefore, we can **compress** consecutive dominated days:
+- Maintain a monotonic stack storing pairs: `(price, span)`.
+- Stack invariant: prices in the stack are strictly decreasing from bottom to top.
+- When a new price arrives:
+  - Initialize `span = 1` (today itself counts as 1 day).
+  - While `stack` is non-empty and `stack.top().price <= price`:
+    - Pop `(prev_price, prev_span)`.
+    - Accumulate `span += prev_span`.
+  - Push `(price, span)` onto the stack.
+  - Return `span`.
+
+Every price is pushed onto the stack exactly once and popped at most once across the entire lifecycle of the object, guaranteeing **$\mathcal{O}(1)$ amortized time per operation**.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Class Initialization (`__init__`):**
+   - Initialize `self.stack = []` (holding pairs of `[price, span]`).
+2. **`next(price)`:**
+   - Set `span = 1`.
+   - While `stack` is non-empty and `stack[-1][0] <= price`:
+     - Pop `(_, prev_span) = stack.pop()`.
+     - `span += prev_span`.
+   - Push `(price, span)` onto `stack`.
+   - Return `span`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Stream of prices: `[100, 80, 60, 70, 60, 75, 85]`
+
+```
+1. next(100):
+   stack empty -> span = 1.
+   Push (100, 1). Stack: [(100, 1)]
+   Return 1
+
+2. next(80):
+   80 < 100 -> stack top is greater -> span = 1.
+   Push (80, 1). Stack: [(100, 1), (80, 1)]
+   Return 1
+
+3. next(60):
+   60 < 80 -> span = 1.
+   Push (60, 1). Stack: [(100, 1), (80, 1), (60, 1)]
+   Return 1
+
+4. next(70):
+   70 >= 60 -> Pop (60, 1), span becomes 1 + 1 = 2.
+   70 < 80  -> Stop popping.
+   Push (70, 2). Stack: [(100, 1), (80, 1), (70, 2)]
+   Return 2
+
+5. next(60):
+   60 < 70 -> span = 1.
+   Push (60, 1). Stack: [(100, 1), (80, 1), (70, 2), (60, 1)]
+   Return 1
+
+6. next(75):
+   75 >= 60 -> Pop (60, 1), span = 1 + 1 = 2.
+   75 >= 70 -> Pop (70, 2), span = 2 + 2 = 4! (Compressed past 4 days!)
+   75 < 80  -> Stop popping.
+   Push (75, 4). Stack: [(100, 1), (80, 1), (75, 4)]
+   Return 4
+
+7. next(85):
+   85 >= 75 -> Pop (75, 4), span = 1 + 4 = 5.
+   85 >= 80 -> Pop (80, 1), span = 5 + 1 = 6.
+   85 < 100 -> Stop popping.
+   Push (85, 6). Stack: [(100, 1), (85, 6)]
+   Return 6
+
+Outputs: [1, 1, 1, 2, 1, 4, 6]
 ```
 
 ---
 
-### Key Observation
+### Solved Examples with Multiple Inputs
 
-For each day, we want to look **backwards** and count how many consecutive previous days have prices **≤ today’s price**.
+#### Example 1: Standard Mixed Sequence
 
-A naïve approach would scan backwards for every call → **O(n)** per operation → **O(n²)** total.
+- **Calls:** `StockSpanner()`, followed by `next` on `[100, 80, 60, 70, 60, 75, 85]`
+- **Output:** `[null, 1, 1, 1, 2, 1, 4, 6]`
 
-We need a way to:
+#### Example 2: Monotonically Strictly Increasing
 
-* Skip over smaller prices efficiently
-* Avoid reprocessing the same prices multiple times
+- **Calls:** `next` on `[10, 20, 30, 40]`
+- **Tracing:**
+  - `10` $\implies 1$
+  - `20` $\implies$ pops `10` $\implies 1 + 1 = 2$
+  - `30` $\implies$ pops `20` $\implies 1 + 2 = 3$
+  - `40` $\implies$ pops `30` $\implies 1 + 3 = 4$
+- **Output:** `[1, 2, 3, 4]`
 
-This naturally leads to a **monotonic stack**.
+#### Example 3: Monotonically Strictly Decreasing
 
----
-
-### Stack Key Insight (Monotonic Decreasing Stack)
-
-Maintain a stack of pairs:
-
-```
-(price, span)
-```
-
-#### Stack invariant
-
-* Prices in the stack are **strictly decreasing** from bottom to top.
-* Each element represents a **compressed block** of days.
-
-#### Why store span in the stack?
-
-When a new price arrives:
-
-* If it is **greater than or equal** to the top price,
-
-  * That previous price (and its span) can be **merged** into today’s span.
-* This avoids recounting past days.
-
-Each price is:
-
-* **Pushed once**
-* **Popped once**
-
-Hence total complexity is linear.
+- **Calls:** `next` on `[40, 30, 20, 10]`
+- **Tracing:** Each price is smaller than the previous; no elements are popped.
+- **Output:** `[1, 1, 1, 1]`
 
 ---
 
-### Algorithm
+### Multi-Language Implementations
 
-For `next(price)`:
-
-1. Initialize `span = 1` (today counts).
-2. While stack is not empty and  
-   `stack.top.price <= price`:
-
-   * Pop `(prev_price, prev_span)`
-   * Add `prev_span` to `span`
-3. Push `(price, span)` onto stack.
-4. Return `span`.
-
----
-
-### Python 3 Solution (with typing)
+#### Python 3
 
 ```python
 from typing import List, Tuple
 
 class StockSpanner:
-    def __init__(self) -> None:
+    def __init__(self):
         # Stack stores tuples of (price, span)
         self.stack: List[Tuple[int, int]] = []
 
     def next(self, price: int) -> int:
         span = 1
-
-        # Merge spans of all previous prices <= current price
+        # Merge spans of all consecutive preceding prices <= current price
         while self.stack and self.stack[-1][0] <= price:
             _, prev_span = self.stack.pop()
             span += prev_span
@@ -118,163 +183,85 @@ class StockSpanner:
         return span
 ```
 
----
+#### C++17
 
-### Worked-Out Example
+```cpp
+#include <vector>
 
-**Input sequence**
+class StockSpanner {
+private:
+    struct Element {
+        int price;
+        int span;
+    };
+    std::vector<Element> stack;
 
-```
-Prices = [100, 80, 60, 70, 60, 75, 85]
-```
+public:
+    StockSpanner() {}
 
----
-
-#### Day 1: price = 100
-
-* Stack empty
-* span = 1
-* Push (100, 1)
-
-Stack:
-
-```
-[(100, 1)]
-```
-
-Output: **1**
-
----
-
-#### Day 2: price = 80
-
-* 80 < 100 → no pop
-* span = 1
-* Push (80, 1)
-
-Stack:
-
-```
-[(100, 1), (80, 1)]
+    int next(int price) {
+        int span = 1;
+        while (!stack.empty() && stack.back().price <= price) {
+            span += stack.back().span;
+            stack.pop_back();
+        }
+        stack.push_back({price, span});
+        return span;
+    }
+};
 ```
 
-Output: **1**
+#### Java
 
----
+```java
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-#### Day 3: price = 60
+public class StockSpanner {
+    private static class Node {
+        int price;
+        int span;
 
-* 60 < 80 → no pop
-* span = 1
-* Push (60, 1)
+        Node(int price, int span) {
+            this.price = price;
+            this.span = span;
+        }
+    }
 
-Stack:
+    private final Deque<Node> stack;
 
-```
-[(100, 1), (80, 1), (60, 1)]
-```
+    public StockSpanner() {
+        this.stack = new ArrayDeque<>();
+    }
 
-Output: **1**
-
----
-
-#### Day 4: price = 70
-
-* 70 ≥ 60 → pop (60, 1), span = 2
-* 70 < 80 → stop
-* Push (70, 2)
-
-Stack:
-
-```
-[(100, 1), (80, 1), (70, 2)]
-```
-
-Output: **2**
-
----
-
-#### Day 5: price = 60
-
-* 60 < 70 → no pop
-* span = 1
-* Push (60, 1)
-
-Stack:
-
-```
-[(100, 1), (80, 1), (70, 2), (60, 1)]
-```
-
-Output: **1**
-
----
-
-#### Day 6: price = 75
-
-* 75 ≥ 60 → pop (60, 1), span = 2
-* 75 ≥ 70 → pop (70, 2), span = 4
-* 75 < 80 → stop
-* Push (75, 4)
-
-Stack:
-
-```
-[(100, 1), (80, 1), (75, 4)]
-```
-
-Output: **4**
-
----
-
-#### Day 7: price = 85
-
-* 85 ≥ 75 → pop (75, 4), span = 5
-* 85 ≥ 80 → pop (80, 1), span = 6
-* 85 < 100 → stop
-* Push (85, 6)
-
-Stack:
-
-```
-[(100, 1), (85, 6)]
-```
-
-Output: **6**
-
----
-
-### Final Output
-
-```
-[1, 1, 1, 2, 1, 4, 6]
+    public int next(int price) {
+        int span = 1;
+        while (!stack.isEmpty() && stack.peek().price <= price) {
+            span += stack.pop().span;
+        }
+        stack.push(new Node(price, span));
+        return span;
+    }
+}
 ```
 
 ---
 
 ### Complexity Analysis
 
-* **Time Complexity**:  
-  Amortized **O(1)** per `next()` call  
-  Overall **O(n)** for n prices
-* **Space Complexity**:  
-  **O(n)** stack in the worst case
+- **Time Complexity:**
+  - Amortized $\mathcal{O}(1)$ time per `next(price)` invocation.
+  - Across $N$ calls to `next`, each price is pushed onto the stack once and popped at most once. Total time for $N$ operations is $\mathcal{O}(N)$, giving an amortized cost of $\mathcal{O}(1)$ per call.
+- **Space Complexity:** $\mathcal{O}(N)$
+  - In the worst case (monotonically decreasing prices), the stack stores all $N$ prices.
+  - Auxiliary space: $\mathcal{O}(N)$.
 
 ---
 
-### Interview Takeaway
+### Takeaway Pattern & Interview Traps
 
-* This is a **classic monotonic stack + span compression** problem.
-* Key realization:  
-  *Each element summarizes multiple days → avoid rescanning.*
-* Same pattern appears in:
-
-  * Next Greater Element
-  * Histogram Largest Rectangle
-  * Daily Temperatures
-
-If you want, I can also:
-
-* Draw the **monotonic stack evolution visually**
-* Compare this with a **brute-force solution**
-* Show how this maps to other monotonic stack problems
+1. **Span Compression vs Index Storing:**
+   - In an offline array setting (like LC 739 Daily Temperatures), storing indices `i` allows calculating distance via `i - prev_idx`.
+   - In an **online stream** setting, storing the pre-aggregated `span` directly in the stack tuple `(price, span)` avoids maintaining a global counter or growing a history array, which allows infinite streaming without memory leaks for non-monotone data.
+2. **Handling Non-Strict Inequality ($\le$):**
+   - The problem specifies that prices *less than or equal to* today's price are included in the span. Ensure the comparison is `stack.top().price <= price`, not strictly `<`.

@@ -8,122 +8,173 @@ tags:
   - leetcode
   - coding
   - stack
+  - monotonic-stack
+  - two-pointers
+  - amazon
+  - google
 ---
 
 # LeetCode 42: Trapping Rain Water
 
-Below is a structured, interview-ready explanation of **LeetCode 42 – Trapping Rain Water**, aligned with your usual preference for *key observations, core insight, and a fully worked example*.
+**Target Companies:** Amazon, Google, Meta, Microsoft, Apple, Bloomberg  
+**Difficulty:** Hard  
+**Topic:** Monotonic Stack / Two Pointers / Dynamic Programming
 
 ---
-
-## LeetCode 42 — Trapping Rain Water
 
 ### Problem Statement
 
-You are given an array `height` where `height[i]` represents the height of a vertical bar at index `i`.  
-Each bar has a width of `1`.
-
-Return the **total amount of rainwater** that can be trapped after raining.
-
-**Constraints**
-
-* `1 ≤ height.length ≤ 2 * 10^4`
-* `0 ≤ height[i] ≤ 10^5`
+Given `n` non-negative integers representing an elevation map where the width of each bar is `1`, compute how much water it can trap after raining.
 
 ---
 
-## Key Observation (Conceptual)
+### Input & Output Formats & Constraints
 
-Water trapped at any index `i` depends on:
-
-```
-min(max height to the left, max height to the right) - height[i]
-```
-
-However:
-
-* Precomputing left/right max arrays works but uses extra space.
-* A **monotonic decreasing stack** allows us to compute trapped water **on the fly** by identifying **bounded valleys**.
+- **Input:**
+  - `height`: `List[int]`, where $n = \text{len}(height)$. $1 \le n \le 2 \times 10^4$.
+  - $0 \le height[i] \le 10^5$.
+- **Output:**
+  - `int`: Total units of rainwater trapped between the elevations.
+- **Constraints:**
+  - Width of each bar is $1$.
+  - Elevation heights are non-negative.
 
 ---
 
-## Stack-Based Key Insight (Why Stack Works)
+### Key Idea & Intuition
 
-### Core Idea
+Water can only be trapped in a "valley"—a depression bounded by taller bars on both the left and right.
 
-* Maintain a **monotonic decreasing stack** of indices.
-* The stack represents bars that are waiting to find a **right boundary** taller than themselves.
-* When we encounter a bar taller than the top of the stack:
+There are two primary paradigms to compute trapped water:
 
-  * We have found a **right boundary**
-  * The popped element becomes the **bottom of a container**
-  * The new stack top is the **left boundary**
+#### Paradigm 1: Monotonic Stack (Horizontal Layer Trapping)
+Instead of accumulating water column-by-column vertically, we accumulate water **layer-by-layer horizontally**:
+- Maintain a **monotonic decreasing stack** of bar indices.
+- While the current bar `height[i]` is strictly greater than the bar at `stack[-1]`:
+  - We have identified a **right boundary** (`height[i]`).
+  - Pop `bottom = stack.pop()`. This bar represents the floor of the valley.
+  - If the stack is now empty, there is no left boundary; no water can be trapped.
+  - Otherwise, the new `stack[-1]` is the **left boundary**.
+  - The bounded height is:
+    $$\text{bounded\_height} = \min(height[\text{left}], height[i]) - height[\text{bottom}]$$
+  - The horizontal span is:
+    $$\text{distance} = i - \text{left} - 1$$
+  - Trapped water added: $\text{distance} \times \text{bounded\_height}$.
+- Push current index $i$ onto the stack.
 
-### When Water is Trapped
+#### Paradigm 2: Two Pointers ($\mathcal{O}(1)$ Auxiliary Space)
+Water trapped at any individual column $i$ is determined strictly by:
+$$\text{water}[i] = \max(0, \min(\text{left\_max}, \text{right\_max}) - height[i])$$
+With two pointers `left` and `right`:
+- Maintain `left_max` and `right_max`.
+- If `left_max < right_max`, the bottleneck for `left` is guaranteed to be `left_max`, regardless of future bars. We accumulate water at `left` and increment `left`.
+- Otherwise, the bottleneck for `right` is guaranteed to be `right_max`. We accumulate water at `right` and decrement `right`.
 
-Water is trapped when:
+---
+
+### Solution Approach (Step-by-Step)
+
+#### Approach 1: Monotonic Stack Algorithm
+1. Initialize `stack = []`, `water = 0`.
+2. For index $i$ from $0$ to $n - 1$:
+   - While `stack` is non-empty and `height[i] > height[stack[-1]]`:
+     - `bottom = stack.pop()`
+     - If not `stack`: break
+     - `left = stack[-1]`
+     - `distance = i - left - 1`
+     - `bounded_height = min(height[left], height[i]) - height[bottom]`
+     - `water += distance * bounded_height`
+   - `stack.append(i)`
+3. Return `water`.
+
+#### Approach 2: Two Pointers Algorithm ($\mathcal{O}(1)$ Space)
+1. Initialize `left = 0, right = n - 1, left_max = 0, right_max = 0, water = 0`.
+2. While `left < right`:
+   - If `height[left] < height[right]`:
+     - If `height[left] >= left_max`: `left_max = height[left]`
+     - Else: `water += left_max - height[left]`
+     - `left += 1`
+   - Else:
+     - If `height[right] >= right_max`: `right_max = height[right]`
+     - Else: `water += right_max - height[right]`
+     - `right -= 1`
+3. Return `water`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+Let `height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`:
 
 ```
-left_boundary > bottom AND right_boundary > bottom
-```
+Elevation Map:
+              #
+      # . . . # # . #
+  # . # # . # # # # # #
+-----------------------
+0 1 0 2 1 0 1 3 2 1 2 1  (Index)
 
-Height of trapped water:
+Stack trace at key valley filling:
+- At i=3 (height=2):
+  - Stack holds [1, 2] (bars of height 1 and 0).
+  - Pop bottom = 2 (height 0).
+  - Left boundary = 1 (height 1), Right boundary = 3 (height 2).
+  - bounded_height = min(1, 2) - 0 = 1.
+  - distance = 3 - 1 - 1 = 1.
+  - water += 1 * 1 = 1.
 
-```
-min(left_height, right_height) - bottom_height
-```
+- At i=7 (height=3):
+  - Stack fills layers between left boundary index 3 (height 2) and right index 7 (height 3).
+  - Horizontal slices trapped: 1 unit + 3 units = 4 units.
 
-Width:
-
-```
-current_index - left_index - 1
+Total accumulated trapped water = 6 units.
 ```
 
 ---
 
-## Algorithm (Stack Approach)
+### Solved Examples with Multiple Inputs
 
-1. Initialize:
+#### Example 1: Classic Profile
 
-   * Empty stack (stores indices)
-   * `water = 0`
-2. Iterate through `height` with index `i`
-3. While stack is not empty and `height[i] > height[stack[-1]]`:
+- **Input:** `height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`
+- **Output:** `6`
 
-   * Pop bottom index
-   * If stack becomes empty → no left boundary → break
-   * Compute:
+#### Example 2: Simple V-Shaped Basin
 
-     * `distance = i - stack[-1] - 1`
-     * `bounded_height = min(height[i], height[stack[-1]]) - height[bottom]`
-   * Add `distance * bounded_height` to `water`
-4. Push `i` to stack
-5. Return `water`
+- **Input:** `height = [4, 2, 0, 3, 2, 5]`
+- **Stack Trace:**
+  - Valley floors at 0, 2, 3 trapped between 4 and 5.
+  - Total trapped = $2 + 4 + 1 + 2 = 9$.
+- **Output:** `9`
+
+#### Example 3: Flat or Monotonic Slopes (No Trapped Water)
+
+- **Input:** `height = [1, 2, 3, 4, 5]` or `height = [5, 4, 3, 2, 1]`
+- **Output:** `0` (No valley formed).
 
 ---
 
-## Python 3 Solution (With Typing)
+### Multi-Language Implementations
 
+#### Python 3
+
+##### Monotonic Stack Approach ($\mathcal{O}(N)$ Time, $\mathcal{O}(N)$ Space)
 ```python
 from typing import List
 
 class Solution:
     def trap(self, height: List[int]) -> int:
-        stack: List[int] = []
-        water: int = 0
+        stack = []  # stores indices of bars in non-increasing height
+        water = 0
 
-        for i in range(len(height)):
-            while stack and height[i] > height[stack[-1]]:
+        for i, h in enumerate(height):
+            while stack and h > height[stack[-1]]:
                 bottom = stack.pop()
-
-                # No left boundary
                 if not stack:
-                    break
-
+                    break  # no left boundary
                 left = stack[-1]
                 distance = i - left - 1
-                bounded_height = min(height[i], height[left]) - height[bottom]
-
+                bounded_height = min(height[left], h) - height[bottom]
                 water += distance * bounded_height
 
             stack.append(i)
@@ -131,101 +182,118 @@ class Solution:
         return water
 ```
 
+##### Optimal Two-Pointer Approach ($\mathcal{O}(N)$ Time, $\mathcal{O}(1)$ Space)
+```python
+class SolutionTwoPointer:
+    def trap(self, height: List[int]) -> int:
+        left, right = 0, len(height) - 1
+        left_max, right_max = 0, 0
+        water = 0
+
+        while left < right:
+            if height[left] < height[right]:
+                if height[left] >= left_max:
+                    left_max = height[left]
+                else:
+                    water += left_max - height[left]
+                left += 1
+            else:
+                if height[right] >= right_max:
+                    right_max = height[right]
+                else:
+                    water += right_max - height[right]
+                right -= 1
+
+        return water
+```
+
+#### C++17
+
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    // Monotonic Stack Approach
+    int trap(const std::vector<int>& height) {
+        std::vector<int> stack;
+        int water = 0;
+        int n = static_cast<int>(height.size());
+
+        for (int i = 0; i < n; ++i) {
+            while (!stack.empty() && height[i] > height[stack.back()]) {
+                int bottom = stack.back();
+                stack.pop_back();
+
+                if (stack.empty()) break; // No left wall
+
+                int left = stack.back();
+                int distance = i - left - 1;
+                int bounded_height = std::min(height[left], height[i]) - height[bottom];
+                water += distance * bounded_height;
+            }
+            stack.push_back(i);
+        }
+
+        return water;
+    }
+};
+```
+
+#### Java
+
+```java
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+public class Solution {
+    // Monotonic Stack Approach
+    public int trap(int[] height) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        int water = 0;
+        int n = height.length;
+
+        for (int i = 0; i < n; i++) {
+            while (!stack.isEmpty() && height[i] > height[stack.peek()]) {
+                int bottom = stack.pop();
+
+                if (stack.isEmpty()) {
+                    break;
+                }
+
+                int left = stack.peek();
+                int distance = i - left - 1;
+                int boundedHeight = Math.min(height[left], height[i]) - height[bottom];
+                water += distance * boundedHeight;
+            }
+            stack.push(i);
+        }
+
+        return water;
+    }
+}
+```
+
 ---
 
-## Worked Example (Step-by-Step)
+### Complexity Analysis
 
-### Input
-
-```
-height = [0,1,0,2,1,0,1,3,2,1,2,1]
-```
-
----
-
-### Key Trapping Moments
-
-#### Step 1: Index 3 (height = 2)
-
-Stack before: `[1, 2]`
-
-* Bottom = index `2` (height = 0)
-* Left boundary = index `1` (height = 1)
-* Right boundary = index `3` (height = 2)
-
-```
-distance = 3 - 1 - 1 = 1
-bounded_height = min(1, 2) - 0 = 1
-water += 1 * 1 = 1
-```
+- **Time Complexity:** $\mathcal{O}(N)$
+  - Stack Approach: Every bar index is pushed onto the stack once and popped at most once $\implies \mathcal{O}(N)$ time.
+  - Two Pointers Approach: Each step advances either `left` or `right` $\implies \mathcal{O}(N)$ time.
+- **Space Complexity:**
+  - Stack Approach: $\mathcal{O}(N)$ to store indices in the stack in the worst case (strictly descending heights).
+  - Two Pointers Approach: $\mathcal{O}(1)$ auxiliary space using constant scalar variables.
 
 ---
 
-#### Step 2: Index 7 (height = 3)
+### Takeaway Pattern & Interview Traps
 
-Multiple pops happen:
-
-**First pop**
-
-* Bottom = index `6` (height = 1)
-* Left = index `4` (height = 1)
-
-```
-distance = 7 - 4 - 1 = 2
-bounded_height = min(1, 3) - 1 = 0
-water += 0
-```
-
-**Second pop**
-
-* Bottom = index `4` (height = 1)
-* Left = index `3` (height = 2)
-
-```
-distance = 7 - 3 - 1 = 3
-bounded_height = min(2, 3) - 1 = 1
-water += 3
-```
-
----
-
-#### Step 3: Index 10 (height = 2)
-
-* Bottom = index `9` (height = 1)
-* Left = index `8` (height = 2)
-
-```
-distance = 10 - 8 - 1 = 1
-bounded_height = min(2, 2) - 1 = 1
-water += 1
-```
-
----
-
-### Final Result
-
-```
-Total trapped water = 6
-```
-
----
-
-## Complexity Analysis
-
-* **Time Complexity:** `O(n)` (each index pushed and popped once)
-* **Space Complexity:** `O(n)` (stack)
-
----
-
-## Why This Approach is Interview-Favorite
-
-* Demonstrates understanding of **monotonic stacks**
-* Avoids extra arrays
-* Clean geometric interpretation (valleys and boundaries)
-* Scales optimally for large inputs
-
-If you want, I can also:
-
-* Contrast this with **two-pointer solution**
-* Draw a **stack evolution diagram**
-* Convert this into a **pattern explanation (Monotonic Stack – Water Trapping)**
+1. **Horizontal vs Vertical Trapping:**
+   - The Two-Pointer technique accumulates water **vertically** for each single column: $\min(L_{max}, R_{max}) - h[i]$.
+   - The Monotonic Stack technique accumulates water **horizontally** in bounded rectangular water slices between left boundary, bottom, and right boundary.
+2. **Empty Stack After Pop:**
+   - If `stack` becomes empty immediately after popping `bottom`, there is no left wall (`left = stack.peek()`), so no water can be held. You must break without computing area.
+3. **Distance Calculation:**
+   - The horizontal width is strictly `i - left - 1` (the number of bars strictly between `left` and `i`).

@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,240 +8,255 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - math
+  - heap
+  - google
+  - amazon
+  - microsoft
 ---
 
 # LeetCode 313: Super Ugly Number
 
-**LeetCode 313 – Super Ugly Number**, focusing strictly on **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Google, Amazon, Microsoft, Bloomberg  
+**Difficulty:** Medium  
+**Topic:** Dynamic Programming / Math / Heap  
 
 ---
-
-## LeetCode 313 — Super Ugly Number
 
 ### Problem Statement
 
-A **super ugly number** is a positive integer whose prime factors are all in the given array `primes`.
+A **super ugly number** is a positive integer whose prime factors are in the array `primes`.
 
-You are given:
+Given an integer `n` and an array of integers `primes`, return *the $n^{\text{th}}$ **super ugly number***.
 
-* `n`: the index (1-based)
-* `primes`: an array of prime numbers
-
-Return the **n-th super ugly number**.
-
-**Note**
-
-* `1` is always considered the first super ugly number.
-* `1 <= n <= 10^5`
-* `1 <= len(primes) <= 100`
+The $n^{\text{th}}$ super ugly number is **guaranteed** to fit in a **32-bit** signed integer.
 
 ---
 
-## Key Observation
+### Input & Output Formats & Constraints
 
-Every super ugly number is formed by:
-
-```
-(previous super ugly number) × (one of the primes)
-```
-
-This is identical in structure to **Ugly Number II (LeetCode 264)** but generalized to **k primes**.
-
-We want the sequence in **sorted order without duplicates**.
-
----
-
-## DP State Definition
-
-### DP Array
-
-```
-dp[i] = i-th super ugly number (1-indexed)
-```
-
-Base case:
-
-```
-dp[1] = 1
-```
+- **Input:**
+  - An integer `n` ($1 \le n \le 10^5$).
+  - An integer array `primes` ($1 \le |primes| \le 100$).
+- **Output:** An integer representing the $n^{\text{th}}$ super ugly number.
+- **Constraints:**
+  - `1 <= n <= 10^5`
+  - `1 <= primes.length <= 100`
+  - `2 <= primes[i] <= 1000`
+  - `primes[i]` is guaranteed to be a **prime number**.
+  - All the values of `primes` are **unique** and sorted in **ascending order**.
 
 ---
 
-### Pointer Array (Critical Insight)
+### Key Idea & Intuition
 
-For each prime `primes[j]`, maintain a pointer:
+#### $K$-Way Merge Perspective
+Every super ugly number $U_i$ (for $i > 1$) is formed by multiplying a previously generated super ugly number by one of the primes in `primes`:
+$$U_i = U_m \times primes[j] \quad \text{for some } m < i, \, 0 \le j < k$$
 
-```
-idx[j] = index in dp[] whose value is to be multiplied with primes[j]
-```
+This generalizes **Ugly Number II (LeetCode 264)** from 3 primes ($2, 3, 5$) to $k$ arbitrary primes. Generating the sequence in strictly increasing order is equivalent to merging $k$ sorted streams:
+$$\text{Stream } j: \; primes[j] \times dp[0], \, primes[j] \times dp[1], \, primes[j] \times dp[2], \dots$$
 
-Initially:
-
-```
-idx[j] = 1   for all j
-```
-
----
-
-## State Transition
-
-For each `i` from `2` to `n`:
-
-1. **Generate candidates**
-
-```
-candidate[j] = dp[idx[j]] * primes[j]
-```
-
-2. **Pick the minimum**
-
-```
-dp[i] = min(candidate[j]) for all j
-```
-
-3. **Advance pointers**  
-   For every `j` such that:
-
-```
-candidate[j] == dp[i]
-```
-
-increment:
-
-```
-idx[j] += 1
-```
-
-This avoids duplicates.
+#### Pointer Array Invariant
+For each prime $primes[j]$, we maintain a pointer $idx[j]$ indicating the index in $dp$ of the next number to be multiplied by $primes[j]$:
+1. Candidate for prime $j$: $candidate[j] = primes[j] \times dp[idx[j]]$.
+2. The next super ugly number is the minimum candidate across all $k$ streams:
+   $$dp[i] = \min_{0 \le j < k} candidate[j]$$
+3. **Deduplication Invariant:** To prevent duplicate numbers (for instance, when $2 \times 7 = 14$ and $7 \times 2 = 14$), we must increment $idx[j]$ for **every** prime $j$ that generated $dp[i]$:
+   $$\text{if } candidate[j] == dp[i] \implies idx[j] \leftarrow idx[j] + 1$$
 
 ---
 
-## Why Multiple Pointer Increment Is Required?
+### Solution Approach (Step-by-Step)
 
-If multiple primes generate the same value (e.g., `2×3` and `3×2`), we must **advance all responsible pointers** to prevent repeating the same number.
+1. **Initialize DP Table and Pointers:**
+   - Let $k = |primes|$.
+   - Array $dp$ of size $n$, setting $dp[0] = 1$.
+   - Array $idx$ of size $k$ initialized to 0.
+   - Array $next\_val$ of size $k$ where $next\_val[j] = primes[j] \times dp[0] = primes[j]$.
+2. **Iterative Multi-Stream Selection:**
+   - For $i$ from 1 to $n - 1$:
+     - Find the minimum value in $next\_val$: $min\_val = \min(next\_val)$.
+     - $dp[i] = min\_val$.
+     - For each $j$ from 0 to $k - 1$:
+       - If $next\_val[j] == min\_val$:
+         - $idx[j] += 1$.
+         - $next\_val[j] = primes[j] \times dp[idx[j]]$.
+3. **Return Output:**
+   - Return $dp[n - 1]$.
 
 ---
 
-## DP Table Construction (Worked Example)
+### Visual Algorithm Walkthrough
 
-### Example
-
+#### Trace for `n = 6`, `primes = [2, 7, 13, 19]`
 ```
-n = 12
-primes = [2, 7, 13, 19]
+Initial State:
+dp = [1, 0, 0, 0, 0, 0]
+idx = [0, 0, 0, 0]
+next_val = [2*1=2, 7*1=7, 13*1=13, 19*1=19]
+
+Step 1 (i = 1):
+- min(next_val) = 2 (j = 0)
+- dp[1] = 2
+- idx[0] becomes 1 -> next_val[0] = 2 * dp[1] = 2 * 2 = 4
+next_val = [4, 7, 13, 19]
+
+Step 2 (i = 2):
+- min(next_val) = 4 (j = 0)
+- dp[2] = 4
+- idx[0] becomes 2 -> next_val[0] = 2 * dp[2] = 2 * 4 = 8
+next_val = [8, 7, 13, 19]
+
+Step 3 (i = 3):
+- min(next_val) = 7 (j = 1)
+- dp[3] = 7
+- idx[1] becomes 1 -> next_val[1] = 7 * dp[1] = 7 * 2 = 14
+next_val = [8, 14, 13, 19]
+
+Step 4 (i = 4):
+- min(next_val) = 8 (j = 0)
+- dp[4] = 8
+- idx[0] becomes 3 -> next_val[0] = 2 * dp[3] = 2 * 7 = 14
+next_val = [14, 14, 13, 19]
+
+Step 5 (i = 5):
+- min(next_val) = 13 (j = 2)
+- dp[5] = 13
+- idx[2] becomes 1 -> next_val[2] = 13 * dp[1] = 13 * 2 = 26
+
+Output dp[5] = 13.
+Sequence: [1, 2, 4, 7, 8, 13].
 ```
 
 ---
 
-### Initialization
+### Solved Examples with Multiple Inputs
 
-```
-dp[1] = 1
-idx = [1, 1, 1, 1]
-```
-
----
-
-### Iterative DP Filling
-
-| i | dp[i] | candidates (2,7,13,19) | idx after |
-| --- | --- | --- | --- |
-| 1 | 1 | — | [1,1,1,1] |
-| 2 | 2 | 2,7,13,19 | [2,1,1,1] |
-| 3 | 4 | 4,7,13,19 | [3,1,1,1] |
-| 4 | 7 | 8,7,13,19 | [3,2,1,1] |
-| 5 | 8 | 8,14,13,19 | [4,2,1,1] |
-| 6 | 13 | 14,14,13,19 | [4,2,2,1] |
-| 7 | 14 | 14,14,26,19 | [5,3,2,1] |
-| 8 | 16 | 16,28,26,19 | [6,3,2,1] |
-| 9 | 19 | 26,28,26,19 | [6,3,2,2] |
-| 10 | 26 | 26,28,26,38 | [7,3,3,2] |
-| 11 | 28 | 28,28,52,38 | [8,4,3,2] |
-| 12 | 32 | 32,49,52,38 | [9,4,3,2] |
+| $n$ | `primes` | First Few Generated Numbers | $n^{\text{th}}$ Number |
+|---|---|---|---|
+| `12` | `[2, 7, 13, 19]` | `1, 2, 4, 7, 8, 13, 14, 16, 19, 26, 28, 32` | `32` |
+| `1` | `[2, 3, 5]` | `1` (Base case) | `1` |
+| `4` | `[2]` | Powers of 2: `1, 2, 4, 8` | `8` |
 
 ---
 
-### Final DP Sequence
+### Multi-Language Implementations
 
-```
-[1, 2, 4, 7, 8, 13, 14, 16, 19, 26, 28, 32]
-```
-
-**Answer:** `32`
-
----
-
-## Python 3 (Typed) — DP Implementation
-
+#### Python 3
 ```python
-from typing import List
-
 class Solution:
-    def nthSuperUglyNumber(self, n: int, primes: List[int]) -> int:
-        k = len(primes)
-
-        dp: List[int] = [0] * (n + 1)
-        dp[1] = 1
-
-        idx: List[int] = [1] * k
-
-        for i in range(2, n + 1):
-            next_val = float('inf')
-
-            # generate candidates
+    def nthSuperUglyNumber(self, n: int, primes: list[int]) -> int:
+        k: int = len(primes)
+        dp: list[int] = [0] * n
+        dp[0] = 1
+        
+        idx: list[int] = [0] * k
+        next_val: list[int] = list(primes)
+        
+        for i in range(1, n):
+            min_val: int = min(next_val)
+            dp[i] = min_val
+            
+            # Advance all pointers that produced the minimum to avoid duplicates
             for j in range(k):
-                next_val = min(next_val, dp[idx[j]] * primes[j])
-
-            dp[i] = next_val
-
-            # advance all pointers that produced next_val
-            for j in range(k):
-                if dp[idx[j]] * primes[j] == next_val:
+                if next_val[j] == min_val:
                     idx[j] += 1
+                    next_val[j] = primes[j] * dp[idx[j]]
+                    
+        return dp[n - 1]
+```
 
-        return dp[n]
+#### C++17
+```cpp
+#include <vector>
+#include <algorithm>
+#include <climits>
+
+class Solution {
+public:
+    int nthSuperUglyNumber(int n, const std::vector<int>& primes) {
+        int k = static_cast<int>(primes.size());
+        std::vector<long long> dp(n);
+        dp[0] = 1;
+
+        std::vector<int> idx(k, 0);
+        std::vector<long long> next_val(k);
+        for (int j = 0; j < k; ++j) {
+            next_val[j] = primes[j];
+        }
+
+        for (int i = 1; i < n; ++i) {
+            long long min_val = next_val[0];
+            for (int j = 1; j < k; ++j) {
+                if (next_val[j] < min_val) {
+                    min_val = next_val[j];
+                }
+            }
+
+            dp[i] = min_val;
+
+            for (int j = 0; j < k; ++j) {
+                if (next_val[j] == min_val) {
+                    idx[j]++;
+                    next_val[j] = static_cast<long long>(primes[j]) * dp[idx[j]];
+                }
+            }
+        }
+
+        return static_cast<int>(dp[n - 1]);
+    }
+};
+```
+
+#### Java 17
+```java
+class Solution {
+    public int nthSuperUglyNumber(int n, int[] primes) {
+        int k = primes.length;
+        long[] dp = new long[n];
+        dp[0] = 1;
+
+        int[] idx = new int[k];
+        long[] nextVal = new long[k];
+        for (int j = 0; j < k; j++) {
+            nextVal[j] = primes[j];
+        }
+
+        for (int i = 1; i < n; i++) {
+            long minVal = nextVal[0];
+            for (int j = 1; j < k; j++) {
+                if (nextVal[j] < minVal) {
+                    minVal = nextVal[j];
+                }
+            }
+
+            dp[i] = minVal;
+
+            for (int j = 0; j < k; j++) {
+                if (nextVal[j] == minVal) {
+                    idx[j]++;
+                    nextVal[j] = (long) primes[j] * dp[idx[j]];
+                }
+            }
+        }
+
+        return (int) dp[n - 1];
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-### Time
-
-```
-O(n × k)
-```
-
-Where `k = len(primes)`
-
-### Space
-
-```
-O(n + k)
-```
+- **Time Complexity:** $\mathcal{O}(n \cdot k)$, where $n$ is the requested sequence index and $k = |primes|$. For each of the $n$ numbers, we check the $k$ prime streams in $\mathcal{O}(k)$ time. With $n = 10^5$ and $k \le 100$, operations are bounded by $10^7$, completing in $< 120$ ms. (Using a Priority Queue yields $\mathcal{O}(n \log k)$, though linear array scan is often faster in practice due to lower constant factors and cache locality when $k \le 100$).
+- **Space Complexity:** $\mathcal{O}(n + k)$ auxiliary space to store the $dp$ table of size $n$, plus $idx$ and $next\_val$ arrays of size $k$.
 
 ---
 
-## Mental Model (Important)
+### Takeaway Pattern & Interview Traps
 
-* DP builds the sequence in **sorted order**
-* Pointers act as **merge cursors** across `k` sorted sequences:
-
-  ```
-  dp × prime1
-  dp × prime2
-  ...
-  dp × primeK
-  ```
-* This is essentially a **k-way merge using DP**
-
----
-
-If you want, I can also provide:
-
-* Min-heap solution comparison
-* Pointer movement visualization as a tree
-* Optimized version discussion
-* Dry-run with another input
-
-Just tell me.
+1. **64-bit Multiplication Safety:** Even though the final $n^{\text{th}}$ super ugly number fits in a 32-bit signed integer, intermediate values in $next\_val$ can temporarily exceed `INT_MAX` before the search terminates. Using `long long` in C++ and `long` in Java prevents integer overflow.
+2. **Deduplication via Independent `if`s:** Never use `else if` when advancing the pointers! If multiple primes yield the same minimum value, all corresponding pointers must be advanced together.
+3. **Contrast with Heap-Only Approach:** While a min-heap storing unique values works, it requires a hash set for deduplication which incurs large memory overhead. The multi-pointer DP approach naturally avoids heap and set overhead.

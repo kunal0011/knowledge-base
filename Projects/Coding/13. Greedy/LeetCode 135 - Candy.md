@@ -1,5 +1,5 @@
 ---
-date: "2025-12-16"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Greedy"
 folder: "13. Greedy"
@@ -8,230 +8,143 @@ tags:
   - leetcode
   - coding
   - greedy
+  - amazon
+  - google
 ---
 
 # LeetCode 135: Candy
 
-**LeetCode 135 – Candy**, aligned with your usual preference for conceptual clarity and step-by-step reasoning.
+**Target Companies:** Google (Signature Greedy Hard), Amazon, Meta  
+**Difficulty:** Hard  
+**Topic:** Two-Pass Greedy Slope Invariant
 
 ---
-
-## LeetCode 135 — Candy
 
 ### Problem Statement
 
-You are given an integer array `ratings` where `ratings[i]` represents the rating of the *i-th* child standing in a line.
+There are $n$ children standing in a line. Each child is assigned a rating value given in the integer array `ratings`.
 
-You must distribute candies to these children subject to the following rules:
+You are giving candies to these children subjected to the following requirements:
+1. Each child must have at least one candy.
+2. Children with a higher rating get more candies than their neighbors.
 
-1. Each child must have **at least one candy**.
-2. Children with a **higher rating than their immediate neighbor** must get **more candies** than that neighbor.
-
-Return the **minimum total number of candies** required to satisfy these conditions.
-
----
-
-### Key Observations
-
-1. **Local constraint, global minimum**
-
-   * Each child’s candy count depends only on **adjacent neighbors**.
-   * However, naive local decisions can violate constraints later.
-2. **One-directional greediness is insufficient**
-
-   * Left-to-right ensures correctness w.r.t. left neighbor.
-   * Right-to-left ensures correctness w.r.t. right neighbor.
-   * **Both directions are required**.
-3. **Final candy count for each child**
-
-   * Must satisfy **both** constraints:
-
-     ```
-     candies[i] ≥ candies[i-1] + 1  (if rating[i] > rating[i-1])
-     candies[i] ≥ candies[i+1] + 1  (if rating[i] > rating[i+1])
-     ```
-   * Hence:
-
-     ```
-     candies[i] = max(left_pass[i], right_pass[i])
-     ```
+Return the **minimum number of candies** you need to have to distribute the candies to the children.
 
 ---
 
-## Greedy Strategy (Core Trick)
+### Input & Output Formats & Constraints
 
-### Two-Pass Greedy Algorithm
-
-1. **Initialize**
-
-   * Give each child **1 candy** (minimum requirement).
-2. **Left → Right pass**
-
-   * If `ratings[i] > ratings[i-1]`
-
-     ```
-     candies[i] = candies[i-1] + 1
-     ```
-3. **Right → Left pass**
-
-   * If `ratings[i] > ratings[i+1]`
-
-     ```
-     candies[i] = max(candies[i], candies[i+1] + 1)
-     ```
-4. **Sum all candies**
+- **Input:** `ratings: List[int]`
+- **Output:** `int` (total sum of candies)
+- **Constraints:**
+  - $n == \text{ratings.length}$
+  - $1 \le n \le 2 \times 10^4$
+  - $0 \le \text{ratings}[i] \le 2 \times 10^4$
 
 ---
 
-## Why This Works
+### Key Idea & Intuition
 
-* First pass enforces **left neighbor dominance**
-* Second pass enforces **right neighbor dominance**
-* `max()` ensures **both constraints are satisfied**
-* Greedy works because:
-
-  * We only increase candies when *forced by constraints*
-  * We never increase unnecessarily
+- **Decomposing Neighbor Constraints:**
+  - Requirement 2 says:
+    - If `ratings[i] > ratings[i - 1]`: `candies[i] > candies[i - 1]`.
+    - If `ratings[i] > ratings[i + 1]`: `candies[i] > candies[i + 1]`.
+  - Trying to satisfy both left and right neighbors simultaneously in a single pass is tricky.
+- **Two-Pass Solution:**
+  1. **Left-to-Right Pass:**
+     - Initialize every child with 1 candy.
+     - For $i$ from 1 to $n - 1$: if `ratings[i] > ratings[i - 1]`, set `candies[i] = candies[i - 1] + 1`.
+  2. **Right-to-Left Pass:**
+     - For $i$ from $n - 2$ down to 0: if `ratings[i] > ratings[i + 1]`, set `candies[i] = max(candies[i], candies[i + 1] + 1)`.
+  - Taking `max` ensures that both the left-neighbor condition and right-neighbor condition remain satisfied!
 
 ---
 
-## Python 3 Solution (With Typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def candy(self, ratings: List[int]) -> int:
         n = len(ratings)
-        if n == 0:
-            return 0
-
-        # Step 1: each child gets at least one candy
         candies = [1] * n
-
-        # Step 2: left to right
+        
+        # Left to right
         for i in range(1, n):
             if ratings[i] > ratings[i - 1]:
                 candies[i] = candies[i - 1] + 1
-
-        # Step 3: right to left
+                
+        # Right to left
         for i in range(n - 2, -1, -1):
             if ratings[i] > ratings[i + 1]:
                 candies[i] = max(candies[i], candies[i + 1] + 1)
-
-        # Step 4: total candies
+                
         return sum(candies)
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <numeric>
+#include <algorithm>
 
-## Complete Worked Example (Step-by-Step)
+class Solution {
+public:
+    int candy(std::vector<int>& ratings) {
+        int n = ratings.size();
+        std::vector<int> candies(n, 1);
 
-### Input
+        for (int i = 1; i < n; ++i) {
+            if (ratings[i] > ratings[i - 1]) {
+                candies[i] = candies[i - 1] + 1;
+            }
+        }
 
-```
-ratings = [1, 0, 2]
-```
+        for (int i = n - 2; i >= 0; --i) {
+            if (ratings[i] > ratings[i + 1]) {
+                candies[i] = std::max(candies[i], candies[i + 1] + 1);
+            }
+        }
 
----
-
-### Step 1: Initialization
-
-```
-candies = [1, 1, 1]
-```
-
----
-
-### Step 2: Left → Right Pass
-
-| i | ratings | Condition | candies update |
-| --- | --- | --- | --- |
-| 1 | 0 vs 1 | 0 > 1 ❌ | no change |
-| 2 | 2 vs 0 | 2 > 0 ✅ | candies[2] = 2 |
-
-```
-candies = [1, 1, 2]
+        return std::accumulate(candies.begin(), candies.end(), 0);
+    }
+};
 ```
 
----
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
 
-### Step 3: Right → Left Pass
+class Solution {
+    public int candy(int[] ratings) {
+        int n = ratings.length;
+        int[] candies = new int[n];
+        Arrays.fill(candies, 1);
 
-| i | ratings | Condition | candies update |
-| --- | --- | --- | --- |
-| 1 | 0 vs 2 | 0 > 2 ❌ | no change |
-| 0 | 1 vs 0 | 1 > 0 ✅ | candies[0] = max(1, 1+1) = 2 |
+        for (int i = 1; i < n; i++) {
+            if (ratings[i] > ratings[i - 1]) {
+                candies[i] = candies[i - 1] + 1;
+            }
+        }
 
-```
-candies = [2, 1, 2]
-```
+        for (int i = n - 2; i >= 0; i--) {
+            if (ratings[i] > ratings[i + 1]) {
+                candies[i] = Math.max(candies[i], candies[i + 1] + 1);
+            }
+        }
 
----
-
-### Step 4: Final Sum
-
-```
-2 + 1 + 2 = 5
-```
-
----
-
-### Output
-
-```
-5
+        int total = 0;
+        for (int c : candies) total += c;
+        return total;
+    }
+}
 ```
 
 ---
 
-## Another Example (Monotonic Decrease)
+### Complexity Analysis
 
-### Input
-
-```
-ratings = [5, 4, 3, 2, 1]
-```
-
-### Final candies after both passes
-
-```
-[5, 4, 3, 2, 1]
-```
-
-### Total
-
-```
-15
-```
-
----
-
-## Time & Space Complexity
-
-| Metric | Value |
-| --- | --- |
-| Time Complexity | **O(n)** |
-| Space Complexity | **O(n)** |
-| Greedy Validity | Guaranteed minimal |
-
----
-
-## Interview Notes
-
-* This problem is a **classic greedy + two-pass** pattern
-* Frequently asked follow-up:
-
-  > Can we do it in O(1) space?
-
-  * Yes, using slope counting (advanced variant), but **this solution is preferred and accepted**
-
----
-
-If you want, I can next:
-
-* Derive the **O(1) space slope-based solution**
-* Explain **why a single pass fails**
-* Convert this into a **pattern template** usable across greedy problems
-
-Just tell me how deep you want to go.
+- **Time Complexity:** $O(N)$ — Two linear scans across the array.
+- **Space Complexity:** $O(N)$ for the candy distribution array.

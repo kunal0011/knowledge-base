@@ -1,5 +1,5 @@
 ---
-date: "2025-12-23"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Binary Search"
 folder: "06. Binary Search"
@@ -8,153 +8,153 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - amazon
+  - google
 ---
 
 # LeetCode 33: Search in Rotated Sorted Array
 
-Below is a complete, structured explanation of **LeetCode 33 – Search in Rotated Sorted Array**, aligned with binary-search reasoning and implementation rigor.
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Modified Binary Search on Rotated Invariant
 
 ---
-
-## LeetCode 33: Search in Rotated Sorted Array
 
 ### Problem Statement
 
-You are given an integer array `nums` sorted in **ascending order**, but **rotated at an unknown pivot**.  
-You are also given an integer `target`.
+There is an integer array `nums` sorted in ascending order (with **distinct** values).
 
-Return the **index of `target`** if it exists in `nums`; otherwise, return `-1`.
+Prior to being passed to your function, `nums` is possibly rotated at an unknown pivot index $k$ ($1 \le k < \text{nums.length}$) such that the resulting array is `[nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]]`.
 
-**Constraints**
+Given the array `nums` after the possible rotation and an integer `target`, return the index of `target` if it is in `nums`, or `-1` if it is not in `nums`.
 
-* All elements in `nums` are **distinct**
-* Time complexity must be **O(log n)**
+You must write an algorithm with **$O(\log n)$ runtime complexity**.
 
 ---
 
-### Key Observation
+### Input & Output Formats & Constraints
 
-Although the array is rotated, the following invariant always holds:
-
-> **At least one half of the array is always sorted**.
-
-For any middle index `mid`:
-
-* Either the **left half `[left … mid]` is sorted**
-* Or the **right half `[mid … right]` is sorted**
-
-This allows us to **adapt binary search** instead of reverting to linear search.
+- **Input:** `nums: List[int]`, `target: int`
+- **Output:** `int` (index of target or -1)
+- **Constraints:**
+  - $1 \le \text{nums.length} \le 5000$
+  - $-10^4 \le \text{nums}[i], \text{target} \le 10^4$
+  - All values of `nums` are **unique**.
 
 ---
 
-### Binary Search Technique (Modified Binary Search)
+### Key Idea & Intuition
 
-At each step:
-
-1. Compute `mid`
-2. Check if `nums[mid] == target`
-3. Determine which half is sorted:
-
-   * **Left sorted** if `nums[left] <= nums[mid]`
-   * Otherwise, **right sorted**
-4. Decide whether `target` lies inside the sorted half
-5. Discard the irrelevant half
-
-This guarantees logarithmic time.
-
----
-
-### Algorithm Steps
-
-1. Initialize two pointers: `left = 0`, `right = len(nums) - 1`
-2. While `left <= right`:
-
-   * Compute `mid`
-   * If `nums[mid] == target`, return `mid`
-   * If left half is sorted:
-
-     * Check if `target` lies between `nums[left]` and `nums[mid]`
-   * Else right half is sorted:
-
-     * Check if `target` lies between `nums[mid]` and `nums[right]`
-3. If not found, return `-1`
+- **The Halving Invariant:**
+  - In any rotated sorted array, splitting at midpoint `mid` guarantees that **at least one half is strictly normally sorted**!
+- **Testing the Sorted Half:**
+  - Compare `nums[left]` and `nums[mid]`:
+    - Case 1: `nums[left] <= nums[mid]` $\implies$ **Left half is sorted**.
+      - Check if `target` lies within `[nums[left], nums[mid])`:
+        - If yes: search left (`right = mid - 1`).
+        - Otherwise: search right (`left = mid + 1`).
+    - Case 2: `nums[left] > nums[mid]` $\implies$ **Right half is sorted**.
+      - Check if `target` lies within `(nums[mid], nums[right]]`:
+        - If yes: search right (`left = mid + 1`).
+        - Otherwise: search left (`right = mid - 1`).
 
 ---
 
-### Python 3 Solution (With Typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def search(self, nums: List[int], target: int) -> int:
         left, right = 0, len(nums) - 1
-
+        
         while left <= right:
             mid = (left + right) // 2
-
             if nums[mid] == target:
                 return mid
-
-            # Left half is sorted
+                
+            # Check if left half is sorted
             if nums[left] <= nums[mid]:
                 if nums[left] <= target < nums[mid]:
                     right = mid - 1
                 else:
                     left = mid + 1
-            # Right half is sorted
+            # Otherwise, right half is sorted
             else:
                 if nums[mid] < target <= nums[right]:
                     left = mid + 1
                 else:
                     right = mid - 1
-
+                    
         return -1
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
 
-### Worked-Out Example
+class Solution {
+public:
+    int search(std::vector<int>& nums, int target) {
+        int left = 0, right = static_cast<int>(nums.size()) - 1;
 
-**Input**
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (nums[mid] == target) return mid;
 
-```text
-nums = [4,5,6,7,0,1,2]
-target = 0
+            if (nums[left] <= nums[mid]) {
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;
+                } else {
+                    left = mid + 1;
+                }
+            } else {
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+        }
+        return -1;
+    }
+};
 ```
 
-| left | mid | right | nums[mid] | Observation | Action |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 3 | 6 | 7 | Left half [4,5,6,7] sorted | Target not in left → move right |
-| 4 | 5 | 6 | 1 | Left half [0,1] sorted | Target in left → move left |
-| 4 | 4 | 4 | 0 | Found target | Return index 4 |
+#### 3. Java (Modern, Typed)
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
 
-**Output**
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (nums[mid] == target) return mid;
 
+            if (nums[left] <= nums[mid]) {
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;
+                } else {
+                    left = mid + 1;
+                }
+            } else {
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+        }
+        return -1;
+    }
+}
 ```
-4
-```
 
 ---
 
-### Why This Works
+### Complexity Analysis
 
-* Binary search is preserved because **one side is always sorted**
-* We intelligently eliminate half the search space every iteration
-* Meets the required **O(log n)** time complexity
-
----
-
-### Common Pitfalls
-
-* Forgetting to check which half is sorted
-* Incorrect boundary comparisons (`<=` vs `<`)
-* Using linear search (violates constraints)
-
----
-
-If you want, I can also:
-
-* Convert this into a **decision tree visualization**
-* Compare with **LeetCode 81 (duplicates allowed)**
-* Explain why standard binary search fails without modification
+- **Time Complexity:** $O(\log N)$ — Classical binary search dividing the array in half at every comparison.
+- **Space Complexity:** $O(1)$ — Only pointer variables.

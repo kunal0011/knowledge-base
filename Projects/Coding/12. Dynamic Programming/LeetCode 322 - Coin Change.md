@@ -1,5 +1,5 @@
 ---
-date: "2025-12-15"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Dynamic Programming"
 folder: "12. Dynamic Programming"
@@ -8,231 +8,118 @@ tags:
   - leetcode
   - coding
   - dynamic-programming
+  - amazon
+  - google
 ---
 
 # LeetCode 322: Coin Change
 
-**LeetCode 322 (Coin Change)** using **Dynamic Programming**, with explicit **state definition, transition, DP table construction, and a worked example**.
+**Target Companies:** Amazon (Top #1 DP), Google, Meta, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Unbounded Knapsack / 1D Bottom-Up DP
 
 ---
-
-## LeetCode 322 — Coin Change
 
 ### Problem Statement
 
-You are given an integer array `coins` representing coins of different denominations and an integer `amount`.  
-Return the **fewest number of coins** needed to make up that amount.  
-If it is not possible, return `-1`.
+You are given an integer array `coins` representing coins of different denominations and an integer `amount` representing a total amount of money.
 
-You may use **unlimited coins of each denomination**.
+Return the **fewest number of coins** that you need to make up that amount. If that amount of money cannot be made up by any combination of the coins, return `-1`.
 
----
-
-## Key Observation
-
-* Order does **not** matter.
-* Each coin can be used **multiple times**.
-* This is a classic **unbounded knapsack / minimum optimization DP** problem.
-* Greedy fails (e.g., coins `[1, 3, 4]`, amount `6`).
+You may assume that you have an **infinite number** of each kind of coin.
 
 ---
 
-## DP State Definition
+### Input & Output Formats & Constraints
 
-### 1D DP (Optimal and Standard)
-
-Let:
-
-```
-dp[x] = minimum number of coins required to make amount x
-```
-
-Goal:
-
-```
-dp[amount]
-```
+- **Input:** `coins: List[int]`, `amount: int`
+- **Output:** `int` (minimum coins or -1)
+- **Constraints:**
+  - $1 \le \text{coins.length} \le 12$
+  - $1 \le \text{coins}[i] \le 2^{31} - 1$
+  - $0 \le \text{amount} \le 10^4$
 
 ---
 
-## Base Case
+### Key Idea & Intuition
 
-```
-dp[0] = 0
-```
-
-Reason:
-
-* Zero coins are needed to make amount `0`.
-
-For all other values:
-
-```
-dp[x] = ∞  (initially)
-```
+- **Optimal Substructure:**
+  - To make `amount` $A$, if we pick coin $c$, the remaining amount is $A - c$.
+  - The minimum coins needed is:
+    $$\text{DP}[A] = 1 + \min_{c \in \text{coins}} \text{DP}[A - c]$$
+- **Base Case & Initialization:**
+  - $\text{DP}[0] = 0$ (0 coins needed to make amount 0).
+  - All other amounts initialized to $\infty$ (`amount + 1`).
 
 ---
 
-## State Transition
+### Multi-Language Implementations
 
-For every amount `x` from `1` to `amount`  
-For every coin `c` in `coins`:
-
-```
-if x - c >= 0:
-    dp[x] = min(dp[x], dp[x - c] + 1)
-```
-
-### Intuition
-
-* To make amount `x`, try taking one coin `c`
-* Remaining amount = `x - c`
-* If we know the best way to make `x - c`, add one coin
-
----
-
-## DP Table Creation Order
-
-* Amount increases from `0 → amount`
-* This ensures subproblems (`x - c`) are already solved
-
----
-
-## Example Walkthrough
-
-### Input
-
-```
-coins = [1, 2, 5]
-amount = 11
-```
-
----
-
-### DP Table Initialization
-
-```
-dp = [0, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞]
-index: 0  1  2  3  4  5  6  7  8  9 10 11
-```
-
----
-
-### Step-by-Step Filling
-
-#### Amount = 1
-
-* Using coin 1 → dp[1] = dp[0] + 1 = 1
-
-```
-dp = [0, 1, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞]
-```
-
----
-
-#### Amount = 2
-
-* coin 1 → dp[1] + 1 = 2
-* coin 2 → dp[0] + 1 = 1
-
-```
-dp = [0, 1, 1, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞]
-```
-
----
-
-#### Amount = 3
-
-* coin 1 → dp[2] + 1 = 2
-* coin 2 → dp[1] + 1 = 2
-
-```
-dp = [0, 1, 1, 2, ∞, ∞, ∞, ∞, ∞, ∞, ∞, ∞]
-```
-
----
-
-#### Amount = 5
-
-* coin 5 → dp[0] + 1 = 1 (best)
-
-```
-dp = [0, 1, 1, 2, 2, 1, ∞, ∞, ∞, ∞, ∞, ∞]
-```
-
----
-
-#### Amount = 11
-
-* coin 1 → dp[10] + 1 = 3
-* coin 2 → dp[9] + 1 = 4
-* coin 5 → dp[6] + 1 = 3
-
-```
-dp[11] = 3
-```
-
-Final DP table:
-
-```
-dp = [0, 1, 1, 2, 2, 1, 2, 2, 3, 3, 2, 3]
-```
-
----
-
-## Final Answer
-
-```
-Minimum coins required = 3
-```
-
-(5 + 5 + 1)
-
----
-
-## Python 3 Implementation (With Typing)
-
+#### 1. Python 3 (Clean, Typed)
 ```python
 from typing import List
 
 class Solution:
     def coinChange(self, coins: List[int], amount: int) -> int:
-        # dp[x] = minimum coins to make amount x
         dp = [float('inf')] * (amount + 1)
         dp[0] = 0
-
-        for x in range(1, amount + 1):
-            for coin in coins:
-                if x - coin >= 0:
-                    dp[x] = min(dp[x], dp[x - coin] + 1)
-
+        
+        for a in range(1, amount + 1):
+            for c in coins:
+                if a - c >= 0:
+                    dp[a] = min(dp[a], 1 + dp[a - c])
+                    
         return dp[amount] if dp[amount] != float('inf') else -1
+```
+
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <vector>
+#include <algorithm>
+
+class Solution {
+public:
+    int coinChange(std::vector<int>& coins, int amount) {
+        std::vector<int> dp(amount + 1, amount + 1);
+        dp[0] = 0;
+
+        for (int a = 1; a <= amount; ++a) {
+            for (int c : coins) {
+                if (a >= c) {
+                    dp[a] = std::min(dp[a], 1 + dp[a - c]);
+                }
+            }
+        }
+        return dp[amount] > amount ? -1 : dp[amount];
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.Arrays;
+
+class Solution {
+    public int coinChange(int[] coins, int amount) {
+        int[] dp = new int[amount + 1];
+        Arrays.fill(dp, amount + 1);
+        dp[0] = 0;
+
+        for (int a = 1; a <= amount; a++) {
+            for (int c : coins) {
+                if (a >= c) {
+                    dp[a] = Math.min(dp[a], 1 + dp[a - c]);
+                }
+            }
+        }
+        return dp[amount] > amount ? -1 : dp[amount];
+    }
+}
 ```
 
 ---
 
-## Time & Space Complexity
+### Complexity Analysis
 
-| Metric | Complexity |
-| --- | --- |
-| Time | `O(amount × len(coins))` |
-| Space | `O(amount)` |
-
----
-
-## Why This Works
-
-* Each amount builds on **already solved smaller amounts**
-* Unlimited coin usage handled naturally
-* Guarantees global minimum due to DP optimization
-
----
-
-If you want, next I can:
-
-* Show **2D DP version** and why it’s worse
-* Explain **why greedy fails**
-* Derive this from **unbounded knapsack**
-* Show **coin combination reconstruction**
-
-Just tell me.
+- **Time Complexity:** $O(\text{amount} \times |\text{coins}|)$ — Outer loop runs `amount` times, inner loop checks each denomination.
+- **Space Complexity:** $O(\text{amount})$ for the 1D DP table.

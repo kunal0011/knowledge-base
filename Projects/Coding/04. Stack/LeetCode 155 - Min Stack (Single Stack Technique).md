@@ -1,267 +1,154 @@
 ---
-date: "2025-12-19"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Stack"
 folder: "04. Stack"
-title: "LeetCode 155: Min Stack (Single Stack Technique)"
+title: "LeetCode 155: Min Stack"
 tags:
   - leetcode
   - coding
   - stack
+  - amazon
+  - google
 ---
 
-# LeetCode 155: Min Stack (Single Stack Technique)
+# LeetCode 155: Min Stack
 
-Below is the **single-stack (value encoding) approach** for **LeetCode 155 – Min Stack**, structured in the same rigorous format.
-
----
-
-## LeetCode 155 – Min Stack (Single Stack Technique)
-
-### Core Idea
-
-Instead of using a separate `min_stack`, we **encode values** in the main stack such that:
-
-* We can detect when the **minimum changes**
-* We can **restore the previous minimum** during `pop()`
-* All operations remain **O(1)**
-
-This approach relies on **mathematical encoding**, not an auxiliary stack.
+**Target Companies:** Amazon (Top Classic), Google, Microsoft, Apple, Meta  
+**Difficulty:** Medium  
+**Topic:** Stack Design / Prefix Minimum Invariant
 
 ---
 
-## Key Observation
+### Problem Statement
 
-When a new value becomes the **new minimum**, we must:
+Design a stack that supports push, pop, top, and retrieving the minimum element in **constant time**.
 
-1. Remember the **old minimum**
-2. Push something that allows us to recover it later
+Implement the `MinStack` class:
+- `MinStack()`: initializes the stack object.
+- `void push(int val)`: pushes the element `val` onto the stack.
+- `void pop()`: removes the element on the top of the stack.
+- `int top()`: gets the top element of the stack.
+- `int getMin()`: retrieves the minimum element in the stack.
 
-We do this by pushing a **transformed value**.
-
----
-
-## Stack Key Insight (Encoding Trick)
-
-Maintain:
-
-* One stack: `stack`
-* One variable: `current_min`
-
-### Encoding Rule
-
-When pushing a value `x`:
-
-#### Case 1: Stack is empty
-
-```
-push(x)
-current_min = x
-```
-
-#### Case 2: x ≥ current\_min
-
-```
-push(x)
-```
-
-#### Case 3: x < current\_min (new minimum)
-
-```
-encoded_value = 2*x - current_min
-push(encoded_value)
-current_min = x
-```
-
-👉 The encoded value is **always smaller than the new minimum**, which lets us detect it later.
+You must implement a solution with **$O(1)$ time complexity** for each function.
 
 ---
 
-## Decoding During Pop
+### Input & Output Formats & Constraints
 
-When popping:
-
-* If `top ≥ current_min` → normal value
-* If `top < current_min` → encoded value
-
-  * Previous minimum is recovered using:
-
-    ```
-    previous_min = 2*current_min - encoded_value
-    ```
+- **Input Operations:** `MinStack()`, `push(val)`, `pop()`, `top()`, `getMin()`
+- **Constraints:**
+  - $-2^{31} \le \text{val} \le 2^{31} - 1$
+  - Methods `pop`, `top` and `getMin` operations will always be called on **non-empty** stacks.
+  - At most $3 \times 10^4$ calls will be made to `push`, `pop`, `top`, and `getMin`.
 
 ---
 
-## Python 3 Solution (with typing)
+### Key Idea & Intuition
 
+- **The Fundamental Challenge:**
+  - A standard stack provides $O(1)$ push/pop/top. But tracking the minimum requires finding the smallest across all elements.
+- **Prefix Minimum State Invariant:**
+  - The minimum of elements currently in the stack depends **only** on the elements below it in the stack.
+  - If we store `(val, current_min)` as a pair on the stack, each stack element remembers the exact minimum of the stack up to that height!
+  - When an element is popped, the previous minimum is automatically restored with zero overhead.
+
+---
+
+### Multi-Language Implementations
+
+#### 1. Python 3 (Clean, Typed)
 ```python
-from typing import List
-
 class MinStack:
-    def __init__(self) -> None:
-        self.stack: List[int] = []
-        self.current_min: int | None = None
+    def __init__(self):
+        # stack stores pairs of (val, min_so_far)
+        self.stack = []
 
     def push(self, val: int) -> None:
-        if not self.stack:
-            self.stack.append(val)
-            self.current_min = val
-        elif val >= self.current_min:
-            self.stack.append(val)
-        else:
-            encoded = 2 * val - self.current_min
-            self.stack.append(encoded)
-            self.current_min = val
+        curr_min = val if not self.stack else min(val, self.stack[-1][1])
+        self.stack.append((val, curr_min))
 
     def pop(self) -> None:
-        top = self.stack.pop()
-        if top < self.current_min:
-            # Decode previous minimum
-            self.current_min = 2 * self.current_min - top
-
-        if not self.stack:
-            self.current_min = None
+        self.stack.pop()
 
     def top(self) -> int:
-        top = self.stack[-1]
-        if top < self.current_min:
-            return self.current_min
-        return top
+        return self.stack[-1][0]
 
     def getMin(self) -> int:
-        return self.current_min
+        return self.stack[-1][1]
+```
+
+#### 2. C++ (C++17 / STL)
+```cpp
+#include <stack>
+#include <algorithm>
+
+class MinStack {
+private:
+    std::stack<std::pair<int, int>> st; // pair<val, minSoFar>
+
+public:
+    MinStack() {}
+
+    void push(int val) {
+        int currMin = st.empty() ? val : std::min(val, st.top().second);
+        st.push({val, currMin});
+    }
+
+    void pop() {
+        st.pop();
+    }
+
+    int top() {
+        return st.top().first;
+    }
+
+    int getMin() {
+        return st.top().second;
+    }
+};
+```
+
+#### 3. Java (Modern, Typed)
+```java
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+class MinStack {
+    private static class Element {
+        int val, min;
+        Element(int val, int min) { this.val = val; this.min = min; }
+    }
+
+    private final Deque<Element> stack;
+
+    public MinStack() {
+        this.stack = new ArrayDeque<>();
+    }
+
+    public void push(int val) {
+        int currentMin = stack.isEmpty() ? val : Math.min(val, stack.peek().min);
+        stack.push(new Element(val, currentMin));
+    }
+
+    public void pop() {
+        stack.pop();
+    }
+
+    public int top() {
+        return stack.peek().val;
+    }
+
+    public int getMin() {
+        return stack.peek().min;
+    }
+}
 ```
 
 ---
 
-## Worked Out Example (Step-by-Step)
+### Complexity Analysis
 
-### Operations
-
-```
-push(5)
-push(3)
-push(7)
-push(2)
-top()
-getMin()
-pop()
-getMin()
-```
-
----
-
-### Step 1: `push(5)`
-
-| Stack | current\_min |
-| --- | --- |
-| [5] | 5 |
-
----
-
-### Step 2: `push(3)` → New minimum
-
-```
-encoded = 2*3 - 5 = 1
-```
-
-| Stack | current\_min |
-| --- | --- |
-| [5, 1] | 3 |
-
----
-
-### Step 3: `push(7)` (normal push)
-
-| Stack | current\_min |
-| --- | --- |
-| [5, 1, 7] | 3 |
-
----
-
-### Step 4: `push(2)` → New minimum
-
-```
-encoded = 2*2 - 3 = 1
-```
-
-| Stack | current\_min |
-| --- | --- |
-| [5, 1, 7, 1] | 2 |
-
----
-
-### Step 5: `top()`
-
-Top value = `1`  
-Since `1 < current_min (2)` → encoded  
-Return `current_min`
-
-```
-top() → 2
-```
-
----
-
-### Step 6: `getMin()`
-
-```
-current_min → 2
-```
-
----
-
-### Step 7: `pop()`
-
-Pop `1` (encoded)
-
-```
-previous_min = 2*2 - 1 = 3
-```
-
-| Stack | current\_min |
-| --- | --- |
-| [5, 1, 7] | 3 |
-
----
-
-### Step 8: `getMin()`
-
-```
-current_min → 3
-```
-
----
-
-## Why This Works
-
-* Encoded values act as **markers** indicating a minimum change
-* Mathematical transformation guarantees:
-
-  ```
-  encoded < new_min
-  ```
-* Old minimum can be reconstructed using the inverse formula
-
----
-
-## Time & Space Complexity
-
-| Metric | Value |
-| --- | --- |
-| Time per operation | O(1) |
-| Extra space | O(1) |
-
----
-
-## Interview Comparison
-
-| Approach | Extra Space | Complexity | Readability |
-| --- | --- | --- | --- |
-| Two Stack | O(n) | O(1) | Very High |
-| Single Stack (Encoded) | O(1) | O(1) | Medium |
-
-**Interview Tip:**  
-Explain the **two-stack approach first**, then mention this as an **optimization**.
-
-If you want, I can also provide a **formal invariant proof** or explain **why overflow is not an issue in Python but matters in Java/C++**.
+- **Time Complexity:** Strict $O(1)$ for `push`, `pop`, `top`, and `getMin`.
+- **Space Complexity:** $O(N)$ auxiliary space for paired storage.

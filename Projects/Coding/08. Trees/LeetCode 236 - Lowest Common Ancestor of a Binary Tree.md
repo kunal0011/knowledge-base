@@ -1,5 +1,5 @@
 ---
-date: "2025-12-24"
+date: "2026-09-15"
 type: leetcode-solution
 category: "Trees"
 folder: "08. Trees"
@@ -8,219 +8,123 @@ tags:
   - leetcode
   - coding
   - trees
+  - amazon
+  - google
 ---
 
 # LeetCode 236: Lowest Common Ancestor of a Binary Tree
 
-Below is a **structured, interview-grade explanation** of **LeetCode 236 – Lowest Common Ancestor of a Binary Tree**, aligned with your earlier DSA pattern requests.
+**Target Companies:** Amazon (Top #1 Tree), Google, Meta, Microsoft  
+**Difficulty:** Medium  
+**Topic:** Post-Order DFS Bottom-Up Propagation
 
 ---
 
-## 🔹 Problem Statement (LeetCode 236)
+### Problem Statement
 
-Given a **binary tree** (not necessarily a BST) and two distinct nodes `p` and `q`, return their **lowest common ancestor (LCA)**.
+Given a binary tree, find the lowest common ancestor (LCA) of two given nodes in the tree.
 
-> **Lowest Common Ancestor**:  
-> The lowest node in the tree that has **both `p` and `q` as descendants** (a node can be a descendant of itself).
-
----
-
-## 🔹 Key Observations
-
-1. **Tree is NOT a BST**
-
-   * No ordering property
-   * Cannot use value comparisons
-2. **Nodes are guaranteed to exist**
-
-   * We do not need to handle missing nodes
-3. **Definition allows self-ancestor**
-
-   * If `p` is ancestor of `q`, then `p` is the LCA
-4. **Post-order traversal is natural**
-
-   * We need information from both subtrees **before deciding**
+According to the definition of LCA on Wikipedia: “The lowest common ancestor is defined between two nodes $p$ and $q$ as the lowest node in $T$ that has both $p$ and $q$ as descendants (where we allow **a node to be a descendant of itself**).”
 
 ---
 
-## 🔹 Core Concepts Used
+### Input & Output Formats & Constraints
 
-| Concept | Role |
-| --- | --- |
-| Binary Tree Traversal | Explore entire tree |
-| Post-order DFS | Decide LCA after children |
-| Divide & Conquer | Each subtree returns partial result |
-| Recursion | Elegant bottom-up aggregation |
-
----
-
-## 🔹 Key Insight (Most Important)
-
-At **each node**, ask:
-
-> Do I see `p` or `q` in my left subtree?  
-> Do I see `p` or `q` in my right subtree?
-
-### Three decisive cases:
-
-1. **Current node is `p` or `q`**  
-   → Return current node
-2. **`p` and `q` found in different subtrees**  
-   → Current node is the **LCA**
-3. **Both found in one subtree**  
-   → Propagate that subtree’s result upward
+- **Input:** `root: TreeNode`, `p: TreeNode`, `q: TreeNode`
+- **Output:** `TreeNode` (the lowest common ancestor node reference)
+- **Constraints:**
+  - The number of nodes in the tree is in the range $[2, 10^5]$.
+  - $-10^9 \le \text{Node.val} \le 10^9$
+  - All `Node.val` are **unique**.
+  - $p \ne q$, and both $p$ and $q$ exist in the tree.
 
 ---
 
-## 🔹 Algorithm (High Level)
+### Key Idea & Intuition
 
-```
-DFS(node):
-    if node is None:
-        return None
-
-    if node == p or node == q:
-        return node
-
-    left = DFS(node.left)
-    right = DFS(node.right)
-
-    if left and right:
-        return node   # LCA found
-
-    return left or right
-```
+- **Bottom-Up Post-Order DFS:**
+  - If the current node is `None`, return `None`.
+  - If the current node is `p` or `q`, we have found one of the targets! Return `root`.
+  - Recursively search the left and right subtrees:
+    - `left = lowestCommonAncestor(root.left, p, q)`
+    - `right = lowestCommonAncestor(root.right, p, q)`
+- **Three Core Propagation Cases:**
+  1. **Both `left` and `right` are non-null:** One target is in the left subtree, and the other is in the right subtree. Therefore, `root` **is the Lowest Common Ancestor**! Return `root`.
+  2. **Only one side is non-null:** Both targets are in the same subtree, or one is an ancestor of the other. Return the non-null side.
+  3. **Both are null:** Neither target exists in this subtree. Return `None`.
 
 ---
 
-## 🔹 Python 3 Solution (With Typing)
+### Multi-Language Implementations
 
+#### 1. Python 3 (Clean, Typed)
 ```python
-from typing import Optional
-
 class TreeNode:
-    def __init__(self, x: int):
+    def __init__(self, x):
         self.val = x
-        self.left: Optional['TreeNode'] = None
-        self.right: Optional['TreeNode'] = None
+        self.left = None
+        self.right = None
 
 class Solution:
-    def lowestCommonAncestor(
-        self,
-        root: 'TreeNode',
-        p: 'TreeNode',
-        q: 'TreeNode'
-    ) -> 'TreeNode':
-
-        if root is None:
-            return None
-
-        if root == p or root == q:
+    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':
+        if not root or root == p or root == q:
             return root
-
+            
         left = self.lowestCommonAncestor(root.left, p, q)
         right = self.lowestCommonAncestor(root.right, p, q)
-
+        
         if left and right:
             return root
-
         return left if left else right
 ```
 
----
+#### 2. C++ (C++17 / STL)
+```cpp
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+};
 
-## 🔹 Worked Example
+class Solution {
+public:
+    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+        if (!root || root == p || root == q) return root;
 
-### Tree Structure
+        TreeNode* left = lowestCommonAncestor(root->left, p, q);
+        TreeNode* right = lowestCommonAncestor(root->right, p, q);
 
-```
-            3
-          /   \
-         5     1
-        / \   / \
-       6   2 0   8
-          / \
-         7   4
-```
-
-### Input
-
-```
-p = 5
-q = 1
-```
-
----
-
-### Step-by-Step DFS Reasoning
-
-1. Start at `3`
-2. Explore left subtree → returns `5`
-3. Explore right subtree → returns `1`
-4. Both left & right are non-null  
-   ✅ **LCA = 3**
-
----
-
-### Another Example
-
-```
-p = 5
-q = 4
+        if (left && right) return root;
+        return left ? left : right;
+    }
+};
 ```
 
-Traversal result:
+#### 3. Java (Modern, Typed)
+```java
+class TreeNode {
+    int val;
+    TreeNode left, right;
+    TreeNode(int x) { val = x; }
+}
 
-* `4` found under subtree of `5`
-* `5` matches `p`
-* One side returns `None`, other returns `4`
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        if (root == null || root == p || root == q) return root;
 
-✅ **LCA = 5**
+        TreeNode left = lowestCommonAncestor(root.left, p, q);
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
+
+        if (left != null && right != null) return root;
+        return left != null ? left : right;
+    }
+}
+```
 
 ---
 
-## 🔹 Conceptual Illustration (Decision Flow)
+### Complexity Analysis
 
-```
-DFS(node):
-    ├── returns p?
-    ├── returns q?
-    └── returns LCA?
-```
-
-| Left | Right | Result |
-| --- | --- | --- |
-| p | q | current node (LCA) |
-| p | None | p |
-| None | q | q |
-| None | None | None |
-
----
-
-## 🔹 Time & Space Complexity
-
-| Metric | Value |
-| --- | --- |
-| Time | **O(N)** — visit each node once |
-| Space | **O(H)** — recursion stack (`H` = tree height) |
-| Worst Case | O(N) for skewed tree |
-
----
-
-## 🔹 Why This Approach Is Optimal
-
-* Single DFS pass
-* No extra data structures
-* Works for **any binary tree**
-* Clean recursive reasoning (very interview-friendly)
-
----
-
-If you want next:
-
-* Iterative version
-* Parent pointer approach
-* Follow-up when nodes may not exist
-* Visual backtracking tree like your earlier requests
-
-Tell me how deep you want to go.
+- **Time Complexity:** $O(N)$ — In the worst case, visits all $N$ nodes of the tree.
+- **Space Complexity:** $O(H)$ where $H$ is tree height (recursion stack depth; $O(N)$ worst case, $O(\log N)$ for balanced tree).

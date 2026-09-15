@@ -2,12 +2,12 @@
 
 [![HLD Systems](https://img.shields.io/badge/System%20Design%20(HLD)-45%20Systems-blue.svg)](#pillar-i-system-design-interview-alex-xu-curriculum-45-chapters)
 [![LLD Questions](https://img.shields.io/badge/Low--Level%20Design%20(LLD)-50%20Systems-success.svg)](#pillar-ii-low-level-design-lld--design-patterns-64-topics)
-[![LeetCode Problems](https://img.shields.io/badge/Coding%20Patterns-343%20Solutions-brightgreen.svg)](#pillar-iii-coding--leetcode-masterclass-343-problems)
+[![LeetCode Problems](https://img.shields.io/badge/Coding%20Patterns-357%20Solutions-brightgreen.svg)](#pillar-iii-coding--leetcode-masterclass-357-problems)
 [![Design Patterns](https://img.shields.io/badge/Design%20Patterns-14%20Covered-orange.svg)](#part-1-head-first-design-patterns-14-patterns)
 [![Runnable Labs](https://img.shields.io/badge/Simulation%20Labs-45%20Python%20Engines-brightgreen.svg)](#the-4-pillar-chapter-architecture)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
-> A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (343 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, and typed solution walkthroughs.
+> A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
 
 ---
 
@@ -18,21 +18,21 @@ knowledge-base/
 ├── Projects/
 │   ├── Coding/                               # Algorithms, Data Structures & LeetCode Patterns
 │   │   ├── README.md                         # Coding & Patterns Masterclass Index
-│   │   ├── Coding - LeetCode Masterclass Index.md # Master Index (343 Problems)
-│   │   ├── 01. Arrays & Hashing/             # 15 Solved & Explained Systems
-│   │   ├── 02. Two Pointers/                 # 14 Solved & Explained Systems
-│   │   ├── 03. Sliding Window/               # 36 Solved & Explained Systems
-│   │   ├── 04. Stack/                        # 20 Solved & Explained Systems
-│   │   ├── 05. Queue/                        # 11 Solved & Explained Systems
-│   │   ├── 06. Binary Search/                # 13 Solved & Explained Systems
-│   │   ├── 07. Linked List/                  # 11 Solved & Explained Systems
-│   │   ├── 08. Trees/                        # 21 Solved & Explained Systems
-│   │   ├── 09. Heap & Priority Queue/        # 19 Solved & Explained Systems
-│   │   ├── 10. Backtracking/                 # 34 Solved & Explained Systems
-│   │   ├── 11. Graphs/                       # 21 Solved & Explained Systems
-│   │   ├── 12. Dynamic Programming/          # 70 Solved & Explained Systems
-│   │   ├── 13. Greedy/                       # 45 Solved & Explained Systems
-│   │   └── 14. Bit Manipulation/             # 13 Solved & Explained Systems
+│   │   ├── Coding - LeetCode Masterclass Index.md # Master Index (357 Problems)
+│   │   ├── 01. Arrays & Hashing/             # 16 Solved & Explained Systems
+│   │   ├── 02. Two Pointers/                 # 15 Solved & Explained Systems
+│   │   ├── 03. Sliding Window/               # 37 Solved & Explained Systems
+│   │   ├── 04. Stack/                        # 21 Solved & Explained Systems
+│   │   ├── 05. Queue/                        # 12 Solved & Explained Systems
+│   │   ├── 06. Binary Search/                # 14 Solved & Explained Systems
+│   │   ├── 07. Linked List/                  # 12 Solved & Explained Systems
+│   │   ├── 08. Trees/                        # 22 Solved & Explained Systems
+│   │   ├── 09. Heap & Priority Queue/        # 20 Solved & Explained Systems
+│   │   ├── 10. Backtracking/                 # 35 Solved & Explained Systems
+│   │   ├── 11. Graphs/                       # 22 Solved & Explained Systems
+│   │   ├── 12. Dynamic Programming/          # 71 Solved & Explained Systems
+│   │   ├── 13. Greedy/                       # 46 Solved & Explained Systems
+│   │   └── 14. Bit Manipulation/             # 14 Solved & Explained Systems
 │   │
 │   ├── System-Design-Alex-Xu/                # High-Level Distributed System Design (HLD)
 │   │   ├── System Design Interview - Alex Xu Index.md  # Master HLD Index & Curriculum
@@ -144,31 +144,31 @@ Complete object models, thread safety, and clean code for top interview systems:
 
 ---
 
-## 🧩 Pillar III: Coding & LeetCode Masterclass (343 Problems)
+## 🧩 Pillar III: Coding & LeetCode Masterclass (357 Problems)
 
 [![LeetCode Masterclass](https://img.shields.io/badge/Curriculum-14%20Algorithmic%20Patterns-blue.svg)](Projects/Coding/README.md)
-[![Total Problems](https://img.shields.io/badge/Total%20Problems-343%20Solutions-success.svg)](Projects/Coding/Coding%20-%20LeetCode%20Masterclass%20Index.md)
+[![Total Problems](https://img.shields.io/badge/Total%20Problems-357%20Solutions-success.svg)](Projects/Coding/Coding%20-%20LeetCode%20Masterclass%20Index.md)
 
-A production-grade, interview-tested curriculum covering all **14 foundational algorithmic patterns** and **343 LeetCode problems**. Each solution note includes the core problem formulation, target company tags, first-principles algorithmic intuition, clean typed Python 3 implementations, worked-out examples, complexity bounds ($O(N)$ time & space), and transferrable pattern takeaways:
+A production-grade, interview-tested curriculum covering all **14 foundational algorithmic patterns** and **357 LeetCode problems** with multi-language implementations in **Python 3, C++, and Java**. Each solution note includes the core problem formulation, target company tags (Amazon, Google, Meta, Microsoft, Apple), input/output specifications, constraints, first-principles algorithmic intuition, visual algorithm walkthroughs, step-by-step execution traces with multiple inputs, complexity bounds ($O(N)$ time & space), and transferrable pattern takeaways:
 
 | # | Algorithmic Pattern | Count | Core Techniques & Focus | Catalog |
 |:---:|:---|:---:|:---|:---:|
-| **01** | [Arrays & Hashing](Projects/Coding/01.%20Arrays%20%26%20Hashing/) | `15` | Hash maps, frequency counters, prefix sums, duplicate detection, and sorting tricks | [Browse](Projects/Coding/01.%20Arrays%20%26%20Hashing/) |
-| **02** | [Two Pointers](Projects/Coding/02.%20Two%20Pointers/) | `14` | Inward-converging pointers, fast/slow runners, sorted array transformations | [Browse](Projects/Coding/02.%20Two%20Pointers/) |
-| **03** | [Sliding Window](Projects/Coding/03.%20Sliding%20Window/) | `36` | Fixed/variable windows, monotonic deques, substring frequencies, optimization | [Browse](Projects/Coding/03.%20Sliding%20Window/) |
-| **04** | [Stack](Projects/Coding/04.%20Stack/) | `20` | Monotonic stacks, expression evaluators, parenthesis matching, next greater element | [Browse](Projects/Coding/04.%20Stack/) |
-| **05** | [Queue](Projects/Coding/05.%20Queue/) | `11` | FIFO scheduling, circular queues, rate limiting hit counters, monotonic queues | [Browse](Projects/Coding/05.%20Queue/) |
-| **06** | [Binary Search](Projects/Coding/06.%20Binary%20Search/) | `13` | Search space reduction, monotonic predicate functions, rotated arrays, boundaries | [Browse](Projects/Coding/06.%20Binary%20Search/) |
-| **07** | [Linked List](Projects/Coding/07.%20Linked%20List/) | `11` | In-place reversal, Floyd cycle detection, fast & slow pointers, dummy heads | [Browse](Projects/Coding/07.%20Linked%20List/) |
-| **08** | [Trees](Projects/Coding/08.%20Trees/) | `21` | DFS/BFS traversals, LCA, path sum validation, tree transformations, BST properties | [Browse](Projects/Coding/08.%20Trees/) |
-| **09** | [Heap & Priority Queue](Projects/Coding/09.%20Heap%20%26%20Priority%20Queue/) | `19` | Top-K elements, streaming medians, interval scheduling, greedy priority queues | [Browse](Projects/Coding/09.%20Heap%20%26%20Priority%20Queue/) |
-| **10** | [Backtracking](Projects/Coding/10.%20Backtracking/) | `34` | State space tree search, permutations, combinations, subset pruning | [Browse](Projects/Coding/10.%20Backtracking/) |
-| **11** | [Graphs](Projects/Coding/11.%20Graphs/) | `21` | BFS shortest paths, DFS connectivity, topological sort, Dijkstra, union-find | [Browse](Projects/Coding/11.%20Graphs/) |
-| **12** | [Dynamic Programming](Projects/Coding/12.%20Dynamic%20Programming/) | `70` | 1D/2D memoization, knapsack, longest common subsequences, interval DP | [Browse](Projects/Coding/12.%20Dynamic%20Programming/) |
-| **13** | [Greedy](Projects/Coding/13.%20Greedy/) | `45` | Locally optimal choice paradigms, interval scheduling, jump games | [Browse](Projects/Coding/13.%20Greedy/) |
-| **14** | [Bit Manipulation](Projects/Coding/14.%20Bit%20Manipulation/) | `13` | Bitwise XOR/AND/OR tricks, bitmasks, 2's complement properties | [Browse](Projects/Coding/14.%20Bit%20Manipulation/) |
+| **01** | [Arrays & Hashing](Projects/Coding/01.%20Arrays%20%26%20Hashing/) | `16` | Hash maps, frequency counters, prefix sums, duplicate detection, and sorting tricks | [Browse](Projects/Coding/01.%20Arrays%20%26%20Hashing/) |
+| **02** | [Two Pointers](Projects/Coding/02.%20Two%20Pointers/) | `15` | Inward-converging pointers, fast/slow runners, sorted array transformations | [Browse](Projects/Coding/02.%20Two%20Pointers/) |
+| **03** | [Sliding Window](Projects/Coding/03.%20Sliding%20Window/) | `37` | Fixed/variable windows, monotonic deques, substring frequencies, optimization | [Browse](Projects/Coding/03.%20Sliding%20Window/) |
+| **04** | [Stack](Projects/Coding/04.%20Stack/) | `21` | Monotonic stacks, expression evaluators, parenthesis matching, next greater element | [Browse](Projects/Coding/04.%20Stack/) |
+| **05** | [Queue](Projects/Coding/05.%20Queue/) | `12` | FIFO scheduling, circular queues, rate limiting hit counters, monotonic queues | [Browse](Projects/Coding/05.%20Queue/) |
+| **06** | [Binary Search](Projects/Coding/06.%20Binary%20Search/) | `14` | Search space reduction, monotonic predicate functions, rotated arrays, boundaries | [Browse](Projects/Coding/06.%20Binary%20Search/) |
+| **07** | [Linked List](Projects/Coding/07.%20Linked%20List/) | `12` | In-place reversal, Floyd cycle detection, fast & slow pointers, dummy heads | [Browse](Projects/Coding/07.%20Linked%20List/) |
+| **08** | [Trees](Projects/Coding/08.%20Trees/) | `22` | DFS/BFS traversals, LCA, path sum validation, tree transformations, BST properties | [Browse](Projects/Coding/08.%20Trees/) |
+| **09** | [Heap & Priority Queue](Projects/Coding/09.%20Heap%20%26%20Priority%20Queue/) | `20` | Top-K elements, streaming medians, interval scheduling, greedy priority queues | [Browse](Projects/Coding/09.%20Heap%20%26%20Priority%20Queue/) |
+| **10** | [Backtracking](Projects/Coding/10.%20Backtracking/) | `35` | State space tree search, permutations, combinations, subset pruning | [Browse](Projects/Coding/10.%20Backtracking/) |
+| **11** | [Graphs](Projects/Coding/11.%20Graphs/) | `22` | BFS shortest paths, DFS connectivity, topological sort, Dijkstra, union-find | [Browse](Projects/Coding/11.%20Graphs/) |
+| **12** | [Dynamic Programming](Projects/Coding/12.%20Dynamic%20Programming/) | `71` | 1D/2D memoization, knapsack, longest common subsequences, interval DP | [Browse](Projects/Coding/12.%20Dynamic%20Programming/) |
+| **13** | [Greedy](Projects/Coding/13.%20Greedy/) | `46` | Locally optimal choice paradigms, interval scheduling, jump games | [Browse](Projects/Coding/13.%20Greedy/) |
+| **14** | [Bit Manipulation](Projects/Coding/14.%20Bit%20Manipulation/) | `14` | Bitwise XOR/AND/OR tricks, bitmasks, 2's complement properties | [Browse](Projects/Coding/14.%20Bit%20Manipulation/) |
 
-> Complete catalog of all 343 problems with direct links and target companies: **[Coding - LeetCode Masterclass Index](Projects/Coding/Coding%20-%20LeetCode%20Masterclass%20Index.md)**
+> Complete catalog of all 357 problems with direct links and target companies: **[Coding - LeetCode Masterclass Index](Projects/Coding/Coding%20-%20LeetCode%20Masterclass%20Index.md)**
 
 ---
 

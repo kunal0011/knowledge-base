@@ -5,6 +5,7 @@
 [![LeetCode Problems](https://img.shields.io/badge/Coding%20Patterns-357%20Solutions-brightgreen.svg)](#pillar-iii-coding--leetcode-masterclass-357-problems)
 [![Design Patterns](https://img.shields.io/badge/Design%20Patterns-14%20Covered-orange.svg)](#part-1-head-first-design-patterns-14-patterns)
 [![Runnable Labs](https://img.shields.io/badge/Simulation%20Labs-45%20Python%20Engines-brightgreen.svg)](#the-4-pillar-chapter-architecture)
+[![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-40%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch--40-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -179,6 +180,21 @@ A production-grade, interview-tested curriculum covering all **14 foundational a
 | **14** | [Bit Manipulation](Projects/Coding/14.%20Bit%20Manipulation/) | `14` | Bitwise XOR/AND/OR tricks, bitmasks, 2's complement properties | [Browse](Projects/Coding/14.%20Bit%20Manipulation/) |
 
 > Complete catalog of all 357 problems with direct links and target companies: **[Coding - LeetCode Masterclass Index](Projects/Coding/Coding%20-%20LeetCode%20Masterclass%20Index.md)**
+
+---
+
+## ⚡ Pillar IV: Data & AI Computing Frameworks (NumPy, Pandas, PySpark, PyTorch — 40 Chapters)
+
+A publication-grade systems textbook covering the four foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence, citing canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga*):
+
+| Framework | Domain & Hardware Focus | Canonical Book References | Master Curriculum |
+| :--- | :--- | :--- | :---: |
+| **NumPy** | Strided N-D Buffers, Vectorized Ufuncs, BLAS/LAPACK Linear Algebra | *Guide to NumPy* (Travis Oliphant) & *Python for Data Analysis* (McKinney) | [10 Chapters](Projects/Data-and-AI-Frameworks/NumPy/README.md) |
+| **Pandas** | Tabular Data, BlockManager, Arrow Backend, Relational Merges | *Python for Data Analysis* (Wes McKinney) & *Effective Pandas* (Matt Harrison) | [10 Chapters](Projects/Data-and-AI-Frameworks/Pandas/README.md) |
+| **Apache Spark** | Distributed Big Data, Catalyst Query Optimizer, Tungsten CodeGen, Streaming | *Spark: The Definitive Guide* (Matei Zaharia) & *Learning Spark* (Jules Damji) | [10 Chapters](Projects/Data-and-AI-Frameworks/PySpark/README.md) |
+| **PyTorch** | Dynamic Autograd DAG, Mixed Precision (AMP), DDP/FSDP, `torch.compile` | *Deep Learning with PyTorch* (Eli Stevens et al.) & PyTorch Core Papers | [10 Chapters](Projects/Data-and-AI-Frameworks/PyTorch/README.md) |
+
+> Complete cross-framework comparison matrix & 40-chapter curriculum: **[Data & AI Frameworks Master Portal](Projects/Data-and-AI-Frameworks/README.md)**
 
 ---
 

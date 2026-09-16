@@ -7,6 +7,7 @@
 [![Runnable Labs](https://img.shields.io/badge/Simulation%20Labs-45%20Python%20Engines-brightgreen.svg)](#the-4-pillar-chapter-architecture)
 [![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-40%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch--40-chapters)
 [![Streaming & Distributed Engines](https://img.shields.io/badge/Distributed%20Engines-30%20Chapters-crimson.svg)](#-pillar-v-distributed-data--streaming-engines-kafka-flink-airflow--30-chapters)
+[![DDIA Systems](https://img.shields.io/badge/DDIA%20Systems-12%20Chapters-teal.svg)](#-pillar-vi-designing-data-intensive-applications-ddia--12-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -60,6 +61,12 @@ knowledge-base/
 │   │   ├── Kafka/                             # Distributed Event Store & Storage Topologies
 │   │   ├── Flink/                             # Stream Processing, Watermarks & State Backends
 │   │   └── Airflow/                           # Workflow Orchestration & Directed Acyclic Graphs
+│   │
+│   ├── Designing-Data-Intensive-Applications/ # Martin Kleppmann's DDIA Masterclass
+│   │   ├── README.md                          # Master Portal & Comparative Technology Matrix
+│   │   ├── Part-1-Foundations-of-Data-Systems/# Single-Node Storage, Models & Encoding
+│   │   ├── Part-2-Distributed-Data/           # Replication, Partitioning, ACID & Consensus
+│   │   └── Part-3-Derived-Data/               # Batch, Stream Processing & Unbundled Databases
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
@@ -216,6 +223,20 @@ A rigorous, textbook-grade distributed systems curriculum covering the three can
 | **Apache Airflow**| Distributed Orchestration, TaskFlow API, Dynamic Task Mapping, Timetables, Deferrable Operators | *Data Pipelines with Apache Airflow* (Bas P. Harenslak & Julian Rutger de Ruiter) | [10 Chapters](Projects/Distributed-Data-and-Streaming-Engines/Airflow/README.md) |
 
 > Complete cross-engine comparative matrix & 30-chapter curriculum: **[Distributed Data & Streaming Engines Master Portal](Projects/Distributed-Data-and-Streaming-Engines/README.md)**
+
+---
+
+## 📖 Pillar VI: Designing Data-Intensive Applications (DDIA — 12 Chapters)
+
+A publication-grade, first-principles systems treatise covering the entire canon of Martin Kleppmann's seminal work: **"Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems"** (O'Reilly):
+
+| Part | Focus & Domain | Foundational Theoretical Concepts | Chapters |
+| :--- | :--- | :--- | :---: |
+| **Part I: Foundations of Data Systems** | Storage Engines, Data Models & Formats | LSM-Trees, SSTables, B-Trees, OLAP Columnar, Protobuf/Avro, Schema Evolution | [4 Chapters](Projects/Designing-Data-Intensive-Applications/Part-1-Foundations-of-Data-Systems/) |
+| **Part II: Distributed Data** | Scale-out, Transactions, Network Realities | Dynamo Quorums ($W+R>N$), Hash Sharding, MVCC, Write Skew, Clock Drift, Raft Consensus | [5 Chapters](Projects/Designing-Data-Intensive-Applications/Part-2-Distributed-Data/) |
+| **Part III: Derived Data** | Batch, Stream Processing & Unbundling | MapReduce Joins, Spark DAGs, CDC vs Dual Writes, Event Sourcing, Unbundled Databases | [3 Chapters](Projects/Designing-Data-Intensive-Applications/Part-3-Derived-Data/) |
+
+> Complete cross-paradigm technology matrix & 12-chapter curriculum: **[Designing Data-Intensive Applications Master Portal](Projects/Designing-Data-Intensive-Applications/README.md)**
 
 ---
 

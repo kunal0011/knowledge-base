@@ -8,6 +8,7 @@
 [![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-40%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch--40-chapters)
 [![Streaming & Distributed Engines](https://img.shields.io/badge/Distributed%20Engines-30%20Chapters-crimson.svg)](#-pillar-v-distributed-data--streaming-engines-kafka-flink-airflow--30-chapters)
 [![DDIA Systems](https://img.shields.io/badge/DDIA%20Systems-12%20Chapters-teal.svg)](#-pillar-vi-designing-data-intensive-applications-ddia--12-chapters)
+[![Microservices Architecture](https://img.shields.io/badge/Microservices%20Design-10%20Chapters-darkgreen.svg)](#-pillar-vii-microservices-architecture--design-10-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -67,6 +68,19 @@ knowledge-base/
 │   │   ├── Part-1-Foundations-of-Data-Systems/# Single-Node Storage, Models & Encoding
 │   │   ├── Part-2-Distributed-Data/           # Replication, Partitioning, ACID & Consensus
 │   │   └── Part-3-Derived-Data/               # Batch, Stream Processing & Unbundled Databases
+│   │
+│   ├── Microservices-Architecture-and-Design/ # Polyglot Microservices Patterns & Blueprints
+│   │   ├── README.md                          # Master Architecture Portal & Pattern Taxonomy
+│   │   ├── 01. Decomposition, Bounded Contexts & Monolith Migration.md
+│   │   ├── 02. Inter-Service Communication - REST, gRPC & Messaging.md
+│   │   ├── 03. API Gateway, BFF & Service Discovery Topologies.md
+│   │   ├── 04. Distributed Data - Database-per-Service & CQRS.md
+│   │   ├── 05. Distributed Transactions & Saga Orchestration.md
+│   │   ├── 06. Transactional Outbox Pattern & CDC Ingestion.md
+│   │   ├── 07. Resilience Patterns - Circuit Breakers, Bulkheads & Retries.md
+│   │   ├── 08. Security & Identity - OAuth2, OIDC, JWT & Zero-Trust mTLS.md
+│   │   ├── 09. Observability - OpenTelemetry, Tracing & Metrics.md
+│   │   └── 10. Multi-Language Microservice Blueprint (Java, Go, Python).md
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
@@ -237,6 +251,27 @@ A publication-grade, first-principles systems treatise covering the entire canon
 | **Part III: Derived Data** | Batch, Stream Processing & Unbundling | MapReduce Joins, Spark DAGs, CDC vs Dual Writes, Event Sourcing, Unbundled Databases | [3 Chapters](Projects/Designing-Data-Intensive-Applications/Part-3-Derived-Data/) |
 
 > Complete cross-paradigm technology matrix & 12-chapter curriculum: **[Designing Data-Intensive Applications Master Portal](Projects/Designing-Data-Intensive-Applications/README.md)**
+
+---
+
+## 🧩 Pillar VII: Microservices Architecture & Design (10 Chapters)
+
+A publication-grade systems textbook covering the core architectural patterns, distributed transaction models, resilience engineering, security, and observability across **Java (Spring Boot 3)**, **Go (Cloud-Native Go)**, and **Python (FastAPI)**, citing canonical literature (*Richardson, Newman, Titmus, Percival & Gregory*):
+
+| Chapter | Pattern & Domain Focus | Theoretical & Runtime Concepts | Master Chapter |
+| :---: | :--- | :--- | :---: |
+| **01** | **Decomposition & Monolith Migration** | Conway's Law, DDD Bounded Contexts, Strangler Fig, Anti-Corruption Layer (ACL) | [Chapter 01](Projects/Microservices-Architecture-and-Design/01.%20Decomposition,%20Bounded%20Contexts%20&%20Monolith%20Migration.md) |
+| **02** | **Inter-Service Communication** | HTTP/1.1 vs HTTP/2 Binary Framing, Protobuf, gRPC Streaming, Async Kafka Messaging | [Chapter 02](Projects/Microservices-Architecture-and-Design/02.%20Inter-Service%20Communication%20-%20REST,%20gRPC%20&%20Messaging.md) |
+| **03** | **API Gateway & Service Discovery** | Ingress Routing, BFF Pattern, Client-Side vs Server-Side Discovery, Rate Limiting | [Chapter 03](Projects/Microservices-Architecture-and-Design/03.%20API%20Gateway,%20BFF%20&%20Service%20Discovery%20Topologies.md) |
+| **04** | **Distributed Data & CQRS** | Database-per-Service, Dual-Write Pitfalls, CQRS Command vs Query, Read Projections | [Chapter 04](Projects/Microservices-Architecture-and-Design/04.%20Distributed%20Data%20-%20Database-per-Service%20&%20CQRS.md) |
+| **05** | **Distributed Transactions & Sagas** | 2PC Failure Modes, Choreography vs Orchestration Sagas, Compensations, Pivot Steps | [Chapter 05](Projects/Microservices-Architecture-and-Design/05.%20Distributed%20Transactions%20&%20Saga%20Orchestration.md) |
+| **06** | **Transactional Outbox & CDC** | Dual-Write Elimination, Outbox Tables, Postgres WAL / Debezium CDC, Transactional Inbox | [Chapter 06](Projects/Microservices-Architecture-and-Design/06.%20Transactional%20Outbox%20Pattern%20&%20CDC%20Ingestion.md) |
+| **07** | **Resilience Patterns** | Cascading Avalanches, Circuit Breakers, Bulkheads, Full Jitter Exponential Backoff | [Chapter 07](Projects/Microservices-Architecture-and-Design/07.%20Resilience%20Patterns%20-%20Circuit%20Breakers,%20Bulkheads%20&%20Retries.md) |
+| **08** | **Security & Identity** | Zero-Trust (ZTA), Asymmetric RS256 JWT, JWKS Key Rotation, SPIFFE/SPIRE mTLS | [Chapter 08](Projects/Microservices-Architecture-and-Design/08.%20Security%20&%20Identity%20-%20OAuth2,%20OIDC,%20JWT%20&%20Zero-Trust%20mTLS.md) |
+| **09** | **Observability & OpenTelemetry** | Distributed Tracing, W3C traceparent, Prometheus Metrics, Tail-Based Sampling | [Chapter 09](Projects/Microservices-Architecture-and-Design/09.%20Observability%20-%20OpenTelemetry,%20Tracing%20&%20Metrics.md) |
+| **10** | **Multi-Language Blueprint** | End-to-End E-Commerce Checkout: Spring Boot 3 + Go gRPC + FastAPI Async Ingestion | [Chapter 10](Projects/Microservices-Architecture-and-Design/10.%20Multi-Language%20Microservice%20Blueprint%20%28Java,%20Go,%20Python%29.md) |
+
+> Complete cross-language runtime matrix & pattern taxonomy: **[Microservices Architecture & Design Master Portal](Projects/Microservices-Architecture-and-Design/README.md)**
 
 ---
 

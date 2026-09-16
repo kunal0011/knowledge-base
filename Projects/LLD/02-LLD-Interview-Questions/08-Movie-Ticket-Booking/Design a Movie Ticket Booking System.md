@@ -78,6 +78,31 @@ classDiagram
     Booking --> Seat
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant App as BookingApp
+    participant Show as ShowService
+    participant Lock as SeatLockManager
+    participant Payment as PaymentGateway
+
+    Customer->>App: selectSeats(showId, seatIds=["A1", "A2"])
+    App->>Show: lockSeats(seatIds, userId)
+    Show->>Lock: acquireLock(seatIds, duration=5min)
+    Lock-->>Show: Lock Granted (Status: LOCKED)
+    Show-->>App: Seats Locked (Start 5-min timer)
+    App->>Payment: pay(amount=$30.00)
+    Payment-->>App: Payment Success
+    App->>Show: confirmBooking(seatIds, paymentId)
+    Show->>Lock: commitBooking(seatIds)
+    Lock-->>Show: Seats Status -> BOOKED
+    Show-->>Customer: Tickets Issued
+```
+
+
 ## 4. Key Implementation (Python)
 
 ```python
@@ -168,6 +193,119 @@ class BookingService:
             return booking_id
         return None
 ```
+
+### Java
+
+```java
+package com.lld.movieticket;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum SeatStatus { AVAILABLE, LOCKED, BOOKED }
+
+class Seat {
+    private final String seatId;
+    private final int row;
+    private final int col;
+    private final double price;
+
+    public Seat(String seatId, int row, int col, double price) {
+        this.seatId = seatId;
+        this.row = row;
+        this.col = col;
+        this.price = price;
+    }
+    public String getSeatId() { return seatId; }
+    public double getPrice() { return price; }
+}
+
+public class MovieTicketBookingSystem {
+    private final Map<String, SeatStatus> seatStatus = new ConcurrentHashMap<>();
+    private final Map<String, LocalDateTime> lockExpirations = new ConcurrentHashMap<>();
+    private final Map<String, Seat> seats = new HashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private static final int LOCK_DURATION_MINUTES = 5;
+
+    public void addSeat(Seat seat) {
+        seats.put(seat.getSeatId(), seat);
+        seatStatus.put(seat.getSeatId(), SeatStatus.AVAILABLE);
+    }
+
+    public boolean lockSeats(List<String> seatIds, String userId) {
+        lock.lock();
+        try {
+            cleanupExpiredLocks();
+            // Validate all seats are available
+            for (String sid : seatIds) {
+                if (seatStatus.get(sid) != SeatStatus.AVAILABLE) {
+                    return false;
+                }
+            }
+            // Acquire temporary lock
+            LocalDateTime expiry = LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES);
+            for (String sid : seatIds) {
+                seatStatus.put(sid, SeatStatus.LOCKED);
+                lockExpirations.put(sid, expiry);
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean bookSeats(List<String> seatIds, String userId) {
+        lock.lock();
+        try {
+            for (String sid : seatIds) {
+                if (seatStatus.get(sid) != SeatStatus.LOCKED) {
+                    return false;
+                }
+            }
+            for (String sid : seatIds) {
+                seatStatus.put(sid, SeatStatus.BOOKED);
+                lockExpirations.remove(sid);
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void cleanupExpiredLocks() {
+        LocalDateTime now = LocalDateTime.now();
+        for (Map.Entry<String, LocalDateTime> entry : lockExpirations.entrySet()) {
+            if (now.isAfter(entry.getValue())) {
+                seatStatus.put(entry.getKey(), SeatStatus.AVAILABLE);
+                lockExpirations.remove(entry.getKey());
+            }
+        }
+    }
+}
+```
+
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent seat locking race | `ReentrantLock` guards `lockSeats()` so batch checks and lock allocations are fully atomic |
+| Abandoned carts / Lock expiry | Lazy lock cleanup during retrieval + scheduled background reaper thread |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `SeatLockManager` separates ephemeral locking logic from `Show` inventory and `Payment` services |
+| **O** — Open/Closed | Pricing strategies (VIP, matinee, surge) easily injected via Strategy pattern |
+| **D** — Dependency Inversion | Payment processor decoupled behind interface abstraction |
+
+---
 
 ## 5. Key Design Decisions
 

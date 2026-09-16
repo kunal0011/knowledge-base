@@ -50,10 +50,37 @@ classDiagram
         REQUESTED, MATCHED, EN_ROUTE, IN_PROGRESS, COMPLETED, CANCELLED
     }
 
+```mermaid
     RideService --> Ride
     RideService --> MatchingStrategy
     RideService --> FareStrategy
     Ride --> Driver
+```
+
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Rider
+    participant Service as RideService
+    participant Matching as DriverMatchingStrategy
+    participant Fare as SurgeFareStrategy
+    actor Driver
+
+    Rider->>Service: requestRide(pickup, dest, RideType.PREMIUM)
+    Service->>Fare: calculateFare(pickup, dest, surgeMultiplier=1.5)
+    Fare-->>Service: Estimated Fare: $32.50
+    Service->>Matching: findNearestDriver(pickup, availableDrivers)
+    Matching->>Driver: dispatchRideOffer(rideId, pickup, fare)
+    Driver-->>Matching: acceptRide()
+    Matching-->>Service: Driver Matched (Driver #9)
+    Service-->>Rider: Ride Confirmed (Driver 5 mins away)
+    Driver->>Service: updateStatus(ARRIVED_AT_PICKUP)
+    Driver->>Service: startTrip(OTP)
+    Service-->>Rider: Trip In Progress
+    Driver->>Service: completeTrip()
+    Service-->>Rider: Receipt & Charge Card ($32.50)
 ```
 
 ## 3. Key Implementation (Python)
@@ -140,13 +167,121 @@ class RideService:
         return round((self.BASE_FARE + distance * self.PER_KM_RATE) * ride_type.value[0], 2)
 ```
 
+### Java
+
+```java
+package com.lld.ridesharing;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum RideStatus { REQUESTED, MATCHED, EN_ROUTE, IN_PROGRESS, COMPLETED, CANCELLED }
+
+class Location {
+    private final double lat;
+    private final double lng;
+
+    public Location(double lat, double lng) {
+        this.lat = lat;
+        this.lng = lng;
+    }
+
+    public double distanceTo(Location other) {
+        return Math.hypot(this.lat - other.lat, this.lng - other.lng);
+    }
+}
+
+class Driver {
+    private final String driverId;
+    private final String name;
+    private volatile Location location;
+    private volatile boolean available = true;
+
+    public Driver(String driverId, String name, Location location) {
+        this.driverId = driverId;
+        this.name = name;
+        this.location = location;
+    }
+
+    public synchronized boolean lockDriver() {
+        if (available) {
+            available = false;
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void releaseDriver() { available = true; }
+    public boolean isAvailable() { return available; }
+    public Location getLocation() { return location; }
+    public String getName() { return name; }
+}
+
+public class RideSharingService {
+    private final List<Driver> drivers = new CopyOnWriteArrayList<>();
+    private final Map<String, RideStatus> activeRides = new ConcurrentHashMap<>();
+    private final ReentrantLock matchLock = new ReentrantLock();
+
+    public void registerDriver(Driver driver) { drivers.add(driver); }
+
+    public Driver matchNearestDriver(Location pickup) {
+        matchLock.lock();
+        try {
+            Driver bestDriver = null;
+            double minDistance = Double.MAX_VALUE;
+
+            for (Driver driver : drivers) {
+                if (driver.isAvailable()) {
+                    double dist = driver.getLocation().distanceTo(pickup);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestDriver = driver;
+                    }
+                }
+            }
+            if (bestDriver != null && bestDriver.lockDriver()) {
+                return bestDriver;
+            }
+            return null;
+        } finally {
+            matchLock.unlock();
+        }
+    }
+}
+```
+
+---
+
 ## 4. Patterns: **Strategy** (matching + fare + surge pricing) | **State** (ride lifecycle) | **Observer** (real-time tracking)
 
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Race on driver assignment | `matchLock` combined with `Driver.lockDriver()` guarantees no two riders are matched with identical driver |
+| Real-time driver telemetry | Volatile `Location` fields allow concurrent reads by distance proximity algorithms |
+| Trip state progression | `ConcurrentHashMap` holds thread-safe ride status mutations |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `DriverMatchingStrategy` handles spatial search; `FareStrategy` handles pricing; `Ride` tracks lifecycle |
+| **O** — Open/Closed | Surge pricing, pooled rides, and VIP tiers extend via Strategy pattern without modifying core matching |
+| **D** — Dependency Inversion | High-level `RideService` depends on abstract `MatchingStrategy` contracts |
+
+---
+
 ## 5. Follow-ups
-- **Surge pricing?** Multiplier based on demand/supply ratio in area.
-- **Ride pooling?** Match multiple riders on similar routes.
-- **Driver incentives?** Bonus for completing N rides per day.
+- **Surge pricing?** Multiplier based on real-time spatial H3 hexagonal demand/supply clustering.
+- **Ride pooling?** Dynamic route insertion heuristic (Detour tolerance $\le 10$ minutes).
+- **Driver incentives?** Observer pattern triggering daily streak bonuses on ride completions.
 
 ---
 
 **Related:** [[01 - Strategy Pattern]] | [[13 - State Pattern]] | [[02 - Observer Pattern]]
+

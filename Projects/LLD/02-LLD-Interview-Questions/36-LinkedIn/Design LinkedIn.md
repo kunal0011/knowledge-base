@@ -11,7 +11,98 @@ tags: [lld, interview-prep, linkedin, observer-pattern]
 ## 1. Problem Statement
 Design LLD for a professional networking platform with profiles, connections, messaging, job postings, and feed.
 
-## 2. Key Implementation (Python)
+## 2. Class & Sequence Design
+
+```mermaid
+classDiagram
+    class ConnectionStatus {
+        <<enumeration>>
+        PENDING
+        ACCEPTED
+        REJECTED
+    }
+    class UserProfile {
+        -String userId
+        -String name
+        -String headline
+        -List~String~ skills
+        +addSkill(skill) void
+    }
+    class User {
+        -String userId
+        -UserProfile profile
+        -Set~String~ connections
+        -Map~String, ConnectionStatus~ pendingRequests
+        +sendConnectionRequest(targetUser) void
+        +acceptRequest(senderId) void
+        +getConnections() Set~String~
+    }
+    class JobPosting {
+        -String jobId
+        -String title
+        -String company
+        -Set~String~ applicants
+        +apply(userId) boolean
+    }
+    class LinkedInService {
+        -Map~String, User~ users
+        -Map~String, JobPosting~ jobs
+        +connect(senderId, receiverId) void
+        +acceptConnection(receiverId, senderId) void
+        +getMutualConnections(u1, u2) Set~String~
+        +getSecondDegreeRecommendations(userId) Set~String~
+    }
+
+    LinkedInService o-- User
+    LinkedInService o-- JobPosting
+    User o-- UserProfile
+    User --> ConnectionStatus
+```
+
+### Sequence Diagram: Connection Request, Acceptance, and Graph Edge Formation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice
+    participant LS as LinkedInService
+    participant UAlice as User (Alice)
+    participant UBob as User (Bob)
+    actor Bob
+
+    Alice->>LS: sendConnectionRequest(sender: "Alice", receiver: "Bob")
+    activate LS
+    LS->>UAlice: validateCanConnect(targetId: "Bob")
+    LS->>UBob: receiveRequest("Alice", PENDING)
+    activate UBob
+    UBob-->>LS: requestRecorded
+    deactivate UBob
+    LS-->>Bob: pushNotification("Alice sent you a connection request")
+    LS-->>Alice: requestSent
+    deactivate LS
+
+    Note over Bob,LS: Bob reviews and accepts the invitation
+    Bob->>LS: acceptConnection(receiver: "Bob", sender: "Alice")
+    activate LS
+    LS->>UBob: acceptRequest("Alice")
+    activate UBob
+    UBob->>UBob: connections.add("Alice")
+    UBob-->>LS: accepted
+    deactivate UBob
+
+    LS->>UAlice: addConnection("Bob")
+    activate UAlice
+    UAlice->>UAlice: connections.add("Bob")
+    deactivate UAlice
+
+    LS-->>Bob: connectionEstablished("Alice is now a 1st-degree connection")
+    LS-->>Alice: pushNotification("Bob accepted your connection request!")
+    deactivate LS
+```
+
+## 3. Key Implementation
+
+### Python
 
 ```python
 from typing import Dict, List, Set, Optional
@@ -87,7 +178,6 @@ class LinkedInService:
         return self.users[user1_id].connections & self.users[user2_id].connections
 
     def get_recommendations(self, user_id: str) -> List[str]:
-        """2nd degree connections — friends of friends"""
         user = self.users[user_id]
         recommendations = set()
         for conn_id in user.connections:
@@ -99,13 +189,200 @@ class LinkedInService:
         return list(recommendations)
 ```
 
-## 3. Patterns: **Observer** (feed, notifications) | **Strategy** (recommendation algorithms) | **State** (connection request lifecycle)
+### Java
 
-## 4. Follow-ups
-- **Endorsements?** Users endorse specific skills of connections.
-- **Content feed?** Ranked feed from connections' posts + engagement.
-- **People you may know?** Graph-based 2nd/3rd degree connections with mutual count.
+```java
+package com.lld.linkedin;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+
+enum ConnectionStatus {
+    PENDING, ACCEPTED, REJECTED
+}
+
+class UserProfile {
+    private final String userId;
+    private final String name;
+    private final String headline;
+    private final List<String> skills = new CopyOnWriteArrayList<>();
+
+    public UserProfile(String userId, String name, String headline) {
+        this.userId = userId;
+        this.name = name;
+        this.headline = headline;
+    }
+
+    public String getUserId() { return userId; }
+    public String getName() { return name; }
+    public String getHeadline() { return headline; }
+    public List<String> getSkills() { return Collections.unmodifiableList(skills); }
+    public void addSkill(String skill) { skills.add(skill); }
+}
+
+class User {
+    private final String userId;
+    private final UserProfile profile;
+    private final Set<String> connections = ConcurrentHashMap.newKeySet();
+    private final Map<String, ConnectionStatus> pendingRequests = new ConcurrentHashMap<>();
+
+    public User(String userId, String name, String headline) {
+        this.userId = userId;
+        this.profile = new UserProfile(userId, name, headline);
+    }
+
+    public String getUserId() { return userId; }
+    public UserProfile getProfile() { return profile; }
+    public Set<String> getConnections() { return Collections.unmodifiableSet(connections); }
+    public Map<String, ConnectionStatus> getPendingRequests() { return pendingRequests; }
+
+    public void receiveConnectionRequest(String senderId) {
+        if (!connections.contains(senderId)) {
+            pendingRequests.put(senderId, ConnectionStatus.PENDING);
+        }
+    }
+
+    public synchronized boolean acceptConnectionRequest(String senderId) {
+        if (pendingRequests.get(senderId) == ConnectionStatus.PENDING) {
+            pendingRequests.put(senderId, ConnectionStatus.ACCEPTED);
+            connections.add(senderId);
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void addConnection(String friendId) {
+        connections.add(friendId);
+    }
+}
+
+class JobPosting {
+    private final String jobId;
+    private final String company;
+    private final String title;
+    private final List<String> requiredSkills;
+    private final Set<String> applicants = ConcurrentHashMap.newKeySet();
+
+    public JobPosting(String jobId, String company, String title, List<String> requiredSkills) {
+        this.jobId = jobId;
+        this.company = company;
+        this.title = title;
+        this.requiredSkills = new ArrayList<>(requiredSkills);
+    }
+
+    public String getJobId() { return jobId; }
+    public String getCompany() { return company; }
+    public String getTitle() { return title; }
+    public List<String> getRequiredSkills() { return Collections.unmodifiableList(requiredSkills); }
+    public Set<String> getApplicants() { return Collections.unmodifiableSet(applicants); }
+
+    public boolean apply(String userId) {
+        return applicants.add(userId);
+    }
+}
+
+public class LinkedInService {
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+    private final Map<String, JobPosting> jobs = new ConcurrentHashMap<>();
+
+    public User registerUser(String userId, String name, String headline) {
+        User user = new User(userId, name, headline);
+        users.put(userId, user);
+        return user;
+    }
+
+    public void sendConnectionRequest(String fromUserId, String toUserId) {
+        User recipient = users.get(toUserId);
+        if (recipient != null && !recipient.getConnections().contains(fromUserId)) {
+            recipient.receiveConnectionRequest(fromUserId);
+            System.out.printf("[Invite] %s -> %s connection request sent.%n", fromUserId, toUserId);
+        }
+    }
+
+    public void acceptConnectionRequest(String receiverId, String senderId) {
+        User receiver = users.get(receiverId);
+        User sender = users.get(senderId);
+        if (receiver != null && sender != null) {
+            boolean accepted = receiver.acceptConnectionRequest(senderId);
+            if (accepted) {
+                sender.addConnection(receiverId);
+                System.out.printf("[Connected] %s and %s are now 1st-degree connections.%n", senderId, receiverId);
+            }
+        }
+    }
+
+    public Set<String> getMutualConnections(String user1Id, String user2Id) {
+        User u1 = users.get(user1Id);
+        User u2 = users.get(user2Id);
+        if (u1 == null || u2 == null) return Collections.emptySet();
+
+        Set<String> mutual = new HashSet<>(u1.getConnections());
+        mutual.retainAll(u2.getConnections());
+        return mutual;
+    }
+
+    public Set<String> getSecondDegreeRecommendations(String userId) {
+        User user = users.get(userId);
+        if (user == null) return Collections.emptySet();
+
+        Set<String> firstDegree = user.getConnections();
+        Set<String> secondDegree = new HashSet<>();
+
+        for (String friendId : firstDegree) {
+            User friend = users.get(friendId);
+            if (friend != null) {
+                secondDegree.addAll(friend.getConnections());
+            }
+        }
+        secondDegree.remove(userId);
+        secondDegree.removeAll(firstDegree);
+        return secondDegree;
+    }
+
+    public void postJob(JobPosting job) {
+        jobs.put(job.getJobId(), job);
+    }
+
+    public List<JobPosting> searchJobsBySkill(String skill) {
+        return jobs.values().stream()
+                .filter(j -> j.getRequiredSkills().stream().anyMatch(s -> s.equalsIgnoreCase(skill)))
+                .collect(Collectors.toList());
+    }
+}
+```
+
+## 4. Thread Safety Considerations
+
+| Component | Concurrency Hazard | Mitigation Strategy |
+| :--- | :--- | :--- |
+| **Bi-directional Edge Creation** | Partial state if one thread crashes during 2-way friendship insertion | Synchronized connection addition ensuring both user adjacency lists record the edge concurrently. |
+| **Pending Request State Races** | User accepts and rejects same invitation concurrently | Map state checked with atomic compare/update (`pendingRequests.put` under lock). |
+| **Job Applications Idempotency** | Double submission of job application on button double-click | `ConcurrentHashMap.newKeySet().add()` guarantees idempotent insertion of applicant IDs. |
+| **Graph Traversal under Churn** | Calculating 2nd-degree connections while users are actively connecting | Copy-on-read defensive snapshots of connection sets prevent `ConcurrentModificationException`. |
+
+## 5. Extensibility & SOLID Principles
+
+| Principle | Implementation in Design |
+| :--- | :--- |
+| **Single Responsibility (SRP)** | `UserProfile` handles identity/skills; `User` manages social network edges; `JobPosting` coordinates recruitment pipelines. |
+| **Open/Closed (OCP)** | Pluggable recommendation engines (Mutual Count, Common Industry, Graph Neural Network score) implement `ConnectionRecommender` interface. |
+| **Liskov Substitution (LSP)** | Different account tiers (`StandardUser`, `PremiumUser`, `RecruiterUser`) inherit from base `User` with consistent messaging contracts. |
+| **Interface Segregation (ISP)** | Job seeker interfaces separated from Recruiter candidate search and posting APIs. |
+| **Dependency Inversion (DIP)** | Feed distribution and notifications triggered through pub/sub event bus rather than direct user object linkage. |
+
+## 6. Patterns
+- **Observer**: Connection events triggering newsfeed posts and notifications.
+- **Strategy**: Social graph search and "People You May Know" recommendation algorithms.
+- **State**: Connection request lifecycle transitions (`PENDING` $\to$ `ACCEPTED` / `REJECTED`).
+
+## 7. Follow-ups
+- **Skill endorsements?** Endorsement model mapping `(endorserId, candidateId, skillId)` with social proof counts.
+- **Multi-degree connection distance?** Bidirectional BFS to find shortest path (1st, 2nd, 3rd degree) between any two profiles.
+- **Feed ranking algorithm?** Engagement scoring: $Score = \alpha \cdot \text{affinity} + \beta \cdot \text{weight} - \gamma \cdot \text{decay}$.
 
 ---
 
 **Related:** [[02 - Observer Pattern]] | [[01 - Strategy Pattern]] | [[13 - State Pattern]]
+

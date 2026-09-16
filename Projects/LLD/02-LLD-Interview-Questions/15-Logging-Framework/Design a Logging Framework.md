@@ -46,6 +46,27 @@ classDiagram
     Formatter <|.. JSONFormatter
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor App as Application Code
+    participant Logger as Logger (Singleton)
+    participant Filter as LevelFilter
+    participant Formatter as LogFormatter
+    participant Appender as Appender (Console / File)
+
+    App->>Logger: log(LogLevel.ERROR, "Database Timeout")
+    Logger->>Filter: shouldLog(LogLevel.ERROR)
+    Filter-->>Logger: true (Level >= Threshold)
+    Logger->>Formatter: format("Database Timeout", timestamp, thread)
+    Formatter-->>Logger: "[2026-09-16 10:00:00] [ERROR] Database Timeout"
+    Logger->>Appender: append(formattedMessage)
+    Appender-->>App: Message written to Console & S3 File
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -135,7 +156,86 @@ class Logger:
     def error(self, msg): self.log(LogLevel.ERROR, msg)
 ```
 
+### Java
+
+```java
+package com.lld.logging;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+enum LogLevel { DEBUG, INFO, WARN, ERROR }
+
+interface LogAppender {
+    void write(String message);
+}
+
+class ConsoleAppender implements LogAppender {
+    @Override
+    public void write(String message) { System.out.println("[CONSOLE] " + message); }
+}
+
+class FileAppender implements LogAppender {
+    @Override
+    public void write(String message) { System.out.println("[FILE] " + message); }
+}
+
+public class Logger {
+    private static volatile Logger instance;
+    private LogLevel minimumLevel = LogLevel.INFO;
+    private final List<LogAppender> appenders = new CopyOnWriteArrayList<>();
+
+    private Logger() {
+        appenders.add(new ConsoleAppender());
+    }
+
+    public static Logger getInstance() {
+        if (instance == null) {
+            synchronized (Logger.class) {
+                if (instance == null) {
+                    instance = new Logger();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public void addAppender(LogAppender appender) { appenders.add(appender); }
+    public void setMinimumLevel(LogLevel level) { this.minimumLevel = level; }
+
+    public void log(LogLevel level, String message) {
+        if (level.ordinal() < minimumLevel.ordinal()) return;
+        String formatted = String.format("[%s] [%s] %s", LocalDateTime.now(), level, message);
+        for (LogAppender appender : appenders) {
+            appender.write(formatted);
+        }
+    }
+}
+```
+
+
 ## 4. Patterns: **Singleton** (Logger.getLogger) | **Strategy** (formatters) | **Chain of Responsibility** (handler chain)
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Singleton Initialization | Double-Checked Locking with `volatile` prevents instruction reordering race |
+| Concurrent logging | `CopyOnWriteArrayList` permits lock-free log dispatching across multi-threaded applications |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Logger` controls log flow; `LogAppender` handles output sink IO |
+| **O** — Open/Closed | Remote sinks (Elasticsearch, Kafka) plug in by implementing `LogAppender` |
+| **D** — Dependency Inversion | Logger depends on the `LogAppender` interface, not concrete file or console sinks |
+
+---
 
 ## 5. Follow-ups
 - **Async logging?** Background thread with queue for non-blocking I/O.

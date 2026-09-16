@@ -63,6 +63,34 @@ classDiagram
     DeliveryAssignmentStrategy <|.. LeastLoadStrategy
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Service as OrderService
+    participant Restaurant as Kitchen
+    participant Dispatcher as DeliveryAssignmentStrategy
+    actor Agent as DeliveryAgent
+
+    Customer->>Service: placeOrder(restaurantId, items)
+    Service->>Restaurant: notifyNewOrder(orderId, items)
+    Restaurant-->>Service: Order Accepted (PREPARING)
+    Service->>Dispatcher: assignAgent(order, availableAgents)
+    Dispatcher->>Agent: offerDelivery(orderId, pickupLoc)
+    Agent-->>Dispatcher: Accept Assignment
+    Dispatcher-->>Service: Agent Assigned
+    Service-->>Customer: Order Confirmed (ETA: 30 mins)
+    Restaurant->>Service: Order Ready (FOOD_READY)
+    Service->>Agent: notifyPickupReady()
+    Agent->>Restaurant: Pick up food
+    Agent->>Customer: Deliver food & request OTP
+    Customer->>Agent: provideOTP(4821)
+    Agent->>Service: completeDelivery(orderId)
+    Service-->>Customer: Order Delivered (Status: DELIVERED)
+```
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -149,14 +177,136 @@ class OrderService:
         return min(available, key=lambda a: a.location.distance_to(restaurant_loc))
 ```
 
+### Java
+
+```java
+package com.lld.fooddelivery;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum OrderStatus { PLACED, CONFIRMED, PREPARING, PICKED_UP, DELIVERED, CANCELLED }
+
+class Location {
+    private final double lat;
+    private final double lng;
+
+    public Location(double lat, double lng) {
+        this.lat = lat;
+        this.lng = lng;
+    }
+
+    public double distanceTo(Location other) {
+        return Math.hypot(this.lat - other.lat, this.lng - other.lng);
+    }
+}
+
+class MenuItem {
+    private final String name;
+    private final double price;
+
+    public MenuItem(String name, double price) {
+        this.name = name;
+        this.price = price;
+    }
+    public double getPrice() { return price; }
+    public String getName() { return name; }
+}
+
+class DeliveryAgent {
+    private final String agentId;
+    private final String name;
+    private volatile Location location;
+    private volatile boolean available = true;
+
+    public DeliveryAgent(String agentId, String name, Location location) {
+        this.agentId = agentId;
+        this.name = name;
+        this.location = location;
+    }
+
+    public synchronized boolean tryAssign() {
+        if (available) {
+            available = false;
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void release() { available = true; }
+    public boolean isAvailable() { return available; }
+    public Location getLocation() { return location; }
+    public String getName() { return name; }
+}
+
+public class FoodDeliveryService {
+    private final Map<String, OrderStatus> orderStatuses = new ConcurrentHashMap<>();
+    private final List<DeliveryAgent> agents = new CopyOnWriteArrayList<>();
+    private final ReentrantLock dispatchLock = new ReentrantLock();
+
+    public void registerAgent(DeliveryAgent agent) {
+        agents.add(agent);
+    }
+
+    public DeliveryAgent dispatchNearestAgent(Location restaurantLoc) {
+        dispatchLock.lock();
+        try {
+            DeliveryAgent best = null;
+            double minDist = Double.MAX_VALUE;
+
+            for (DeliveryAgent agent : agents) {
+                if (agent.isAvailable()) {
+                    double dist = agent.getLocation().distanceTo(restaurantLoc);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        best = agent;
+                    }
+                }
+            }
+            if (best != null && best.tryAssign()) {
+                return best;
+            }
+            return null;
+        } finally {
+            dispatchLock.unlock();
+        }
+    }
+}
+```
+
+---
+
 ## 4. Patterns: **Strategy** (delivery assignment) | **State** (order status) | **Observer** (real-time tracking)
 
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent driver assignment race | `dispatchLock` and `DeliveryAgent.tryAssign()` prevent double-assigning the same courier |
+| Live location updates | Volatile `Location` fields allow concurrent reads by distance algorithms |
+| Status pipeline transitions | ConcurrentHashMap holds thread-safe order progression states |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `DeliveryAssignmentStrategy` isolates routing algorithms from cart/order logic |
+| **O** — Open/Closed | Pluggable dispatch algorithms (Nearest, Highest Rated, Batch Pooling) via Strategy pattern |
+| **D** — Dependency Inversion | Dispatcher depends on abstract `LocationAware` interface |
+
+---
+
 ## 5. Follow-ups
-- **ETA calculation?** Factor in distance, traffic, preparation time.
-- **Surge pricing?** Strategy pattern based on demand/supply ratio.
-- **Rating system?** Separate `RatingService` for restaurant and agent ratings.
-- **Cart management?** Single restaurant per cart, clear on restaurant switch.
+- **ETA calculation?** Factor in distance, live traffic coefficients, and historical kitchen prep time.
+- **Surge pricing?** Strategy pattern dynamically recalculating delivery fees based on active demand/supply ratio.
+- **Rating system?** Separate `RatingService` for decoupled restaurant and delivery partner review aggregation.
+- **Cart management?** Enforce single restaurant origin per active cart session; prompt user on switch.
 
 ---
 
 **Related:** [[01 - Strategy Pattern]] | [[13 - State Pattern]] | [[02 - Observer Pattern]]
+

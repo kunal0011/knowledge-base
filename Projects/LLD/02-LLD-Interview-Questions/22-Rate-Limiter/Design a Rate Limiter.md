@@ -38,6 +38,32 @@ classDiagram
     RateLimiter <|.. FixedWindowLimiter
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Gateway as APIGateway
+    participant Limiter as TokenBucketLimiter
+    participant Bucket as TokenBucket (Per Client)
+    participant Backend as Microservice
+
+    Client->>Gateway: GET /api/v1/resource (Client ID: 101)
+    Gateway->>Limiter: allowRequest("client_101")
+    Limiter->>Bucket: refillTokens(currentTime)
+    Bucket->>Bucket: tokens = min(cap, tokens + delta * rate)
+    alt tokens >= 1.0
+        Bucket->>Bucket: tokens -= 1.0
+        Limiter-->>Gateway: true (Allowed)
+        Gateway->>Backend: Forward Request
+        Backend-->>Client: 200 OK (Data Payload)
+    else tokens < 1.0
+        Limiter-->>Gateway: false (Throttled)
+        Gateway-->>Client: 429 Too Many Requests (Retry-After: 2s)
+    end
+```
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -107,6 +133,72 @@ class FixedWindowLimiter(RateLimiter):
             return self._windows[key] <= self.max_requests
 ```
 
+### Java
+
+```java
+package com.lld.ratelimiter;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+public interface RateLimiter {
+    boolean allowRequest(String clientId);
+}
+
+class TokenBucket {
+    private final long capacity;
+    private final double refillRatePerSecond;
+    private double currentTokens;
+    private long lastRefillTimestampNanos;
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public TokenBucket(long capacity, double refillRatePerSecond) {
+        this.capacity = capacity;
+        this.refillRatePerSecond = refillRatePerSecond;
+        this.currentTokens = capacity;
+        this.lastRefillTimestampNanos = System.nanoTime();
+    }
+
+    public boolean tryConsume() {
+        lock.lock();
+        try {
+            long now = System.nanoTime();
+            double secondsElapsed = (now - lastRefillTimestampNanos) / 1_000_000_000.0;
+            currentTokens = Math.min(capacity, currentTokens + secondsElapsed * refillRatePerSecond);
+            lastRefillTimestampNanos = now;
+
+            if (currentTokens >= 1.0) {
+                currentTokens -= 1.0;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+
+class TokenBucketRateLimiter implements RateLimiter {
+    private final long capacity;
+    private final double refillRatePerSecond;
+    private final ConcurrentHashMap<String, TokenBucket> buckets = new ConcurrentHashMap<>();
+
+    public TokenBucketRateLimiter(long capacity, double refillRatePerSecond) {
+        this.capacity = capacity;
+        this.refillRatePerSecond = refillRatePerSecond;
+    }
+
+    @Override
+    public boolean allowRequest(String clientId) {
+        TokenBucket bucket = buckets.computeIfAbsent(clientId, 
+            k -> new TokenBucket(capacity, refillRatePerSecond));
+        return bucket.tryConsume();
+    }
+}
+```
+
+---
+
 ## 4. Algorithm Comparison
 | Algorithm | Pros | Cons |
 |-----------|------|------|
@@ -115,10 +207,30 @@ class FixedWindowLimiter(RateLimiter):
 | **Fixed Window** | Simple, low memory | Boundary burst problem |
 | **Sliding Window Counter** | Good accuracy, low memory | Approximation |
 
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent requests from same client | Per-bucket `ReentrantLock` ensures exact token deductions without locking other clients |
+| Dynamic client registration | `ConcurrentHashMap.computeIfAbsent()` atomically creates client token buckets |
+| High throughput clock resolution | `System.nanoTime()` provides monotonic sub-microsecond precision resistant to system clock shifts |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `TokenBucket` handles refill math; `RateLimiter` maps clients to buckets |
+| **O** — Open/Closed | Sliding Window, Leaky Bucket, and Token Bucket plug in via `RateLimiter` interface |
+| **D** — Dependency Inversion | API Gateway depends on abstract `RateLimiter` interface |
+
+---
+
 ## 5. Follow-ups
-- **Distributed?** Redis + Lua scripts for atomic operations.
-- **Per-API-endpoint?** Composite key: `clientId:endpoint`.
-- **Response headers?** `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`.
+- **Distributed?** Redis + Lua scripts (`redis.call('get', key)`) for cluster-wide atomic token checks.
+- **Per-API-endpoint?** Composite key: `clientId:endpoint` or tiered quotas by user subscription level.
+- **Response headers?** Emit `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Retry-After: <seconds>` on 429 rejects.
 
 ---
 

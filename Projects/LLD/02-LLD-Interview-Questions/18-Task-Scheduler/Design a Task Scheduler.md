@@ -45,6 +45,30 @@ classDiagram
     ScheduledTask --> Task
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Scheduler as TaskScheduler
+    participant Queue as PriorityBlockingQueue
+    participant Worker as WorkerThread
+
+    Client->>Scheduler: schedule(task, delay=10s)
+    Scheduler->>Queue: offer(ScheduledTask(runTime=now+10s))
+    Queue-->>Scheduler: Enqueued
+    loop Continuous Worker Loop
+        Worker->>Queue: take() (Blocks until head task matures)
+        Queue-->>Worker: Task Ready (now >= runTime)
+        Worker->>Worker: task.run()
+        opt Recurring Task
+            Worker->>Queue: re-enqueue(ScheduledTask(runTime=now+period))
+        end
+    end
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -126,7 +150,91 @@ class TaskScheduler:
         self._running = False
 ```
 
+### Java
+
+```java
+package com.lld.taskscheduler;
+
+import java.util.concurrent.*;
+
+class ScheduledTask implements Delayed {
+    private final Runnable action;
+    private final long executeTimeMillis;
+
+    public ScheduledTask(Runnable action, long delayMillis) {
+        this.action = action;
+        this.executeTimeMillis = System.currentTimeMillis() + delayMillis;
+    }
+
+    public void execute() { action.run(); }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+        long diff = executeTimeMillis - System.currentTimeMillis();
+        return unit.convert(diff, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(Delayed other) {
+        return Long.compare(this.executeTimeMillis, ((ScheduledTask) other).executeTimeMillis);
+    }
+}
+
+public class TaskScheduler {
+    private final DelayQueue<ScheduledTask> queue = new DelayQueue<>();
+    private final ExecutorService threadPool;
+    private volatile boolean running = true;
+
+    public TaskScheduler(int numThreads) {
+        this.threadPool = Executors.newFixedThreadPool(numThreads);
+        new Thread(this::pollLoop).start();
+    }
+
+    public void schedule(Runnable action, long delayMillis) {
+        queue.put(new ScheduledTask(action, delayMillis));
+    }
+
+    private void pollLoop() {
+        while (running) {
+            try {
+                ScheduledTask task = queue.take(); // Blocks until task delay expires
+                threadPool.submit(task::execute);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
+    public void shutdown() {
+        this.running = false;
+        threadPool.shutdown();
+    }
+}
+```
+
+
 ## 4. Patterns: **Command** (Task objects) | **Strategy** (scheduling policies) | **Observer** (task completion callbacks)
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrency on schedule queue | Java's native `DelayQueue` handles lock-free thread-safe multi-producer/multi-consumer queuing |
+| Worker thread exhaustion | Worker execution offloaded to an bounded `ExecutorService` thread pool |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `DelayQueue` orders temporal triggers; `ScheduledTask` encapsulates command; `Scheduler` coordinates |
+| **O** — Open/Closed | Any arbitrary business logic can be passed via standard `Runnable` command interface |
+| **D** — Dependency Inversion | Scheduler depends on abstract command objects, completely decoupled from task behavior |
+
+---
 
 ## 5. Follow-ups
 - **Distributed?** Leader election + shared task queue (Redis/DB).

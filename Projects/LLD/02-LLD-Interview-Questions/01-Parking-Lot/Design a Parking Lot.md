@@ -152,6 +152,33 @@ classDiagram
     PricingStrategy <|.. HourlyPricing
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Driver
+    participant Entrance as EntryGate
+    participant Lot as ParkingLot
+    participant Floor as ParkingFloor
+    participant Spot as ParkingSpot
+    participant Ticket as TicketService
+
+    Driver->>Entrance: Arrive with Vehicle(license, type)
+    Entrance->>Lot: parkVehicle(vehicle)
+    Lot->>Floor: findAvailableSpot(vehicle.type)
+    Floor->>Spot: check availability
+    Spot-->>Floor: spotAvailable
+    Floor-->>Lot: ParkingSpot
+    Lot->>Spot: park(vehicle)
+    Spot-->>Lot: success
+    Lot->>Ticket: generateTicket(vehicle, spot)
+    Ticket-->>Lot: ParkingTicket
+    Lot-->>Entrance: ParkingTicket
+    Entrance-->>Driver: Issue Ticket & Open Gate
+```
+
+
 ---
 
 ## 5. Design Patterns Used

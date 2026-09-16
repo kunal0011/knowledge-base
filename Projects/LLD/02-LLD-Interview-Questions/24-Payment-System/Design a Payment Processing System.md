@@ -49,6 +49,33 @@ classDiagram
     PaymentMethod <|.. WalletPayment
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Service as PaymentService
+    participant Idem as IdempotencyManager
+    participant Gateway as PaymentMethodStrategy
+    participant Bank as ExternalBankProcessor
+
+    Customer->>Service: processPayment(amount=$150, method=CreditCard, idemKey="tx_8891")
+    Service->>Idem: checkAndLock(idemKey)
+    alt Duplicate Request
+        Idem-->>Service: Cached Result (Already Paid)
+        Service-->>Customer: PaymentResult(Success, tx_8891)
+    else First Time Request
+        Idem-->>Service: Lock Acquired (PENDING)
+        Service->>Gateway: pay(amount)
+        Gateway->>Bank: authorizeAndDebit(card, amount)
+        Bank-->>Gateway: Auth OK (BankRef: "BANK-9912")
+        Gateway-->>Service: PaymentResult(Success, "CC-7712")
+        Service->>Idem: commitSuccess(idemKey, result)
+        Service-->>Customer: Payment Completed
+    end
+```
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -136,13 +163,107 @@ class PaymentService:
         return False
 ```
 
+### Java
+
+```java
+package com.lld.payment;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum PaymentStatus { PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED }
+
+class PaymentResult {
+    private final boolean success;
+    private final String transactionId;
+    private final String errorMessage;
+
+    public PaymentResult(boolean success, String transactionId, String errorMessage) {
+        this.success = success;
+        this.transactionId = transactionId;
+        this.errorMessage = errorMessage;
+    }
+    public boolean isSuccess() { return success; }
+    public String getTransactionId() { return transactionId; }
+}
+
+interface PaymentStrategy {
+    PaymentResult pay(double amount);
+    boolean refund(String transactionId);
+}
+
+class CreditCardStrategy implements PaymentStrategy {
+    private final String maskedCard;
+    public CreditCardStrategy(String cardNum) {
+        this.maskedCard = "***" + cardNum.substring(Math.max(0, cardNum.length() - 4));
+    }
+    @Override
+    public PaymentResult pay(double amount) {
+        String txn = "CC-" + UUID.randomUUID().toString().substring(0, 8);
+        return new PaymentResult(true, txn, null);
+    }
+    @Override
+    public boolean refund(String txnId) { return true; }
+}
+
+public class PaymentService {
+    private final Map<String, PaymentResult> idempotencyRecords = new ConcurrentHashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public PaymentResult processPaymentWithIdempotency(String idempotencyKey, double amount, PaymentStrategy strategy) {
+        // Fast path: idempotency cache hit
+        PaymentResult existing = idempotencyRecords.get(idempotencyKey);
+        if (existing != null) {
+            return existing;
+        }
+
+        lock.lock();
+        try {
+            // Double check
+            if (idempotencyRecords.containsKey(idempotencyKey)) {
+                return idempotencyRecords.get(idempotencyKey);
+            }
+            PaymentResult result = strategy.pay(amount);
+            idempotencyRecords.put(idempotencyKey, result);
+            return result;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+---
+
 ## 4. Patterns: **Strategy** (payment methods) | **State** (payment lifecycle) | **Command** (transaction as command for undo)
 
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Double charge on concurrent retries | Idempotency key checked atomically via Double-Checked Locking on `ConcurrentHashMap` |
+| State transition races | State mutations (`PROCESSING` $\to$ `COMPLETED` / `FAILED`) guarded under payment lock |
+| Gateway timeout retries | Exponential backoff jitter prevents thundering herd on banking partner APIs |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `PaymentStrategy` executes wire charge; `PaymentService` manages idempotency & retry state |
+| **O** — Open/Closed | Apple Pay, Crypto, NetBanking plug-in as new `PaymentStrategy` implementations |
+| **D** — Dependency Inversion | Core billing engine depends on abstract `PaymentStrategy` contracts |
+
+---
+
 ## 5. Follow-ups
-- **Idempotency?** Idempotency key per request to prevent double charges.
-- **Webhook callbacks?** Observer pattern for async payment status updates.
-- **Multi-currency?** Strategy for currency conversion and gateway selection.
+- **Idempotency?** Distributed idempotency store (Redis `SET NX EX 3600`) with cryptographic request payload hashing.
+- **Webhook callbacks?** Asynchronous status updates via Observer pattern and Transactional Outbox pattern.
+- **Multi-currency?** Decorator pattern to inject real-time FX conversion and gateway fee routing.
 
 ---
 
 **Related:** [[01 - Strategy Pattern]] | [[13 - State Pattern]] | [[07 - Command Pattern]]
+

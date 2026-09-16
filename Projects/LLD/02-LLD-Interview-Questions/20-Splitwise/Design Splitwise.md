@@ -49,6 +49,29 @@ classDiagram
     Split <|-- PercentSplit
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Alice (Payer)
+    participant App as SplitwiseService
+    participant Splitter as EqualSplitCalculator
+    participant Balance as BalanceSheetManager
+
+    Alice->>App: addExpense(payer="Alice", amount=$90, users=[Alice, Bob, Charlie], EQUAL)
+    App->>Splitter: calculateShares(amount=90, users=3)
+    Splitter-->>App: Each owes $30
+    App->>Balance: recordDebt(debtor="Bob", creditor="Alice", amount=$30)
+    App->>Balance: recordDebt(debtor="Charlie", creditor="Alice", amount=$30)
+    Balance-->>App: Balances Updated
+    App-->>Alice: Expense Recorded Successfully
+    Alice->>App: simplifyDebts()
+    App->>Balance: runMinCashFlowGraphAlgorithm()
+    Balance-->>Alice: Minimal Settlement Transactions Generated
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -159,8 +182,77 @@ if __name__ == "__main__":
         print(f"  {svc.users[debtor].name} → {svc.users[creditor].name}: ${amt:.2f}")
 ```
 
+### Java
+
+```java
+package com.lld.splitwise;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+enum SplitType { EQUAL, EXACT, PERCENT }
+
+class Split {
+    private final String userId;
+    private final double amount;
+    public Split(String userId, double amount) { this.userId = userId; this.amount = amount; }
+    public String getUserId() { return userId; }
+    public double getAmount() { return amount; }
+}
+
+public class SplitwiseService {
+    // balances[userA][userB] = net amount userA owes userB
+    private final Map<String, Map<String, Double>> balances = new ConcurrentHashMap<>();
+
+    public synchronized void addExpense(String paidBy, double amount, List<Split> splits) {
+        for (Split split : splits) {
+            String paidTo = split.getUserId();
+            if (paidBy.equals(paidTo)) continue;
+
+            balances.computeIfAbsent(paidTo, k -> new ConcurrentHashMap<>());
+            balances.computeIfAbsent(paidBy, k -> new ConcurrentHashMap<>());
+
+            double currentOwed = balances.get(paidTo).getOrDefault(paidBy, 0.0);
+            balances.get(paidTo).put(paidBy, currentOwed + split.getAmount());
+        }
+    }
+
+    public synchronized void settle(String debtor, String creditor, double amount) {
+        if (balances.containsKey(debtor) && balances.get(debtor).containsKey(creditor)) {
+            double current = balances.get(debtor).get(creditor);
+            balances.get(debtor).put(creditor, Math.max(0.0, current - amount));
+        }
+    }
+
+    public Map<String, Double> getBalancesForUser(String userId) {
+        return balances.getOrDefault(userId, Collections.emptyMap());
+    }
+}
+```
+
+
 ## 4. Key Algorithm: Debt Simplification
 Use **greedy approach**: compute net balance per user, then match largest creditor with largest debtor. This minimizes number of transactions.
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent balance mutations | `addExpense` and `settle` are synchronized to prevent balance ledger drift across users |
+| Deadlock during cyclic transfers | Global user ordering (`min(u1, u2)` before `max(u1, u2)`) eliminates Coffman lock loops |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `SplitCalculator` separates fractional math from `BalanceSheetManager` state |
+| **O** — Open/Closed | New split models (shares, adjustments) implement the `SplitCalculator` interface |
+| **D** — Dependency Inversion | Expense orchestration depends on abstract split calculation algorithms |
+
+---
 
 ## 5. Follow-ups
 - **Groups?** Group expenses with shared balances.

@@ -83,6 +83,32 @@ classDiagram
     Piece --> Position
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor WhitePlayer as White Player
+    actor BlackPlayer as Black Player
+    participant Game as ChessGame
+    participant Board as ChessBoard
+    participant Piece as King/Pawn/Rook
+    participant Validator as CheckValidator
+
+    WhitePlayer->>Game: move(from="E2", to="E4")
+    Game->>Piece: canMove(board, E2, E4)
+    Piece-->>Game: true
+    Game->>Validator: causesSelfCheck(board, White)
+    Validator-->>Game: false
+    Game->>Board: executeMove(E2, E4)
+    Board-->>Game: Board Updated
+    Game->>Validator: isInCheck(board, Black)
+    Validator-->>Game: false
+    Game-->>WhitePlayer: Move Accepted (Black's Turn)
+    BlackPlayer->>Game: move(from="E7", to="E5")
+```
+
+
 ## 4. Key Implementation (Python)
 
 ```python
@@ -239,12 +265,131 @@ class ChessGame:
         return True
 ```
 
+### Java
+
+```java
+package com.lld.chess;
+
+import java.util.*;
+
+enum Color { WHITE, BLACK }
+
+class Position {
+    private final int row;
+    private final int col;
+
+    public Position(int row, int col) {
+        this.row = row;
+        this.col = col;
+    }
+    public int getRow() { return row; }
+    public int getCol() { return col; }
+}
+
+abstract class Piece {
+    private final Color color;
+    public Piece(Color color) { this.color = color; }
+    public Color getColor() { return color; }
+    public abstract boolean canMove(Board board, Position from, Position to);
+}
+
+class Rook extends Piece {
+    public Rook(Color color) { super(color); }
+    @Override
+    public boolean canMove(Board board, Position from, Position to) {
+        if (from.getRow() != to.getRow() && from.getCol() != to.getCol()) return false;
+        // Path obstruction check...
+        return board.isPathClear(from, to);
+    }
+}
+
+class Knight extends Piece {
+    public Knight(Color color) { super(color); }
+    @Override
+    public boolean canMove(Board board, Position from, Position to) {
+        int dr = Math.abs(from.getRow() - to.getRow());
+        int dc = Math.abs(from.getCol() - to.getCol());
+        return (dr == 2 && dc == 1) || (dr == 1 && dc == 2);
+    }
+}
+
+class Board {
+    private final Piece[][] grid = new Piece[8][8];
+
+    public Board() { setupInitialPieces(); }
+
+    private void setupInitialPieces() {
+        grid[0][0] = new Rook(Color.WHITE);
+        grid[0][1] = new Knight(Color.WHITE);
+        grid[7][0] = new Rook(Color.BLACK);
+        grid[7][1] = new Knight(Color.BLACK);
+        // remaining pieces...
+    }
+
+    public Piece getPiece(Position pos) { return grid[pos.getRow()][pos.getCol()]; }
+
+    public void setPiece(Position pos, Piece piece) {
+        grid[pos.getRow()][pos.getCol()] = piece;
+    }
+
+    public boolean isPathClear(Position from, Position to) {
+        // Implementation checking no intermediate pieces exist between from and to
+        return true;
+    }
+}
+
+public class ChessGame {
+    private final Board board = new Board();
+    private Color currentTurn = Color.WHITE;
+    private boolean gameOver = false;
+
+    public synchronized boolean makeMove(Position from, Position to) {
+        if (gameOver) return false;
+        Piece piece = board.getPiece(from);
+        if (piece == null || piece.getColor() != currentTurn) return false;
+
+        Piece destPiece = board.getPiece(to);
+        if (destPiece != null && destPiece.getColor() == currentTurn) return false;
+
+        if (!piece.canMove(board, from, to)) return false;
+
+        // Execute Move
+        board.setPiece(to, piece);
+        board.setPiece(from, null);
+
+        currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+        return true;
+    }
+}
+```
+
+
 ## 5. Design Patterns
 | Pattern | Usage |
 |---------|-------|
 | **Strategy** | Each `Piece` subclass encapsulates its own movement strategy |
 | **State** | `GameStatus` — behavior changes in check vs normal |
 | **Command** | For undo/redo move history |
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Turn-order integrity | `makeMove()` synchronized to prevent concurrent conflicting moves |
+| Move simulation | Cloning board state for check validation occurs in memory without mutating active board |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Piece` encapsulates move mechanics; `Board` manages spatial state; `ChessGame` tracks turn rules |
+| **O** — Open/Closed | New pieces (e.g., Fairy Chess pieces) added by subclassing `Piece` without altering `Board` |
+| **L** — Liskov Substitution | Any concrete `Piece` (Knight, Rook, Bishop) is substituted cleanly into `board.getPiece()` calls |
+
+---
 
 ## 6. Follow-ups
 - **Undo/Redo?** Command pattern — store `MoveCommand(piece, from, to, captured)`.

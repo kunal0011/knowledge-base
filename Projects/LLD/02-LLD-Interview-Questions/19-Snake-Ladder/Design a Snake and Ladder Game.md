@@ -85,6 +85,75 @@ if __name__ == "__main__":
     game.play()
 ```
 
+### Java
+
+```java
+package com.lld.snakeladder;
+
+import java.util.*;
+
+class Player {
+    private final String name;
+    private int position = 0;
+    public Player(String name) { this.name = name; }
+    public String getName() { return name; }
+    public int getPosition() { return position; }
+    public void setPosition(int p) { this.position = p; }
+}
+
+public class SnakeAndLadderGame {
+    private final Map<Integer, Integer> jumpMap = new HashMap<>(); // snakes & ladders
+    private final Queue<Player> players = new LinkedList<>();
+    private final Random random = new Random();
+    private static final int WINNING_POSITION = 100;
+    private boolean won = false;
+
+    public void addSnake(int head, int tail) { jumpMap.put(head, tail); }
+    public void addLadder(int start, int end) { jumpMap.put(start, end); }
+    public void addPlayer(Player p) { players.offer(p); }
+
+    public synchronized void playTurn() {
+        if (won || players.isEmpty()) return;
+        Player current = players.poll();
+        int roll = random.nextInt(6) + 1;
+        int nextPos = current.getPosition() + roll;
+
+        if (nextPos <= WINNING_POSITION) {
+            if (jumpMap.containsKey(nextPos)) {
+                nextPos = jumpMap.get(nextPos);
+            }
+            current.setPosition(nextPos);
+            System.out.printf("%s rolled %d, moved to %d%n", current.getName(), roll, nextPos);
+            if (nextPos == WINNING_POSITION) {
+                won = true;
+                System.out.println("🎉 " + current.getName() + " won the game!");
+                return;
+            }
+        }
+        players.offer(current);
+    }
+}
+```
+
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Turn race conditions | `playTurn` synchronized to ensure strictly alternating FIFO player queue turns |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Dice` encapsulates randomness; `Board` holds jump layout; `Game` enforces win rules |
+| **O** — Open/Closed | Jump rules (portals, traps) extensible by decorating the jump mapping strategy |
+
+---
+
 ## 3. Follow-ups
 - **Multiple dice?** Configurable `Dice(num_dice=2)`.
 - **Power-ups?** Strategy pattern for special squares.

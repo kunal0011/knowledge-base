@@ -99,6 +99,34 @@ classDiagram
     Elevator --> ElevatorState
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Passenger
+    participant Button as FloorButton
+    participant System as ElevatorSystem
+    participant Scheduler as ElevatorScheduler
+    participant Elevator as ElevatorCar
+    participant Door as ElevatorDoor
+
+    Passenger->>Button: Press Floor Button (floor=5, direction=UP)
+    Button->>System: requestElevator(floor=5, UP)
+    System->>Scheduler: selectElevator(elevators, 5, UP)
+    Scheduler-->>System: Selected Elevator 1
+    System->>Elevator: addDestination(5)
+    loop Elevator Step Cycle
+        Elevator->>Elevator: moveTowardsDestination()
+    end
+    Elevator->>Door: openDoor()
+    Door-->>Passenger: Doors Open (Ding!)
+    Passenger->>Elevator: Step Inside & Select Floor 9
+    Elevator->>Elevator: addDestination(9)
+    Elevator->>Door: closeDoor()
+```
+
+
 ---
 
 ## 4. Design Patterns Used
@@ -300,6 +328,172 @@ if __name__ == "__main__":
     system.status()
 ```
 
+### Java
+
+```java
+package com.lld.elevator;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum Direction {
+    UP, DOWN, IDLE
+}
+
+enum ElevatorState {
+    MOVING, STOPPED, DOOR_OPEN, MAINTENANCE
+}
+
+class Elevator {
+    private final int id;
+    private int currentFloor;
+    private Direction direction;
+    private ElevatorState state;
+    private final int minFloor;
+    private final int maxFloor;
+    private final ConcurrentSkipListSet<Integer> upStops = new ConcurrentSkipListSet<>();
+    private final ConcurrentSkipListSet<Integer> downStops = new ConcurrentSkipListSet<>(Collections.reverseOrder());
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public Elevator(int id, int minFloor, int maxFloor) {
+        this.id = id;
+        this.minFloor = minFloor;
+        this.maxFloor = maxFloor;
+        this.currentFloor = minFloor;
+        this.direction = Direction.IDLE;
+        this.state = ElevatorState.STOPPED;
+    }
+
+    public void addDestination(int floor) {
+        lock.lock();
+        try {
+            if (floor > currentFloor) {
+                upStops.add(floor);
+                if (direction == Direction.IDLE) direction = Direction.UP;
+            } else if (floor < currentFloor) {
+                downStops.add(floor);
+                if (direction == Direction.IDLE) direction = Direction.DOWN;
+            } else {
+                openDoors();
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void move() {
+        lock.lock();
+        try {
+            if (direction == Direction.UP) {
+                if (!upStops.isEmpty()) {
+                    currentFloor++;
+                    if (upStops.contains(currentFloor)) {
+                        upStops.remove(currentFloor);
+                        openDoors();
+                    }
+                } else if (!downStops.isEmpty()) {
+                    direction = Direction.DOWN;
+                } else {
+                    direction = Direction.IDLE;
+                    state = ElevatorState.STOPPED;
+                }
+            } else if (direction == Direction.DOWN) {
+                if (!downStops.isEmpty()) {
+                    currentFloor--;
+                    if (downStops.contains(currentFloor)) {
+                        downStops.remove(currentFloor);
+                        openDoors();
+                    }
+                } else if (!upStops.isEmpty()) {
+                    direction = Direction.UP;
+                } else {
+                    direction = Direction.IDLE;
+                    state = ElevatorState.STOPPED;
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void openDoors() {
+        state = ElevatorState.DOOR_OPEN;
+        System.out.printf("Elevator %d stopped at floor %d. Doors opening.%n", id, currentFloor);
+        state = ElevatorState.STOPPED;
+    }
+
+    public int getId() { return id; }
+    public int getCurrentFloor() { return currentFloor; }
+    public Direction getDirection() { return direction; }
+    public ElevatorState getState() { return state; }
+}
+
+interface ElevatorScheduler {
+    Elevator selectElevator(List<Elevator> elevators, int floor, Direction direction);
+}
+
+class NearestElevatorScheduler implements ElevatorScheduler {
+    @Override
+    public Elevator selectElevator(List<Elevator> elevators, int floor, Direction direction) {
+        Elevator best = null;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (Elevator e : elevators) {
+            int dist = Math.abs(e.getCurrentFloor() - floor);
+            if (e.getDirection() == Direction.IDLE) {
+                dist += 0;
+            } else if (e.getDirection() == direction &&
+                    ((direction == Direction.UP && e.getCurrentFloor() <= floor) ||
+                     (direction == Direction.DOWN && e.getCurrentFloor() >= floor))) {
+                dist += 1;
+            } else {
+                dist += 10;
+            }
+            if (dist < minDistance) {
+                minDistance = dist;
+                best = e;
+            }
+        }
+        return best;
+    }
+}
+
+public class ElevatorSystem {
+    private final List<Elevator> elevators;
+    private final ElevatorScheduler scheduler;
+    private final int numFloors;
+
+    public ElevatorSystem(int numElevators, int numFloors, ElevatorScheduler scheduler) {
+        this.numFloors = numFloors;
+        this.scheduler = scheduler != null ? scheduler : new NearestElevatorScheduler();
+        this.elevators = new ArrayList<>();
+        for (int i = 0; i < numElevators; i++) {
+            this.elevators.add(new Elevator(i, 0, numFloors));
+        }
+    }
+
+    public void requestElevator(int floor, Direction direction) {
+        Elevator chosen = scheduler.selectElevator(elevators, floor, direction);
+        if (chosen != null) {
+            chosen.addDestination(floor);
+            System.out.printf("Floor %d %s dispatched to Elevator %d%n", floor, direction, chosen.getId());
+        }
+    }
+
+    public void selectFloor(int elevatorId, int floor) {
+        elevators.get(elevatorId).addDestination(floor);
+    }
+
+    public void step() {
+        for (Elevator elevator : elevators) {
+            elevator.move();
+        }
+    }
+}
+```
+
+
 ---
 
 ## 6. Scheduling Algorithms
@@ -310,6 +504,30 @@ if __name__ == "__main__":
 | **Nearest** | Dispatch closest elevator | Low wait time | May starve far floors |
 | **SCAN (Elevator)** | Move in one direction, reverse at end | Fair, like disk scheduling | Less optimal for sparse requests |
 | **LOOK** | Like SCAN but reverses when no more requests in current direction | Better than SCAN | More complex |
+
+---
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent destination requests | `ReentrantLock` guards `addDestination()` and `move()` |
+| Destination ordering | `ConcurrentSkipListSet` maintains sorted unique stop requests |
+| Floor button spamming | Idempotent set additions prevent duplicate stop scheduling |
+| Multi-car starvation | Strategy scheduler isolates elevator state evaluation |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Elevator` manages physical kinematics; `ElevatorScheduler` governs dispatching heuristics |
+| **O** — Open/Closed | Pluggable dispatchers (`FCFS`, `LOOK`, `SCAN`, `Zoned`) via `ElevatorScheduler` interface |
+| **L** — Liskov Substitution | Any scheduler implementation seamlessly substitutes into `ElevatorSystem` |
+| **I** — Interface Segregation | `ElevatorScheduler` interface exposes purely `selectElevator()` |
+| **D** — Dependency Inversion | `ElevatorSystem` depends on `ElevatorScheduler` abstraction, not concrete implementations |
 
 ---
 

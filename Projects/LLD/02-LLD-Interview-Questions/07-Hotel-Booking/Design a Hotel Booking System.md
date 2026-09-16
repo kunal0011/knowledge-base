@@ -81,6 +81,32 @@ classDiagram
     Hotel --> PaymentProcessor
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest
+    participant Search as SearchService
+    participant Booking as BookingService
+    participant Inventory as RoomInventory
+    participant Payment as PaymentService
+
+    Guest->>Search: searchRooms(city, checkIn, checkOut, RoomType)
+    Search->>Inventory: queryAvailableRooms(dates, type)
+    Inventory-->>Search: Available Room List
+    Search-->>Guest: Return Matching Rooms
+    Guest->>Booking: createBooking(roomId, dates, guestDetails)
+    Booking->>Inventory: lockRoom(roomId, dates, ttl=10min)
+    Inventory-->>Booking: Lock Acquired
+    Booking->>Payment: processPayment(amount)
+    Payment-->>Booking: Payment Succeeded
+    Booking->>Inventory: confirmRoomBooking(roomId, dates)
+    Inventory-->>Booking: Room Status -> BOOKED
+    Booking-->>Guest: Reservation Confirmed (Booking ID)
+```
+
+
 ## 4. Key Implementation (Python)
 
 ```python
@@ -183,6 +209,128 @@ class Hotel:
               f"${booking.total_amount} ({date_range.nights} nights)")
         return booking
 ```
+
+### Java
+
+```java
+package com.lld.hotelbooking;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum RoomType { STANDARD, DELUXE, SUITE }
+enum BookingStatus { PENDING, CONFIRMED, CANCELLED }
+
+class Room {
+    private final String roomId;
+    private final RoomType type;
+    private final double pricePerNight;
+
+    public Room(String roomId, RoomType type, double pricePerNight) {
+        this.roomId = roomId;
+        this.type = type;
+        this.pricePerNight = pricePerNight;
+    }
+    public String getRoomId() { return roomId; }
+    public RoomType getType() { return type; }
+    public double getPricePerNight() { return pricePerNight; }
+}
+
+class Booking {
+    private final String bookingId;
+    private final String userId;
+    private final Room room;
+    private final LocalDate checkIn;
+    private final LocalDate checkOut;
+    private BookingStatus status;
+
+    public Booking(String bookingId, String userId, Room room, LocalDate checkIn, LocalDate checkOut) {
+        this.bookingId = bookingId;
+        this.userId = userId;
+        this.room = room;
+        this.checkIn = checkIn;
+        this.checkOut = checkOut;
+        this.status = BookingStatus.PENDING;
+    }
+    public void confirm() { this.status = BookingStatus.CONFIRMED; }
+    public void cancel() { this.status = BookingStatus.CANCELLED; }
+    public String getBookingId() { return bookingId; }
+    public Room getRoom() { return room; }
+    public LocalDate getCheckIn() { return checkIn; }
+    public LocalDate getCheckOut() { return checkOut; }
+}
+
+public class HotelBookingSystem {
+    private final Map<String, Room> rooms = new ConcurrentHashMap<>();
+    private final Map<String, List<Booking>> roomBookings = new ConcurrentHashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public void addRoom(Room room) {
+        rooms.put(room.getRoomId(), room);
+        roomBookings.put(room.getRoomId(), new ArrayList<>());
+    }
+
+    public List<Room> searchAvailableRooms(LocalDate checkIn, LocalDate checkOut, RoomType type) {
+        List<Room> available = new ArrayList<>();
+        for (Room room : rooms.values()) {
+            if (room.getType() == type && isRoomAvailable(room.getRoomId(), checkIn, checkOut)) {
+                available.add(room);
+            }
+        }
+        return available;
+    }
+
+    private boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {
+        List<Booking> bookings = roomBookings.get(roomId);
+        if (bookings == null) return true;
+        for (Booking b : bookings) {
+            if (b.getCheckIn().isBefore(checkOut) && checkIn.isBefore(b.getCheckOut())) {
+                return false; // Overlap detected
+            }
+        }
+        return true;
+    }
+
+    public Booking bookRoom(String userId, String roomId, LocalDate checkIn, LocalDate checkOut) {
+        lock.lock();
+        try {
+            if (!isRoomAvailable(roomId, checkIn, checkOut)) {
+                throw new IllegalStateException("Room not available for selected dates");
+            }
+            Room room = rooms.get(roomId);
+            Booking booking = new Booking(UUID.randomUUID().toString().substring(0, 8), userId, room, checkIn, checkOut);
+            booking.confirm();
+            roomBookings.get(roomId).add(booking);
+            return booking;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent room reservation collision | `ReentrantLock` synchronizes `bookRoom()` to prevent double-booking identical date ranges |
+| Date interval overlap checking | Closed-open interval collision check `checkIn < existingCheckOut && existingCheckIn < checkOut` |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Room` models physical property; `Booking` models financial reservation; `HotelBookingSystem` coordinates inventory |
+| **O** — Open/Closed | Pluggable pricing strategies (Seasonal, Surge, Weekend) can wrap room rates via Strategy pattern |
+| **D** — Dependency Inversion | Systems coordinate via abstract reservation interfaces |
+
+---
 
 ## 5. Follow-ups
 - **Dynamic pricing?** Strategy pattern — `PricingStrategy` (peak, off-peak, holiday).

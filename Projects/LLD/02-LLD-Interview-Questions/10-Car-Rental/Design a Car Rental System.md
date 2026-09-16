@@ -57,6 +57,31 @@ classDiagram
     BillingStrategy <|.. WeeklyBilling
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Rental as RentalService
+    participant Fleet as VehicleFleet
+    participant Decorator as AddonDecorator
+    participant Payment as PaymentProcessor
+
+    Customer->>Rental: searchVehicles(type=SUV, dates)
+    Rental->>Fleet: findAvailable(SUV, dates)
+    Fleet-->>Rental: List of matching SUVs
+    Rental-->>Customer: Show Vehicle Options
+    Customer->>Rental: selectVehicle(carId="C-101", addons=[GPS, ChildSeat])
+    Rental->>Decorator: calculateTotal(baseRate=$80, addons)
+    Decorator-->>Rental: Total Daily Rate: $105
+    Rental->>Payment: authorizeDeposit(deposit=$200)
+    Payment-->>Rental: Deposit Authorized
+    Rental->>Fleet: markReserved("C-101", dates)
+    Rental-->>Customer: Reservation Confirmed (Rental Agreement)
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -126,12 +151,84 @@ class RentalStore:
         return Reservation(customer_id, vehicle, pickup, return_date)
 ```
 
+### Java
+
+```java
+package com.lld.carrental;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum VehicleType { SEDAN, SUV, TRUCK, VAN }
+enum VehicleStatus { AVAILABLE, RESERVED, RENTED, MAINTENANCE }
+
+class Vehicle {
+    private final String vehicleId;
+    private final String licensePlate;
+    private final VehicleType type;
+    private final double baseDailyRate;
+    private VehicleStatus status = VehicleStatus.AVAILABLE;
+
+    public Vehicle(String vehicleId, String licensePlate, VehicleType type, double baseDailyRate) {
+        this.vehicleId = vehicleId;
+        this.licensePlate = licensePlate;
+        this.type = type;
+        this.baseDailyRate = baseDailyRate;
+    }
+
+    public synchronized boolean isAvailable() { return status == VehicleStatus.AVAILABLE; }
+    public synchronized void setStatus(VehicleStatus status) { this.status = status; }
+    public String getVehicleId() { return vehicleId; }
+    public double getBaseDailyRate() { return baseDailyRate; }
+    public VehicleType getType() { return type; }
+}
+
+public class CarRentalSystem {
+    private final Map<String, Vehicle> fleet = new ConcurrentHashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public void addVehicle(Vehicle v) { fleet.put(v.getVehicleId(), v); }
+
+    public synchronized Vehicle reserveVehicle(String vehicleId, String customerId, LocalDate start, LocalDate end) {
+        Vehicle v = fleet.get(vehicleId);
+        if (v == null || !v.isAvailable()) {
+            throw new IllegalStateException("Vehicle not available for reservation");
+        }
+        v.setStatus(VehicleStatus.RESERVED);
+        return v;
+    }
+}
+```
+
+
 ## 4. Design Patterns
 | Pattern | Usage |
 |---------|-------|
 | **Strategy** | `BillingStrategy` — daily, weekly, membership pricing |
 | **Factory** | Vehicle creation based on type |
 | **Decorator** | Add-ons: insurance, GPS, child seat |
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent fleet reservation | `reserveVehicle()` synchronized to prevent multiple customers claiming identical car |
+| State transitions | Status changes (`AVAILABLE` $	o$ `RESERVED` $	o$ `RENTED`) guarded atomically |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Vehicle` manages mechanical specs; `RentalService` handles reservation schedules; `AddonDecorator` handles billable add-ons |
+| **O** — Open/Closed | Insurance, GPS, Roadside assistance added dynamically via Decorator pattern without altering `Vehicle` |
+| **D** — Dependency Inversion | Pricing and payment engines depend on high-level strategy interfaces |
+
+---
 
 ## 5. Follow-up Questions
 - **Insurance add-ons?** Decorator pattern — wrap rental with insurance layer.

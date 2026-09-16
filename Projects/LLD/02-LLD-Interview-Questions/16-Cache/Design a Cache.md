@@ -43,6 +43,31 @@ classDiagram
     Cache <|.. LFUCache
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Cache as LRUCache
+    participant Map as KeyToNodeMap
+    participant DLL as DoublyLinkedList
+
+    Client->>Cache: get("k1")
+    Cache->>Map: get("k1")
+    Map-->>Cache: Node("k1", "v1")
+    Cache->>DLL: moveToTail(Node)
+    Cache-->>Client: Return "v1"
+    Client->>Cache: put("k4", "v4") (Capacity Reached!)
+    Cache->>DLL: popHead() (Evict LRU Node "k2")
+    DLL-->>Cache: Evicted Node "k2"
+    Cache->>Map: remove("k2")
+    Cache->>DLL: addTail(Node("k4", "v4"))
+    Cache->>Map: put("k4", Node)
+    Cache-->>Client: Put Complete
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -158,6 +183,26 @@ public class LRUCache<K, V> {
 | get() | O(1) | O(1) |
 | put() | O(1) | O(1) |
 | Space | O(capacity) | O(capacity) |
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent Reads vs Writes | `ReentrantReadWriteLock` allows hundreds of parallel `get()` calls while serializing `put()` and eviction |
+| O(1) Eviction Coherency | Map removals and Doubly Linked List node unlink operations are bound inside the same write lock |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `DoublyLinkedList` handles positional recency; `HashMap` handles constant time index |
+| **O** — Open/Closed | Pluggable eviction algorithms (LRU, LFU, FIFO, ARC) implement an `EvictionPolicy` interface |
+| **D** — Dependency Inversion | High-level cache facades interact through abstract eviction contracts |
+
+---
 
 ## 6. Follow-ups
 - **TTL?** Add expiry timestamp per entry, lazy cleanup on access.

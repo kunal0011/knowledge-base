@@ -39,6 +39,29 @@ classDiagram
     Directory o--> FileSystemEntry
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Root as Directory ("/")
+    participant Sub as Directory ("etc")
+    participant File as File ("hosts", 100B)
+
+    Client->>Root: mkdir("etc")
+    Root->>Sub: create child Directory("etc")
+    Client->>Sub: createFile("hosts", 100B)
+    Sub->>File: instantiate File("hosts")
+    Client->>Root: getSize()
+    Root->>Sub: getSize() (Recursive Composite)
+    Sub->>File: getSize()
+    File-->>Sub: 100 Bytes
+    Sub-->>Root: 100 Bytes
+    Root-->>Client: Total Size: 100 Bytes
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -124,7 +147,87 @@ class FileSystem:
         return f
 ```
 
+### Java
+
+```java
+package com.lld.filesystem;
+
+import java.util.*;
+
+interface FileSystemNode {
+    String getName();
+    int getSize();
+    boolean isDirectory();
+}
+
+class FileNode implements FileSystemNode {
+    private final String name;
+    private byte[] content;
+
+    public FileNode(String name, byte[] content) {
+        this.name = name;
+        this.content = content != null ? content : new byte[0];
+    }
+    @Override public String getName() { return name; }
+    @Override public int getSize() { return content.length; }
+    @Override public boolean isDirectory() { return false; }
+}
+
+class DirectoryNode implements FileSystemNode {
+    private final String name;
+    private final Map<String, FileSystemNode> children = new HashMap<>();
+
+    public DirectoryNode(String name) { this.name = name; }
+    @Override public String getName() { return name; }
+
+    @Override
+    public int getSize() {
+        int total = 0;
+        for (FileSystemNode node : children.values()) {
+            total += node.getSize();
+        }
+        return total;
+    }
+
+    @Override public boolean isDirectory() { return true; }
+
+    public void addNode(FileSystemNode node) { children.put(node.getName(), node); }
+    public FileSystemNode getChild(String name) { return children.get(name); }
+}
+
+public class FileSystem {
+    private final DirectoryNode root = new DirectoryNode("/");
+
+    public DirectoryNode getRoot() { return root; }
+
+    public int calculateTotalSize() {
+        return root.getSize();
+    }
+}
+```
+
+
 ## 4. Patterns: **Composite** (files + directories) | **Iterator** (traversal) | **Visitor** (operations)
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent file tree traversal | Immutable nodes or ReadWriteLock on directory child map allows concurrent readers |
+| Node addition race | Per-directory locks avoid tree restructuring race conditions during path creation |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `FileNode` stores content bytes; `DirectoryNode` maintains hierarchical child links |
+| **O** — Open/Closed | New node types (Symlink, Pipe, BlockDevice) implement `FileSystemNode` without changing callers |
+| **L** — Liskov Substitution | `FileNode` and `DirectoryNode` are completely interchangeable via the `FileSystemNode` interface |
+
+---
 
 ## 5. Follow-ups
 - **Permissions?** `Permission` class with rwx bits per user/group.

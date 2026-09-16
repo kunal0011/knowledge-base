@@ -76,6 +76,35 @@ classDiagram
     Transaction <|-- BalanceInquiry
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant ATM as ATMContext
+    participant State as ATMState
+    participant Bank as BankAPI
+    participant Dispenser as CashDispenserChain
+
+    Customer->>ATM: insertCard(card)
+    ATM->>State: insertCard()
+    State->>ATM: setState(HasCardState)
+    Customer->>ATM: enterPin(1234)
+    ATM->>State: enterPin(1234)
+    State->>Bank: authenticatePin(card, 1234)
+    Bank-->>State: Authenticated (Success)
+    State->>ATM: setState(AuthorizedState)
+    Customer->>ATM: withdraw(amount=$180)
+    ATM->>State: withdraw(180)
+    State->>Bank: checkBalanceAndDebit(card, 180)
+    Bank-->>State: Debit Approved
+    State->>Dispenser: dispenseCash(180)
+    Dispenser-->>Customer: Dispense 1x$100, 1x$50, 1x$20, 1x$10
+    State->>ATM: ejectCard() & setState(IdleState)
+```
+
+
 ## 4. Key Implementation (Python)
 
 ```python
@@ -205,6 +234,89 @@ class ATM:
         self.set_state(self.idle_state)
         print("Card ejected")
 ```
+
+### Java
+
+```java
+package com.lld.atm;
+
+abstract class CashDispenser {
+    protected CashDispenser next;
+    protected final int denomination;
+    protected int availableNotes;
+
+    public CashDispenser(int denomination, int availableNotes) {
+        this.denomination = denomination;
+        this.availableNotes = availableNotes;
+    }
+
+    public void setNext(CashDispenser next) { this.next = next; }
+
+    public void dispense(int amount) {
+        int notesToDispense = Math.min(amount / denomination, availableNotes);
+        int remaining = amount - (notesToDispense * denomination);
+
+        if (notesToDispense > 0) {
+            availableNotes -= notesToDispense;
+            System.out.printf("Dispensed %d x $%d%n", notesToDispense, denomination);
+        }
+
+        if (remaining > 0) {
+            if (next != null) next.dispense(remaining);
+            else throw new IllegalStateException("Cannot dispense exact amount");
+        }
+    }
+}
+
+class HundredDispenser extends CashDispenser {
+    public HundredDispenser(int notes) { super(100, notes); }
+}
+class FiftyDispenser extends CashDispenser {
+    public FiftyDispenser(int notes) { super(50, notes); }
+}
+class TwentyDispenser extends CashDispenser {
+    public TwentyDispenser(int notes) { super(20, notes); }
+}
+
+public class ATMSystem {
+    private final CashDispenser dispenserChain;
+
+    public ATMSystem() {
+        CashDispenser c100 = new HundredDispenser(10);
+        CashDispenser c50 = new FiftyDispenser(10);
+        CashDispenser c20 = new TwentyDispenser(20);
+
+        c100.setNext(c50);
+        c50.setNext(c20);
+        this.dispenserChain = c100;
+    }
+
+    public synchronized void withdrawCash(int amount) {
+        dispenserChain.dispense(amount);
+    }
+}
+```
+
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent card operations | ATM operates as a synchronized single-user physical kiosk state machine |
+| Dispenser inventory race | Note inventory counts in dispenser nodes updated within synchronized transaction block |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | Dispenser chain handles bill denominations; ATM state machine manages user session steps |
+| **O** — Open/Closed | Additional currency denominations ($200, $5) added by appending a node to the Chain of Responsibility |
+| **D** — Dependency Inversion | ATM delegates to Bank API interface rather than concrete banking infrastructure |
+
+---
 
 ## 5. Key Design Decisions
 - **State Pattern** for ATM states (idle → auth → transaction)

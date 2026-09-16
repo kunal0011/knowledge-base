@@ -102,6 +102,34 @@ classDiagram
     Library --> FineCalculator
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Member
+    participant Library as LibraryService
+    participant Catalog as BookCatalog
+    participant Item as BookItem
+    participant Fine as FineCalculator
+
+    Member->>Library: searchByTitle("Clean Architecture")
+    Library->>Catalog: findBooks("Clean Architecture")
+    Catalog-->>Library: List of matching Books
+    Library-->>Member: Available Books & ISBNs
+    Member->>Library: issueBook(memberId, isbn)
+    Library->>Item: check status & checkout(memberId)
+    Item-->>Library: success (due date = +14 days)
+    Library-->>Member: Book Issued Successfully
+    Note over Member,Library: 20 Days Pass (Book Overdue)
+    Member->>Library: returnBook(memberId, barcode)
+    Library->>Fine: calculateFine(dueDate, now)
+    Fine-->>Library: Fine Amount ($6.00)
+    Library->>Item: returnBook()
+    Library-->>Member: Book Returned (Fine: $6.00)
+```
+
+
 ---
 
 ## 4. Key Implementation (Python)
@@ -218,6 +246,189 @@ class Library:
                 return fine
         raise ValueError("Book not found in member's borrowed list")
 ```
+
+### Java
+
+```java
+package com.lld.library;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+enum BookStatus {
+    AVAILABLE, CHECKED_OUT, RESERVED, LOST
+}
+
+class Book {
+    private final String isbn;
+    private final String title;
+    private final String author;
+
+    public Book(String isbn, String title, String author) {
+        this.isbn = isbn;
+        this.title = title;
+        this.author = author;
+    }
+    public String getIsbn() { return isbn; }
+    public String getTitle() { return title; }
+}
+
+class BookItem {
+    private final String barcode;
+    private final Book book;
+    private BookStatus status = BookStatus.AVAILABLE;
+    private LocalDate dueDate;
+    private String borrowedByMemberId;
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public BookItem(String barcode, Book book) {
+        this.barcode = barcode;
+        this.book = book;
+    }
+
+    public boolean checkout(String memberId, int loanDays) {
+        lock.lock();
+        try {
+            if (status != BookStatus.AVAILABLE) return false;
+            this.status = BookStatus.CHECKED_OUT;
+            this.borrowedByMemberId = memberId;
+            this.dueDate = LocalDate.now().plusDays(loanDays);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void returnBook() {
+        lock.lock();
+        try {
+            this.status = BookStatus.AVAILABLE;
+            this.borrowedByMemberId = null;
+            this.dueDate = null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean isOverdue() {
+        return dueDate != null && LocalDate.now().isAfter(dueDate);
+    }
+
+    public LocalDate getDueDate() { return dueDate; }
+    public String getBarcode() { return barcode; }
+    public Book getBook() { return book; }
+    public BookStatus getStatus() { return status; }
+}
+
+class Member {
+    private final String memberId;
+    private final String name;
+    private final List<BookItem> borrowedBooks = new ArrayList<>();
+    private static final int MAX_BOOKS = 5;
+
+    public Member(String memberId, String name) {
+        this.memberId = memberId;
+        this.name = name;
+    }
+
+    public synchronized boolean canBorrow() {
+        return borrowedBooks.size() < MAX_BOOKS;
+    }
+
+    public synchronized void addBorrowedBook(BookItem item) {
+        borrowedBooks.add(item);
+    }
+
+    public synchronized void removeBorrowedBook(BookItem item) {
+        borrowedBooks.remove(item);
+    }
+
+    public String getMemberId() { return memberId; }
+    public String getName() { return name; }
+    public List<BookItem> getBorrowedBooks() { return Collections.unmodifiableList(borrowedBooks); }
+}
+
+public class LibraryManagementSystem {
+    private final Map<String, Book> booksByIsbn = new ConcurrentHashMap<>();
+    private final Map<String, List<BookItem>> itemsByIsbn = new ConcurrentHashMap<>();
+    private final Map<String, Member> members = new ConcurrentHashMap<>();
+    private static final double DAILY_FINE = 1.0;
+
+    public void addBook(Book book, int copies) {
+        booksByIsbn.put(book.getIsbn(), book);
+        itemsByIsbn.putIfAbsent(book.getIsbn(), new ArrayList<>());
+        for (int i = 1; i <= copies; i++) {
+            itemsByIsbn.get(book.getIsbn()).add(new BookItem(book.getIsbn() + "-" + i, book));
+        }
+    }
+
+    public void registerMember(Member member) {
+        members.put(member.getMemberId(), member);
+    }
+
+    public synchronized boolean issueBook(String memberId, String isbn) {
+        Member member = members.get(memberId);
+        if (member == null || !member.canBorrow()) return false;
+
+        List<BookItem> items = itemsByIsbn.get(isbn);
+        if (items == null) return false;
+
+        for (BookItem item : items) {
+            if (item.getStatus() == BookStatus.AVAILABLE && item.checkout(memberId, 14)) {
+                member.addBorrowedBook(item);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized double returnBook(String memberId, String barcode, String isbn) {
+        Member member = members.get(memberId);
+        if (member == null) throw new IllegalArgumentException("Invalid member");
+
+        for (BookItem item : member.getBorrowedBooks()) {
+            if (item.getBarcode().equals(barcode)) {
+                double fine = 0.0;
+                if (item.isOverdue()) {
+                    long days = ChronoUnit.DAYS.between(item.getDueDate(), LocalDate.now());
+                    fine = days * DAILY_FINE;
+                }
+                item.returnBook();
+                member.removeBorrowedBook(item);
+                return fine;
+            }
+        }
+        throw new IllegalStateException("Book not borrowed by member");
+    }
+}
+```
+
+
+---
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent checkout of same copy | Item-level `ReentrantLock` ensures exactly one thread changes `BookStatus.AVAILABLE` to `CHECKED_OUT` |
+| Member quota race | Synchronized `canBorrow()` and `addBorrowedBook()` block concurrent over-limit checkouts |
+| Catalog reads vs writes | `ConcurrentHashMap` allows lock-free search operations concurrent with inventory additions |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `BookItem` manages physical barcode status; `Member` tracks borrowing quota; `Library` orchestrates |
+| **O** — Open/Closed | Lending policies and fine strategies can be swapped via strategy interfaces without modifying core catalog |
+| **L** — Liskov Substitution | `ReferenceBook` or `EBook` subclasses can substitute for `Book` without breaking checkout contracts |
+| **I** — Interface Segregation | Search APIs segregated from checkout/transactional APIs |
+| **D** — Dependency Inversion | Fine calculation relies on a pluggable `FineCalculator` contract |
 
 ---
 

@@ -71,6 +71,36 @@ classDiagram
     VendingMachine --> Product
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant VM as VendingMachine
+    participant State as MachineState
+    participant Inv as Inventory
+    participant Coin as CoinDispenser
+
+    Customer->>VM: insertMoney(amount=$2.00)
+    VM->>State: insertMoney(amount)
+    State->>VM: balance += 2.00, setState(HasMoneyState)
+    VM-->>Customer: Balance: $2.00
+    Customer->>VM: selectProduct("A1")
+    VM->>State: selectProduct("A1")
+    State->>Inv: checkProduct("A1")
+    Inv-->>State: Product(price=$1.50, qty=5)
+    State->>VM: setState(DispensingState)
+    VM->>State: dispense()
+    State->>Inv: deductQuantity("A1")
+    State->>VM: balance -= 1.50
+    State->>Coin: returnChange(0.50)
+    Coin-->>Customer: Dispense Change ($0.50)
+    State-->>Customer: Dispense Product (A1)
+    State->>VM: setState(IdleState)
+```
+
+
 ---
 
 ## 4. Key Implementation (Python)
@@ -218,6 +248,194 @@ if __name__ == "__main__":
     vm.select_product("A1")  # Now it works
 ```
 
+### Java
+
+```java
+package com.lld.vendingmachine;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+class Product {
+    private final String code;
+    private final String name;
+    private final double price;
+    private int quantity;
+
+    public Product(String code, String name, double price, int quantity) {
+        this.code = code;
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+    }
+
+    public synchronized boolean isAvailable() { return quantity > 0; }
+    public synchronized void decrement() { if (quantity > 0) quantity--; }
+    public String getCode() { return code; }
+    public String getName() { return name; }
+    public double getPrice() { return price; }
+    public synchronized int getQuantity() { return quantity; }
+}
+
+interface State {
+    void insertMoney(VendingMachine machine, double amount);
+    void selectProduct(VendingMachine machine, String code);
+    void dispense(VendingMachine machine);
+    void returnChange(VendingMachine machine);
+}
+
+class IdleState implements State {
+    @Override
+    public void insertMoney(VendingMachine machine, double amount) {
+        machine.addBalance(amount);
+        System.out.printf("Inserted $%.2f. Current balance: $%.2f%n", amount, machine.getBalance());
+        machine.setState(machine.getHasMoneyState());
+    }
+
+    @Override
+    public void selectProduct(VendingMachine machine, String code) {
+        System.out.println("Please insert money first.");
+    }
+
+    @Override
+    public void dispense(VendingMachine machine) {
+        System.out.println("No product selected.");
+    }
+
+    @Override
+    public void returnChange(VendingMachine machine) {
+        System.out.println("No money to return.");
+    }
+}
+
+class HasMoneyState implements State {
+    @Override
+    public void insertMoney(VendingMachine machine, double amount) {
+        machine.addBalance(amount);
+        System.out.printf("Added $%.2f. Current balance: $%.2f%n", amount, machine.getBalance());
+    }
+
+    @Override
+    public void selectProduct(VendingMachine machine, String code) {
+        Product p = machine.getProduct(code);
+        if (p == null) {
+            System.out.println("Invalid product code.");
+            return;
+        }
+        if (!p.isAvailable()) {
+            System.out.println("Product out of stock.");
+            return;
+        }
+        if (machine.getBalance() < p.getPrice()) {
+            System.out.printf("Insufficient balance. Need $%.2f more.%n", p.getPrice() - machine.getBalance());
+            return;
+        }
+        machine.setSelectedProduct(p);
+        machine.setState(machine.getDispensingState());
+        machine.dispense();
+    }
+
+    @Override
+    public void dispense(VendingMachine machine) {
+        System.out.println("Select a product first.");
+    }
+
+    @Override
+    public void returnChange(VendingMachine machine) {
+        double change = machine.resetBalance();
+        System.out.printf("Refunded $%.2f.%n", change);
+        machine.setState(machine.getIdleState());
+    }
+}
+
+class DispensingState implements State {
+    @Override
+    public void insertMoney(VendingMachine machine, double amount) {
+        System.out.println("Please wait, dispensing in progress.");
+    }
+
+    @Override
+    public void selectProduct(VendingMachine machine, String code) {
+        System.out.println("Already dispensing.");
+    }
+
+    @Override
+    public void dispense(VendingMachine machine) {
+        Product p = machine.getSelectedProduct();
+        p.decrement();
+        machine.deductBalance(p.getPrice());
+        System.out.printf("Dispensing %s!%n", p.getName());
+
+        if (machine.getBalance() > 0) {
+            double change = machine.resetBalance();
+            System.out.printf("Returning change: $%.2f%n", change);
+        }
+        machine.setSelectedProduct(null);
+        machine.setState(machine.getIdleState());
+    }
+
+    @Override
+    public void returnChange(VendingMachine machine) {
+        System.out.println("Cannot return change during dispense.");
+    }
+}
+
+public class VendingMachine {
+    private final State idleState = new IdleState();
+    private final State hasMoneyState = new HasMoneyState();
+    private final State dispensingState = new DispensingState();
+    private State currentState = idleState;
+
+    private final Map<String, Product> inventory = new ConcurrentHashMap<>();
+    private double balance = 0.0;
+    private Product selectedProduct;
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public void addProduct(Product p) {
+        inventory.put(p.getCode(), p);
+    }
+
+    public void insertMoney(double amount) {
+        lock.lock();
+        try { currentState.insertMoney(this, amount); }
+        finally { lock.unlock(); }
+    }
+
+    public void selectProduct(String code) {
+        lock.lock();
+        try { currentState.selectProduct(this, code); }
+        finally { lock.unlock(); }
+    }
+
+    public void dispense() {
+        lock.lock();
+        try { currentState.dispense(this); }
+        finally { lock.unlock(); }
+    }
+
+    public void returnChange() {
+        lock.lock();
+        try { currentState.returnChange(this); }
+        finally { lock.unlock(); }
+    }
+
+    // State & Balance Helpers
+    public void setState(State state) { this.currentState = state; }
+    public State getIdleState() { return idleState; }
+    public State getHasMoneyState() { return hasMoneyState; }
+    public State getDispensingState() { return dispensingState; }
+    public Product getProduct(String code) { return inventory.get(code); }
+    public Product getSelectedProduct() { return selectedProduct; }
+    public void setSelectedProduct(Product p) { this.selectedProduct = p; }
+    public double getBalance() { return balance; }
+    public void addBalance(double amt) { this.balance += amt; }
+    public void deductBalance(double amt) { this.balance -= amt; }
+    public double resetBalance() { double prev = balance; balance = 0.0; return prev; }
+}
+```
+
+
 ---
 
 ## 5. Design Patterns
@@ -228,6 +446,29 @@ if __name__ == "__main__":
 | **Strategy** | Could be used for different payment methods |
 
 → See: [[13 - State Pattern]]
+
+---
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent money insertion & selection | `ReentrantLock` synchronizes high-level state transitions across threads |
+| Race on item inventory | `Product.decrement()` is synchronized to prevent double-dispensing out-of-stock items |
+| Balance corruption | Dedicated mutation helpers (`addBalance`, `resetBalance`) under lock guard |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | Each `State` handles exact behavior for its lifecycle phase; `VendingMachine` acts as context |
+| **O** — Open/Closed | New states (`OutOfOrderState`, `MaintenanceState`) added without modifying existing state classes |
+| **L** — Liskov Substitution | All state instances adhere strictly to the `State` contract |
+| **I** — Interface Segregation | `State` interface defines only the 4 canonical user interactions |
+| **D** — Dependency Inversion | Context depends on the `State` abstraction, not concrete states |
 
 ---
 

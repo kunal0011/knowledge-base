@@ -43,6 +43,31 @@ classDiagram
     Topic --> Message
 ```
 
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Publisher
+    participant Broker as MessageBroker
+    participant Topic as Topic
+    actor Consumer1 as Consumer (Group A)
+    actor Consumer2 as Consumer (Group B)
+
+    Publisher->>Broker: publish("orders", Message("Order#1001"))
+    Broker->>Topic: appendMessage(msg)
+    Topic-->>Broker: Committed at Offset 42
+    Broker-->>Publisher: ACK (Message Published)
+    par Fan-Out to Consumer Groups
+        Topic->>Consumer1: dispatch(Message, offset=42)
+        Consumer1-->>Topic: ACK (Offset 42 committed)
+    and
+        Topic->>Consumer2: dispatch(Message, offset=42)
+        Consumer2-->>Topic: ACK (Offset 42 committed)
+    end
+```
+
+
 ## 3. Key Implementation (Python)
 
 ```python
@@ -119,7 +144,77 @@ if __name__ == "__main__":
     broker.publish("payments", Message("Payment received"))
 ```
 
+### Java
+
+```java
+package com.lld.pubsub;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+class Message {
+    private final String payload;
+    public Message(String payload) { this.payload = payload; }
+    public String getPayload() { return payload; }
+}
+
+interface Subscriber {
+    void onMessage(Message message);
+}
+
+class Topic {
+    private final String name;
+    private final List<Subscriber> subscribers = new CopyOnWriteArrayList<>();
+    private final List<Message> messageLog = new CopyOnWriteArrayList<>();
+
+    public Topic(String name) { this.name = name; }
+    public void addSubscriber(Subscriber sub) { subscribers.add(sub); }
+    public void removeSubscriber(Subscriber sub) { subscribers.remove(sub); }
+
+    public void publish(Message message) {
+        messageLog.add(message);
+        for (Subscriber sub : subscribers) {
+            sub.onMessage(message);
+        }
+    }
+}
+
+public class PubSubSystem {
+    private final Map<String, Topic> topics = new ConcurrentHashMap<>();
+
+    public Topic createTopic(String name) {
+        return topics.computeIfAbsent(name, Topic::new);
+    }
+
+    public void publish(String topicName, Message message) {
+        Topic topic = topics.get(topicName);
+        if (topic != null) topic.publish(message);
+    }
+}
+```
+
+
 ## 4. Patterns: **Observer** (core pub-sub) | **Strategy** (delivery guarantees)
+
+
+---
+
+## Thread Safety Considerations
+
+| Concern | Solution |
+|---|---|
+| Concurrent publication | `CopyOnWriteArrayList` in `Topic` permits message broadcast without locking readers |
+| Dynamic subscription | Thread-safe subscriber registrations prevent deadlocks during fan-out loops |
+
+## Extensibility & SOLID Principles
+
+| Principle | Architectural Implementation |
+|---|---|
+| **S** — Single Responsibility | `Topic` manages subscriber registry; `Broker` manages routing; `Subscriber` handles payload processing |
+| **O** — Open/Closed | New subscriber types (WebSocket, Kafka bridge, Logger) subscribe without modifying `Topic` |
+| **D** — Dependency Inversion | Publisher and Topic interact through the abstract `Subscriber` interface |
+
+---
 
 ## 5. Follow-ups
 - **At-most-once vs at-least-once vs exactly-once?** Acknowledgment + dedup.

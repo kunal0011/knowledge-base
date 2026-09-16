@@ -97,6 +97,18 @@ Results: ["1+2+3", "1*2*3"]
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+| Input `num` | `target` | Expressions Evaluated | Valid Output List | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `"123"` | `6` | `"1+2+3"=6`, `"1*2*3"=6` | `["1*2*3", "1+2+3"]` | Multiple operator combinations match |
+| `"232"` | `8` | `"2*3+2"=8`, `"2+3*2"=8` | `["2*3+2", "2+3*2"]` | Tests multiplication precedence over addition |
+| `"105"` | `5` | `"1*0+5"=5`, `"10-5"=5` | `["1*0+5", "10-5"]` | Multi-digit grouping `"10"` vs single digit `"0"` |
+| `"00"` | `0` | `"0+0"=0`, `"0-0"=0`, `"0*0"=0` | `["0*0", "0+0", "0-0"]` | Note `"00"` is invalid due to leading zeros rule |
+| `"3456237490"` | `9191` | Explores partitions with 64-bit bounds | `[]` | No valid expressions |
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -259,3 +271,17 @@ class Solution {
 
 - **Time Complexity:** $O(4^N)$ — At each of the $N - 1$ spaces between digits, we have 4 choices: No-op (extend number), `+`, `-`, or `*`.
 - **Space Complexity:** $O(N)$ — Maximum recursion stack depth is $N$.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Multiplication Precedence Maintenance Without Re-evaluating Expression:**
+   - Subtract the previous operand and add back `prev * curr`:
+     `curr_val - prev + (prev * curr)`.
+   - Update the new previous operand as `prev * curr`.
+2. **64-bit Integer Overflow Trap:**
+   - Intermediate evaluation values can exceed 32-bit signed integer limits ($2 \times 10^9$). Always use 64-bit integers (`long` in Java/C++) for `prev`, `curr_val`, and `target`.
+3. **Leading Zero Pruning Invariant:**
+   - If `part[0] == '0'` and `len(part) > 1` (e.g. `"05"`), break immediately! Pruning with `break` (instead of `continue`) is valid because any longer slice starting at this index will also have a leading zero (e.g. `"053"`).
+

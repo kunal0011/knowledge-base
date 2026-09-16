@@ -90,6 +90,17 @@ Queue successfully reconstructed!
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+| Input `people` | Sorted by `(-h, k)` | Insertion Order / Final Queue | Notes |
+| :--- | :--- | :--- | :--- |
+| `[[7,0],[4,4],[7,1],[5,0],[6,1],[5,2]]` | `[7,0], [7,1], [6,1], [5,0], [5,2], [4,4]` | `[[5,0],[7,0],[5,2],[6,1],[4,4],[7,1]]` | Standard multi-element case |
+| `[[6,0],[5,0],[4,0],[3,2],[2,2],[1,4]]` | `[6,0], [5,0], [4,0], [3,2], [2,2], [1,4]` | `[[4,0],[5,0],[2,2],[3,2],[1,4],[6,0]]` | Multiple ties with $k=0$ and cascading shifts |
+| `[[1,0]]` | `[1,0]` | `[[1,0]]` | Single person base case |
+| `[[2,0],[1,0]]` | `[2,0], [1,0]` | `[[1,0],[2,0]]` | Person 1 placed before 2 at index 0 |
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -158,3 +169,13 @@ class Solution {
 
 - **Time Complexity:** $O(N^2)$ — Sorting takes $O(N \log N)$. Each list insertion at an arbitrary index takes $O(N)$ shifting, performed $N$ times. With $N \le 2000$, $N^2 \approx 4 \times 10^6$ operations, which runs in $< 20$ ms.
 - **Space Complexity:** $O(N)$ for the reconstructed list.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Why Ascending $k$ on Height Ties?**
+   - If two people have the exact same height (e.g. $[7, 0]$ and $[7, 1]$), sorting $k$ ascending ensures $[7, 0]$ is placed at index 0 first, and $[7, 1]$ is placed at index 1 after it. If reversed, $[7, 1]$ would be inserted at index 1 first, and then $[7, 0]$ would be inserted at index 0, pushing $[7, 1]$ to index 2 and incorrectly giving it 2 people in front of it!
+2. **`O(N log N)` Segment Tree / Binary Indexed Tree Optimization:**
+   - While $\mathcal{O}(N^2)$ dynamic list insertion easily passes within $N \le 2000$, this problem can be solved in $\mathcal{O}(N \log N)$ by sorting ascending by height and using a Fenwick Tree / Segment Tree to find the $k$-th empty slot.
+

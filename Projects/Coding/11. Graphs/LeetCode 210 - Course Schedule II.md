@@ -63,6 +63,28 @@ Return the **ordering of courses** you should take to finish all courses. If the
 
 ---
 
+### Solution Approach (Step-by-Step)
+
+1. **Build Adjacency List & Compute In-Degrees:**
+   - Initialize `adj = [[] for _ in range(numCourses)]` and `in_degree = [0] * numCourses`.
+   - For each `[dest, src]` in `prerequisites`:
+     - Add directed edge `src -> dest`: `adj[src].append(dest)`.
+     - Increment `in_degree[dest] += 1`.
+2. **Initialize Queue with In-Degree 0 Nodes:**
+   - Enqueue all course IDs $i$ with `in_degree[i] == 0`.
+3. **Process Courses via BFS:**
+   - Initialize `order = []`.
+   - While queue is not empty:
+     - Dequeue course `curr`, append to `order`.
+     - For each prerequisite-dependent course `neighbor` in `adj[curr]`:
+       - Decrement `in_degree[neighbor] -= 1`.
+       - If `in_degree[neighbor] == 0`, enqueue `neighbor`.
+4. **Cycle Detection Check:**
+   - If `len(order) == numCourses`, return `order`.
+   - Else (cycle detected, cannot complete all courses), return `[]`.
+
+---
+
 ### Visual Algorithm Walkthrough
 
 ```

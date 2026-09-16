@@ -159,3 +159,15 @@ class Solution {
 
 - **Time Complexity:** $O(N)$ — Exactly one single pass over the array with simple bitwise operations.
 - **Space Complexity:** $O(1)$ — Only two scalar variables `ones` and `twos`.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Generalized Modulo $K$ Counter FSM:**
+   - For elements appearing $K$ times and one element appearing $M$ times ($M < K$):
+     - We need $m = \lceil \log_2 K \rceil$ bitmask variables to represent counter states $0, 1, \dots, K-1$.
+     - When the counter reaches $K$, construct a reset mask `mask = ~(bit_0 & bit_1 & ...)` and AND it with each state variable.
+2. **Alternative 32-bit Summation Approach:**
+   - In languages like Python where integers have arbitrary precision, negative numbers require two's complement masking: `if ones >= 2**31: ones -= 2**32`. The FSM approach handles signed 32-bit integers naturally in C++ and Java.
+

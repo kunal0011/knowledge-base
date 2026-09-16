@@ -40,11 +40,21 @@ knowledge-base/
 │   │   ├── Volume-2/                          # Advanced Large-Scale Systems (15 Chapters)
 │   │   └── Volume-3/                          # Frontier AI & Agent Platforms (18 Chapters)
 │   │
-│   └── LLD/                                  # Low-Level Design & Object-Oriented Architecture
-│       ├── README.md                          # LLD Masterclass Homepage & Guide
-│       ├── LLD - Design Patterns & Interview Questions Index.md
-│       ├── 01-Design-Patterns/                # 14 Head First & GoF Patterns (Python & Java)
-│       └── 02-LLD-Interview-Questions/        # Top 50 FAANG/MAANG LLD Systems
+│   ├── LLD/                                  # Low-Level Design & Object-Oriented Architecture
+│   │   ├── README.md                          # LLD Masterclass Homepage & Guide
+│   │   ├── LLD - Design Patterns & Interview Questions Index.md
+│   │   ├── 01-Design-Patterns/                # 14 Head First & GoF Patterns (Python & Java)
+│   │   └── 02-LLD-Interview-Questions/        # Top 50 FAANG/MAANG LLD Systems
+│   │
+│   ├── Data-and-AI-Frameworks/               # High-Performance Data, Distributed & AI Frameworks
+│   │   ├── README.md                          # Framework Matrix & Master Curriculum
+│   │   ├── NumPy/                             # Vectorized N-D Computing & Buffer Protocols
+│   │   ├── Pandas/                            # Tabular Wrangling & Apache Arrow Backends
+│   │   ├── PySpark/                           # Distributed Big Data, Catalyst & Tungsten
+│   │   └── PyTorch/                           # Deep Learning, Dynamic Autograd & Compilation
+│   │
+│   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
+│       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
 │
 ├── Templates/                                # System Design & LLD Architectural Templates
 └── README.md                                 # Master Repository Portal

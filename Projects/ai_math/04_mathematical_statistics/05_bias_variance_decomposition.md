@@ -107,6 +107,164 @@ $$\mathbf{\text{EPE}(x_0) = \text{Bias}^2(\hat{f}(x_0)) + \text{Var}(\hat{f}(x_0
 
 ---
 
+### Deep Derivation 4.5.1: The Hoerl-Kennard Theorem (Why Ridge Regression Strictly Dominates OLS)
+
+A foundational question in statistical estimation is: *Can a biased estimator ever systematically outperform the minimum-variance unbiased estimator (OLS)?*
+Hoerl and Kennard (1970) proved that the answer is always **yes** for linear models.
+
+#### 1. Setup
+Consider the standard linear model $\mathbf{y} = X \mathbf{w}^* + \boldsymbol{\epsilon}$, where $X \in \mathbb{R}^{N \times D}$ has full column rank $D$, $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$, and $\text{Cov}(\boldsymbol{\epsilon}) = \sigma^2 I_N$.
+The Ridge estimator with shrinkage parameter $\lambda \ge 0$ is:
+$$\hat{\mathbf{w}}_\lambda = (X^T X + \lambda I)^{-1} X^T \mathbf{y}$$
+
+#### 2. Expectation and Bias
+Taking expectation over label noise:
+$$\mathbb{E}[\hat{\mathbf{w}}_\lambda] = (X^T X + \lambda I)^{-1} X^T X \mathbf{w}^*$$
+The bias vector is:
+$$\text{Bias}(\hat{\mathbf{w}}_\lambda) = \mathbb{E}[\hat{\mathbf{w}}_\lambda] - \mathbf{w}^* = \left[ (X^T X + \lambda I)^{-1} X^T X - I \right] \mathbf{w}^* = -\lambda (X^T X + \lambda I)^{-1} \mathbf{w}^*$$
+The squared bias is:
+$$\|\text{Bias}(\hat{\mathbf{w}}_\lambda)\|_2^2 = \lambda^2 {\mathbf{w}^*}^T (X^T X + \lambda I)^{-2} \mathbf{w}^*$$
+
+#### 3. Covariance and Variance
+The covariance matrix of the estimator is:
+$$\text{Cov}(\hat{\mathbf{w}}_\lambda) = (X^T X + \lambda I)^{-1} X^T (\sigma^2 I_N) X (X^T X + \lambda I)^{-1} = \sigma^2 (X^T X + \lambda I)^{-1} X^T X (X^T X + \lambda I)^{-1}$$
+The total variance (trace of covariance) is:
+$$\text{Var}_{\text{tot}}(\hat{\mathbf{w}}_\lambda) = \text{Tr}(\text{Cov}(\hat{\mathbf{w}}_\lambda)) = \sigma^2 \text{Tr}\left( (X^T X + \lambda I)^{-2} X^T X \right)$$
+
+#### 4. Spectral Decomposition
+Let $X^T X = V \Lambda V^T$ be the eigendecomposition of the symmetric positive definite Gram matrix, where $\Lambda = \text{diag}(d_1, \dots, d_D)$ with eigenvalues $d_j > 0$, and $V = [\mathbf{v}_1, \dots, \mathbf{v}_D]$ is the orthonormal eigenvector matrix.
+Define the rotated parameter coordinates $\boldsymbol{\alpha} = V^T \mathbf{w}^*$, so $\alpha_j = \mathbf{v}_j^T \mathbf{w}^*$.
+
+In this eigenbasis:
+$$(X^T X + \lambda I)^{-1} = V \text{diag}\left( \frac{1}{d_1 + \lambda}, \dots, \frac{1}{d_D + \lambda} \right) V^T$$
+Substituting into the bias and variance expressions:
+$$\text{Bias}^2(\lambda) = \sum_{j=1}^D \frac{\lambda^2 \alpha_j^2}{(d_j + \lambda)^2}$$
+$$\text{Var}(\lambda) = \sigma^2 \sum_{j=1}^D \frac{d_j}{(d_j + \lambda)^2}$$
+
+The Total Mean Squared Error of the parameter vector is:
+$$\text{MSE}(\lambda) = \text{Bias}^2(\lambda) + \text{Var}(\lambda) = \sum_{j=1}^D \frac{\lambda^2 \alpha_j^2 + \sigma^2 d_j}{(d_j + \lambda)^2}$$
+
+#### 5. Derivative at $\lambda = 0$
+Let us compute the derivative of each term in the summation with respect to $\lambda$:
+$$\frac{d}{d\lambda} \left[ \frac{\lambda^2 \alpha_j^2 + \sigma^2 d_j}{(d_j + \lambda)^2} \right] = \frac{2\lambda \alpha_j^2 (d_j + \lambda)^2 - 2(d_j + \lambda)(\lambda^2 \alpha_j^2 + \sigma^2 d_j)}{(d_j + \lambda)^4}$$
+Cancel the factor $(d_j + \lambda)$:
+$$= \frac{2 \left[ \lambda \alpha_j^2 (d_j + \lambda) - (\lambda^2 \alpha_j^2 + \sigma^2 d_j) \right]}{(d_j + \lambda)^3} = \frac{2 (\lambda d_j \alpha_j^2 - \sigma^2 d_j)}{(d_j + \lambda)^3} = \frac{2 d_j (\lambda \alpha_j^2 - \sigma^2)}{(d_j + \lambda)^3}$$
+
+Now evaluate this derivative at $\lambda = 0$ (which corresponds to Ordinary Least Squares):
+$$\left. \frac{d \text{MSE}(\lambda)}{d\lambda} \right|_{\lambda = 0} = \sum_{j=1}^D \frac{2 d_j (0 - \sigma^2)}{d_j^3} = \mathbf{-2\sigma^2 \sum_{j=1}^D \frac{1}{d_j^2}}$$
+
+#### 6. Theoretical Conclusion
+Because $d_j > 0$ and $\sigma^2 > 0$:
+$$\left. \frac{d \text{MSE}(\lambda)}{d\lambda} \right|_{\lambda = 0} < 0$$
+Since the derivative at $\lambda = 0$ is strictly negative, the MSE function strictly decreases as $\lambda$ moves away from zero into positive territory!
+$$\mathbf{\exists \, \lambda^* > 0 \quad \text{such that} \quad \text{MSE}(\hat{\mathbf{w}}_{\lambda^*}) < \text{MSE}(\hat{\mathbf{w}}_{\text{OLS}})} \quad \blacksquare$$
+*Significance:* It is mathematically impossible for OLS to be optimal in total parameter MSE whenever noise $\sigma^2 > 0$. Introducing deliberate bias through $L_2$ shrinkage always buys more variance reduction than it costs in bias.
+
+---
+
+### Deep Derivation 4.5.2: Bias-Variance Decomposition for 0-1 Classification Loss (Domingos Formulation)
+
+The classical bias-variance decomposition applies to additive squared loss. For binary classification with targets $y \in \{-1, +1\}$ and discrete 0-1 loss $L(y, \hat{y}) = \mathbb{I}(y \ne \hat{y})$, Pedro Domingos (2000) unified the theory.
+
+#### 1. Fundamental Definitions
+For a fixed input $x$:
+1. **Bayes Optimal Predictor:** The theoretically best prediction:
+   $$y_* = \text{argmax}_{y \in \{-1, +1\}} P(y \mid x)$$
+2. **Main Prediction:** The mode of the model's predictions over all training dataset draws $\mathcal{D}$:
+   $$y_m = \text{argmax}_{y \in \{-1, +1\}} P_{\mathcal{D}}(\hat{y} = y)$$
+3. **Irreducible Noise $N(x)$:** The rate at which nature disagrees with the Bayes optimal label:
+   $$N(x) = \mathbb{E}_y[L(y, y_*)] = P(y \ne y_* \mid x)$$
+   Note that by definition of the Bayes classifier, $N(x) \le 0.5$.
+4. **Bias $B(x)$:** Whether the model's typical decision disagrees with the Bayes optimal decision:
+   $$B(x) = L(y_m, y_*) = \mathbb{I}(y_m \ne y_*) \in \{0, 1\}$$
+5. **Variance $V(x)$:** The probability that the model's prediction on a random dataset disagrees with its main prediction:
+   $$V(x) = \mathbb{E}_{\mathcal{D}}[L(\hat{y}, y_m)] = P_{\mathcal{D}}(\hat{y} \ne y_m)$$
+
+#### 2. The Expected Loss Derivation
+The expected 0-1 loss over training sets $\mathcal{D}$ and test labels $y$ is:
+$$\mathbb{E}_{\mathcal{D}, y}[L(y, \hat{y})] = P_{\mathcal{D}, y}(y \ne \hat{y})$$
+Condition on whether the target $y$ equals the Bayes optimal label $y_*$:
+$$P(y \ne \hat{y}) = P(y = y_*) P(\hat{y} \ne y_*) + P(y \ne y_*) P(\hat{y} = y_*)$$
+Since $P(y \ne y_*) = N(x)$ and $P(y = y_*) = 1 - N(x)$:
+$$\mathbb{E}[L(y, \hat{y})] = (1 - N(x)) P(\hat{y} \ne y_*) + N(x) (1 - P(\hat{y} \ne y_*))$$
+$$= N(x) + (1 - 2N(x)) P(\hat{y} \ne y_*)$$
+
+Now evaluate $P(\hat{y} \ne y_*)$ under the two cases of Bias $B(x) \in \{0, 1\}$:
+
+**Case 1: Unbiased ($B(x) = 0 \implies y_m = y_*$):**
+Here, $\hat{y} \ne y_* \iff \hat{y} \ne y_m$, which by definition has probability $V(x)$.
+$$\mathbb{E}[L(y, \hat{y})] = N(x) + (1 - 2N(x)) V(x)$$
+
+**Case 2: Biased ($B(x) = 1 \implies y_m \ne y_*$):**
+In binary classification, if $y_m \ne y_*$, then $\hat{y} \ne y_* \iff \hat{y} = y_m$, which occurs with probability $1 - V(x)$.
+$$\mathbb{E}[L(y, \hat{y})] = N(x) + (1 - 2N(x))(1 - V(x)) = N(x) + (1 - 2N(x)) - (1 - 2N(x))V(x)$$
+$$= 1 - N(x) - (1 - 2N(x))V(x)$$
+
+#### 3. Unified Classification Theorem
+Combining both cases:
+$$\mathbf{\mathbb{E}_{\mathcal{D}, y}[L(y, \hat{y})] = N(x) + B(x) + c(x) V(x)}$$
+where:
+$$c(x) = \begin{cases} +(1 - 2N(x)) > 0 & \text{if } B(x) = 0 \quad (\text{Unbiased learner}) \\ -(1 - 2N(x)) < 0 & \text{if } B(x) = 1 \quad (\text{Biased learner}) \end{cases}$$
+
+#### 4. The Profound Practical Implication: Variance Dampening
+- When a model is **unbiased** ($y_m = y_*$), variance strictly increases error: every fluctuation away from the main prediction turns a correct decision into a blunder.
+- When a model is **biased** ($y_m \ne y_*$), variance **decreases error**: because the model's typical decision is wrong, random perturbations give it a chance of stumbling into the correct Bayes class!
+- This explains why **Bagging** works exceptionally well with low-bias decision trees (slashing positive variance), while **Boosting** is required for high-bias learners to first flip $B(x)$ to $0$.
+
+---
+
+### Deep Derivation 4.5.3: $k$-Nearest Neighbors Bias-Variance Tradeoff & Minimax Optimal Rate
+
+In non-parametric estimation, $k$-Nearest Neighbors ($k$-NN) provides a transparent lens on how local smoothing controls the bias-variance boundary in $\mathbb{R}^D$.
+
+#### 1. Setup
+Let $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^N$ with $x_i \sim P_X$ uniformly on a bounded domain $[0, 1]^D$, and $y_i = f(x_i) + \epsilon_i$ with $\mathbb{E}[\epsilon_i] = 0, \text{Var}(\epsilon_i) = \sigma^2$.
+The $k$-NN estimator at test point $x_0$ is:
+$$\hat{f}_k(x_0) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x_0)} y_i$$
+where $\mathcal{N}_k(x_0)$ indexes the $k$ nearest neighbors to $x_0$.
+
+#### 2. Exact Variance
+Since errors $\epsilon_i$ are independent with variance $\sigma^2$:
+$$\text{Var}(\hat{f}_k(x_0)) = \text{Var}\left( \frac{1}{k} \sum_{i \in \mathcal{N}_k(x_0)} (f(x_i) + \epsilon_i) \right) = \frac{1}{k^2} \sum_{i \in \mathcal{N}_k(x_0)} \text{Var}(\epsilon_i) = \mathbf{\frac{\sigma^2}{k}}$$
+Notice: The variance depends **only on $k$**, not on the total dataset size $N$ or feature dimension $D$!
+
+#### 3. Bias and the Curse of Dimensionality
+The expected prediction is:
+$$\bar{f}(x_0) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x_0)} f(x_i)$$
+The bias is:
+$$\text{Bias}(\hat{f}_k(x_0)) = \bar{f}(x_0) - f(x_0) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x_0)} (f(x_i) - f(x_0))$$
+
+Assuming $f$ is twice continuously differentiable with Lipschitz Hessian, Taylor expand $f(x_i)$ around $x_0$:
+$$f(x_i) - f(x_0) \approx \nabla f(x_0)^T (x_i - x_0) + \frac{1}{2} (x_i - x_0)^T \nabla^2 f(x_0) (x_i - x_0)$$
+For symmetric neighbor distributions, linear terms cancel, leaving the quadratic distance scale:
+$$\text{Bias} \approx C \cdot R_k^2(x_0)$$
+where $R_k(x_0)$ is the Euclidean distance from $x_0$ to its $k$-th nearest neighbor.
+
+In $D$ dimensions, the volume of a ball containing $k$ out of $N$ points scales as:
+$$\text{Vol}(B(R_k)) \propto R_k^D \approx \frac{k}{N} \implies R_k \propto \left( \frac{k}{N} \right)^{1/D}$$
+Therefore:
+$$\text{Bias}^2(\hat{f}_k(x_0)) \approx C_1 \cdot R_k^4 = \mathbf{C_1 \left( \frac{k}{N} \right)^{4/D}}$$
+
+#### 4. Total Expected Prediction Error and Optimal $k^*$
+Summing bias, variance, and irreducible noise:
+$$\text{EPE}(k) = C_1 \left( \frac{k}{N} \right)^{4/D} + \frac{\sigma^2}{k} + \sigma^2$$
+
+Differentiate with respect to $k$ and set to zero:
+$$\frac{d \text{EPE}}{dk} = \frac{4 C_1}{D N^{4/D}} k^{\frac{4}{D} - 1} - \frac{\sigma^2}{k^2} = 0$$
+$$\frac{4 C_1}{D N^{4/D}} k^{\frac{4 + D}{D}} = \sigma^2 \implies k^{\frac{D + 4}{D}} = \frac{D \sigma^2}{4 C_1} N^{4/D}$$
+Solving for the optimal neighborhood size $k^*$:
+$$\mathbf{k^* \propto N^{\frac{4}{D + 4}}}$$
+
+#### 5. Asymptotic Error Rate
+Substituting $k^*$ back into the MSE:
+$$\text{MSE}(k^*) = \mathcal{O}\left( \left(\frac{N^{\frac{4}{D+4}}}{N}\right)^{4/D} \right) + \mathcal{O}\left( N^{-\frac{4}{D+4}} \right) = \mathbf{\mathcal{O}\left( N^{-\frac{4}{D + 4}} \right)}$$
+- In $D = 1$: Rate is $N^{-4/5} = N^{-0.80}$.
+- In $D = 10$: Rate slows to $N^{-4/14} \approx N^{-0.28}$.
+- In $D = 100$: Rate crawls to $N^{-4/104} \approx N^{-0.038}$.
+This mathematically proves the **Curse of Dimensionality**: in high dimensions, keeping bias small forces the neighbor radius to encompass the entire volume, destroying local smoothness unless sample size $N$ grows exponentially!
+
+---
+
 ## Part 3: Geometric & Algebraic Interpretation
 
 ### 1. The Classical U-Curve vs. Modern Double Descent
@@ -285,6 +443,115 @@ $$\hat{f}_{\text{ens}}(x) = \frac{1}{K} \sum_{k=1}^K \hat{f}_k(x)$$
 - If the models are perfectly uncorrelated ($\rho = 0$):
   $$\text{Var}(\hat{f}_{\text{ens}}) = \frac{V}{K} \xrightarrow{K \to \infty} 0!$$
 *Deep Learning Takeaway:* Model ensembling, Random Forests, and Test-Time Augmentation (TTA) are **pure variance reduction operators** that slash variance by up to $1/K$ without hurting bias!
+
+---
+
+### Illustration 4 (Numerical): Step-by-Step Bias-Variance Tradeoff in $k$-NN Regression
+
+Let us compute exact Bias, Variance, and Expected Prediction Error for $k$-Nearest Neighbors by hand on a 1D dataset.
+
+#### 1. Setup
+- **True Function:** $f(x) = 4 x^2$
+- **Noise Model:** $y = f(x) + \epsilon$ with $\epsilon \sim \mathcal{N}(0, \sigma^2 = 0.36)$
+- **Test Query:** $x_0 = 0.50 \implies \mathbf{f(x_0) = 4(0.50)^2 = 1.0000}$
+- **Irreducible Noise:** $\sigma^2 = 0.3600$
+- **Training Sample ($N = 5$ inputs):**
+  $$x = [0.10, \, 0.30, \, 0.50, \, 0.70, \, 0.90]$$
+  True noiseless values:
+  $$f(x_1) = 4(0.10)^2 = 0.04, \quad f(x_2) = 4(0.30)^2 = 0.36, \quad f(x_3) = 4(0.50)^2 = 1.00$$
+  $$f(x_4) = 4(0.70)^2 = 1.96, \quad f(x_5) = 4(0.90)^2 = 3.24$$
+
+We compare $k = 1$ (low bias, high variance) against $k = 3$ (higher bias, low variance).
+
+#### 2. Case A: $k = 1$ Nearest Neighbor
+The single nearest neighbor to $x_0 = 0.50$ is $x_3 = 0.50$ (distance $d = 0$).
+- **Expected Prediction:**
+  $$\bar{f}_1(x_0) = \mathbb{E}[y_3] = f(x_3) = \mathbf{1.0000}$$
+- **Bias:**
+  $$\text{Bias}_1 = \bar{f}_1(x_0) - f(x_0) = 1.0000 - 1.0000 = \mathbf{0.0000} \implies \mathbf{\text{Bias}_1^2 = 0.0000}$$
+- **Variance:**
+  $$\text{Var}_1(x_0) = \text{Var}(y_3) = \frac{\sigma^2}{1} = \mathbf{0.3600}$$
+- **Total Expected Prediction Error:**
+  $$\mathbf{\text{EPE}_{k=1} = \text{Bias}^2 + \text{Var} + \sigma^2 = 0.0000 + 0.3600 + 0.3600 = 0.7200}$$
+
+#### 3. Case B: $k = 3$ Nearest Neighbors
+The 3 nearest neighbors to $x_0 = 0.50$ are $x_2 = 0.30$, $x_3 = 0.50$, and $x_4 = 0.70$.
+- **Expected Prediction:**
+  $$\bar{f}_3(x_0) = \frac{f(x_2) + f(x_3) + f(x_4)}{3} = \frac{0.36 + 1.00 + 1.96}{3} = \frac{3.32}{3} \approx \mathbf{1.1067}$$
+- **Bias:**
+  $$\text{Bias}_3 = \bar{f}_3(x_0) - f(x_0) = 1.1067 - 1.0000 = \mathbf{+0.1067}$$
+  $$\mathbf{\text{Bias}_3^2 = (0.10667)^2 \approx 0.01138}$$
+- **Variance:**
+  $$\text{Var}_3(x_0) = \text{Var}\left( \frac{y_2 + y_3 + y_4}{3} \right) = \frac{\sigma^2}{3} = \frac{0.36}{3} = \mathbf{0.1200}$$
+- **Total Expected Prediction Error:**
+  $$\mathbf{\text{EPE}_{k=3} = \text{Bias}^2 + \text{Var} + \sigma^2 = 0.01138 + 0.1200 + 0.3600 = 0.4914}$$
+
+#### 4. Quantitative Verdict
+```
+Configuration │ Squared Bias │ Variance │ Noise Floor │ Total EPE │ Error Reduction
+──────────────┼──────────────┼──────────┼─────────────┼───────────┼─────────────────
+k = 1         │ 0.0000       │ 0.3600   │ 0.3600      │ 0.7200    │ Baseline
+k = 3         │ 0.0114       │ 0.1200   │ 0.3600      │ 0.4914    │ -31.75% ◄── MIN
+```
+By accepting a tiny bias penalty ($+0.0114$), $k = 3$ achieves a massive $66.7\%$ reduction in variance ($-0.2400$), slashing overall prediction error by nearly a third!
+
+---
+
+### Illustration 5 (Numerical): Spectral Evaluation of Ridge Regularization vs. OLS
+
+Let us verify the Hoerl-Kennard Theorem with an ill-conditioned linear regression problem in $D = 2$ dimensions.
+
+#### 1. Setup & Spectral Parameters
+- **Gram Matrix Eigenvalues:** $d_1 = 4.0$, $d_2 = 0.25$ (condition number $\kappa = d_1 / d_2 = 16.0$, indicating collinearity along the second eigenvector).
+- **True Parameter Coordinates:** $\alpha_1 = \mathbf{v}_1^T \mathbf{w}^* = 1.0$, $\alpha_2 = \mathbf{v}_2^T \mathbf{w}^* = 2.0$.
+- **Observation Noise:** $\sigma^2 = 1.00$.
+
+Recall the exact spectral formula for parameter MSE from Deep Derivation 4.5.1:
+$$\text{MSE}(\lambda) = \sum_{j=1}^2 \left[ \underbrace{\frac{\lambda^2 \alpha_j^2}{(d_j + \lambda)^2}}_{\text{Bias}_j^2} + \underbrace{\frac{\sigma^2 d_j}{(d_j + \lambda)^2}}_{\text{Var}_j} \right]$$
+
+#### 2. Evaluation at $\lambda = 0.00$ (Ordinary Least Squares)
+- **Bias:** $\text{Bias}^2 = 0.0000$.
+- **Variance:**
+  $$\text{Var}_1 = \frac{1.0(4.0)}{(4.0 + 0)^2} = \frac{4.0}{16.0} = 0.2500$$
+  $$\text{Var}_2 = \frac{1.0(0.25)}{(0.25 + 0)^2} = \frac{0.25}{0.0625} = 4.0000 \quad (\text{Explosion due to small } d_2!)$$
+  $$\text{Var}_{\text{tot}} = 0.2500 + 4.0000 = \mathbf{4.2500}$$
+- **Total Parameter MSE:**
+  $$\mathbf{\text{MSE}(\lambda = 0.00) = 0.0000 + 4.2500 = 4.2500}$$
+
+#### 3. Evaluation at $\lambda = 0.20$ (Moderate Ridge Shrinkage)
+- **Eigen-component 1 ($d_1 = 4.0, \alpha_1 = 1.0, d_1 + \lambda = 4.20$):**
+  $$\text{Bias}_1^2 = \frac{(0.20)^2 (1.0)^2}{(4.20)^2} = \frac{0.04}{17.64} \approx 0.00227$$
+  $$\text{Var}_1 = \frac{1.00(4.0)}{(4.20)^2} = \frac{4.0}{17.64} \approx 0.22676$$
+  $$\text{MSE}_1 = 0.00227 + 0.22676 = 0.22903$$
+- **Eigen-component 2 ($d_2 = 0.25, \alpha_2 = 2.0, d_2 + \lambda = 0.45$):**
+  $$\text{Bias}_2^2 = \frac{(0.20)^2 (2.0)^2}{(0.45)^2} = \frac{0.16}{0.2025} \approx 0.79012$$
+  $$\text{Var}_2 = \frac{1.00(0.25)}{(0.45)^2} = \frac{0.25}{0.2025} \approx 1.23457$$
+  $$\text{MSE}_2 = 0.79012 + 1.23457 = 2.02469$$
+- **Total:**
+  $$\text{Bias}^2 = 0.00227 + 0.79012 = \mathbf{0.7924}$$
+  $$\text{Var} = 0.22676 + 1.23457 = \mathbf{1.4613}$$
+  $$\mathbf{\text{MSE}(\lambda = 0.20) = 0.7924 + 1.4613 = 2.2537}$$
+  *Improvement:* MSE plummets from $4.2500 \to 2.2537$ (**47.0% error reduction!**). The small eigenvalue's variance was tamed from $4.0000 \to 1.2346$.
+
+#### 4. Evaluation at $\lambda = 1.00$ (Over-Shrinkage)
+- **Eigen-component 1 ($d_1 + \lambda = 5.0$):**
+  $$\text{Bias}_1^2 = \frac{1.00(1.0)}{25.0} = 0.0400, \quad \text{Var}_1 = \frac{4.0}{25.0} = 0.1600$$
+- **Eigen-component 2 ($d_2 + \lambda = 1.25$):**
+  $$\text{Bias}_2^2 = \frac{1.00(4.0)}{(1.25)^2} = \frac{4.0}{1.5625} = 2.5600, \quad \text{Var}_2 = \frac{0.25}{1.5625} = 0.1600$$
+- **Total:**
+  $$\text{Bias}^2 = 0.0400 + 2.5600 = \mathbf{2.6000}$$
+  $$\text{Var} = 0.1600 + 0.1600 = \mathbf{0.3200}$$
+  $$\mathbf{\text{MSE}(\lambda = 1.00) = 2.6000 + 0.3200 = 2.9200}$$
+
+#### 5. Comparison Summary
+```
+Shrinkage λ │ Total Bias² │ Total Variance │ Total Parameter MSE │ Dominant Source
+────────────┼─────────────┼────────────────┼─────────────────────┼───────────────────
+λ = 0.00    │ 0.0000      │ 4.2500         │ 4.2500              │ Collinear Variance (100%)
+λ = 0.20    │ 0.7924      │ 1.4613         │ 2.2537 ◄── MINIMUM  │ Balanced Optimum
+λ = 1.00    │ 2.6000      │ 0.3200         │ 2.9200              │ Underfitting Bias (89%)
+```
+This concrete calculation numerically validates the Hoerl-Kennard Theorem: introducing positive shrinkage $\lambda = 0.20$ drops total parameter MSE by nearly half compared to the unbiased OLS estimator!
 
 ---
 

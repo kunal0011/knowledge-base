@@ -87,6 +87,36 @@ $$-\ln p(\mathbf{w}) = D \ln(2b) + \frac{1}{b} \|\mathbf{w}\|_1$$
 Combine with Gaussian NLL and scale by $\frac{\sigma^2}{N}$:
 $$\mathbf{\mathcal{L}_{\text{MAP}}(\mathbf{w}) = \frac{1}{2N} \sum_{i=1}^N (y_i - f_{\mathbf{w}}(x_i))^2 + \lambda \|\mathbf{w}\|_1} \quad \text{where } \mathbf{\lambda = \frac{\sigma^2}{N b}} \quad \blacksquare$$
 
+#### Deep Derivation 4.4.1: Subgradient Calculus Derivation of the Soft-Thresholding Operator
+Consider the decoupled 1D scalar Lasso / $L_1$ MAP objective:
+$$\min_w J(w) \triangleq \frac{1}{2} (w - w_{\text{MLE}})^2 + \lambda |w|, \quad \lambda > 0$$
+Because the absolute value function $|w|$ is non-differentiable at $w = 0$, we must utilize **Subgradient Calculus**.
+
+1. **Subdifferential of the Absolute Value Function:**
+   $$\partial |w| = \begin{cases} \{+1\} & \text{if } w > 0 \\ [-1, +1] & \text{if } w = 0 \\ \{-1\} & \text{if } w < 0 \end{cases}$$
+
+2. **First-Order Subgradient Optimality Condition:**
+   By convex analysis, $w^*$ is a global minimum of $J(w)$ if and only if zero belongs to the subdifferential:
+   $$0 \in \partial J(w^*) = (w^* - w_{\text{MLE}}) + \lambda \, \partial |w^*|$$
+
+3. **Case-by-Case Analysis:**
+   - **Case 1 ($w^* > 0$):**
+     $$\partial |w^*| = \{+1\} \implies (w^* - w_{\text{MLE}}) + \lambda(1) = 0 \implies w^* = w_{\text{MLE}} - \lambda$$
+     For this solution to satisfy the assumption $w^* > 0$, we strictly require:
+     $$w_{\text{MLE}} - \lambda > 0 \implies \mathbf{w_{\text{MLE}} > \lambda}$$
+   - **Case 2 ($w^* < 0$):**
+     $$\partial |w^*| = \{-1\} \implies (w^* - w_{\text{MLE}}) + \lambda(-1) = 0 \implies w^* = w_{\text{MLE}} + \lambda$$
+     For this solution to satisfy the assumption $w^* < 0$, we strictly require:
+     $$w_{\text{MLE}} + \lambda < 0 \implies \mathbf{w_{\text{MLE}} < -\lambda}$$
+   - **Case 3 ($w^* = 0$):**
+     $$\partial |w^*| = [-1, +1] \implies 0 \in (0 - w_{\text{MLE}}) + \lambda [-1, +1] \implies w_{\text{MLE}} \in [-\lambda, +\lambda]$$
+     This holds if and only if:
+     $$\mathbf{|w_{\text{MLE}}| \le \lambda}$$
+
+4. **Unified Piecewise Formulation (The Soft-Thresholding Operator):**
+   Combining all three cases yields the **Soft-Thresholding Operator** $\mathcal{S}_\lambda(w_{\text{MLE}})$:
+   $$\mathbf{\hat{w}_{\text{MAP}} = \mathcal{S}_\lambda(w_{\text{MLE}}) \triangleq \text{sign}(w_{\text{MLE}}) \max\left( 0, \, |w_{\text{MLE}}| - \lambda \right) = \begin{cases} w_{\text{MLE}} - \lambda & \text{if } w_{\text{MLE}} > \lambda \\ 0 & \text{if } |w_{\text{MLE}}| \le \lambda \\ w_{\text{MLE}} + \lambda & \text{if } w_{\text{MLE}} < -\lambda \end{cases}} \quad \blacksquare$$
+
 ---
 
 ### 4. Closed-Form Analytical MAP Solution for Linear Regression
@@ -97,6 +127,27 @@ $$\nabla_{\mathbf{w}} \mathcal{L} = -\frac{1}{\sigma^2} X^T (\mathbf{y} - X\math
 Multiply by $\sigma^2$:
 $$-X^T \mathbf{y} + X^T X \mathbf{w} + \frac{\sigma^2}{\sigma_0^2} \mathbf{w} = \mathbf{0} \implies \left( X^T X + \frac{\sigma^2}{\sigma_0^2} I_D \right) \mathbf{w} = X^T \mathbf{y}$$
 $$\mathbf{\hat{\mathbf{w}}_{\text{MAP}} = \left( X^T X + \lambda I_D \right)^{-1} X^T \mathbf{y} \quad \text{where } \lambda = \frac{\sigma^2}{\sigma_0^2}}$$
+
+#### Deep Derivation 4.4.2: Full Algebraic Proof of Multivariate Gaussian-Gaussian Conjugacy
+Let prior $\mathbf{w} \sim \mathcal{N}(\mathbf{m}_0, S_0)$ and likelihood $\mathbf{y} \mid X, \mathbf{w} \sim \mathcal{N}(X\mathbf{w}, \sigma^2 I_N)$.
+By Bayes' rule, the posterior density satisfies:
+$$p(\mathbf{w} \mid \mathbf{y}) \propto p(\mathbf{y} \mid X, \mathbf{w}) \, p(\mathbf{w})$$
+Expand the quadratic exponents:
+$$-\frac{1}{2} \left[ (\mathbf{w} - \mathbf{m}_0)^T S_0^{-1} (\mathbf{w} - \mathbf{m}_0) + \frac{1}{\sigma^2} (\mathbf{y} - X\mathbf{w})^T (\mathbf{y} - X\mathbf{w}) \right]$$
+
+1. **Collect terms quadratic in $\mathbf{w}$:**
+   $$\mathbf{w}^T S_0^{-1} \mathbf{w} + \frac{1}{\sigma^2} \mathbf{w}^T X^T X \mathbf{w} = \mathbf{w}^T \left( S_0^{-1} + \frac{1}{\sigma^2} X^T X \right) \mathbf{w}$$
+   Define the posterior precision matrix $S_N^{-1}$:
+   $$\mathbf{S_N^{-1} \triangleq S_0^{-1} + \frac{1}{\sigma^2} X^T X \implies S_N = \left( S_0^{-1} + \frac{1}{\sigma^2} X^T X \right)^{-1}}$$
+
+2. **Collect terms linear in $\mathbf{w}$:**
+   $$-2 \mathbf{w}^T S_0^{-1} \mathbf{m}_0 - \frac{2}{\sigma^2} \mathbf{w}^T X^T \mathbf{y} = -2 \mathbf{w}^T \left( S_0^{-1} \mathbf{m}_0 + \frac{1}{\sigma^2} X^T \mathbf{y} \right)$$
+   Matching this linear form to the standard Gaussian expansion $\mathbf{w}^T S_N^{-1} \mathbf{w} - 2\mathbf{w}^T S_N^{-1} \mathbf{m}_N$:
+   $$S_N^{-1} \mathbf{m}_N = S_0^{-1} \mathbf{m}_0 + \frac{1}{\sigma^2} X^T \mathbf{y} \implies \mathbf{\mathbf{m}_N = S_N \left( S_0^{-1} \mathbf{m}_0 + \frac{1}{\sigma^2} X^T \mathbf{y} \right)}$$
+
+3. **Conclusion:**
+   Completing the square proves that the posterior distribution is **identically Gaussian**:
+   $$\mathbf{\mathbf{w} \mid \mathbf{y} \sim \mathcal{N}(\mathbf{m}_N, S_N)} \quad \blacksquare$$
 
 #### Numerical Stability Guarantee:
 Even if $X^T X$ is rank-deficient (e.g. collinear features or $D > N$), the regularized matrix $(X^T X + \lambda I)$ is **strictly symmetric positive definite** and always invertible because all its eigenvalues are strictly shifted by $+\lambda > 0$!
@@ -264,6 +315,89 @@ $$\theta_{t+1} = \theta_t - \frac{\eta}{\sqrt{v_t} + \epsilon} \left( \nabla_\th
 **AdamW (Loshchilov & Hutter, 2019):** Decouples weight decay from the adaptive gradient moment:
 $$\theta_{t+1} = \theta_t - \frac{\eta}{\sqrt{v_t} + \epsilon} \nabla \mathcal{L}(\theta_t) - \mathbf{\eta \lambda \theta_t}$$
 AdamW restores the true Gaussian MAP prior behavior, which is why virtually every modern Transformer (LLaMA, GPT-4, Mistral) is trained with AdamW rather than vanilla Adam!
+
+---
+
+### Illustration 4 (Numerical): Multi-Dimensional Ridge Regression ($L_2$ MAP with Matrix Inversion)
+
+Let us solve a multi-dimensional linear regression problem with a Gaussian prior ($\sigma^2 = 1.0, \sigma_0^2 = 1.0 \implies \lambda = \sigma^2 / \sigma_0^2 = 1.0$).
+
+#### 1. Setup
+Given $N = 3$ observations and $D = 2$ features:
+$$X = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}, \quad \mathbf{y} = \begin{bmatrix} 2 \\ 3 \\ 4 \end{bmatrix}, \quad \lambda = 1.0$$
+
+#### 2. Normal Equation Gram Matrix and Cross-Product
+$$X^T X = \begin{bmatrix} 1 & 0 & 1 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix} = \begin{bmatrix} 1^2 + 0^2 + 1^2 & 1(0) + 0(1) + 1(1) \\ 0(1) + 1(0) + 1(1) & 0^2 + 1^2 + 1^2 \end{bmatrix} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$$
+
+$$X^T \mathbf{y} = \begin{bmatrix} 1 & 0 & 1 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 3 \\ 4 \end{bmatrix} = \begin{bmatrix} 1(2) + 0(3) + 1(4) \\ 0(2) + 1(3) + 1(4) \end{bmatrix} = \begin{bmatrix} 6 \\ 7 \end{bmatrix}$$
+
+#### 3. Unregularized MLE Weights ($\mathbf{w}_{\text{MLE}}$)
+$$\det(X^T X) = (2)(2) - (1)(1) = 3$$
+$$(X^T X)^{-1} = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}$$
+$$\mathbf{w}_{\text{MLE}} = (X^T X)^{-1} X^T \mathbf{y} = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix} \begin{bmatrix} 6 \\ 7 \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 12 - 7 \\ -6 + 14 \end{bmatrix} = \begin{bmatrix} 5/3 \\ 8/3 \end{bmatrix} \approx \begin{bmatrix} 1.6667 \\ 2.6667 \end{bmatrix}$$
+
+Norm of MLE weight vector:
+$$\|\mathbf{w}_{\text{MLE}}\|_2^2 = \left(\frac{5}{3}\right)^2 + \left(\frac{8}{3}\right)^2 = \frac{25 + 64}{9} = \frac{89}{9} \approx \mathbf{9.8889}$$
+
+#### 4. Regularized MAP Weights ($\mathbf{w}_{\text{MAP}}$)
+Add $\lambda I = 1.0 \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$:
+$$X^T X + \lambda I = \begin{bmatrix} 2 + 1 & 1 \\ 1 & 2 + 1 \end{bmatrix} = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}$$
+$$\det(X^T X + \lambda I) = (3)(3) - (1)(1) = 8$$
+$$(X^T X + \lambda I)^{-1} = \frac{1}{8} \begin{bmatrix} 3 & -1 \\ -1 & 3 \end{bmatrix}$$
+
+$$\mathbf{w}_{\text{MAP}} = (X^T X + \lambda I)^{-1} X^T \mathbf{y} = \frac{1}{8} \begin{bmatrix} 3 & -1 \\ -1 & 3 \end{bmatrix} \begin{bmatrix} 6 \\ 7 \end{bmatrix} = \frac{1}{8} \begin{bmatrix} 18 - 7 \\ -6 + 21 \end{bmatrix} = \begin{bmatrix} 11/8 \\ 15/8 \end{bmatrix} = \begin{bmatrix} \mathbf{1.3750} \\ \mathbf{1.8750} \end{bmatrix}$$
+
+Norm of MAP weight vector:
+$$\|\mathbf{w}_{\text{MAP}}\|_2^2 = (1.375)^2 + (1.875)^2 = 1.890625 + 3.515625 = \frac{346}{64} = \mathbf{5.40625}$$
+
+#### 5. Comparison & Posterior Covariance
+- **Shrinkage Analysis:** 
+  $$w_1: 1.6667 \to 1.3750 \quad (-17.5\%)$$
+  $$w_2: 2.6667 \to 1.8750 \quad (-29.7\%)$$
+  $$\|\mathbf{w}\|_2^2: 9.8889 \to 5.40625 \quad (\mathbf{-45.33\% \text{ reduction in total parameter energy}})$$
+- **Posterior Uncertainty Matrix:**
+  $$S_N = \sigma^2 (X^T X + \lambda I)^{-1} = \begin{bmatrix} 0.375 & -0.125 \\ -0.125 & 0.375 \end{bmatrix}$$
+  The posterior marginal variances are $\text{Var}(w_1 \mid \mathcal{D}) = \text{Var}(w_2 \mid \mathcal{D}) = 0.375$, compared to unregularized sampling variances $(X^T X)^{-1}_{11} = 2/3 \approx 0.6667$. The prior reduces estimator variance by $\mathbf{43.75\%}$!
+
+---
+
+### Illustration 5 (Numerical): Multi-Feature Lasso ($L_1$ MAP) with Exact Zero Sparsity
+
+Consider an orthogonal feature matrix ($X^T X = I_4$) with 4 features. Unregularized ordinary least squares yields:
+$$\mathbf{w}_{\text{MLE}} = \begin{bmatrix} 3.50 \\ -0.80 \\ 0.40 \\ -2.20 \end{bmatrix}$$
+
+We place an independent Laplace prior on each parameter $w_j \sim \text{Laplace}(0, b)$ such that the regularization threshold is $\lambda = 1.00$.
+
+#### 1. Analytical Evaluation via Soft-Thresholding Operator $\mathcal{S}_\lambda(w_j)$
+Recall:
+$$\mathcal{S}_\lambda(w) = \text{sign}(w)\max(0, |w| - \lambda)$$
+
+Let us evaluate each coordinate step-by-step:
+1. **Feature 1 ($w_{1, \text{MLE}} = 3.50$):**
+   $$|3.50| = 3.50 > 1.00 \implies w_{1, \text{MAP}} = \text{sign}(+3.50)(3.50 - 1.00) = \mathbf{+2.50}$$
+2. **Feature 2 ($w_{2, \text{MLE}} = -0.80$):**
+   $$|-0.80| = 0.80 \le 1.00 \implies w_{2, \text{MAP}} = \mathbf{0.00} \quad \text{(Zeroed Out / Pruned)}$$
+3. **Feature 3 ($w_{3, \text{MLE}} = 0.40$):**
+   $$|0.40| = 0.40 \le 1.00 \implies w_{3, \text{MAP}} = \mathbf{0.00} \quad \text{(Zeroed Out / Pruned)}$$
+4. **Feature 4 ($w_{4, \text{MLE}} = -2.20$):**
+   $$|-2.20| = 2.20 > 1.00 \implies w_{4, \text{MAP}} = \text{sign}(-2.20)(2.20 - 1.00) = \mathbf{-1.20}$$
+
+#### 2. Summary Comparison: Lasso ($L_1$) vs. Ridge ($L_2$)
+For orthogonal design with penalty $\lambda = 1.00$, Ridge MAP shrinks by factor $\frac{1}{1 + \lambda} = \frac{1}{2}$:
+$$\mathbf{w}_{\text{Ridge}} = \frac{1}{2} \mathbf{w}_{\text{MLE}} = \begin{bmatrix} 1.75 \\ -0.40 \\ 0.20 \\ -1.10 \end{bmatrix}$$
+
+```
+Feature │ w_MLE   │ Lasso MAP (L1, λ=1.0) │ Ridge MAP (L2, λ=1.0) │ Status under Lasso
+────────┼─────────┼───────────────────────┼───────────────────────┼────────────────────
+1       │  3.50   │  2.50                 │  1.75                 │ Retained & Shrunk
+2       │ -0.80   │  0.00                 │ -0.40                 │ ELIMINATED (Sparse)
+3       │  0.40   │  0.00                 │  0.20                 │ ELIMINATED (Sparse)
+4       │ -2.20   │ -1.20                 │ -1.10                 │ Retained & Shrunk
+```
+
+**Key Takeaway:**
+- **Lasso ($L_1$ MAP):** Produces exactly **50% sparsity** (features 2 and 3 are set identically to zero). This performs automated feature selection directly from the geometry of the Laplace prior at the origin.
+- **Ridge ($L_2$ MAP):** Smoothly shrinks all 4 parameters towards zero, but **none are set to zero**.
 
 ---
 

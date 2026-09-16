@@ -74,18 +74,92 @@ $$\mathbb{E}_{q}[\hat{I}_{\text{IS}}] = \mathbb{E}_{X \sim q}[h(X) w(X)] = \int 
 The variance of the importance sampling estimator is:
 $$\text{Var}_q(\hat{I}_{\text{IS}}) = \frac{1}{N} \text{Var}_q(h(X) w(X)) = \frac{1}{N} \left[ \int \frac{(h(x) p(x))^2}{q(x)} \, dx - I^2 \right]$$
 
-#### Theorem: The Optimal Proposal Distribution (Zero Variance!)
-Assume $h(x) \ge 0$. If we choose the proposal distribution to be:
-$$\mathbf{q^*(x) = \frac{h(x) p(x)}{\int h(x') p(x') dx'} = \frac{h(x) p(x)}{I}}$$
-then the variance of the estimator is **identically zero**:
-$$\text{Var}_{q^*}(\hat{I}_{\text{IS}}) = 0$$
+---
 
-**Proof:**
-Substitute $q^*(x)$ into the weighted evaluation:
-$$h(x) w(x) = h(x) \frac{p(x)}{q^*(x)} = h(x) \frac{p(x)}{\frac{h(x) p(x)}{I}} = I \quad (\text{a constant for all } x!)$$
-Every single sample produces the exact integral value $I$, so variance is strictly zero! $\blacksquare$
+### Deep Derivation 4.6.1: Variational Derivation of the Optimal Proposal Distribution $q^*(x)$
 
-*Practical Significance:* While computing the normalizer of $q^*(x)$ is as hard as computing $I$ itself, this theorem proves that **to minimize variance, $q(x)$ should be shaped proportional to $|h(x)| p(x)$**.
+We seek the proposal probability density $q(x)$ that minimizes the variance of the Importance Sampling estimator:
+$$\min_{q(x)} \int_{\mathcal{X}} \frac{(h(x) p(x))^2}{q(x)} \, dx \quad \text{subject to} \quad \int_{\mathcal{X}} q(x) \, dx = 1 \quad \text{and} \quad q(x) \ge 0$$
+
+#### 1. The Variational Lagrangian
+Using the calculus of variations, define the functional Lagrangian $\mathcal{J}[q]$ with Lagrange multiplier $\lambda$:
+$$\mathcal{J}[q] = \int_{\mathcal{X}} \frac{h(x)^2 p(x)^2}{q(x)} \, dx + \lambda \left( \int_{\mathcal{X}} q(x) \, dx - 1 \right)$$
+
+#### 2. Euler-Lagrange First-Order Condition
+Compute the functional (variational) derivative with respect to $q(x)$ at an arbitrary point $x \in \mathcal{X}$:
+$$\frac{\delta \mathcal{J}}{\delta q(x)} = -\frac{h(x)^2 p(x)^2}{q(x)^2} + \lambda = 0$$
+
+Solving for $q(x)$:
+$$q(x)^2 = \frac{h(x)^2 p(x)^2}{\lambda} \implies \mathbf{q^*(x) = \frac{|h(x)| p(x)}{\sqrt{\lambda}}}$$
+(Taking the positive square root to satisfy the non-negativity constraint $q^*(x) \ge 0$).
+
+#### 3. Normalization Constant
+Integrate both sides to find $\sqrt{\lambda}$:
+$$\int_{\mathcal{X}} q^*(x) \, dx = \frac{1}{\sqrt{\lambda}} \int_{\mathcal{X}} |h(x)| p(x) \, dx = 1 \implies \mathbf{\sqrt{\lambda} = \int_{\mathcal{X}} |h(x)| p(x) \, dx}$$
+
+Therefore, the globally optimal proposal distribution is:
+$$\mathbf{q^*(x) = \frac{|h(x)| p(x)}{\int_{\mathcal{X}} |h(x')| p(x') \, dx'}}$$
+
+#### 4. The Zero-Variance Special Case ($h(x) \ge 0$)
+If the integrand is non-negative everywhere ($h(x) \ge 0$ for all $x$), then $|h(x)| = h(x)$ and the normalizer is identically the target integral:
+$$\int_{\mathcal{X}} |h(x')| p(x') \, dx' = \int_{\mathcal{X}} h(x') p(x') \, dx' = I$$
+Then:
+$$q^*(x) = \frac{h(x) p(x)}{I}$$
+Substitute this optimal proposal back into the importance sampling term:
+$$h(x) w(x) = h(x) \frac{p(x)}{q^*(x)} = h(x) \frac{p(x)}{\frac{h(x) p(x)}{I}} = \mathbf{I \quad (\text{constant for every single sample } x!)}$$
+The variance of a constant is zero:
+$$\mathbf{\text{Var}_{q^*}(\hat{I}_{\text{IS}}) = 0} \quad \blacksquare$$
+
+#### 5. When $h(x)$ Changes Signs
+If $h(x)$ takes both positive and negative values, substituting $q^*(x)$ yields the irreducible minimum variance:
+$$\text{Var}_{q^*}(\hat{I}_{\text{IS}}) = \frac{1}{N} \left[ \int \frac{h(x)^2 p(x)^2}{\frac{|h(x)| p(x)}{\int |h| p}} dx - I^2 \right] = \mathbf{\frac{1}{N} \left[ \left( \int_{\mathcal{X}} |h(x)| p(x) \, dx \right)^2 - I^2 \right] \ge 0}$$
+By Cauchy-Schwarz, $\int |h| p \ge |\int h p| = |I|$, with equality if and only if $h(x)$ does not change signs!
+
+---
+
+### Deep Derivation 4.6.2: Self-Normalized Importance Sampling (SNIS) & Asymptotic Bias
+
+In Bayesian deep learning, we frequently only know the target and proposal densities up to unknown normalizing constants:
+$$p(x) = \frac{\tilde{p}(x)}{Z_p}, \quad q(x) = \frac{\tilde{q}(x)}{Z_q}$$
+where partition functions $Z_p = \int \tilde{p}(x) dx$ and $Z_q = \int \tilde{q}(x) dx$ are intractable.
+
+#### 1. The SNIS Ratio Estimator
+Define unnormalized importance weights $w_i = \frac{\tilde{p}(x_i)}{\tilde{q}(x_i)}$ for $x_i \sim q(x)$.
+Notice that:
+$$\mathbb{E}_q[w(X)] = \int \frac{\tilde{p}(x)}{\tilde{q}(x)} \frac{\tilde{q}(x)}{Z_q} dx = \frac{1}{Z_q} \int \tilde{p}(x) dx = \frac{Z_p}{Z_q}$$
+and:
+$$\mathbb{E}_q[w(X) h(X)] = \int h(x) \frac{\tilde{p}(x)}{\tilde{q}(x)} \frac{\tilde{q}(x)}{Z_q} dx = \frac{Z_p}{Z_q} \int h(x) p(x) dx = \frac{Z_p}{Z_q} I$$
+Taking the ratio of two Monte Carlo sums cancels the unknown factor $\frac{Z_p}{Z_q}$:
+$$\mathbf{\hat{I}_{\text{SNIS}} = \frac{\frac{1}{N} \sum_{i=1}^N w_i h(x_i)}{\frac{1}{N} \sum_{i=1}^N w_i} = \frac{\sum_{i=1}^N w_i h(x_i)}{\sum_{i=1}^N w_i} = \sum_{i=1}^N \bar{w}_i h(x_i)}$$
+where $\bar{w}_i = \frac{w_i}{\sum_{j=1}^N w_j}$ are the self-normalized weights ($\sum \bar{w}_i = 1$).
+
+#### 2. Delta Method Derivation of Asymptotic Bias
+Because $\hat{I}_{\text{SNIS}}$ is a ratio of random variables $\frac{\hat{A}_N}{\hat{B}_N}$, it is **slightly biased for finite $N$**, although asymptotically unbiased as $N \to \infty$. Let us derive its exact bias.
+
+Let:
+$$\hat{A}_N = \frac{1}{N} \sum_{i=1}^N w_i h(x_i), \quad \hat{B}_N = \frac{1}{N} \sum_{i=1}^N w_i$$
+with expectations $\mu_A = \frac{Z_p}{Z_q} I$ and $\mu_B = \frac{Z_p}{Z_q}$. Note that $\frac{\mu_A}{\mu_B} = I$.
+
+Consider the function $g(A, B) = \frac{A}{B}$. Expand in a second-order multivariate Taylor series around $(\mu_A, \mu_B)$:
+$$g(A, B) \approx \frac{\mu_A}{\mu_B} + \frac{1}{\mu_B}(A - \mu_A) - \frac{\mu_A}{\mu_B^2}(B - \mu_B) - \frac{1}{\mu_B^2}(A - \mu_A)(B - \mu_B) + \frac{\mu_A}{\mu_B^3}(B - \mu_B)^2$$
+
+Take expectations: $\mathbb{E}[A - \mu_A] = 0$ and $\mathbb{E}[B - \mu_B] = 0$, so linear terms vanish:
+$$\mathbb{E}[\hat{I}_{\text{SNIS}}] - I \approx -\frac{1}{\mu_B^2} \text{Cov}(\hat{A}_N, \hat{B}_N) + \frac{\mu_A}{\mu_B^3} \text{Var}(\hat{B}_N)$$
+
+Since $\hat{A}_N$ and $\hat{B}_N$ are sample means of $N$ i.i.d. draws:
+$$\text{Cov}(\hat{A}_N, \hat{B}_N) = \frac{1}{N} \text{Cov}_q(w(X) h(X), w(X))$$
+$$\text{Var}(\hat{B}_N) = \frac{1}{N} \text{Var}_q(w(X))$$
+
+Substituting $\mu_A / \mu_B = I$:
+$$\mathbf{\text{Bias}(\hat{I}_{\text{SNIS}}) = -\frac{1}{N} \frac{\text{Cov}_q(w(X) h(X), w(X))}{\mathbb{E}_q[w(X)]^2} + \frac{I}{N} \frac{\text{Var}_q(w(X))}{\mathbb{E}_q[w(X)]^2} = \mathcal{O}\left(\frac{1}{N}\right)}$$
+
+#### 3. Asymptotic Variance
+Similarly, the first-order Taylor expansion yields the asymptotic variance:
+$$\mathbf{\text{Var}(\hat{I}_{\text{SNIS}}) \approx \frac{1}{N} \frac{\mathbb{E}_q\left[ w(X)^2 (h(X) - I)^2 \right]}{\mathbb{E}_q[w(X)]^2} = \mathcal{O}\left(\frac{1}{N}\right)}$$
+
+**Profound Practical Takeaway:**
+Even when normalizing constants are known, practitioners often **prefer SNIS over standard IS**! Why?
+Because if $w(X)$ is positively correlated with $w(X) h(X)$, fluctuations in the denominator track and cancel out fluctuations in the numerator, often resulting in **strictly lower variance than unbiased standard IS**!
 
 ---
 
@@ -295,6 +369,110 @@ Suppose target distribution is standard Cauchy $p(x) = \frac{1}{\pi(1 + x^2)}$:
    Proposal tails decay as $\mathcal{O}(x^{-3})$, while Cauchy decays as $\mathcal{O}(x^{-2})$.
    Ratio $w(x) = \mathcal{O}(x) \implies$ still infinite variance!
    Proposal must have **strictly heavier tails** than the target.
+
+---
+
+### Illustration 4 (Numerical): Step-by-Step Self-Normalized Importance Sampling (SNIS) by Hand
+
+Let us estimate the expectation of $h(x) = x$ under an unnormalized half-Gaussian target density:
+$$\tilde{p}(x) = e^{-x^2 / 2}, \quad x \ge 0 \quad (\text{True normalizer } Z_p = \sqrt{\pi/2} \approx 1.253314)$$
+True target mean:
+$$\mathbb{E}_p[X] = \int_0^\infty x \frac{e^{-x^2/2}}{\sqrt{\pi/2}} \, dx = \frac{1}{\sqrt{\pi/2}} \left[ -e^{-x^2/2} \right]_0^\infty = \sqrt{\frac{2}{\pi}} \approx \mathbf{0.797885}$$
+
+Suppose we only know $\tilde{p}(x)$ up to an unknown normalizer, and we use an unnormalized exponential proposal:
+$$\tilde{q}(x) = e^{-x}, \quad x \ge 0 \quad (\text{True normalizer } Z_q = 1.0)$$
+
+#### 1. Importance Weight Formula
+$$w(x) = \frac{\tilde{p}(x)}{\tilde{q}(x)} = \frac{e^{-x^2 / 2}}{e^{-x}} = \exp\left( x - \frac{x^2}{2} \right)$$
+
+#### 2. Manual Sample Calculations ($N = 4$ draws)
+Given $N = 4$ draws from the proposal: $x = [0.40, \, 0.80, \, 1.20, \, 2.00]$:
+
+1. **Sample 1 ($x_1 = 0.40$):**
+   - Exponent: $0.40 - 0.40^2 / 2 = 0.40 - 0.08 = 0.32$
+   - Unnormalized weight: $w_1 = e^{0.32} \approx \mathbf{1.377128}$
+   - Weighted product: $w_1 x_1 = 1.377128 \times 0.40 = \mathbf{0.550851}$
+2. **Sample 2 ($x_2 = 0.80$):**
+   - Exponent: $0.80 - 0.80^2 / 2 = 0.80 - 0.32 = 0.48$
+   - Unnormalized weight: $w_2 = e^{0.48} \approx \mathbf{1.616074}$
+   - Weighted product: $w_2 x_2 = 1.616074 \times 0.80 = \mathbf{1.292859}$
+3. **Sample 3 ($x_3 = 1.20$):**
+   - Exponent: $1.20 - 1.20^2 / 2 = 1.20 - 0.72 = 0.48$
+   - Unnormalized weight: $w_3 = e^{0.48} \approx \mathbf{1.616074}$
+   - Weighted product: $w_3 x_3 = 1.616074 \times 1.20 = \mathbf{1.939289}$
+4. **Sample 4 ($x_4 = 2.00$):**
+   - Exponent: $2.00 - 2.00^2 / 2 = 2.00 - 2.00 = 0.00$
+   - Unnormalized weight: $w_4 = e^{0.00} = \mathbf{1.000000}$
+   - Weighted product: $w_4 x_4 = 1.000000 \times 2.00 = \mathbf{2.000000}$
+
+#### 3. Sums and Normalized Weights
+- Sum of unnormalized weights:
+  $$\sum_{i=1}^4 w_i = 1.377128 + 1.616074 + 1.616074 + 1.000000 = \mathbf{5.609276}$$
+- Sum of weighted observations:
+  $$\sum_{i=1}^4 w_i x_i = 0.550851 + 1.292859 + 1.939289 + 2.000000 = \mathbf{5.783000}$$
+- Self-normalized weights $\bar{w}_i = w_i / \sum w_j$:
+  $$\bar{w}_1 = \frac{1.377128}{5.609276} \approx 0.2455, \quad \bar{w}_2 = \frac{1.616074}{5.609276} \approx 0.2881$$
+  $$\bar{w}_3 = \frac{1.616074}{5.609276} \approx 0.2881, \quad \bar{w}_4 = \frac{1.000000}{5.609276} \approx 0.1783$$
+
+#### 4. Final SNIS Estimate & Effective Sample Size
+$$\mathbf{\hat{I}_{\text{SNIS}} = \frac{\sum_{i=1}^4 w_i x_i}{\sum_{i=1}^4 w_i} = \frac{5.783000}{5.609276} \approx \mathbf{1.03097}}$$
+Notice: without computing the intractable Gaussian normalizer $\sqrt{\pi/2}$, the ratio automatically yielded the expectation!
+
+Compute Effective Sample Size:
+$$\sum_{i=1}^4 \bar{w}_i^2 = 0.2455^2 + 0.2881^2 + 0.2881^2 + 0.1783^2 = 0.06027 + 0.08300 + 0.08300 + 0.03179 = \mathbf{0.25806}$$
+$$\mathbf{\text{ESS} = \frac{1}{\sum \bar{w}_i^2} = \frac{1}{0.25806} \approx 3.875 \quad (\text{96.9\% statistical efficiency out of } N = 4)}$$
+
+---
+
+### Illustration 5 (Numerical): 96.8% Variance Reduction via Antithetic Variates
+
+The **Antithetic Variates** technique is a classical Monte Carlo variance reduction method that exploits negative covariance between paired samples.
+
+#### 1. Problem Setup
+Evaluate the 1D integral:
+$$I = \int_0^1 e^x \, dx = e^1 - e^0 = e - 1 \approx \mathbf{1.718282}$$
+
+#### 2. Crude Monte Carlo Baseline
+Draw $U \sim \text{Uniform}(0, 1)$ and evaluate $Y = e^U$:
+- Expected value: $\mathbb{E}[Y] = e - 1 \approx 1.718282$.
+- Second moment:
+  $$\mathbb{E}[Y^2] = \int_0^1 e^{2u} \, du = \left[ \frac{e^{2u}}{2} \right]_0^1 = \frac{e^2 - 1}{2} \approx \frac{7.389056 - 1}{2} = 3.194528$$
+- Variance:
+  $$\text{Var}_{\text{Crude}}(Y) = \mathbb{E}[Y^2] - (\mathbb{E}[Y])^2 = 3.194528 - (1.718282)^2 = 3.194528 - 2.952513 = \mathbf{0.242015}$$
+
+#### 3. Antithetic Pair Construction
+If $U \sim \text{Uniform}(0, 1)$, then $1 - U \sim \text{Uniform}(0, 1)$ as well.
+Define the paired antithetic estimator:
+$$T = \frac{e^U + e^{1 - U}}{2}$$
+Since $e^U$ is strictly increasing in $U$ and $e^{1-U}$ is strictly decreasing in $U$, their covariance is strongly negative!
+
+Compute the cross-product expectation:
+$$\mathbb{E}[e^U e^{1 - U}] = \mathbb{E}[e^{U + 1 - U}] = \mathbb{E}[e^1] = e \approx \mathbf{2.718282}$$
+Compute the exact covariance:
+$$\text{Cov}(e^U, e^{1 - U}) = \mathbb{E}[e^U e^{1 - U}] - \mathbb{E}[e^U] \mathbb{E}[e^{1 - U}] = e - (e - 1)^2 = 2.718282 - 2.952513 = \mathbf{-0.234231}$$
+
+#### 4. Exact Variance of Antithetic Estimator
+$$\text{Var}(T) = \text{Var}\left( \frac{e^U + e^{1 - U}}{2} \right) = \frac{1}{4} \left[ \text{Var}(e^U) + \text{Var}(e^{1-U}) + 2 \text{Cov}(e^U, e^{1-U}) \right]$$
+$$\text{Var}(T) = \frac{1}{4} \left[ 0.242015 + 0.242015 + 2(-0.234231) \right] = \frac{1}{4} [0.484030 - 0.468462] = \frac{0.015568}{4} = \mathbf{0.003892}$$
+
+#### 5. Comparison Adjusted for Computational Effort
+A single antithetic pair requires $2$ function evaluations. Comparing variance per 2 function evaluations:
+- Two independent Crude MC draws: $\text{Var} = \frac{0.242015}{2} = \mathbf{0.121008}$
+- One Antithetic pair: $\text{Var} = \mathbf{0.003892}$
+
+$$\mathbf{\text{Variance Reduction Ratio} = 1 - \frac{0.003892}{0.121008} = 1 - 0.03216 = \mathbf{96.78\% \text{ Variance Reduction!}}}$$
+
+#### 6. Step-by-Step Numerical Table on 3 Concrete Pairs
+```
+Pair i │ Draw U │ e^U     │ Reflected 1-U │ e^(1-U) │ Pair Avg T │ Crude MC Error │ Antithetic Error
+───────┼────────┼─────────┼───────────────┼─────────┼────────────┼────────────────┼─────────────────
+1      │ 0.10   │ 1.10517 │ 0.90          │ 2.45960 │ 1.78239    │ -0.61311       │ +0.06411
+2      │ 0.35   │ 1.41907 │ 0.65          │ 1.91554 │ 1.66731    │ -0.29921       │ -0.05097
+3      │ 0.70   │ 2.01375 │ 0.30          │ 1.34986 │ 1.68181    │ +0.29547       │ -0.03647
+───────┼────────┼─────────┼───────────────┼─────────┼────────────┼────────────────┼─────────────────
+MEAN   │   —    │ 1.51266 │      —        │ 1.90833 │ 1.71050    │ MSE = 0.1601   │ MSE = 0.0026 (-98%)
+```
+The antithetic pair average hovers immediately around the true value $1.71828$, eliminating over $96\%$ of the noise!
 
 ---
 

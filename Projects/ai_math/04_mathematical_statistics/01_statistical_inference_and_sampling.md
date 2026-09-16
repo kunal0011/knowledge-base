@@ -87,6 +87,25 @@ To obtain an **unbiased estimator**, we apply **Bessel's Correction** (dividing 
 $$S^2 = S_{N-1}^2 = \frac{1}{N - 1} \sum_{i=1}^N (X_i - \bar{X})^2$$
 $$\mathbb{E}[S^2] = \sigma^2 \quad (\text{unbiased})$$
 
+#### Deep Derivation 4.1.1: Algebraic Proof of Bessel's Correction $\mathbb{E}[S^2] = \sigma^2$
+Let $X_1, \dots, X_N$ be $i.i.d.$ random variables with mean $\mu$ and variance $\sigma^2$.
+We compute the expected value of the sum of squared deviations $\sum_{i=1}^N (X_i - \bar{X})^2$:
+
+1. **Center around population mean $\mu$:**
+   $$X_i - \bar{X} = (X_i - \mu) - (\bar{X} - \mu)$$
+2. **Square and expand:**
+   $$(X_i - \bar{X})^2 = (X_i - \mu)^2 - 2(X_i - \mu)(\bar{X} - \mu) + (\bar{X} - \mu)^2$$
+3. **Sum over all $N$ data points:**
+   $$\sum_{i=1}^N (X_i - \bar{X})^2 = \sum_{i=1}^N (X_i - \mu)^2 - 2(\bar{X} - \mu)\sum_{i=1}^N (X_i - \mu) + \sum_{i=1}^N (\bar{X} - \mu)^2$$
+   Since $\sum_{i=1}^N (X_i - \mu) = N(\bar{X} - \mu)$:
+   $$\sum_{i=1}^N (X_i - \bar{X})^2 = \sum_{i=1}^N (X_i - \mu)^2 - 2N(\bar{X} - \mu)^2 + N(\bar{X} - \mu)^2 = \sum_{i=1}^N (X_i - \mu)^2 - N(\bar{X} - \mu)^2$$
+4. **Take mathematical expectations:**
+   $$\mathbb{E}\left[ \sum_{i=1}^N (X_i - \bar{X})^2 \right] = \sum_{i=1}^N \mathbb{E}[(X_i - \mu)^2] - N \mathbb{E}[(\bar{X} - \mu)^2] = \sum_{i=1}^N \text{Var}(X_i) - N \text{Var}(\bar{X})$$
+   Since $\text{Var}(X_i) = \sigma^2$ and $\text{Var}(\bar{X}) = \frac{\sigma^2}{N}$:
+   $$\mathbb{E}\left[ \sum_{i=1}^N (X_i - \bar{X})^2 \right] = N \sigma^2 - N \left( \frac{\sigma^2}{N} \right) = N \sigma^2 - \sigma^2 = (N - 1) \sigma^2$$
+5. **Divide by $N - 1$:**
+   $$\mathbf{\mathbb{E}[S^2] = \frac{1}{N - 1} \mathbb{E}\left[ \sum_{i=1}^N (X_i - \bar{X})^2 \right] = \frac{(N - 1) \sigma^2}{N - 1} = \sigma^2} \quad \blacksquare$$
+
 ---
 
 ### 5. Cochran's Theorem & Exact Sampling Distributions for Normal Populations
@@ -100,12 +119,54 @@ When samples are drawn from a Gaussian population $X_i \overset{i.i.d.}{\sim} \m
    $$\mathbf{\bar{X} \quad \text{and} \quad S^2 \quad \text{are statistically INDEPENDENT!}}$$
    *(This independence is a unique characterizing property of Gaussian distributions!)*
 
+#### Deep Derivation 4.1.2: Orthogonal Projection Proof of Cochran's Theorem
+Let $\mathbf{X} = [X_1, \dots, X_N]^T \sim \mathcal{N}(\mu \mathbf{1}, \sigma^2 I_N)$.
+Define the standardized vector $\mathbf{Z} = \frac{\mathbf{X} - \mu \mathbf{1}}{\sigma} \sim \mathcal{N}(0, I_N)$.
+
+1. **Idempotent Projection Operators:**
+   Let $P = \frac{1}{N}\mathbf{1}\mathbf{1}^T \in \mathbb{R}^{N \times N}$ be the projection matrix onto the subspace spanned by $\mathbf{1}$.
+   Let $M = I_N - P = I_N - \frac{1}{N}\mathbf{1}\mathbf{1}^T$ be the projection onto the orthogonal complement $\mathbf{1}^\perp$.
+   - Symmetric: $M^T = M$.
+   - Idempotent: $M^2 = (I - P)(I - P) = I - 2P + P^2 = I - P = M$.
+   - Trace / Rank: $\text{Tr}(M) = \text{Tr}(I_N) - \frac{1}{N}\text{Tr}(\mathbf{1}\mathbf{1}^T) = N - \frac{1}{N}N = N - 1$.
+
+2. **Expressing Sample Variance as a Quadratic Form:**
+   Note that $M \mathbf{X} = \mathbf{X} - \bar{X} \mathbf{1}$.
+   $$\frac{(N - 1)S^2}{\sigma^2} = \frac{1}{\sigma^2} \| \mathbf{X} - \bar{X}\mathbf{1} \|_2^2 = \frac{1}{\sigma^2} (M \mathbf{X})^T (M \mathbf{X}) = \frac{1}{\sigma^2} \mathbf{X}^T M^2 \mathbf{X} = \mathbf{Z}^T M \mathbf{Z}$$
+   Because $M$ is a symmetric idempotent matrix of rank $N - 1$, by the Spectral Theorem its eigenvalues are 1 (with multiplicity $N - 1$) and 0 (with multiplicity 1).
+   Under an orthogonal change of basis $\mathbf{Z} = U \mathbf{W}$ where $\mathbf{W} \sim \mathcal{N}(0, I_N)$:
+   $$\mathbf{Z}^T M \mathbf{Z} = \mathbf{W}^T \text{diag}(1, \dots, 1, 0) \mathbf{W} = \sum_{j=1}^{N-1} W_j^2 \sim \mathbf{\chi^2(N - 1)} \quad \blacksquare$$
+
+3. **Proof of Independence between $\bar{X}$ and $S^2$:**
+   The sample mean is $\bar{X} = \frac{1}{N}\mathbf{1}^T \mathbf{X}$.
+   The deviation vector is $\mathbf{e} = M \mathbf{X}$.
+   Both $\bar{X}$ and $\mathbf{e}$ are linear transformations of the jointly Gaussian vector $\mathbf{X}$.
+   Compute their covariance matrix:
+   $$\text{Cov}(\bar{X}, \mathbf{e}) = \text{Cov}\left( \frac{1}{N}\mathbf{1}^T \mathbf{X}, M \mathbf{X} \right) = \frac{1}{N} \mathbf{1}^T \text{Var}(\mathbf{X}) M^T = \frac{\sigma^2}{N} \mathbf{1}^T (I_N - P) = \frac{\sigma^2}{N} \left( \mathbf{1}^T - \frac{1}{N}\mathbf{1}^T \mathbf{1}\mathbf{1}^T \right)$$
+   Since $\mathbf{1}^T \mathbf{1} = N$:
+   $$\text{Cov}(\bar{X}, \mathbf{e}) = \frac{\sigma^2}{N} (\mathbf{1}^T - \mathbf{1}^T) = \mathbf{0}^T$$
+   For jointly Gaussian random variables, **zero covariance implies strict statistical independence**!
+   Since $S^2 = \frac{1}{N-1}\|\mathbf{e}\|_2^2$ is a deterministic function of $\mathbf{e}$, it follows that $\bar{X}$ and $S^2$ are statistically independent! $\blacksquare$
+
 ---
 
 ### 6. Student's $t$-Distribution & Confidence Intervals
 In practice, the true population variance $\sigma^2$ is unknown, so we must plug in the sample standard error $\hat{\text{SE}} = \frac{S}{\sqrt{N}}$.
 The standardized ratio follows **Student's $t$-distribution** with $\nu = N - 1$ degrees of freedom:
 $$T = \frac{\bar{X} - \mu}{S / \sqrt{N}} \sim t(N - 1)$$
+
+#### Deep Derivation 4.1.3: Derivation of Student's $t$-Distribution Ratio
+By Cochran's Theorem, define two independent random variables:
+1. $Z \triangleq \frac{\bar{X} - \mu}{\sigma / \sqrt{N}} \sim \mathcal{N}(0, 1)$
+2. $V \triangleq \frac{(N - 1)S^2}{\sigma^2} \sim \chi^2(\nu)$, where $\nu = N - 1$.
+
+Form the ratio:
+$$T \triangleq \frac{Z}{\sqrt{V / \nu}} = \frac{\frac{\bar{X} - \mu}{\sigma / \sqrt{N}}}{\sqrt{\frac{(N-1)S^2}{\sigma^2 (N-1)}}} = \frac{\frac{\bar{X} - \mu}{\sigma / \sqrt{N}}}{\frac{S}{\sigma}} = \mathbf{\frac{\bar{X} - \mu}{S / \sqrt{N}}}$$
+The unknown population parameter $\sigma$ cancels out perfectly from both numerator and denominator!
+Because $Z$ and $V$ are independent, the joint density is $f_{Z, V}(z, v) = f_Z(z) f_V(v)$.
+Applying the bivariate change of variables $(Z, V) \mapsto (T = Z/\sqrt{V/\nu}, U = V)$ and integrating out $u$ yields the exact PDF of Student's $t$-distribution:
+$$\mathbf{f_T(t; \nu) = \frac{\Gamma\left(\frac{\nu + 1}{2}\right)}{\sqrt{\pi \nu} \, \Gamma\left(\frac{\nu}{2}\right)} \left( 1 + \frac{t^2}{\nu} \right)^{-\frac{\nu + 1}{2}}} \quad \blacksquare$$
+As $\nu \to \infty$, $\left(1 + \frac{t^2}{\nu}\right)^{-\frac{\nu+1}{2}} \to e^{-t^2 / 2}$, recovering the standard normal Gaussian density!
 
 #### Exact Two-Sided $(1 - \alpha)$ Confidence Interval for Population Mean $\mu$:
 $$\text{CI}_{1-\alpha} = \left[ \bar{X} - t_{1-\alpha/2, N-1} \frac{S}{\sqrt{N}}, \quad \bar{X} + t_{1-\alpha/2, N-1} \frac{S}{\sqrt{N}} \right]$$
@@ -297,6 +358,72 @@ $$\text{Var}(\bar{X}) = \frac{\sigma^2}{N} \left( 1 + 2 \sum_{k=1}^{N-1} \left(1
 For $\rho = 0.8$:
 $$\frac{1 + 0.8}{1 - 0.8} = \frac{1.8}{0.2} = \mathbf{9.0}$$
 *The Consequence:* The true variance is **9 times larger** than the naive formula $\sigma^2 / N$, so the naive standard error is **underestimated by $3\times$**! Naive confidence intervals on non-$i.i.d.$ data yield false confidence and invalid benchmark claims.
+
+---
+
+### Illustration 4 (Numerical): Two-Sample Pooled Student's $t$-Test for Model Benchmarking
+An AI lab tests whether a new FlashAttention kernel (Model B) achieves higher BLEU translation scores than the baseline model (Model A).
+Both models are evaluated across $N_A = 5$ and $N_B = 5$ independent random training runs:
+- Model A: $\mathbf{x}_A = [30.0, 32.0, 31.0, 33.0, 29.0]$
+- Model B: $\mathbf{x}_B = [34.0, 36.0, 35.0, 37.0, 33.0]$
+
+We test the null hypothesis $H_0: \mu_B - \mu_A = 0$ against $H_1: \mu_B > \mu_A$ at significance level $\alpha = 0.01$.
+
+1. **Step 1: Compute Sample Means & Sum of Squares:**
+   - Model A:
+     $$\bar{x}_A = \frac{30 + 32 + 31 + 33 + 29}{5} = \frac{155.0}{5} = \mathbf{31.000000}$$
+     $$SS_A = (30-31)^2 + (32-31)^2 + (31-31)^2 + (33-31)^2 + (29-31)^2 = 1 + 1 + 0 + 4 + 4 = \mathbf{10.000000}$$
+     $$s_A^2 = \frac{SS_A}{N_A - 1} = \frac{10.0}{4} = \mathbf{2.500000}$$
+   - Model B:
+     $$\bar{x}_B = \frac{34 + 36 + 35 + 37 + 33}{5} = \frac{175.0}{5} = \mathbf{35.000000}$$
+     $$SS_B = (34-35)^2 + (36-35)^2 + (35-35)^2 + (37-35)^2 + (33-35)^2 = 1 + 1 + 0 + 4 + 4 = \mathbf{10.000000}$$
+     $$s_B^2 = \frac{SS_B}{N_B - 1} = \frac{10.0}{4} = \mathbf{2.500000}$$
+
+2. **Step 2: Compute Pooled Sample Variance $s_p^2$:**
+   Degrees of freedom $\nu = N_A + N_B - 2 = 5 + 5 - 2 = \mathbf{8}$.
+   $$s_p^2 = \frac{(N_A - 1)s_A^2 + (N_B - 1)s_B^2}{N_A + N_B - 2} = \frac{4(2.50) + 4(2.50)}{8} = \frac{20.0}{8} = \mathbf{2.500000}$$
+
+3. **Step 3: Compute Standard Error of the Difference:**
+   $$\text{SE}(\bar{x}_B - \bar{x}_A) = \sqrt{s_p^2 \left( \frac{1}{N_A} + \frac{1}{N_B} \right)} = \sqrt{2.50 \left( \frac{1}{5} + \frac{1}{5} \right)} = \sqrt{2.50(0.40)} = \sqrt{1.000000} = \mathbf{1.000000}$$
+
+4. **Step 4: Compute Test Statistic $t$:**
+   $$t = \frac{\bar{x}_B - \bar{x}_A - 0}{\text{SE}} = \frac{35.00 - 31.00}{1.00} = \mathbf{+4.000000}$$
+
+5. **Step 5: Decision & Confidence Interval:**
+   From Student's $t$-table with $\nu = 8$ degrees of freedom:
+   - Critical value at $\alpha = 0.01$ (one-tailed): $t_{0.99, 8} \approx \mathbf{2.896}$.
+   - Critical value at $\alpha = 0.05$ (two-tailed): $t_{0.975, 8} \approx \mathbf{2.306}$.
+   Since $t_{\text{calc}} = 4.000 > 2.896$, we **reject $H_0$** at the $1\%$ significance level ($p < 0.005$). The new FlashAttention kernel provides a statistically genuine improvement!
+   Exact $95\%$ Confidence Interval for the true performance gain $\mu_B - \mu_A$:
+   $$(\bar{x}_B - \bar{x}_A) \pm t_{0.975, 8} \times \text{SE} = 4.00 \pm 2.306(1.00) = [\mathbf{1.694000, 6.306000}]$$
+
+---
+
+### Illustration 5 (Numerical): Non-Parametric Bootstrap Resampling by Hand
+In many deep learning metrics (e.g., median token generation latency or BLEU scores), the underlying sampling distribution is unknown or non-Gaussian, invalidating Student's $t$ normality assumptions.
+The **Bootstrap** (Efron, 1979) estimates sampling distributions by resampling with replacement from the empirical dataset $\mathcal{D}$.
+
+Consider a toy dataset of $N = 4$ inference request latencies (in milliseconds):
+$$\mathcal{D} = \{10.0, 20.0, 30.0, 40.0\}$$
+Target statistic: **Sample Median** $\hat{\theta} = \text{Median}(\mathbf{x}) = \frac{20.0 + 30.0}{2} = \mathbf{25.000000\text{ ms}}$.
+
+1. **Generate $B = 5$ Bootstrap Resamples (Sampling $N = 4$ with Replacement):**
+   - Resample 1: $\mathbf{x}^{*(1)} = [10.0, 10.0, 20.0, 40.0] \implies \hat{\theta}^{*(1)} = \frac{10 + 20}{2} = \mathbf{15.000000}$
+   - Resample 2: $\mathbf{x}^{*(2)} = [20.0, 20.0, 30.0, 40.0] \implies \hat{\theta}^{*(2)} = \frac{20 + 30}{2} = \mathbf{25.000000}$
+   - Resample 3: $\mathbf{x}^{*(3)} = [10.0, 30.0, 30.0, 40.0] \implies \hat{\theta}^{*(3)} = \frac{30 + 30}{2} = \mathbf{30.000000}$
+   - Resample 4: $\mathbf{x}^{*(4)} = [20.0, 30.0, 40.0, 40.0] \implies \hat{\theta}^{*(4)} = \frac{30 + 40}{2} = \mathbf{35.000000}$
+   - Resample 5: $\mathbf{x}^{*(5)} = [10.0, 20.0, 30.0, 30.0] \implies \hat{\theta}^{*(5)} = \frac{20 + 30}{2} = \mathbf{25.000000}$
+
+2. **Compute Bootstrap Mean & Standard Error:**
+   $$\bar{\theta}^* = \frac{15.0 + 25.0 + 30.0 + 35.0 + 25.0}{5} = \frac{130.0}{5} = \mathbf{26.000000}$$
+   Compute squared deviations from $\bar{\theta}^*$:
+   $$(15 - 26)^2 = 121, \quad (25 - 26)^2 = 1, \quad (30 - 26)^2 = 16, \quad (35 - 26)^2 = 81, \quad (25 - 26)^2 = 1$$
+   $$\sum_{b=1}^5 (\hat{\theta}^{*(b)} - \bar{\theta}^*)^2 = 121 + 1 + 16 + 81 + 1 = \mathbf{220.000000}$$
+   $$\widehat{\text{SE}}_{\text{boot}}(\hat{\theta}) = \sqrt{\frac{1}{B - 1} \sum_{b=1}^B (\hat{\theta}^{*(b)} - \bar{\theta}^*)^2} = \sqrt{\frac{220.0}{4}} = \sqrt{55.0} \approx \mathbf{7.416198\text{ ms}}$$
+
+3. **Bootstrap Bias Estimate:**
+   $$\widehat{\text{Bias}}(\hat{\theta}) = \bar{\theta}^* - \hat{\theta}_{\text{orig}} = 26.00 - 25.00 = \mathbf{+1.000000\text{ ms}}$$
+   *Deep Learning Meaning:* Bootstrap allows us to estimate standard errors and confidence intervals for arbitrary black-box neural metrics (F1 score, AUC-ROC, perplexity) directly from data, without requiring Gaussian assumptions!
 
 ---
 

@@ -74,6 +74,31 @@ Distribute the expectation operator $\mathbb{E}[\cdot]$:
 Combining these yields:
 $$\text{MSE}(\hat{\theta}) = \text{Var}(\hat{\theta}) + \text{Bias}(\hat{\theta})^2 \quad \blacksquare$$
 
+#### Deep Derivation 4.2.1: Analytical Derivation of the Optimal Shrinkage Coefficient
+Consider estimating population mean $\mu$ from sample mean $\bar{X} \sim (\mu, \sigma^2 / N)$.
+Let $\hat{\theta}_\alpha \triangleq \alpha \bar{X}$ be a linear shrinkage estimator parametrized by $\alpha \in \mathbb{R}$.
+
+1. **Bias and Variance as Functions of $\alpha$:**
+   $$\mathbb{E}[\hat{\theta}_\alpha] = \alpha \mu \implies \text{Bias}(\hat{\theta}_\alpha) = \alpha \mu - \mu = (\alpha - 1) \mu$$
+   $$\text{Var}(\hat{\theta}_\alpha) = \alpha^2 \text{Var}(\bar{X}) = \alpha^2 \frac{\sigma^2}{N}$$
+
+2. **Total Mean Squared Error:**
+   $$\text{MSE}(\alpha) = \text{Bias}^2 + \text{Var} = (1 - \alpha)^2 \mu^2 + \alpha^2 \frac{\sigma^2}{N}$$
+
+3. **Optimization w.r.t. $\alpha$:**
+   Take the first derivative and set to zero:
+   $$\frac{d \text{MSE}}{d\alpha} = -2(1 - \alpha) \mu^2 + 2 \alpha \frac{\sigma^2}{N} = 0$$
+   $$-(1 - \alpha) \mu^2 + \alpha \frac{\sigma^2}{N} = 0 \implies -\mu^2 + \alpha \mu^2 + \alpha \frac{\sigma^2}{N} = 0 \implies \alpha \left( \mu^2 + \frac{\sigma^2}{N} \right) = \mu^2$$
+   $$\mathbf{\alpha^* = \frac{\mu^2}{\mu^2 + \frac{\sigma^2}{N}} = \frac{1}{1 + \frac{\sigma^2 / N}{\mu^2}} < 1.0}$$
+
+4. **Guaranteed Error Reduction:**
+   Since $\frac{\sigma^2}{N} > 0$, $\alpha^*$ is strictly strictly less than $1.0$ whenever sampling noise exists!
+   The optimal estimator shrinks the sample mean toward zero by a factor that depends on the **Signal-to-Noise Ratio (SNR)**:
+   $$\text{SNR} \triangleq \frac{\mu^2}{\sigma^2 / N}$$
+   - When $\text{SNR} \gg 1$ (high data / low noise), $\alpha^* \to 1.0$ (no shrinkage).
+   - When $\text{SNR} \ll 1$ (small batch / high noise), $\alpha^* \to 0$ (aggressive regularization).
+   This is the exact first-principles derivation of why $L_2$ weight decay ($\alpha = \frac{1}{1 + \lambda}$) strictly reduces generalization error in neural network training! $\blacksquare$
+
 > [!IMPORTANT]
 > **Why Unbiasedness is Overrated in Deep Learning:**
 > An unbiased estimator does *not* necessarily have lower error than a biased one! A biased estimator with dramatically smaller variance can achieve substantially lower total MSE. This is the exact principle behind $L_2$ regularization (Weight Decay): we accept a small non-zero bias in exchange for a massive drop in weight variance.
@@ -123,6 +148,22 @@ Under standard regularity conditions:
 $$I_N(\theta) = -\mathbb{E}\left[ \nabla_\theta^2 \ln f(\mathbf{X}; \theta) \right] = -\mathbb{E}[\mathcal{H}_\ell(\theta)]$$
 Fisher information equals the **negative expected Hessian** (curvature) of the log-likelihood function!
 
+#### Deep Derivation 4.2.2: Proof that Expected Hessian Equals Negative Score Variance
+Starting from the fundamental normalization condition:
+$$\int_{\mathcal{X}} f(\mathbf{x}; \theta) \, d\mathbf{x} = 1$$
+Differentiating with respect to $\theta$ yields the expected score identity:
+$$\int_{\mathcal{X}} \nabla_\theta f(\mathbf{x}; \theta) \, d\mathbf{x} = \int_{\mathcal{X}} \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right) f(\mathbf{x}; \theta) \, d\mathbf{x} = \mathbf{0}$$
+Now differentiate this identity a second time with respect to $\theta^T$ inside the integral:
+$$\int_{\mathcal{X}} \nabla_\theta \left[ \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right) f(\mathbf{x}; \theta) \right]^T \, d\mathbf{x} = \mathbf{0}$$
+Apply the product rule of matrix calculus:
+$$\int_{\mathcal{X}} \left[ \nabla_\theta^2 \ln f(\mathbf{x}; \theta) \cdot f(\mathbf{x}; \theta) + \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right) \left( \nabla_\theta f(\mathbf{x}; \theta) \right)^T \right] d\mathbf{x} = \mathbf{0}$$
+Substitute $\nabla_\theta f(\mathbf{x}; \theta) = \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right) f(\mathbf{x}; \theta)$:
+$$\int_{\mathcal{X}} \nabla_\theta^2 \ln f(\mathbf{x}; \theta) f(\mathbf{x}; \theta) \, d\mathbf{x} + \int_{\mathcal{X}} \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right) \left( \nabla_\theta \ln f(\mathbf{x}; \theta) \right)^T f(\mathbf{x}; \theta) \, d\mathbf{x} = \mathbf{0}$$
+Recognize both integrals as mathematical expectations under $P_\theta$:
+$$\mathbb{E}\left[ \nabla_\theta^2 \ln f(\mathbf{X}; \theta) \right] + \mathbb{E}\left[ S(\theta) S(\theta)^T \right] = \mathbf{0}$$
+Rearranging terms yields the fundamental relation:
+$$\mathbf{I(\theta) = \mathbb{E}\left[ S(\theta) S(\theta)^T \right] = -\mathbb{E}\left[ \nabla_\theta^2 \ln f(\mathbf{X}; \theta) \right]} \quad \blacksquare$$
+
 For $N$ $i.i.d.$ observations, Fisher information is strictly additive:
 $$I_N(\theta) = N \cdot I_1(\theta)$$
 
@@ -153,6 +194,17 @@ Now apply the **Cauchy-Schwarz Inequality** for random variables:
 $$\left( \text{Cov}(\hat{\theta}, S(\theta)) \right)^2 \le \text{Var}(\hat{\theta}) \cdot \text{Var}(S(\theta))$$
 Substitute $\text{Cov}(\hat{\theta}, S(\theta)) = 1$ and $\text{Var}(S(\theta)) = I_N(\theta)$:
 $$1^2 \le \text{Var}(\hat{\theta}) \cdot I_N(\theta) \implies \text{Var}(\hat{\theta}) \ge \frac{1}{I_N(\theta)} \quad \blacksquare$$
+
+#### Deep Derivation 4.2.3: Multivariate Cramér-Rao Lower Bound
+For parameter vector $\theta = [\theta_1, \dots, \theta_k]^T \in \mathbb{R}^k$ and unbiased estimator $\hat{\theta} \in \mathbb{R}^k$:
+Consider the augmented random vector:
+$$\mathbf{Z} \triangleq \begin{bmatrix} \hat{\theta} - \theta \\ S(\theta) \end{bmatrix} \in \mathbb{R}^{2k}$$
+The covariance matrix of $\mathbf{Z}$ is positive semi-definite ($\text{Cov}(\mathbf{Z}) \succeq 0$):
+$$\text{Cov}(\mathbf{Z}) = \begin{bmatrix} \text{Cov}(\hat{\theta}) & \text{Cov}(\hat{\theta}, S(\theta)) \\ \text{Cov}(S(\theta), \hat{\theta}) & \text{Var}(S(\theta)) \end{bmatrix} = \begin{bmatrix} \Sigma_{\hat{\theta}} & I_k \\ I_k & F(\theta) \end{bmatrix} \succeq 0$$
+where $F(\theta) \triangleq I_N(\theta) \in \mathbb{R}^{k \times k}$ is the Fisher Information Matrix.
+By the Schur Complement condition for positive semi-definiteness:
+$$\Sigma_{\hat{\theta}} - I_k F(\theta)^{-1} I_k \succeq 0 \implies \mathbf{\text{Cov}(\hat{\theta}) \succeq F(\theta)^{-1}} \quad \blacksquare$$
+For any individual parameter $\theta_j$, its variance is bounded by the $j$-th diagonal entry of the inverse Fisher matrix: $\text{Var}(\hat{\theta}_j) \ge [F(\theta)^{-1}]_{jj}$.
 
 ---
 
@@ -359,6 +411,72 @@ Consider the standard plug-in sample variance $S_n^2 = \frac{1}{N}\sum_{i=1}^N (
 - **Variance:**
   $$\text{Var}(S_n^2) = \mathcal{O}\left(\frac{1}{N}\right) \to 0 \quad \text{as } N \to \infty$$
 *Conclusion:* Since both Bias and Variance vanish as $N \to \infty$, $S_n^2$ is **strictly consistent**, despite being biased at every finite sample size.
+
+---
+
+### Illustration 4 (Numerical): Multi-Parameter Fisher Information & CRLB for Gaussian Mean and Variance
+Consider $N = 20$ samples drawn from a Gaussian distribution with unknown mean $\mu$ and unknown variance $\sigma^2$:
+$$X_1, \dots, X_{20} \overset{i.i.d.}{\sim} \mathcal{N}(\mu^* = 5.0, (\sigma^*)^2 = 9.0)$$
+The parameter vector is $\theta = [\mu, \sigma^2]^T \in \mathbb{R}^2$.
+
+1. **Step 1: Compute the Score Vector:**
+   $$\ell(\mu, \sigma^2) = -\frac{N}{2}\ln(2\pi) - \frac{N}{2}\ln(\sigma^2) - \frac{1}{2\sigma^2}\sum_{i=1}^N (X_i - \mu)^2$$
+   - $\frac{\partial \ell}{\partial \mu} = \frac{1}{\sigma^2}\sum_{i=1}^N (X_i - \mu)$
+   - $\frac{\partial \ell}{\partial (\sigma^2)} = -\frac{N}{2\sigma^2} + \frac{1}{2\sigma^4}\sum_{i=1}^N (X_i - \mu)^2$
+
+2. **Step 2: Derive the Expected Fisher Information Matrix:**
+   - $\mathbb{E}\left[-\frac{\partial^2 \ell}{\partial \mu^2}\right] = \mathbb{E}\left[\frac{N}{\sigma^2}\right] = \frac{N}{\sigma^2}$
+   - $\mathbb{E}\left[-\frac{\partial^2 \ell}{\partial \mu \partial (\sigma^2)}\right] = \mathbb{E}\left[\frac{1}{\sigma^4}\sum_{i=1}^N (X_i - \mu)\right] = 0$ (cross-term is exactly orthogonal!)
+   - $\mathbb{E}\left[-\frac{\partial^2 \ell}{\partial (\sigma^2)^2}\right] = -\frac{N}{2\sigma^4} + \frac{1}{\sigma^6}\sum_{i=1}^N \mathbb{E}[(X_i - \mu)^2] = -\frac{N}{2\sigma^4} + \frac{N\sigma^2}{\sigma^6} = \frac{N}{2\sigma^4}$
+   $$I_N(\mu, \sigma^2) = \begin{bmatrix} \frac{N}{\sigma^2} & 0 \\ 0 & \frac{N}{2\sigma^4} \end{bmatrix}$$
+
+3. **Step 3: Invert the Fisher Matrix to Obtain the CRLB Covariance Floor:**
+   $$F(\theta)^{-1} = I_N(\theta)^{-1} = \begin{bmatrix} \frac{\sigma^2}{N} & 0 \\ 0 & \frac{2\sigma^4}{N} \end{bmatrix}$$
+
+4. **Step 4: Numerical Evaluation for $N = 20, \mu = 5.0, \sigma^2 = 9.0$:**
+   - **For $\mu$:**
+     $$\text{CRLB}(\mu) = \frac{9.0}{20} = \mathbf{0.450000}$$
+     The sample mean $\bar{X}$ has variance $\text{Var}(\bar{X}) = \frac{\sigma^2}{N} = \frac{9.0}{20} = \mathbf{0.450000} \implies \text{eff}(\bar{X}) = \mathbf{100.0\%} \quad (\mathbf{\text{MVUE}})$.
+   - **For $\sigma^2$:**
+     $$\text{CRLB}(\sigma^2) = \frac{2(9.0)^2}{20} = \frac{2(81.0)}{20} = \frac{162.0}{20} = \mathbf{8.100000}$$
+     Now evaluate the unbiased sample variance $S^2 = \frac{1}{N-1}\sum_{i=1}^N (X_i - \bar{X})^2$.
+     From Cochran's Theorem, $\frac{(N-1)S^2}{\sigma^2} \sim \chi^2(N-1)$, so:
+     $$\text{Var}(S^2) = \frac{\sigma^4}{(N-1)^2} \text{Var}(\chi^2(N-1)) = \frac{\sigma^4}{(N-1)^2} \cdot 2(N-1) = \mathbf{\frac{2\sigma^4}{N - 1}}$$
+     For $N = 20$:
+     $$\text{Var}(S^2) = \frac{2(81.0)}{19} = \frac{162.0}{19} \approx \mathbf{8.526316}$$
+     Compute statistical efficiency of $S^2$:
+     $$\text{eff}(S^2) = \frac{\text{CRLB}(\sigma^2)}{\text{Var}(S^2)} = \frac{8.100000}{8.526316} = \frac{19}{20} = \mathbf{95.0000\%}$$
+     *Key Insight:* $S^2$ does not reach 100% CRLB efficiency for finite $N$ because estimating $\bar{X}$ sacrifices 1 degree of freedom ($(N-1)/N = 19/20 = 95\%$). As $N \to \infty$, efficiency approaches $100\%$ asymptotically!
+
+---
+
+### Illustration 5 (Numerical): Poisson Rate CRLB & Optimal Regularization
+In high-throughput server telemetry, request arrivals follow a Poisson distribution $X \sim \text{Poisson}(\lambda)$.
+Across $N = 10$ observation windows, recorded token generation counts are:
+$$\mathbf{x} = [4, 6, 3, 5, 4, 7, 5, 6, 4, 6]$$
+$$\sum_{i=1}^{10} x_i = 50.0 \implies \hat{\lambda}_{\text{MLE}} = \bar{x} = \frac{50.0}{10} = \mathbf{5.000000}$$
+
+1. **Step 1: Compute Fisher Information & CRLB for Poisson Rate:**
+   $$\ln f(x; \lambda) = x \ln \lambda - \lambda - \ln(x!) \implies S(\lambda; x) = \frac{x}{\lambda} - 1 \implies \frac{\partial^2 \ln f}{\partial \lambda^2} = -\frac{x}{\lambda^2}$$
+   $$I_1(\lambda) = -\mathbb{E}\left[ -\frac{X}{\lambda^2} \right] = \frac{\mathbb{E}[X]}{\lambda^2} = \frac{\lambda}{\lambda^2} = \frac{1}{\lambda}$$
+   For $N = 10$ and $\lambda = 5.0$:
+   $$I_{10}(\lambda) = \frac{N}{\lambda} = \frac{10}{5.0} = \mathbf{2.000000}$$
+   $$\text{CRLB} = \frac{1}{I_{10}(\lambda)} = \frac{\lambda}{N} = \frac{5.0}{10} = \mathbf{0.500000}$$
+   Since $\text{Var}(\bar{X}) = \frac{\text{Var}(X)}{N} = \frac{\lambda}{N} = 0.500000$, the sample mean $\bar{X}$ achieves $100\%$ efficiency.
+
+2. **Step 2: Construct the Optimal Minimum-MSE Regularized Estimator:**
+   By Deep Derivation 4.2.1, the optimal shrinkage factor is:
+   $$\alpha^* = \frac{\lambda^2}{\lambda^2 + \frac{\lambda}{N}} = \frac{5.0^2}{5.0^2 + 0.50} = \frac{25.0}{25.5} = \frac{50}{51} \approx \mathbf{0.980392}$$
+   Shrunk Estimate:
+   $$\hat{\lambda}^* = \alpha^* \bar{x} = \left( \frac{50}{51} \right) \times 5.0 = \mathbf{4.901961}$$
+
+3. **Step 3: Verification of Reduced Total MSE:**
+   - $\text{Bias}(\hat{\lambda}^*) = 4.901961 - 5.000000 = -0.098039 \implies \text{Bias}^2 = (-0.098039)^2 \approx \mathbf{0.009612}$
+   - $\text{Var}(\hat{\lambda}^*) = (\alpha^*)^2 \text{Var}(\bar{X}) = (0.980392)^2 \times 0.500000 \approx \mathbf{0.480584}$
+   - $\text{MSE}(\hat{\lambda}^*) = \text{Bias}^2 + \text{Var} = 0.009612 + 0.480584 = \mathbf{0.490196}$
+   Compare:
+   $$\text{MSE}(\hat{\lambda}^*) = 0.490196 < \text{MSE}(\bar{X}) = 0.500000$$
+   Accepting a tiny bias of $0.098$ reduced total estimation error by approximately $2\%$!
 
 ---
 

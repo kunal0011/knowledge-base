@@ -30,7 +30,7 @@ tags:
 - [12. Dynamic Programming (71 problems)](#12-dynamic-programming)
 - [13. Greedy (46 problems)](#13-greedy)
 - [14. Bit Manipulation (14 problems)](#14-bit-manipulation)
-- [15. Languages (15 deep-dive guides)](#15-languages)
+- [15. Languages (45 technical guides)](#15-languages)
 
 ---
 
@@ -517,36 +517,64 @@ tags:
 
 ---
 
-## 15. Languages (15 Deep-Dive Guides)
+## 15. Languages (45 Technical Guides: 30 Canonical Concepts + 15 Interview Cheatsheets)
 
-> Master technical reference guides for Python, Java, and C++ covering runtime internals, memory models, collections complexity, interview gotchas, and LeetCode templates. [Read Master Overview & Comparative Reference](15.%20Languages/README.md).
+> Comprehensive, textbook-grade technical reference guides for Python, Java, and C++ based on canonical literature (*Fluent Python*, *Learning Python*, *Effective Java*, *OCP Java SE*, *Bjarne Stroustrup*, and *Effective Modern C++*).  
+> 👉 [**Read Master Overview & Comparative Reference**](15.%20Languages/README.md)
 
-### 🐍 Python
-| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
-|:---|:---|:---:|
-| **01. Runtime Internals & Memory Model** | `PyObject` structure, Small Integer caching, `pymalloc` arenas/pools, Cyclic Generational GC, and the GIL. | [Read Guide](15.%20Languages/Python/01.%20Runtime%20Internals%20&%20Memory%20Model.md) |
-| **02. Built-in Data Structures & Collections** | `list` dynamic array resizing, compact `dict` hash tables, `collections.deque`, `heapq` min-heap, and `bisect`. | [Read Guide](15.%20Languages/Python/02.%20Built-in%20Data%20Structures%20&%20Collections.md) |
-| **03. Interview Gotchas & Common Pitfalls** | Mutable default arguments, late-binding closures, floor division with negatives, 2D list reference replication, and `nonlocal` scoping. | [Read Guide](15.%20Languages/Python/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
-| **04. High-Performance Tricks & Idioms** | Extended unpacking, `itertools` power tools (`accumulate`, `groupby`), `@cache`, matrix rotations, and bit manipulation idioms. | [Read Guide](15.%20Languages/Python/04.%20High-Performance%20Tricks%20&%20Idioms.md) |
-| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D grids, DSU with Path Compression, Trie, Monotonic Queue, and Max-Heap wrapper. | [Read Guide](15.%20Languages/Python/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+### 📚 Part I: The Canonical Concepts Library (30 In-Depth Chapters)
 
-### ☕ Java
-| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
-|:---|:---|:---:|
-| **01. JVM Architecture & Memory Management** | ClassLoader hierarchy, Metaspace, Object Header layout, G1/ZGC collectors, Integer Cache, String Pool, and JMM `volatile`. | [Read Guide](15.%20Languages/Java/01.%20JVM%20Architecture%20&%20Memory%20Management.md) |
-| **02. Java Collections Framework Deep-Dive** | `ArrayList` $1.5\times$ growth, `HashMap` treeification at threshold 8, `ArrayDeque` circular buffer, and `TreeMap` navigation methods. | [Read Guide](15.%20Languages/Java/02.%20Java%20Collections%20Framework%20Deep-Dive.md) |
-| **03. Interview Gotchas & Common Pitfalls** | `==` vs `.equals()`, `ConcurrentModificationException`, `Math.abs(MIN_VALUE)`, `Arrays.asList()` limitations, and generics type erasure. | [Read Guide](15.%20Languages/Java/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
-| **04. High-Performance Tricks & Idioms** | Avoiding the Dual-Pivot Quicksort $\mathcal{O}(N^2)$ trap, `BitSet` optimization, traditional loops vs Streams, and Fast I/O. | [Read Guide](15.%20Languages/Java/04.%20High-Performance%20Tricks%20&%20Idioms.md) |
-| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D intervals sorting, array Trie, DSU with rank, and Monotonic Stack. | [Read Guide](15.%20Languages/Java/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+#### 🐍 Python Concepts (*Fluent Python* & *Learning Python*)
+| # | Concept Chapter Title | Core Theoretical Focus & Runtime Mechanics | Link |
+|:---:|:---|:---|:---:|
+| **01** | Python Data Model & Special Methods | The Python Data Model as an API; CPython C-slots (`tp_as_sequence`); French Deck. | [Read Chapter](15.%20Languages/Python/Concepts/01.%20Python%20Data%20Model%20&%20Special%20%28Dunder%29%20Methods.md) |
+| **02** | Advanced Sequences, Slicing & Memory Views | Container vs Flat sequences; zero-copy `memoryview`; `array.array`; mutable tuple puzzle. | [Read Chapter](15.%20Languages/Python/Concepts/02.%20Advanced%20Sequences,%20Slicing%20&%20Memory%20Views.md) |
+| **03** | Dictionaries, Sets & Hash Table Internals | Raymond Hettinger's compact hash table; pseudo-random perturbation probing; `__missing__`. | [Read Chapter](15.%20Languages/Python/Concepts/03.%20Dictionaries,%20Sets%20&%20Hash%20Table%20Internals.md) |
+| **04** | Unicode, Bytes & Text Representation | PEP 393 flexible strings; the "Unicode Sandwich" model; NFC/NFD normalization; `struct`. | [Read Chapter](15.%20Languages/Python/Concepts/04.%20Unicode,%20Bytes%20&%20Text%20Representation.md) |
+| **05** | First-Class Functions, Closures & Functional | First-class functions; closure `cell` objects on the heap; `nonlocal`; `operator` module. | [Read Chapter](15.%20Languages/Python/Concepts/05.%20First-Class%20Functions,%20Closures%20&%20Functional%20Idioms.md) |
+| **06** | Decorators, Wrappers & Dynamic Scope | Import-time execution; `functools.wraps` metadata preservation; parameterized factories. | [Read Chapter](15.%20Languages/Python/Concepts/06.%20Decorators,%20Wrappers%20&%20Dynamic%20Scope.md) |
+| **07** | Object References, Mutability & Descriptors | Variables as labels; weak references; the Descriptor Protocol; `__slots__` RAM optimization. | [Read Chapter](15.%20Languages/Python/Concepts/07.%20Object%20References,%20Mutability%20&%20Descriptors.md) |
+| **08** | Iterators, Generators & Coroutines | Iterable vs Iterator distinction; generator frame suspension (`gi_frame`); `yield from`. | [Read Chapter](15.%20Languages/Python/Concepts/08.%20Iterators,%20Generators%20&%20Coroutines.md) |
+| **09** | Context Managers & Resource Lifecycles | Deterministic cleanup; exception suppression in `__exit__`; `@contextlib.contextmanager`. | [Read Chapter](15.%20Languages/Python/Concepts/09.%20Context%20Managers%20&%20Resource%20Lifecycles.md) |
+| **10** | Concurrency, Asyncio & Metaprogramming | The GIL reality; `asyncio.TaskGroup` structured concurrency; `type` metaclass; `__init_subclass__`. | [Read Chapter](15.%20Languages/Python/Concepts/10.%20Concurrency,%20Asyncio%20&%20Metaprogramming.md) |
 
-### ⚡ C++
-| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
-|:---|:---|:---:|
-| **01. Memory Layout, RAII & Modern Semantics** | Virtual memory segments, RAII invariants, `unique_ptr`/`shared_ptr`, Move semantics, and Undefined Behavior (UB). | [Read Guide](15.%20Languages/C++/01.%20Memory%20Layout,%20RAII%20&%20Modern%20Semantics.md) |
-| **02. STL Containers & Under-the-Hood** | `std::vector` capacity growth, Small String Optimization (SSO), `unordered_map` chaining, and the `priority_queue` Max-Heap default trap. | [Read Guide](15.%20Languages/C++/02.%20STL%20Containers%20&%20Under-the-Hood.md) |
-| **03. Interview Gotchas & Common Pitfalls** | Iterator invalidation, unsigned `size_t` loop underflow, strict weak ordering segfaults, and anti-hash collision attacks. | [Read Guide](15.%20Languages/C++/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
-| **04. High-Performance Tricks & STL Idioms** | Fast I/O mechanics, GCC hardware builtins (`__builtin_popcount`), C++17 structured bindings, and the 64x `std::bitset` knapsack trick. | [Read Guide](15.%20Languages/C++/04.%20High-Performance%20Tricks%20&%20STL%20Idioms.md) |
-| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D vectors, Trie with raw pointers, DSU, Segment Tree, and custom comparator priority queues. | [Read Guide](15.%20Languages/C++/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+#### ☕ Java Concepts (*OCP Java SE* & *Effective Java*)
+| # | Concept Chapter Title | Core Theoretical Focus & Runtime Mechanics | Link |
+|:---:|:---|:---|:---:|
+| **01** | Type System, Primitives & Object References | Primitive stack storage vs heap wrapper overhead; IntegerCache; `var` LVTI; pattern matching. | [Read Chapter](15.%20Languages/Java/Concepts/01.%20Type%20System,%20Primitives%20&%20Object%20References.md) |
+| **02** | OOP Design, Records & Sealed Classes | Class initialization sequence; Records (JEP 395); Sealed classes (JEP 409); Item 18. | [Read Chapter](15.%20Languages/Java/Concepts/02.%20OOP%20Design,%20Records%20&%20Sealed%20Classes.md) |
+| **03** | Nested Classes, Lambdas & Functional Interfaces | Static vs non-static inner classes; `invokedynamic` bytecode; method references; `java.util.function`. | [Read Chapter](15.%20Languages/Java/Concepts/03.%20Nested%20Classes,%20Lambdas%20&%20Functional%20Interfaces.md) |
+| **04** | Generics, Type Erasure & Wildcards (PECS) | Type erasure; synthetic bridge methods; array covariance vs generics invariance; PECS (Item 31). | [Read Chapter](15.%20Languages/Java/Concepts/04.%20Generics,%20Type%20Erasure%20&%20Wildcards%20%28PECS%29.md) |
+| **05** | Collections Framework & Custom Comparators | `equals()` and `hashCode()` contract (Items 10-11); `HashMap` treeification; fluent comparators. | [Read Chapter](15.%20Languages/Java/Concepts/05.%20Collections%20Framework%20&%20Custom%20Comparators.md) |
+| **06** | Streams API, Collectors & Parallel Processing | Declarative stream pipelines; lazy evaluation; multi-level grouping collectors; ForkJoinPool (Item 48). | [Read Chapter](15.%20Languages/Java/Concepts/06.%20Streams%20API,%20Collectors%20&%20Parallel%20Processing.md) |
+| **07** | Exception Handling, Assertions & Resource Safety | Checked vs unchecked exceptions; `try-with-resources` & suppressed exceptions; failure atomicity. | [Read Chapter](15.%20Languages/Java/Concepts/07.%20Exception%20Handling,%20Assertions%20&%20Resource%20Safety.md) |
+| **08** | Java Module System (JPMS) & ClassLoaders | Project Jigsaw; `module-info.java` directives; ClassLoader Parent-Delegation model; split packages. | [Read Chapter](15.%20Languages/Java/Concepts/08.%20Java%20Module%20System%20%28JPMS%29%20&%20ClassLoaders.md) |
+| **09** | Concurrency, Locks & Virtual Threads | Virtual Threads (JEP 444); carrier unmounting; `ReentrantLock`; CAS atomics; pinning trap. | [Read Chapter](15.%20Languages/Java/Concepts/09.%20Concurrency,%20Locks%20&%20Virtual%20Threads%20%28Project%20Loom%29.md) |
+| **10** | JVM Architecture, Garbage Collectors & JMM | Tiered C1/C2 JIT; escape analysis; G1 and ZGC algorithms; JMM Happens-Before; Double-Checked Locking. | [Read Chapter](15.%20Languages/Java/Concepts/10.%20JVM%20Architecture,%20Garbage%20Collectors%20&%20JMM.md) |
+
+#### ⚡ C++ Concepts (*Bjarne Stroustrup* & *Scott Meyers*)
+| # | Concept Chapter Title | Core Theoretical Focus & Runtime Mechanics | Link |
+|:---:|:---|:---|:---:|
+| **01** | Type System, Object Model & Values | The Zero-Overhead Principle; object alignment & padding; value categories; `std::bit_cast`. | [Read Chapter](15.%20Languages/C++/Concepts/01.%20Type%20System,%20Object%20Model%20&%20Values.md) |
+| **02** | Memory Management, Lifecycles & RAII | RAII invariant; `std::unique_ptr` exclusive ownership; `std::shared_ptr` control blocks; `weak_ptr`. | [Read Chapter](15.%20Languages/C++/Concepts/02.%20Memory%20Management,%20Lifecycles%20&%20RAII.md) |
+| **03** | Move Semantics & Perfect Forwarding | `std::move` unconditional cast; move constructors (`noexcept`); forwarding references; collapsing. | [Read Chapter](15.%20Languages/C++/Concepts/03.%20Move%20Semantics%20&%20Perfect%20Forwarding.md) |
+| **04** | Classes, Inheritance & Object-Oriented Design | Virtual tables (`vtable`) & `vptr` dynamic dispatch; Rule of 0/3/5; `override`; diamond virtual base. | [Read Chapter](15.%20Languages/C++/Concepts/04.%20Classes,%20Inheritance%20&%20Object-Oriented%20Design.md) |
+| **05** | Generic Programming, Templates & Concepts | Compile-time static polymorphism; fold expressions; SFINAE vs modern C++20 Concepts. | [Read Chapter](15.%20Languages/C++/Concepts/05.%20Generic%20Programming,%20Templates%20&%20Concepts.md) |
+| **06** | Compile-Time Metaprogramming & Constexpr | `constexpr` vs `consteval` (immediate functions) vs `constinit`; `if constexpr`; LUTs. | [Read Chapter](15.%20Languages/C++/Concepts/06.%20Compile-Time%20Metaprogramming%20&%20Constexpr.md) |
+| **07** | Standard Template Library (STL) Architecture | Stepanov's orthogonal design; iterator categories; C++20 Ranges and Views; erase-remove idiom. | [Read Chapter](15.%20Languages/C++/Concepts/07.%20Standard%20Template%20Library%20%28STL%29%20Architecture.md) |
+| **08** | Concurrency, Threading & Memory Model | C++11 Memory Model; data races as UB; `std::jthread` RAII auto-joining; Acquire-Release; `volatile` myth. | [Read Chapter](15.%20Languages/C++/Concepts/08.%20Concurrency,%20Threading%20&%20Memory%20Model.md) |
+| **09** | Error Handling & Exception Safety Guarantees | Sutter's 4 exception safety tiers; Copy-and-Swap idiom; `noexcept` performance; `std::expected`. | [Read Chapter](15.%20Languages/C++/Concepts/09.%20Error%20Handling%20&%20Exception%20Safety%20Guarantees.md) |
+| **10** | Modern C++ Idioms, Patterns & Undefined Behavior | The Pimpl Idiom & destructor trap; CRTP compile-time polymorphism; Type Erasure; Top 5 UB traps. | [Read Chapter](15.%20Languages/C++/Concepts/10.%20Modern%20C++%20Idioms,%20Patterns%20&%20Undefined%20Behavior.md) |
+
+---
+
+### ⚡ Part II: Interview Cheatsheets & Algorithmic Boilerplates (15 Guides)
+
+| Language | 01. Runtime Internals | 02. Collections Deep-Dive | 03. Interview Gotchas | 04. High-Performance Tricks | 05. LeetCode Templates |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Python** | [Read](15.%20Languages/Python/01.%20Runtime%20Internals%20&%20Memory%20Model.md) | [Read](15.%20Languages/Python/02.%20Built-in%20Data%20Structures%20&%20Collections.md) | [Read](15.%20Languages/Python/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) | [Read](15.%20Languages/Python/04.%20High-Performance%20Tricks%20&%20Idioms.md) | [Read](15.%20Languages/Python/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+| **Java** | [Read](15.%20Languages/Java/01.%20JVM%20Architecture%20&%20Memory%20Management.md) | [Read](15.%20Languages/Java/02.%20Java%20Collections%20Framework%20Deep-Dive.md) | [Read](15.%20Languages/Java/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) | [Read](15.%20Languages/Java/04.%20High-Performance%20Tricks%20&%20Idioms.md) | [Read](15.%20Languages/Java/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+| **C++** | [Read](15.%20Languages/C++/01.%20Memory%20Layout,%20RAII%20&%20Modern%20Semantics.md) | [Read](15.%20Languages/C++/02.%20STL%20Containers%20&%20Under-the-Hood.md) | [Read](15.%20Languages/C++/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) | [Read](15.%20Languages/C++/04.%20High-Performance%20Tricks%20&%20STL%20Idioms.md) | [Read](15.%20Languages/C++/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
 
 ---
 

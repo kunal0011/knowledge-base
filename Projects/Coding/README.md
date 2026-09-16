@@ -28,7 +28,7 @@ Projects/Coding/
 ├── 12. Dynamic Programming             # 71 problems
 ├── 13. Greedy                          # 46 problems
 ├── 14. Bit Manipulation                # 14 problems
-├── 15. Languages                       # 15 technical guides (Python, Java, C++)
+├── 15. Languages                       # 45 technical guides & textbooks (Python, Java, C++)
 ```
 
 ---
@@ -51,7 +51,7 @@ Projects/Coding/
 | **12** | **Dynamic Programming** | `71` | 1D/2D memoization, knapsack variants, longest common subsequences, interval DP, and state compression. | [Browse](12.%20Dynamic%20Programming/) |
 | **13** | **Greedy** | `46` | Locally optimal choice paradigms, interval scheduling, jump games, and exchange arguments. | [Browse](13.%20Greedy/) |
 | **14** | **Bit Manipulation** | `14` | Bitwise XOR/AND/OR tricks, bitmasks, 2's complement properties, and subset bitmasking. | [Browse](14.%20Bit%20Manipulation/) |
-| **15** | **Languages** | `15 Guides` | Deep-dive runtime internals, memory models, gotchas, and cheatsheets for Python, Java, and C++. | [Browse](15.%20Languages/) |
+| **15** | **Languages** | `45 Guides` | Deep-dive runtime internals, memory models, canonical textbooks (Stroustrup, Fluent Python, Effective Java). | [Browse](15.%20Languages/) |
 
 ---
 

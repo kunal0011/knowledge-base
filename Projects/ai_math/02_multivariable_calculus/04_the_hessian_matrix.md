@@ -64,6 +64,31 @@ $$\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial^2 f}{\partial 
 Consequently, the Hessian matrix is **always symmetric**:
 $$\mathbf{H(x) = H(x)^T}$$
 
+##### Rigorous First-Principles Proof (in $\mathbb{R}^2$):
+1. Without loss of generality, let $f(x, y)$ be defined on an open disk around $(x_0, y_0)$, with continuous second partials.
+2. For small non-zero numbers $h, k$, define the double difference:
+   $$\Delta(h, k) = f(x_0 + h, y_0 + k) - f(x_0 + h, y_0) - f(x_0, y_0 + k) + f(x_0, y_0)$$
+3. **First perspective:** Define the auxiliary function $g(x) = f(x, y_0 + k) - f(x, y_0)$.
+   Then $\Delta(h, k) = g(x_0 + h) - g(x_0)$.
+   By the single-variable Mean Value Theorem, there exists $\xi \in (x_0, x_0 + h)$ such that:
+   $$\Delta(h, k) = h g'(\xi) = h \left[ \frac{\partial f}{\partial x}(\xi, y_0 + k) - \frac{\partial f}{\partial x}(\xi, y_0) \right]$$
+   Apply the Mean Value Theorem again to the bracketed expression as a function of $y$: there exists $\eta \in (y_0, y_0 + k)$ such that:
+   $$\Delta(h, k) = h k \frac{\partial^2 f}{\partial y \partial x}(\xi, \eta) \implies \frac{\Delta(h, k)}{h k} = \frac{\partial^2 f}{\partial y \partial x}(\xi, \eta)$$
+4. **Second perspective:** Define the auxiliary function $\phi(y) = f(x_0 + h, y) - f(x_0, y)$.
+   Then $\Delta(h, k) = \phi(y_0 + k) - \phi(y_0)$.
+   Applying the Mean Value Theorem twice in reverse order (first along $y$, then along $x$): there exist $\hat{\eta} \in (y_0, y_0 + k)$ and $\hat{\xi} \in (x_0, x_0 + h)$ such that:
+   $$\Delta(h, k) = k \phi'(\hat{\eta}) = k \left[ \frac{\partial f}{\partial y}(x_0 + h, \hat{\eta}) - \frac{\partial f}{\partial y}(x_0, \hat{\eta}) \right] = k h \frac{\partial^2 f}{\partial x \partial y}(\hat{\xi}, \hat{\eta})$$
+   $$\implies \frac{\Delta(h, k)}{h k} = \frac{\partial^2 f}{\partial x \partial y}(\hat{\xi}, \hat{\eta})$$
+5. Equating the two expressions:
+   $$\frac{\partial^2 f}{\partial y \partial x}(\xi, \eta) = \frac{\partial^2 f}{\partial x \partial y}(\hat{\xi}, \hat{\eta})$$
+6. Take the limit as $(h, k) \to (0, 0)$.
+   As $h, k \to 0$, both $(\xi, \eta) \to (x_0, y_0)$ and $(\hat{\xi}, \hat{\eta}) \to (x_0, y_0)$.
+   Because the second-order partial derivatives are assumed to be continuous:
+   $$\lim_{(h,k)\to(0,0)} \frac{\partial^2 f}{\partial y \partial x}(\xi, \eta) = \frac{\partial^2 f}{\partial y \partial x}(x_0, y_0)$$
+   $$\lim_{(h,k)\to(0,0)} \frac{\partial^2 f}{\partial x \partial y}(\hat{\xi}, \hat{\eta}) = \frac{\partial^2 f}{\partial x \partial y}(x_0, y_0)$$
+7. Therefore:
+   $$\frac{\partial^2 f}{\partial y \partial x}(x_0, y_0) = \frac{\partial^2 f}{\partial x \partial y}(x_0, y_0) \quad \blacksquare$$
+
 ---
 
 ### 3. Spectral Decomposition & Curvature Along Arbitrary Directions
@@ -99,6 +124,29 @@ We classify the geometry of $x^*$ using the eigenvalues of $H(x^*)$:
 | $\forall i, \; \lambda_i < 0$ | **Negative Definite ($H \prec 0$)** | **Strict Local Maximum** | Inverted dome curving downward in all directions |
 | $\exists i, j$ with $\lambda_i > 0$ and $\lambda_j < 0$ | **Indefinite** | **Saddle Point** | Horse saddle; escapes along eigenvector $q_j$ |
 | $\forall i, \; \lambda_i \ge 0$ with some $\lambda_k = 0$ | **Positive Semi-Definite ($H \succeq 0$)** | Inconclusive (Valley / Flat ridge) | Requires 3rd or 4th order Taylor expansion |
+
+#### Theorem 2.4.3: Derivation of the Second-Derivative Test in $\mathbb{R}^n$
+Let $\nabla f(x^*) = 0$ and $f \in C^2$.
+1. By the 2nd-order Taylor expansion with Peano remainder:
+   $$f(x^* + h) = f(x^*) + \nabla f(x^*)^T h + \frac{1}{2} h^T H(x^*) h + R_2(h) = f(x^*) + \frac{1}{2} h^T H(x^*) h + o(\|h\|_2^2)$$
+2. Let $h = r u$, where $r = \|h\|_2 > 0$ is the step length and $u \in \mathbb{R}^n$ is a unit direction ($\|u\|_2 = 1$):
+   $$\frac{f(x^* + r u) - f(x^*)}{r^2} = \frac{1}{2} u^T H(x^*) u + \frac{o(r^2)}{r^2}$$
+3. As $r \to 0$, the error term $\frac{o(r^2)}{r^2} \to 0$.
+4. **Case 1: $H(x^*) \succ 0$ (Positive Definite).**
+   By the Rayleigh-Ritz theorem, $u^T H(x^*) u \ge \lambda_{\min} > 0$ for all unit vectors $u$.
+   Choose $r$ sufficiently small such that $\left|\frac{o(r^2)}{r^2}\right| < \frac{1}{4} \lambda_{\min}$.
+   Then:
+   $$\frac{f(x^* + r u) - f(x^*)}{r^2} \ge \frac{1}{2} \lambda_{\min} - \frac{1}{4} \lambda_{\min} = \frac{1}{4} \lambda_{\min} > 0$$
+   $$\implies f(x^* + h) > f(x^*) \quad \forall h \neq 0 \text{ sufficiently small}$$
+   Therefore, $x^*$ is a **strict local minimum**.
+5. **Case 2: $H(x^*) \prec 0$ (Negative Definite).**
+   By exact symmetry, $u^T H(x^*) u \le \lambda_{\max} < 0$, which proves $f(x^* + h) < f(x^*)$ for all small $h \neq 0$.
+   Therefore, $x^*$ is a **strict local maximum**.
+6. **Case 3: $H(x^*)$ Indefinite (Eigenvalues with Opposite Signs).**
+   Let $q_1$ be the eigenvector for $\lambda_1 > 0$, and $q_n$ for $\lambda_n < 0$.
+   - Stepping along $h = r q_1$: $f(x^* + r q_1) - f(x^*) \approx \frac{1}{2} \lambda_1 r^2 > 0$ (function increases).
+   - Stepping along $h = r q_n$: $f(x^* + r q_n) - f(x^*) \approx \frac{1}{2} \lambda_n r^2 < 0$ (function decreases).
+   Because the function strictly increases in one direction and strictly decreases in another, $x^*$ cannot be an extremum. It is a **saddle point**. $\blacksquare$
 
 ---
 
@@ -316,6 +364,97 @@ $$\mathbf{w = H v}$$
    Setting $t = 0$:
    $$\mathbf{H(x) v = \left.\frac{d}{dt} \nabla f(x + t v)\right|_{t=0}}$$
 This means we can compute $H v$ with **two backpropagation passes** without ever computing or storing a single entry of the $P \times P$ Hessian matrix!
+
+---
+
+### Case D: The Rosenbrock Banana Function Curvature & Anisotropy Analysis
+The 2D Rosenbrock function is the universal acid test for multivariable optimization algorithms:
+$$f(x, y) = 100(y - x^2)^2 + (1 - x)^2$$
+
+#### Step 1: Compute First-Order Gradient $\nabla f(x, y)$
+$$\frac{\partial f}{\partial x} = 200(y - x^2)(-2x) - 2(1 - x) = -400 x(y - x^2) + 2x - 2 = 400 x^3 - 400 x y + 2x - 2$$
+$$\frac{\partial f}{\partial y} = 200(y - x^2)$$
+
+#### Step 2: Identify Stationary Point $(x^*, y^*)$
+Setting both partial derivatives to zero:
+1. $\frac{\partial f}{\partial y} = 200(y - x^2) = 0 \implies y = x^2$
+2. Substitute $y = x^2$ into $\frac{\partial f}{\partial x}$:
+   $$400 x^3 - 400 x(x^2) + 2x - 2 = 0 \implies 2(x - 1) = 0 \implies x^* = 1 \implies y^* = (1)^2 = 1$$
+The unique critical point is $(x^*, y^*) = (1, 1)$, with minimum value $f(1, 1) = 0$.
+
+#### Step 3: Compute Hessian Matrix at $(1, 1)$
+Compute second-order partial derivatives:
+- $H_{11} = \frac{\partial^2 f}{\partial x^2} = \frac{\partial}{\partial x}(400 x^3 - 400 x y + 2x - 2) = 1200 x^2 - 400 y + 2$
+- $H_{12} = H_{21} = \frac{\partial^2 f}{\partial x \partial y} = -400 x$
+- $H_{22} = \frac{\partial^2 f}{\partial y^2} = 200$
+
+Evaluate at $(x^*, y^*) = (1, 1)$:
+- $H_{11} = 1200(1)^2 - 400(1) + 2 = 1200 - 400 + 2 = \mathbf{802}$
+- $H_{12} = -400(1) = \mathbf{-400}$
+- $H_{22} = \mathbf{200}$
+
+The Hessian matrix at the global minimum is:
+$$H(1, 1) = \begin{bmatrix} 802 & -400 \\ -400 & 200 \end{bmatrix}$$
+
+#### Step 4: Spectral Curvature & Condition Number
+1. **Trace:** $\text{Tr}(H) = 802 + 200 = \mathbf{1002}$
+2. **Determinant:**
+   $$\det(H) = (802)(200) - (-400)^2 = 160{,}400 - 160{,}000 = \mathbf{400} > 0$$
+3. **Eigenvalues:**
+   $$\lambda^2 - 1002 \lambda + 400 = 0$$
+   $$\lambda = \frac{1002 \pm \sqrt{1002^2 - 4(400)}}{2} = \frac{1002 \pm \sqrt{1{,}004{,}004 - 1{,}600}}{2} = \frac{1002 \pm \sqrt{1{,}002{,}404}}{2}$$
+   Since $\sqrt{1{,}002{,}404} \approx 1001.201278$:
+   - $\lambda_1 = \frac{1002 + 1001.201278}{2} \approx \mathbf{1001.600639}$ (Ultra-steep curved valley wall)
+   - $\lambda_2 = \frac{1002 - 1001.201278}{2} \approx \mathbf{0.399361}$ (Almost flat valley floor)
+4. **Definiteness:**
+   Both $\lambda_1 > 0$ and $\lambda_2 > 0 \implies H(1, 1) \succ 0$ (Confirmed strict local minimum).
+5. **Condition Number:**
+   $$\kappa(H) = \frac{\lambda_1}{\lambda_2} \approx \frac{1001.600639}{0.399361} \approx \mathbf{2508.0}$$
+**Insight:** A condition number of $2508$ means the landscape is 2500 times steeper across the valley than along the valley floor. Standard gradient descent requires tiny steps ($\eta < \frac{2}{1001.6} \approx 0.00199$) to avoid blowing up, taking thousands of iterations to crawl along the parabolic trough.
+
+---
+
+### Case E: Multivariable Logistic Regression Hessian & Proof of Global Convexity
+Consider a binary classification dataset of $N$ feature vectors $x_1, \dots, x_N \in \mathbb{R}^d$ with labels $y_i \in \{0, 1\}$.
+The model parameterized by weights $w \in \mathbb{R}^d$ predicts probabilities $p_i = \sigma(w^T x_i) = \frac{1}{1 + e^{-w^T x_i}}$.
+The total binary cross-entropy loss is:
+$$\mathcal{L}(w) = -\sum_{i=1}^N \left[ y_i \log p_i + (1 - y_i) \log (1 - p_i) \right]$$
+
+#### Step 1: Analytical Gradient
+$$\nabla_w \mathcal{L}(w) = \sum_{i=1}^N (p_i - y_i) x_i = X^T (p - y)$$
+where $X = [x_1, \dots, x_N]^T \in \mathbb{R}^{N \times d}$.
+
+#### Step 2: Analytical Hessian
+Differentiating with respect to $w$:
+$$H(w) = \nabla_w^2 \mathcal{L}(w) = \sum_{i=1}^N \frac{\partial p_i}{\partial w} x_i^T = \sum_{i=1}^N p_i (1 - p_i) x_i x_i^T$$
+In compact matrix form:
+$$H(w) = X^T D X, \quad \text{where } D = \text{diag}\left(p_1(1-p_1), \dots, p_N(1-p_N)\right) \in \mathbb{R}^{N \times N}$$
+
+#### Step 3: First-Principles Proof of Strict Positive Definiteness
+1. Since the sigmoid function strictly satisfies $0 < p_i < 1$ for all real logits $w^T x_i \in \mathbb{R}$, each diagonal entry satisfies:
+   $$D_{ii} = p_i(1 - p_i) \in (0, 0.25] > 0$$
+2. Let $v \in \mathbb{R}^d$ be any arbitrary non-zero vector ($v \neq 0$):
+   $$v^T H(w) v = v^T (X^T D X) v = (X v)^T D (X v) = \sum_{i=1}^N D_{ii} (x_i^T v)^2 \ge 0$$
+3. If the feature matrix $X$ has full column rank ($\text{rank}(X) = d$, meaning features are linearly independent), then $X v \neq 0$ for all $v \neq 0$.
+4. Since $D_{ii} > 0$ for all $i$, at least one term $D_{ii} (x_i^T v)^2 > 0$, implying:
+   $$v^T H(w) v > 0 \quad \forall v \neq 0 \iff \mathbf{H(w) \succ 0}$$
+5. **Conclusion:** Logistic regression is **strictly convex** over the entire space $\mathbb{R}^d$. It contains **zero local minima and zero saddle points**; any stationary point found by gradient descent is guaranteed to be the unique global optimum!
+
+#### Step 4: Concrete Numerical Walkthrough
+Let $d = 2, N = 3$ with data matrix:
+$$X = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \\ 1.0 & 1.0 \end{bmatrix}$$
+At weight initialization $w = [0.0, 0.0]^T$:
+- All logits $w^T x_i = 0 \implies p_1 = p_2 = p_3 = 0.50$
+- $p_i (1 - p_i) = 0.5(0.5) = 0.25$ for all $i$.
+- Compute outer product sum:
+  $$x_1 x_1^T = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \begin{bmatrix} 1 & 0 \end{bmatrix} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}$$
+  $$x_2 x_2^T = \begin{bmatrix} 0 \\ 1 \end{bmatrix} \begin{bmatrix} 0 & 1 \end{bmatrix} = \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix}$$
+  $$x_3 x_3^T = \begin{bmatrix} 1 \\ 1 \end{bmatrix} \begin{bmatrix} 1 & 1 \end{bmatrix} = \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix}$$
+  $$H(w_0) = 0.25 \left( \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} + \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} + \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix} \right) = 0.25 \begin{bmatrix} 2.0 & 1.0 \\ 1.0 & 2.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.50} & \mathbf{0.25} \\ \mathbf{0.25} & \mathbf{0.50} \end{bmatrix}$$
+Eigenvalues:
+$$\det \begin{bmatrix} 0.50 - \lambda & 0.25 \\ 0.25 & 0.50 - \lambda \end{bmatrix} = (0.50 - \lambda)^2 - (0.25)^2 = 0$$
+$$\implies 0.50 - \lambda = \pm 0.25 \implies \lambda_1 = \mathbf{0.75}, \quad \lambda_2 = \mathbf{0.25}$$
+Both $\lambda_1, \lambda_2 > 0 \implies H \succ 0$, verifying strict positive definiteness!
 
 ---
 

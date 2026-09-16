@@ -113,10 +113,32 @@ $$\mathbf{J_f(x) \equiv A}$$
 When $m = n$ (the input and output spaces have the same dimension), the Jacobian matrix $J \in \mathbb{R}^{n \times n}$ is square.
 We can therefore compute its determinant: $\det(J_f(x))$.
 
-#### Theorem 2.3.2: Geometric Meaning of the Jacobian Determinant
+#### Theorem 2.3.2: Geometric Meaning of the Jacobian Determinant & Proof
 Let $U \subset \mathbb{R}^n$ be an infinitesimally small volume element containing $x_0$.
-Under the non-linear transformation $f$, the image $f(U)$ has volume:
+Under the non-linear transformation $f: \mathbb{R}^n \to \mathbb{R}^n$, the image $f(U)$ has volume:
 $$\text{Vol}(f(U)) \approx |\det(J_f(x_0))| \cdot \text{Vol}(U)$$
+
+##### First-Principles Derivation:
+1. Consider an infinitesimal rectangular cuboid $U$ at $x_0$ aligned with coordinate axes, defined by edge vectors $h_1 e_1, h_2 e_2, \dots, h_n e_n$, where $e_i$ is the $i^{\text{th}}$ standard basis vector.
+   The volume of this cuboid is simply:
+   $$\text{Vol}(U) = \prod_{i=1}^n h_i$$
+2. Under the differentiable mapping $f$, the corner $x_0$ maps to $f(x_0)$.
+   By Theorem 2.3.1 (Fréchet differentiability), each displaced vertex $x_0 + h_i e_i$ maps to:
+   $$f(x_0 + h_i e_i) \approx f(x_0) + J_f(x_0) (h_i e_i) = f(x_0) + h_i (J_f(x_0) e_i)$$
+3. Recall from linear algebra that $J_f(x_0) e_i$ is precisely the **$i^{\text{th}}$ column of the Jacobian matrix**, denoted $J_{*, i} = \frac{\partial f}{\partial x_i}(x_0)$.
+   Thus, the transformed infinitesimal edge vector is:
+   $$v_i \triangleq f(x_0 + h_i e_i) - f(x_0) \approx h_i \frac{\partial f}{\partial x_i}(x_0)$$
+4. The image $f(U)$ is locally an $n$-dimensional **parallelepiped** spanned by the vectors $v_1, v_2, \dots, v_n$.
+5. From multilinear algebra (Chapter 1.4), the volume of an $n$-dimensional parallelepiped spanned by vectors $v_1, \dots, v_n$ is given by the absolute value of the determinant of the matrix whose columns are those vectors:
+   $$\text{Vol}(f(U)) \approx \left| \det \left( \begin{bmatrix} v_1 & v_2 & \dots & v_n \end{bmatrix} \right) \right|$$
+6. Substitute $v_i = h_i J_{*, i}$:
+   $$\begin{bmatrix} v_1 & v_2 & \dots & v_n \end{bmatrix} = \begin{bmatrix} h_1 J_{*, 1} & h_2 J_{*, 2} & \dots & h_n J_{*, n} \end{bmatrix} = J_f(x_0) \begin{bmatrix} h_1 & 0 & \dots & 0 \\ 0 & h_2 & \dots & 0 \\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \dots & h_n \end{bmatrix}$$
+7. Applying the multiplicative property of determinants ($\det(A B) = \det(A) \det(B)$):
+   $$\det \left( \begin{bmatrix} v_1 & \dots & v_n \end{bmatrix} \right) = \det(J_f(x_0)) \cdot \det\left(\text{diag}(h_1, \dots, h_n)\right) = \det(J_f(x_0)) \cdot \left(\prod_{i=1}^n h_i\right)$$
+8. Taking absolute values gives:
+   $$\text{Vol}(f(U)) = |\det(J_f(x_0))| \cdot \text{Vol}(U) \quad \blacksquare$$
+
+##### Geometric Consequences:
 1. **$|\det(J)| > 1$:** The transformation locally **expands** volume (stretch).
 2. **$|\det(J)| < 1$:** The transformation locally **compresses** volume (shrink).
 3. **$|\det(J)| = 1$:** The transformation is locally **volume-preserving** (equiareall / symplectic).
@@ -353,8 +375,105 @@ Let $f(r, \theta) = \begin{bmatrix} r \cos \theta \\ r \sin \theta \end{bmatrix}
 Compute Jacobian:
 $$J = \begin{bmatrix} \frac{\partial(r \cos \theta)}{\partial r} & \frac{\partial(r \cos \theta)}{\partial \theta} \\ \frac{\partial(r \sin \theta)}{\partial r} & \frac{\partial(r \sin \theta)}{\partial \theta} \end{bmatrix} = \begin{bmatrix} \cos \theta & -r \sin \theta \\ \sin \theta & r \cos \theta \end{bmatrix}$$
 Compute Determinant:
-$$\det(J) = (\cos \theta)(r \cos \theta) - (-r \sin \theta)(\sin \theta) = r \cos^2 \theta + r \sin^2 \theta = r (\cos^2 \theta + \sin^2 \theta) = \mathbf{r}$$
-This proves the famous calculus integration rule: $dx dy = r \, dr \, d\theta$!
+---
+
+### Case D: End-to-End Jacobian of a 2-Layer Multilayer Perceptron (MLP)
+Consider a 2-layer neural network mapping an input $x \in \mathbb{R}^2$ to an output $y \in \mathbb{R}^2$:
+- **Layer 1:** $z_1 = W_1 x + b_1$, followed by elementwise sigmoid activation $a_1 = \sigma(z_1)$, where:
+  $$W_1 = \begin{bmatrix} 1.0 & 1.0 \\ 0.0 & 2.0 \end{bmatrix}, \quad b_1 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}$$
+- **Layer 2:** $y = W_2 a_1 + b_2$, where:
+  $$W_2 = \begin{bmatrix} 2.0 & -1.0 \\ 1.0 & 3.0 \end{bmatrix}, \quad b_2 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}$$
+
+Let the operating input point be $x_0 = [0.0, 0.0]^T$.
+
+#### Step 1: Forward Pass at $x_0$
+- $z_1 = W_1 x_0 + b_1 = [0.0, 0.0]^T$
+- $a_1 = \sigma([0, 0]^T) = [\frac{1}{1 + e^0}, \frac{1}{1 + e^0}]^T = [0.50, 0.50]^T$
+- $y = W_2 a_1 = \begin{bmatrix} 2(0.50) - 1(0.50) \\ 1(0.50) + 3(0.50) \end{bmatrix} = \begin{bmatrix} 1.0 - 0.50 \\ 0.50 + 1.50 \end{bmatrix} = \begin{bmatrix} \mathbf{0.50} \\ \mathbf{2.00} \end{bmatrix}$
+
+#### Step 2: Layer 1 Jacobian $J_1 = \frac{\partial a_1}{\partial x}$
+By the vector chain rule:
+$$J_1 = \frac{\partial a_1}{\partial z_1} \frac{\partial z_1}{\partial x} = \text{diag}\left(\sigma'(z_1)\right) W_1$$
+Since $\sigma'(t) = \sigma(t)(1 - \sigma(t))$, at $z_1 = [0, 0]^T$:
+$$\sigma'(0) = 0.50(1 - 0.50) = 0.25$$
+$$\frac{\partial a_1}{\partial z_1} = \begin{bmatrix} 0.25 & 0.00 \\ 0.00 & 0.25 \end{bmatrix}$$
+$$J_1 = \begin{bmatrix} 0.25 & 0.00 \\ 0.00 & 0.25 \end{bmatrix} \begin{bmatrix} 1.0 & 1.0 \\ 0.0 & 2.0 \end{bmatrix} = \begin{bmatrix} 0.25 & 0.25 \\ 0.00 & 0.50 \end{bmatrix}$$
+
+#### Step 3: Layer 2 Jacobian $J_2 = \frac{\partial y}{\partial a_1}$
+Since Layer 2 is linear:
+$$J_2 = W_2 = \begin{bmatrix} 2.0 & -1.0 \\ 1.0 & 3.0 \end{bmatrix}$$
+
+#### Step 4: Full Network Jacobian $J_{\text{net}} = \frac{\partial y}{\partial x}$
+By the Jacobian Chain Rule:
+$$J_{\text{net}} = J_2 J_1 = \begin{bmatrix} 2.0 & -1.0 \\ 1.0 & 3.0 \end{bmatrix} \begin{bmatrix} 0.25 & 0.25 \\ 0.00 & 0.50 \end{bmatrix}$$
+- Row 1, Col 1: $2.0(0.25) + (-1.0)(0.00) = 0.50$
+- Row 1, Col 2: $2.0(0.25) + (-1.0)(0.50) = 0.50 - 0.50 = 0.00$
+- Row 2, Col 1: $1.0(0.25) + 3.0(0.00) = 0.25$
+- Row 2, Col 2: $1.0(0.25) + 3.0(0.50) = 0.25 + 1.50 = 1.75$
+$$J_{\text{net}} = \begin{bmatrix} \mathbf{0.50} & \mathbf{0.00} \\ \mathbf{0.25} & \mathbf{1.75} \end{bmatrix}$$
+
+#### Step 5: Perturbation Prediction vs True Non-Linear Output
+Let $h = [0.10, 0.10]^T$.
+Linear predicted shift:
+$$\Delta y_{\text{pred}} = J_{\text{net}} h = \begin{bmatrix} 0.50 & 0.00 \\ 0.25 & 1.75 \end{bmatrix} \begin{bmatrix} 0.10 \\ 0.10 \end{bmatrix} = \begin{bmatrix} 0.50(0.10) \\ 0.25(0.10) + 1.75(0.10) \end{bmatrix} = \begin{bmatrix} \mathbf{0.050} \\ \mathbf{0.200} \end{bmatrix}$$
+Predicted output: $y_{\text{pred}} = [0.50 + 0.050, 2.00 + 0.200]^T = [0.550, 2.200]^T$.
+
+True forward pass at $x = [0.10, 0.10]^T$:
+- $z_1 = \begin{bmatrix} 1(0.1) + 1(0.1) \\ 0(0.1) + 2(0.1) \end{bmatrix} = \begin{bmatrix} 0.20 \\ 0.20 \end{bmatrix}$
+- $a_1 = \sigma([0.20, 0.20]^T) = [\frac{1}{1 + e^{-0.20}}, \frac{1}{1 + e^{-0.20}}]^T \approx [0.549834, 0.549834]^T$
+- $y_{\text{true}} = W_2 a_1 = \begin{bmatrix} 2(0.549834) - 1(0.549834) \\ 1(0.549834) + 3(0.549834) \end{bmatrix} = \begin{bmatrix} 0.549834 \\ 2.199336 \end{bmatrix}$
+- Errors: $|0.549834 - 0.550000| = 0.000166$, $|2.199336 - 2.200000| = 0.000664$.
+The MLP network Jacobian predicted the non-linear output to within $0.03\%$ error!
+
+---
+
+### Case E: Spherical to Cartesian Coordinates $3 \times 3$ Jacobian Matrix and Determinant
+The spherical-to-Cartesian coordinate transformation $f: \mathbb{R}^3 \to \mathbb{R}^3$ is defined by:
+$$\begin{bmatrix} x \\ y \\ z \end{bmatrix} = \begin{bmatrix} \rho \sin \phi \cos \theta \\ \rho \sin \phi \sin \theta \\ \rho \cos \phi \end{bmatrix}$$
+where $\rho \ge 0$ is the radial distance, $\phi \in [0, \pi]$ is the polar angle, and $\theta \in [0, 2\pi)$ is the azimuthal angle.
+
+#### Step 1: Construct the $3 \times 3$ Jacobian Matrix
+$$J = \begin{bmatrix}
+\frac{\partial x}{\partial \rho} & \frac{\partial x}{\partial \phi} & \frac{\partial x}{\partial \theta} \\[6pt]
+\frac{\partial y}{\partial \rho} & \frac{\partial y}{\partial \phi} & \frac{\partial y}{\partial \theta} \\[6pt]
+\frac{\partial z}{\partial \rho} & \frac{\partial z}{\partial \phi} & \frac{\partial z}{\partial \theta}
+\end{bmatrix} = \begin{bmatrix}
+\sin \phi \cos \theta & \rho \cos \phi \cos \theta & -\rho \sin \phi \sin \theta \\[6pt]
+\sin \phi \sin \theta & \rho \cos \phi \sin \theta & \rho \sin \phi \cos \theta \\[6pt]
+\cos \phi & -\rho \sin \phi & 0
+\end{bmatrix}$$
+
+#### Step 2: Analytical Determinant Derivation (Laplace Expansion along Row 3)
+$$\det(J) = \cos \phi \cdot M_{31} - (-\rho \sin \phi) \cdot M_{32} + 0 \cdot M_{33}$$
+1. First minor $M_{31}$:
+   $$M_{31} = \det \begin{bmatrix} \rho \cos \phi \cos \theta & -\rho \sin \phi \sin \theta \\ \rho \cos \phi \sin \theta & \rho \sin \phi \cos \theta \end{bmatrix} = \rho^2 \sin \phi \cos \phi \cos^2 \theta - (-\rho^2 \sin \phi \cos \phi \sin^2 \theta)$$
+   $$M_{31} = \rho^2 \sin \phi \cos \phi (\cos^2 \theta + \sin^2 \theta) = \rho^2 \sin \phi \cos \phi$$
+2. Second minor $M_{32}$:
+   $$M_{32} = \det \begin{bmatrix} \sin \phi \cos \theta & -\rho \sin \phi \sin \theta \\ \sin \phi \sin \theta & \rho \sin \phi \cos \theta \end{bmatrix} = \rho \sin^2 \phi \cos^2 \theta - (-\rho \sin^2 \phi \sin^2 \theta) = \rho \sin^2 \phi$$
+3. Combine terms:
+   $$\det(J) = \cos \phi (\rho^2 \sin \phi \cos \phi) + \rho \sin \phi (\rho \sin^2 \phi) = \rho^2 \sin \phi \cos^2 \phi + \rho^2 \sin^3 \phi$$
+   $$\det(J) = \rho^2 \sin \phi \left( \cos^2 \phi + \sin^2 \phi \right) = \mathbf{\rho^2 \sin \phi}$$
+This proves the fundamental volume element for triple integrals in spherical coordinates:
+$$dx \, dy \, dz = |\det(J)| \, d\rho \, d\phi \, d\theta = \rho^2 \sin \phi \, d\rho \, d\phi \, d\theta$$
+
+#### Step 3: Concrete Numerical Evaluation
+Let $(\rho, \phi, \theta) = (2.0, \frac{\pi}{4}, \frac{\pi}{3})$:
+- $\rho = 2.0$
+- $\sin(\frac{\pi}{4}) = \cos(\frac{\pi}{4}) = \frac{\sqrt{2}}{2} \approx 0.707107$
+- $\cos(\frac{\pi}{3}) = 0.500000, \quad \sin(\frac{\pi}{3}) = \frac{\sqrt{3}}{2} \approx 0.866025$
+
+The numerical Jacobian is:
+$$J = \begin{bmatrix}
+(0.7071)(0.5) & 2(0.7071)(0.5) & -2(0.7071)(0.8660) \\
+(0.7071)(0.8660) & 2(0.7071)(0.8660) & 2(0.7071)(0.5) \\
+0.7071 & -2(0.7071) & 0
+\end{bmatrix} \approx \begin{bmatrix}
+0.3536 & 0.7071 & -1.2247 \\
+0.6124 & 1.2247 & 0.7071 \\
+0.7071 & -1.4142 & 0.0000
+\end{bmatrix}$$
+Analytical Determinant:
+$$\det(J) = \rho^2 \sin \phi = 2^2 \sin(\pi/4) = 4 \left(\frac{\sqrt{2}}{2}\right) = 2\sqrt{2} \approx \mathbf{2.828427}$$
 
 ---
 

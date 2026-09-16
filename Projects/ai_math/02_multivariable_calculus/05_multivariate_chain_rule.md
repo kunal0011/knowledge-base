@@ -65,6 +65,25 @@ $$\mathbf{\frac{\partial z}{\partial x_j} = \sum_{i=1}^m \frac{\partial z}{\part
 
 ---
 
+#### Theorem 2.5.1b: Total Derivative vs. Partial Derivative
+When a quantity $z = f(t, x_1(t), \dots, x_m(t))$ depends on a variable $t$ both **explicitly** (direct dependence) and **implicitly** (indirectly through intermediate variables $x_i(t)$):
+$$\mathbf{\frac{df}{dt} = \frac{\partial f}{\partial t} + \sum_{i=1}^m \frac{\partial f}{\partial x_i} \frac{dx_i}{dt}}$$
+
+##### First-Principles Derivation:
+1. Consider the augmented function $F(t, x_1, \dots, x_m) = f(t, x_1, \dots, x_m)$ where $t, x_1, \dots, x_m$ are temporarily treated as independent arguments.
+2. In an infinitesimal interval $\Delta t$, the total change in $f$ is:
+   $$\Delta f = f(t + \Delta t, x_1(t + \Delta t), \dots, x_m(t + \Delta t)) - f(t, x_1(t), \dots, x_m(t))$$
+3. Applying multivariable Fréchet differentiability:
+   $$\Delta f = \frac{\partial f}{\partial t} \Delta t + \sum_{i=1}^m \frac{\partial f}{\partial x_i} \Delta x_i + o\left(\sqrt{(\Delta t)^2 + \sum_{i=1}^m (\Delta x_i)^2}\right)$$
+4. Divide through by $\Delta t \neq 0$:
+   $$\frac{\Delta f}{\Delta t} = \frac{\partial f}{\partial t} + \sum_{i=1}^m \frac{\partial f}{\partial x_i} \frac{\Delta x_i}{\Delta t} + \frac{o(\Delta t)}{\Delta t}$$
+5. Taking the limit as $\Delta t \to 0$:
+   $$\frac{df}{dt} = \lim_{\Delta t \to 0} \frac{\Delta f}{\Delta t} = \frac{\partial f}{\partial t} + \sum_{i=1}^m \frac{\partial f}{\partial x_i} \frac{dx_i}{dt} \quad \blacksquare$$
+
+*Deep Learning Implication:* This distinction is paramount in **Recurrent Neural Networks (RNNs)** and **Neural ODEs**, where time $t$ or depth $l$ acts both as an explicit indexing step and determines the evolving hidden state $h(t)$. Failing to include the implicit path $\frac{\partial f}{\partial h} \frac{dh}{dt}$ causes truncated backpropagation errors.
+
+---
+
 ### 2. General Vector-to-Vector Multivariate Chain Rule
 
 Now consider the general case where both the input, intermediate, and output spaces are multidimensional vectors:
@@ -319,6 +338,91 @@ $$x = \cos(t), \quad y = \sin(t), \quad z = x^2 + y^2$$
 Using the chain rule:
 $$\frac{dz}{dt} = \frac{\partial z}{\partial x} \frac{dx}{dt} + \frac{\partial z}{\partial y} \frac{dy}{dt} = (2x)(-\sin t) + (2y)(\cos t) = 2 \cos t (-\sin t) + 2 \sin t (\cos t) = 0$$
 Indeed, $z = \cos^2 t + \sin^2 t = 1$ is constant for all $t$, so its derivative is identically zero!
+
+---
+
+### Case C: Total Derivative vs. Partial Derivative in a Time-Evolving System
+Consider an objective function $f(t, x, y)$ where time $t$ acts both explicitly and governs the evolution of state variables $x(t)$ and $y(t)$:
+$$f(t, x, y) = t^2 x + x y^2$$
+Trajectory dynamics:
+$$x(t) = 2 t, \quad y(t) = 3 t^2$$
+Evaluate the total time derivative $\frac{df}{dt}$ at $t = 1.0$.
+
+#### Step 1: Compute State Values at $t = 1.0$
+- $x(1.0) = 2(1.0) = 2.0$
+- $y(1.0) = 3(1.0)^2 = 3.0$
+
+#### Step 2: Evaluate All Derivative Components
+1. **Explicit partial time derivative:**
+   $$\frac{\partial f}{\partial t} = \frac{\partial}{\partial t}(t^2 x + x y^2) = 2 t x$$
+   At $t = 1.0, x = 2.0$: $\frac{\partial f}{\partial t} = 2(1.0)(2.0) = \mathbf{4.0}$
+2. **Path through $x(t)$:**
+   $$\frac{\partial f}{\partial x} = t^2 + y^2 = 1.0^2 + 3.0^2 = 1.0 + 9.0 = 10.0$$
+   $$\frac{dx}{dt} = \frac{d}{dt}(2 t) = 2.0$$
+   $$\frac{\partial f}{\partial x} \frac{dx}{dt} = (10.0)(2.0) = \mathbf{20.0}$$
+3. **Path through $y(t)$:**
+   $$\frac{\partial f}{\partial y} = 2 x y = 2(2.0)(3.0) = 12.0$$
+   $$\frac{dy}{dt} = \frac{d}{dt}(3 t^2) = 6 t = 6(1.0) = 6.0$$
+   $$\frac{\partial f}{\partial y} \frac{dy}{dt} = (12.0)(6.0) = \mathbf{72.0}$$
+
+#### Step 3: Sum Over Paths via Theorem 2.5.1b
+$$\frac{df}{dt} = \frac{\partial f}{\partial t} + \frac{\partial f}{\partial x} \frac{dx}{dt} + \frac{\partial f}{\partial y} \frac{dy}{dt} = 4.0 + 20.0 + 72.0 = \mathbf{96.0}$$
+
+#### Step 4: Verification via Direct Closed-Form Substitution
+Substitute $x(t) = 2t$ and $y(t) = 3t^2$ into $f$:
+$$f(t) = t^2(2t) + (2t)(3t^2)^2 = 2t^3 + 2t(9t^4) = 2t^3 + 18t^5$$
+Differentiating directly with respect to $t$:
+$$\frac{df}{dt} = \frac{d}{dt}(2t^3 + 18t^5) = 6t^2 + 90t^4$$
+At $t = 1.0$:
+$$\frac{df}{dt}(1.0) = 6(1.0)^2 + 90(1.0)^4 = 6.0 + 90.0 = \mathbf{96.0} \quad \checkmark$$
+
+---
+
+### Case D: Multi-Branch Hadamard Merge Node (Vector-Jacobian Product VJP)
+In modern Transformer architectures (such as SwiGLU activations and Multi-Head Attention key-value dot products), parallel linear projections are merged via an **elementwise Hadamard product**:
+$$\text{Input } x \in \mathbb{R}^2 \implies \begin{cases} a = W_a x \\ b = W_b x \end{cases} \implies c = a \odot b \implies \mathcal{L} = c_1 + 2 c_2$$
+
+Let projection weight matrices be:
+$$W_a = \begin{bmatrix} 1.0 & 2.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad W_b = \begin{bmatrix} 2.0 & -1.0 \\ 1.0 & 1.0 \end{bmatrix}$$
+Let the input vector be $x_0 = [2.0, 1.0]^T$.
+Compute the exact gradient $\nabla_x \mathcal{L}$ using backpropagation (VJP).
+
+#### Step 1: Forward Pass
+1. Branch $a$:
+   $$a = \begin{bmatrix} 1 & 2 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 1 \end{bmatrix} = \begin{bmatrix} 1(2) + 2(1) \\ 0(2) + 1(1) \end{bmatrix} = \begin{bmatrix} 4.0 \\ 1.0 \end{bmatrix}$$
+2. Branch $b$:
+   $$b = \begin{bmatrix} 2 & -1 \\ 1 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 1 \end{bmatrix} = \begin{bmatrix} 2(2) - 1(1) \\ 1(2) + 1(1) \end{bmatrix} = \begin{bmatrix} 3.0 \\ 3.0 \end{bmatrix}$$
+3. Hadamard product $c = a \odot b$:
+   $$c = \begin{bmatrix} 4.0 \times 3.0 \\ 1.0 \times 3.0 \end{bmatrix} = \begin{bmatrix} 12.0 \\ 3.0 \end{bmatrix}$$
+4. Scalar loss:
+   $$\mathcal{L} = c_1 + 2 c_2 = 12.0 + 2(3.0) = \mathbf{18.0}$$
+
+#### Step 2: Backward Pass (VJP)
+1. **Gradient at output node $c$:**
+   $$\nabla_c \mathcal{L} = \begin{bmatrix} \frac{\partial \mathcal{L}}{\partial c_1} \\ \frac{\partial \mathcal{L}}{\partial c_2} \end{bmatrix} = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$$
+2. **Backpropagation through Hadamard Product $c = a \odot b$:**
+   Since $c_i = a_i b_i$, by the product rule:
+   $$\nabla_a \mathcal{L} = \nabla_c \mathcal{L} \odot b = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} \odot \begin{bmatrix} 3.0 \\ 3.0 \end{bmatrix} = \begin{bmatrix} 3.0 \\ 6.0 \end{bmatrix}$$
+   $$\nabla_b \mathcal{L} = \nabla_c \mathcal{L} \odot a = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} \odot \begin{bmatrix} 4.0 \\ 1.0 \end{bmatrix} = \begin{bmatrix} 4.0 \\ 2.0 \end{bmatrix}$$
+3. **Backpropagation across parallel linear layers into shared input $x$:**
+   Applying Theorem 2.5.2 and summing over both branches:
+   $$\nabla_x \mathcal{L} = W_a^T \nabla_a \mathcal{L} + W_b^T \nabla_b \mathcal{L}$$
+   - Branch $a$ contribution:
+     $$W_a^T \nabla_a \mathcal{L} = \begin{bmatrix} 1.0 & 0.0 \\ 2.0 & 1.0 \end{bmatrix} \begin{bmatrix} 3.0 \\ 6.0 \end{bmatrix} = \begin{bmatrix} 1(3) + 0(6) \\ 2(3) + 1(6) \end{bmatrix} = \begin{bmatrix} 3.0 \\ 12.0 \end{bmatrix}$$
+   - Branch $b$ contribution:
+     $$W_b^T \nabla_b \mathcal{L} = \begin{bmatrix} 2.0 & 1.0 \\ -1.0 & 1.0 \end{bmatrix} \begin{bmatrix} 4.0 \\ 2.0 \end{bmatrix} = \begin{bmatrix} 2(4) + 1(2) \\ -1(4) + 1(2) \end{bmatrix} = \begin{bmatrix} 10.0 \\ -2.0 \end{bmatrix}$$
+   - Total input gradient:
+     $$\mathbf{\nabla_x \mathcal{L} = \begin{bmatrix} 3.0 \\ 12.0 \end{bmatrix} + \begin{bmatrix} 10.0 \\ -2.0 \end{bmatrix} = \begin{bmatrix} 13.0 \\ 10.0 \end{bmatrix}}$$
+
+#### Step 3: Verification via Closed-Form Symbolic Expression
+Express $\mathcal{L}$ directly as a polynomial of $x_1, x_2$:
+- $c_1 = a_1 b_1 = (x_1 + 2 x_2)(2 x_1 - x_2) = 2 x_1^2 + 3 x_1 x_2 - 2 x_2^2$
+- $c_2 = a_2 b_2 = (x_2)(x_1 + x_2) = x_1 x_2 + x_2^2$
+- $\mathcal{L} = c_1 + 2 c_2 = (2 x_1^2 + 3 x_1 x_2 - 2 x_2^2) + (2 x_1 x_2 + 2 x_2^2) = 2 x_1^2 + 5 x_1 x_2$
+
+Compute partial derivatives directly:
+- $\frac{\partial \mathcal{L}}{\partial x_1} = 4 x_1 + 5 x_2 = 4(2.0) + 5(1.0) = 8.0 + 5.0 = \mathbf{13.0} \quad \checkmark$
+- $\frac{\partial \mathcal{L}}{\partial x_2} = 5 x_1 = 5(2.0) = \mathbf{10.0} \quad \checkmark$
 
 ---
 

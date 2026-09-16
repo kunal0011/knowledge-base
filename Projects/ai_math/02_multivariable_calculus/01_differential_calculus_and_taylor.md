@@ -168,6 +168,39 @@ where:
 
 ---
 
+#### Theorem 2.1.4: Multivariable Mean Value Theorem (MVT in $\mathbb{R}^n$)
+Let $f: D \subseteq \mathbb{R}^n \to \mathbb{R}$ be continuously differentiable on an open convex set $D$.
+For any two points $x, y \in D$, there exists a point $c$ on the line segment connecting $x$ and $y$ (i.e., $c = x + t^*(y - x)$ for some $t^* \in (0, 1)$) such that:
+$$f(y) - f(x) = \nabla f(c)^T (y - x)$$
+
+##### Rigorous First-Principles Derivation:
+1. Define the parameterized scalar function $g: [0, 1] \to \mathbb{R}$ by:
+   $$g(t) = f(x + t(y - x))$$
+   Note that $g(0) = f(x)$ and $g(1) = f(y)$.
+2. Since $f$ is continuously differentiable on $D$ and $D$ is convex, $g(t)$ is continuous on $[0, 1]$ and differentiable on $(0, 1)$.
+3. By the single-variable Mean Value Theorem, there exists $t^* \in (0, 1)$ such that:
+   $$g(1) - g(0) = g'(t^*) \cdot (1 - 0) = g'(t^*)$$
+4. By the multivariable chain rule:
+   $$g'(t) = \nabla f(x + t(y - x))^T (y - x)$$
+5. Evaluating at $t = t^*$ and defining $c \triangleq x + t^*(y - x)$:
+   $$f(y) - f(x) = \nabla f(c)^T (y - x) \quad \blacksquare$$
+
+---
+
+#### Theorem 2.1.5: Multivariate Taylor Lagrange Remainder & Curvature Bound
+For a $C^2$ function $f: D \to \mathbb{R}$, the first-order Taylor expansion with exact Lagrange remainder is:
+$$f(x_0 + h) = f(x_0) + \nabla f(x_0)^T h + R_1(h), \quad \text{where } R_1(h) = \frac{1}{2} h^T H(x_0 + \xi h) h$$
+for some $\xi \in (0, 1)$.
+
+##### Curvature Bound Corollary:
+If the Hessian is bounded on the segment $\|H(z)\|_2 \le M$ for all $z \in [x_0, x_0 + h]$:
+$$|R_1(h)| = \frac{1}{2} |h^T H(x_0 + \xi h) h| \le \frac{1}{2} \|H(x_0 + \xi h)\|_2 \|h\|_2^2 \le \frac{M}{2} \|h\|_2^2$$
+*Deep Learning Implication:* If the loss surface is $M$-Lipschitz smooth (i.e. $\|H\|_2 \le M$), then the Descent Lemma guarantees:
+$$\mathcal{L}(\theta - \eta \nabla \mathcal{L}) \le \mathcal{L}(\theta) - \eta \left(1 - \frac{\eta M}{2}\right) \|\nabla \mathcal{L}\|_2^2$$
+Choosing $\eta = \frac{1}{M}$ guarantees maximal guaranteed loss decrease of $\frac{1}{2M} \|\nabla \mathcal{L}\|_2^2$ per step!
+
+---
+
 ## Part 3: Geometric, Algebraic & Physical Interpretation
 
 ### 1. Geometric View: Tangent Hyperplane & Osculating Paraboloid
@@ -242,12 +275,12 @@ $$x_{\text{target}} = x_0 + h = \begin{bmatrix} 1 + 0.1 \\ 2 - 0.2 \end{bmatrix}
 | $h = \Delta x$ | $\mathbb{R}^{2 \times 1}$ | Displacement / perturbation | Weight update step $\Delta \theta = -\eta g_t$ | $[0.1, -0.2]^T$ |
 | $x_{\text{target}}$ | $\mathbb{R}^{2 \times 1}$ | Displaced point | Updated weight vector $\theta_{t+1}$ | $[1.1, 1.8]^T$ |
 | $f(x)$ | $\mathbb{R}$ | Scalar objective function | Training loss $\mathcal{L}(\theta)$ | Polynomial surface |
-| $f(x_0)$ | $\mathbb{R}$ | $0^{\text{th}}$-order Taylor constant | Current loss value $\mathcal{L}(\theta_t)$ | $15.0$ |
+| $f(x_0)$ | $\mathbb{R}$ | $0^{\text{th}}$-order Taylor constant | Current loss value $\mathcal{L}(\theta_t)$ | $13.0$ |
 | $\nabla f(x_0)$ | $\mathbb{R}^{2 \times 1}$ | Gradient vector at $x_0$ | Steepest ascent vector $\mathbf{g}_t$ | $[2.0, 11.0]^T$ |
-| $T_1(h)$ | $\mathbb{R}$ | 1st-order linear Taylor estimate | Linear loss surrogate after update | $13.0$ |
+| $T_1(h)$ | $\mathbb{R}$ | 1st-order linear Taylor estimate | Linear loss surrogate after update | $11.0$ |
 | $H(x_0)$ | $\mathbb{R}^{2 \times 2}$ | Hessian matrix of curvatures | Local curvature matrix | $\begin{bmatrix} 4 & 1 \\ 1 & 6 \end{bmatrix}$ |
-| $T_2(h)$ | $\mathbb{R}$ | 2nd-order quadratic Taylor estimate | Quadric loss surrogate | $13.10$ |
-| $f(x_0 + h)$ | $\mathbb{R}$ | True analytical function value | True post-update loss $\mathcal{L}(\theta_{t+1})$ | $13.10$ |
+| $T_2(h)$ | $\mathbb{R}$ | 2nd-order quadratic Taylor estimate | Quadric loss surrogate | $11.12$ |
+| $f(x_0 + h)$ | $\mathbb{R}$ | True analytical function value | True post-update loss $\mathcal{L}(\theta_{t+1})$ | $11.12$ |
 
 ---
 
@@ -256,8 +289,8 @@ $$x_{\text{target}} = x_0 + h = \begin{bmatrix} 1 + 0.1 \\ 2 - 0.2 \end{bmatrix}
 #### Step 1: Compute 0th-Order Term $f(x_0)$
 Substitute $x_1 = 1, x_2 = 2$:
 $$f(1, 2) = 2(1)^2 + (1)(2) + 3(2)^2 - 4(1) - 2(2) + 5$$
-$$f(1, 2) = 2(1) + 2 + 3(4) - 4 - 4 + 5 = 2 + 2 + 12 - 4 - 4 + 5 = 15.0$$
-$$\mathbf{f(x_0) = 15.0}$$
+$$f(1, 2) = 2(1) + 2 + 3(4) - 4 - 4 + 5 = 2 + 2 + 12 - 4 - 4 + 5 = 13.0$$
+$$\mathbf{f(x_0) = 13.0}$$
 
 #### Step 2: Compute Analytical Gradient $\nabla f(x)$
 Compute the partial derivatives:
@@ -271,7 +304,7 @@ $$\nabla f(x_0) = \begin{bmatrix} 2.0 \\ 11.0 \end{bmatrix}$$
 #### Step 3: Compute 1st-Order Taylor Term $\nabla f(x_0)^T h$
 $$\nabla f(x_0)^T h = \begin{bmatrix} 2.0 & 11.0 \end{bmatrix} \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix} = (2.0)(0.1) + (11.0)(-0.2) = 0.2 - 2.2 = -2.0$$
 Now compute the 1st-order Taylor prediction $T_1$:
-$$T_1(x_0 + h) = f(x_0) + \nabla f(x_0)^T h = 15.0 + (-2.0) = \mathbf{13.0}$$
+$$T_1(x_0 + h) = f(x_0) + \nabla f(x_0)^T h = 13.0 + (-2.0) = \mathbf{11.0}$$
 
 #### Step 4: Compute Analytical Hessian Matrix $H(x_0)$
 Compute all second-order partial derivatives:
@@ -291,8 +324,7 @@ Third, multiply by $\frac{1}{2}$:
 $$\frac{1}{2} h^T H(x_0) h = \frac{1}{2}(0.24) = \mathbf{0.12}$$
 
 Now compute the 2nd-order Taylor prediction $T_2$:
-$$T_2(x_0 + h) = f(x_0) + \nabla f(x_0)^T h + \frac{1}{2} h^T H(x_0) h = 15.0 - 2.0 + 0.12 = \mathbf{13.12}$$
-*(Wait, let's verify exact arithmetic: $0.02 + 0.22 = 0.24 \implies \frac{1}{2}(0.24) = 0.12 \implies 15.0 - 2.0 + 0.12 = 13.12$.)*
+$$T_2(x_0 + h) = f(x_0) + \nabla f(x_0)^T h + \frac{1}{2} h^T H(x_0) h = 13.0 - 2.0 + 0.12 = \mathbf{11.12}$$
 
 #### Step 6: Compute Exact True Value $f(1.1, 1.8)$
 $$f(1.1, 1.8) = 2(1.1)^2 + (1.1)(1.8) + 3(1.8)^2 - 4(1.1) - 2(1.8) + 5$$
@@ -310,20 +342,13 @@ $$\text{Sum} = 2.42 + 1.98 + 9.72 - 4.40 - 3.60 + 5.00$$
 - $14.12 - 4.40 = 9.72$
 - $9.72 - 3.60 = 6.12$
 - $6.12 + 5.00 = \mathbf{11.12}$
-Wait! Let's re-verify Step 1 carefully:
-$f(1, 2) = 2(1)^2 + (1)(2) + 3(2)^2 - 4(1) - 2(2) + 5 = 2 + 2 + 12 - 4 - 4 + 5 = 13.0$!
-Look at Step 1 arithmetic above:
-$2 + 2 = 4$; $4 + 12 = 16$; $16 - 4 = 12$; $12 - 4 = 8$; $8 + 5 = 13.0$!
-In Step 1 earlier, we had $2+2+12-4-4+5 = 15$ written by mistake!
-Let's check: $16 - 8 + 5 = 13.0$.
-Let's recompute with $f(x_0) = 13.0$:
-- 0th order: $T_0 = 13.0$
-- 1st order term: $-2.0 \implies T_1 = 13.0 - 2.0 = 11.0$
-- 2nd order term: $+0.12 \implies T_2 = 11.0 + 0.12 = 11.12$
-- Exact value: $f(1.1, 1.8) = 11.12$!
-**Notice the miraculous agreement!**
-Because the original function is a degree-2 polynomial, all 3rd and higher derivatives are identically zero.
-Therefore, the second-order Taylor expansion is **exact**: $T_2(x_0 + h) \equiv f(x_0 + h) = 11.12$!
+
+**Comparison of Orders:**
+- 0th-order prediction: $T_0 = 13.0$ (Error $= |11.12 - 13.0| = 1.88$)
+- 1st-order prediction: $T_1 = 11.0$ (Error $= |11.12 - 11.0| = 0.12$)
+- 2nd-order prediction: $T_2 = 11.12$ (Error $= |11.12 - 11.12| = 0.0000$)
+
+**Remarkable Property:** Because $f(x)$ is a quadratic polynomial (degree 2), all 3rd and higher-order partial derivatives are identically zero everywhere. Hence, the 2nd-order Taylor expansion is mathematically exact: $T_2(x_0 + h) \equiv f(x_0 + h)$.
 
 ---
 
@@ -429,6 +454,59 @@ Since $f(0, 0) = 0$, but the limit along the parabola is $\frac{1}{2} \neq 0$, t
 
 #### Why This Matters in Machine Learning:
 This pathological case proves why optimization theory cannot rely merely on directional derivatives. A function must be **Fréchet differentiable** (its gradient must locally approximate the function in all curved directions) for gradient descent convergence guarantees to hold.
+
+---
+
+### Case D: Machine Learning Case — Multivariate Taylor Approximation of Logistic Loss (Binary Cross-Entropy)
+Consider binary logistic regression with true label $y = 1$ and input feature vector $x = [2, 1]^T \in \mathbb{R}^2$.
+The model parameterized by weights $w = [w_1, w_2]^T$ predicts probability:
+$$\hat{y} = \sigma(w^T x) = \frac{1}{1 + e^{-w^T x}}$$
+The negative log-likelihood (binary cross-entropy) loss is:
+$$\mathcal{L}(w) = -\log \sigma(w^T x) = \log(1 + e^{-w^T x})$$
+
+Let the current weights be initialized at the origin $w_0 = [0, 0]^T$, and consider a parameter update displacement $h = \Delta w = [0.2, -0.1]^T$.
+
+#### 1. Evaluate Current Loss $\mathcal{L}(w_0)$:
+$$w_0^T x = 0(2) + 0(1) = 0$$
+$$\hat{y}_0 = \sigma(0) = \frac{1}{1 + 1} = 0.5$$
+$$\mathcal{L}(w_0) = \log(1 + e^0) = \log(2) \approx \mathbf{0.693147}$$
+
+#### 2. Compute Analytical Gradient $\nabla_w \mathcal{L}(w_0)$:
+By the chain rule:
+$$\nabla_w \mathcal{L}(w) = (\sigma(w^T x) - 1) x$$
+At $w_0$:
+$$\nabla_w \mathcal{L}(w_0) = (0.5 - 1) \begin{bmatrix} 2 \\ 1 \end{bmatrix} = -0.5 \begin{bmatrix} 2 \\ 1 \end{bmatrix} = \begin{bmatrix} -1.0 \\ -0.5 \end{bmatrix}$$
+
+#### 3. Compute Analytical Hessian Matrix $H(w_0)$:
+Differentiating the gradient:
+$$H(w) = \nabla_w^2 \mathcal{L}(w) = \sigma(w^T x)(1 - \sigma(w^T x)) x x^T$$
+At $w_0$:
+$$\sigma(0)(1 - \sigma(0)) = (0.5)(0.5) = 0.25$$
+$$x x^T = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \begin{bmatrix} 2 & 1 \end{bmatrix} = \begin{bmatrix} 4 & 2 \\ 2 & 1 \end{bmatrix}$$
+$$H(w_0) = 0.25 \begin{bmatrix} 4 & 2 \\ 2 & 1 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.5 \\ 0.5 & 0.25 \end{bmatrix}$$
+
+#### 4. Evaluate Taylor Approximations:
+- **0th-Order Estimate:**
+  $$T_0 = \mathcal{L}(w_0) = \mathbf{0.693147}$$
+- **1st-Order Linear Term:**
+  $$\nabla \mathcal{L}(w_0)^T \Delta w = \begin{bmatrix} -1.0 & -0.5 \end{bmatrix} \begin{bmatrix} 0.2 \\ -0.1 \end{bmatrix} = (-1.0)(0.2) + (-0.5)(-0.1) = -0.20 + 0.05 = -0.15$$
+  $$T_1 = \mathcal{L}(w_0) + \nabla \mathcal{L}(w_0)^T \Delta w = 0.693147 - 0.15 = \mathbf{0.543147}$$
+- **2nd-Order Quadratic Term:**
+  $$H(w_0) \Delta w = \begin{bmatrix} 1.0 & 0.5 \\ 0.5 & 0.25 \end{bmatrix} \begin{bmatrix} 0.2 \\ -0.1 \end{bmatrix} = \begin{bmatrix} 1.0(0.2) + 0.5(-0.1) \\ 0.5(0.2) + 0.25(-0.1) \end{bmatrix} = \begin{bmatrix} 0.20 - 0.05 \\ 0.10 - 0.025 \end{bmatrix} = \begin{bmatrix} 0.150 \\ 0.075 \end{bmatrix}$$
+  $$\Delta w^T H(w_0) \Delta w = \begin{bmatrix} 0.2 & -0.1 \end{bmatrix} \begin{bmatrix} 0.150 \\ 0.075 \end{bmatrix} = 0.2(0.150) + (-0.1)(0.075) = 0.030 - 0.0075 = 0.0225$$
+  $$\frac{1}{2} \Delta w^T H(w_0) \Delta w = \frac{1}{2}(0.0225) = \mathbf{0.01125}$$
+  $$T_2 = T_1 + \frac{1}{2} \Delta w^T H(w_0) \Delta w = 0.543147 + 0.01125 = \mathbf{0.554397}$$
+
+#### 5. Compute Exact True Loss $\mathcal{L}(w_0 + \Delta w)$:
+The updated weight vector is $w_{\text{new}} = [0.2, -0.1]^T$.
+$$w_{\text{new}}^T x = 0.2(2) + (-0.1)(1) = 0.4 - 0.1 = 0.3$$
+$$\mathcal{L}(w_{\text{new}}) = \log(1 + e^{-0.3}) = \log(1 + 0.74081822) = \log(1.74081822) \approx \mathbf{0.554385}$$
+
+#### 6. Error Comparison:
+- **1st-Order Error:** $|0.554385 - 0.543147| = 0.011238$ (relative error $\approx 2.03\%$)
+- **2nd-Order Error:** $|0.554385 - 0.554397| = 0.000012$ (relative error $\approx 0.0022\%$)
+
+The second-order Taylor approximation reduces error by nearly **1000x**, explaining why second-order optimization methods (such as L-BFGS and Newton-CG) take dramatically larger and more accurate steps during logistic and cross-entropy loss minimization.
 
 ---
 

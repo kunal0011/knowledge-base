@@ -139,6 +139,53 @@ The gradient vector $\nabla f(x_0)$ is **strictly orthogonal (perpendicular)** t
 
 ---
 
+#### Theorem 2.2.4: Equation of the Tangent Hyperplane to a Level Set
+Let $S_c = \{x \in \mathbb{R}^n \mid F(x) = c\}$ be a level set of a differentiable function $F$, and let $x_0 \in S_c$ with $\nabla F(x_0) \neq 0$.
+The equation of the tangent hyperplane to $S_c$ at $x_0$ is:
+$$\nabla F(x_0)^T (x - x_0) = 0 \iff \sum_{i=1}^n \frac{\partial F}{\partial x_i}(x_0)(x_i - x_{0, i}) = 0$$
+
+##### First-Principles Derivation:
+1. By Definition, a point $x$ lies on the tangent hyperplane at $x_0$ if and only if the displacement vector $v = x - x_0$ lies in the tangent space $T_{x_0} S_c$.
+2. By Theorem 2.2.3, every tangent vector $v \in T_{x_0} S_c$ is orthogonal to the gradient normal vector:
+   $$\langle \nabla F(x_0), v \rangle = 0$$
+3. Substituting $v = x - x_0$:
+   $$\nabla F(x_0)^T (x - x_0) = 0$$
+4. In $\mathbb{R}^3$, for a surface $F(x, y, z) = c$ at point $(x_0, y_0, z_0)$:
+   $$F_x(x_0, y_0, z_0)(x - x_0) + F_y(x_0, y_0, z_0)(y - y_0) + F_z(x_0, y_0, z_0)(z - z_0) = 0$$
+   The normal line perpendicular to the surface at $(x_0, y_0, z_0)$ has parametric form:
+   $$\begin{bmatrix} x(t) \\ y(t) \\ z(t) \end{bmatrix} = \begin{bmatrix} x_0 \\ y_0 \\ z_0 \end{bmatrix} + t \nabla F(x_0, y_0, z_0), \quad t \in \mathbb{R} \quad \blacksquare$$
+
+---
+
+#### Theorem 2.2.5: Steepest Descent Under a General Riemannian Metric (The Natural Gradient)
+Standard gradient descent assumes the parameter space has a flat Euclidean geometry: distance is measured by $\|\Delta x\|_2^2 = \Delta x^T \Delta x$.
+In probabilistic modeling and deep learning, parameter space is often a curved statistical manifold where distance is measured by a **Riemannian metric tensor** $G(x) \succ 0$ (symmetric positive definite):
+$$\|\Delta x\|_G^2 = \Delta x^T G(x) \Delta x$$
+
+##### Formal Optimization Problem:
+Find the unit direction vector $u \in \mathbb{R}^n$ (where $u^T G(x) u = 1$) that minimizes the directional derivative $\nabla f(x)^T u$:
+$$\min_u \nabla f(x)^T u \quad \text{subject to} \quad u^T G(x) u = 1$$
+
+##### Step-by-Step Derivation via Lagrange Multipliers:
+1. Form the Lagrangian with scalar multiplier $\frac{\lambda}{2}$:
+   $$\mathcal{L}(u, \lambda) = \nabla f(x)^T u + \frac{\lambda}{2} \left( u^T G(x) u - 1 \right)$$
+2. Take the vector derivative with respect to $u$ and set to zero:
+   $$\nabla_u \mathcal{L} = \nabla f(x) + \lambda G(x) u = 0$$
+3. Since $G(x)$ is positive definite, it is invertible. Solve for $u$:
+   $$G(x) u = -\frac{1}{\lambda} \nabla f(x) \implies u = -\frac{1}{\lambda} G(x)^{-1} \nabla f(x)$$
+4. Substitute $u$ into the constraint $u^T G(x) u = 1$:
+   $$\left(-\frac{1}{\lambda} G(x)^{-1} \nabla f(x)\right)^T G(x) \left(-\frac{1}{\lambda} G(x)^{-1} \nabla f(x)\right) = 1$$
+   $$\frac{1}{\lambda^2} \nabla f(x)^T G(x)^{-T} G(x) G(x)^{-1} \nabla f(x) = 1$$
+   $$\frac{1}{\lambda^2} \nabla f(x)^T G(x)^{-1} \nabla f(x) = 1 \implies \lambda = \sqrt{\nabla f(x)^T G(x)^{-1} \nabla f(x)}$$
+5. Substituting $\lambda$ back gives the normalized steepest descent direction:
+   $$u^* = -\frac{G(x)^{-1} \nabla f(x)}{\sqrt{\nabla f(x)^T G(x)^{-1} \nabla f(x)}}$$
+6. Dropping normalization for constant step size $\eta$ yields the **Natural Gradient Update**:
+   $$\mathbf{\Delta x^* = -\eta G(x)^{-1} \nabla f(x)}$$
+
+*Deep Learning Implication:* When $G(x)$ is chosen as the **Fisher Information Matrix** $F(\theta) = \mathbb{E}_{x \sim p_\theta}\left[\nabla_\theta \log p_\theta(x) \nabla_\theta \log p_\theta(x)^T\right]$, this is Shun-ichi Amari's **Natural Gradient**. Unlike Euclidean gradient descent, natural gradient descent is invariant to arbitrary parameter reparameterization and measures distance in distribution space (KL-divergence), forming the exact mathematical foundation of TRPO (Trust Region Policy Optimization) and K-FAC (Kronecker-factored Approximate Curvature). $\blacksquare$
+
+---
+
 ## Part 3: Geometric, Algebraic & Physical Interpretation
 
 ### 1. The Geometry of Contours and Orthogonal Steps
@@ -360,6 +407,64 @@ Pick any point $x_0 = [R \cos \theta, R \sin \theta]^T$ on the circle.
 3. **Inner Product:**
    $$\langle \nabla f(x_0), \gamma'(\theta) \rangle = (2 R \cos \theta)(-R \sin \theta) + (2 R \sin \theta)(R \cos \theta) = -2 R^2 \cos \theta \sin \theta + 2 R^2 \sin \theta \cos \theta = 0$$
    The radial gradient is strictly perpendicular to the circumferential tangent for every point on every circle.
+
+---
+
+### Case D: 3D Level Surface Tangent Plane & Normal Line Calculation
+Consider the 3D ellipsoid level surface defined implicitly by:
+$$F(x, y, z) = x^2 + 2 y^2 + 3 z^2 = 36$$
+Let the evaluation point on the surface be $p_0 = (1, 2, 3)$.
+Verification of membership:
+$$F(1, 2, 3) = 1^2 + 2(2)^2 + 3(3)^2 = 1 + 2(4) + 3(9) = 1 + 8 + 27 = 36 \quad \checkmark$$
+
+#### Step 1: Compute Gradient Normal Vector $\nabla F(p_0)$
+Compute partial derivatives:
+$$\nabla F(x, y, z) = \begin{bmatrix} \frac{\partial F}{\partial x} \\ \frac{\partial F}{\partial y} \\ \frac{\partial F}{\partial z} \end{bmatrix} = \begin{bmatrix} 2x \\ 4y \\ 6z \end{bmatrix}$$
+Evaluate at $p_0 = (1, 2, 3)$:
+$$\nabla F(1, 2, 3) = \begin{bmatrix} 2(1) \\ 4(2) \\ 6(3) \end{bmatrix} = \begin{bmatrix} 2 \\ 8 \\ 18 \end{bmatrix}$$
+
+#### Step 2: Compute Unit Normal Vector $n$
+$$\|\nabla F(p_0)\|_2 = \sqrt{2^2 + 8^2 + 18^2} = \sqrt{4 + 64 + 324} = \sqrt{392} = 14\sqrt{2} \approx 19.798990$$
+$$n = \frac{\nabla F(p_0)}{\|\nabla F(p_0)\|_2} = \frac{1}{14\sqrt{2}} \begin{bmatrix} 2 \\ 8 \\ 18 \end{bmatrix} = \frac{1}{7\sqrt{2}} \begin{bmatrix} 1 \\ 4 \\ 9 \end{bmatrix} \approx \begin{bmatrix} 0.101015 \\ 0.404061 \\ 0.909137 \end{bmatrix}$$
+
+#### Step 3: Formulate Equation of Tangent Plane
+By Theorem 2.2.4:
+$$\nabla F(p_0)^T (p - p_0) = 0 \iff 2(x - 1) + 8(y - 2) + 18(z - 3) = 0$$
+$$2x - 2 + 8y - 16 + 18z - 54 = 0 \implies 2x + 8y + 18z = 72 \implies \mathbf{x + 4y + 9z = 36}$$
+
+#### Step 4: Directional Derivative Towards the Origin
+Let direction vector point towards the origin: $v = -p_0 = [-1, -2, -3]^T$.
+$$\|v\|_2 = \sqrt{(-1)^2 + (-2)^2 + (-3)^2} = \sqrt{1 + 4 + 9} = \sqrt{14} \approx 3.741657$$
+$$u = \frac{v}{\|v\|_2} = \frac{1}{\sqrt{14}} \begin{bmatrix} -1 \\ -2 \\ -3 \end{bmatrix}$$
+The directional derivative is:
+$$D_u F(p_0) = \nabla F(p_0)^T u = \frac{1}{\sqrt{14}} \left( 2(-1) + 8(-2) + 18(-3) \right) = \frac{-2 - 16 - 54}{\sqrt{14}} = -\frac{72}{\sqrt{14}} \approx \mathbf{-19.243181}$$
+Because $D_u F(p_0) < 0$, moving inwards towards the origin rapidly decreases $F(x, y, z)$ (moving into the interior of the ellipsoid).
+
+---
+
+### Case E: Natural Gradient vs Standard Euclidean Gradient on an Ill-Conditioned Landscape
+Consider an anisotropic quadratic loss landscape with condition number $\kappa = 100$:
+$$f(x_1, x_2) = \frac{1}{2} \left( 100 x_1^2 + x_2^2 \right) = \frac{1}{2} x^T A x, \quad A = \begin{bmatrix} 100 & 0 \\ 0 & 1 \end{bmatrix}$$
+Let the current parameter iterate be $x_0 = [1.0, 10.0]^T$. The global optimum is at $x^* = [0, 0]^T$.
+
+#### Step 1: Standard Euclidean Gradient Step
+The gradient is:
+$$\nabla f(x_0) = A x_0 = \begin{bmatrix} 100(1.0) \\ 1(10.0) \end{bmatrix} = \begin{bmatrix} 100.0 \\ 10.0 \end{bmatrix}$$
+Notice the gradient is overwhelmingly dominated by the $x_1$ direction ($100$ vs $10$), even though the parameter is 10 times further from the optimum along $x_2$!
+The maximum stable learning rate for Euclidean GD is $\eta < \frac{2}{\lambda_{\max}} = \frac{2}{100} = 0.020$.
+Let $\eta = 0.010$:
+$$x_{\text{SGD}} = x_0 - \eta \nabla f(x_0) = \begin{bmatrix} 1.0 \\ 10.0 \end{bmatrix} - 0.010 \begin{bmatrix} 100.0 \\ 10.0 \end{bmatrix} = \begin{bmatrix} 1.0 - 1.0 \\ 10.0 - 0.1 \end{bmatrix} = \begin{bmatrix} 0.0 \\ 9.9 \end{bmatrix}$$
+- $x_1$ reached 0 in 1 step.
+- $x_2$ barely moved: it requires $\approx \frac{10.0}{0.1} \approx 100$ iterations to converge!
+
+#### Step 2: Natural Gradient Step (Riemannian Metric $G = A$)
+By Theorem 2.2.5, using the curvature metric tensor $G = A = \begin{bmatrix} 100 & 0 \\ 0 & 1 \end{bmatrix}$:
+$$G^{-1} = \begin{bmatrix} \frac{1}{100} & 0 \\ 0 & 1 \end{bmatrix}$$
+The Natural Gradient direction is:
+$$\mathbf{\tilde{g}} = G^{-1} \nabla f(x_0) = \begin{bmatrix} \frac{1}{100} & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 100.0 \\ 10.0 \end{bmatrix} = \begin{bmatrix} 1.0 \\ 10.0 \end{bmatrix} = x_0$$
+With Natural step size $\eta = 1.0$:
+$$x_{\text{Natural}} = x_0 - 1.0 \cdot \mathbf{\tilde{g}} = \begin{bmatrix} 1.0 \\ 10.0 \end{bmatrix} - \begin{bmatrix} 1.0 \\ 10.0 \end{bmatrix} = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix} = \mathbf{x^*}$$
+**Result:** Natural Gradient completely eliminates the pathological ill-conditioning and converges to the exact optimum in **exactly 1 step**!
 
 ---
 

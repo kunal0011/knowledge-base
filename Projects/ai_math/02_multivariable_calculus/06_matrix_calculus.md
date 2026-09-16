@@ -120,14 +120,26 @@ where $dX \in \mathbb{R}^{m \times n}$ is the differential of $X$.
 When $d f(X)$ is cast into this canonical form, the matrix $G \in \mathbb{R}^{m \times n}$ is **identically the matrix gradient**:
 $$\mathbf{\nabla_X f(X) = \frac{\partial f}{\partial X} \equiv G}$$
 
-##### Differential Operational Rules:
+##### Differential Operational Rules & First-Principles Derivations:
 1. $d(\alpha X) = \alpha dX$
 2. $d(X + Y) = dX + dY$
 3. $d(X Y) = (dX) Y + X (dY)$ (Leibniz Product Rule)
 4. $d(X^T) = (dX)^T$
 5. $d(\text{Tr}(X)) = \text{Tr}(dX)$
-6. $d(X^{-1}) = -X^{-1} (dX) X^{-1}$
-7. $d(\log \det X) = \text{Tr}(X^{-1} dX)$
+6. **Matrix Inverse Differential:** $\mathbf{d(X^{-1}) = -X^{-1} (dX) X^{-1}}$
+   *Proof:* Since $X X^{-1} = I$, take the differential of both sides:
+   $$d(X X^{-1}) = d(I) = 0$$
+   Applying the Leibniz product rule:
+   $$(dX) X^{-1} + X d(X^{-1}) = 0 \implies X d(X^{-1}) = -(dX) X^{-1}$$
+   Multiply on the left by $X^{-1}$:
+   $$d(X^{-1}) = -X^{-1} (dX) X^{-1} \quad \blacksquare$$
+7. **Jacobi's Formula & Log-Determinant Differential:** $\mathbf{d(\log \det X) = \text{Tr}(X^{-1} dX)}$
+   *Proof:*
+   - For an invertible matrix $X$, recall from Cramer's rule that $X^{-1} = \frac{1}{\det(X)} C^T$, where $C$ is the cofactor matrix.
+   - Expanding $\det(X)$ along row $i$: $\det(X) = \sum_{j=1}^n X_{ij} C_{ij}$.
+   - Thus $\frac{\partial \det(X)}{\partial X_{ij}} = C_{ij} = (\det(X) X^{-T})_{ij} \implies d(\det X) = \text{Tr}(C^T dX) = \det(X) \text{Tr}(X^{-1} dX)$.
+   - Now take the differential of the scalar logarithm:
+     $$d(\log \det X) = \frac{1}{\det X} d(\det X) = \frac{1}{\det X} \left( \det(X) \text{Tr}(X^{-1} dX) \right) = \text{Tr}(X^{-1} dX) \quad \blacksquare$$
 
 ---
 
@@ -319,6 +331,74 @@ Given the upstream gradient matrix $G_Y = \frac{\partial \mathcal{L}}{\partial Y
    - Dimension check: $(B \times d_{\text{out}}) \times (d_{\text{out}} \times d_{\text{in}}) = B \times d_{\text{in}} \equiv \text{Shape}(X) \quad \checkmark$
 3. **Gradient with respect to bias $b \in \mathbb{R}^{1 \times d_{\text{out}}}$:**
    $$\mathbf{\frac{\partial \mathcal{L}}{\partial b} = \mathbf{1}_{1 \times B} G_Y = \sum_{i=1}^B (G_Y)_{i, :}}$$
+
+---
+
+### Case D: Covariance Matrix Maximum Likelihood (Log-Determinant Optimization)
+In multivariate Gaussian generative modeling and Variational Autoencoders (VAEs), we frequently minimize the negative log-likelihood of a covariance matrix $\Sigma \succ 0$ given an empirical sample covariance matrix $S \succ 0$:
+$$\mathcal{L}(\Sigma) = \log\det(\Sigma) + \text{Tr}(\Sigma^{-1} S)$$
+
+#### Step 1: Analytical Matrix Differential Derivation
+Take the total differential using our derived rules:
+1. $d(\log\det\Sigma) = \text{Tr}(\Sigma^{-1} d\Sigma)$
+2. $d(\text{Tr}(\Sigma^{-1} S)) = \text{Tr}(d(\Sigma^{-1}) S) = \text{Tr}((-\Sigma^{-1} d\Sigma \Sigma^{-1}) S)$
+3. Apply cyclic permutation to reorder the second trace term:
+   $$\text{Tr}(-\Sigma^{-1} d\Sigma \Sigma^{-1} S) = -\text{Tr}(\Sigma^{-1} S \Sigma^{-1} d\Sigma)$$
+4. Combine differentials:
+   $$d\mathcal{L} = \text{Tr}\left( \left( \Sigma^{-1} - \Sigma^{-1} S \Sigma^{-1} \right) d\Sigma \right) = \text{Tr}\left( \left( \Sigma^{-1} - \Sigma^{-1} S \Sigma^{-1} \right)^T d\Sigma \right)$$
+5. By the Trace Identification Theorem:
+   $$\mathbf{\nabla_\Sigma \mathcal{L} = \Sigma^{-1} - \Sigma^{-1} S \Sigma^{-1}}$$
+
+#### Step 2: Global Optimum (MLE)
+Setting the matrix gradient to zero:
+$$\Sigma^{-1} - \Sigma^{-1} S \Sigma^{-1} = 0 \implies \Sigma^{-1}(I - S \Sigma^{-1}) = 0 \implies \mathbf{\Sigma^* = S}$$
+This proves in 5 lines of matrix calculus that the Maximum Likelihood Estimator of a Gaussian covariance matrix is identically the empirical sample covariance matrix $S$!
+
+#### Step 3: Concrete Numerical Walkthrough
+Let $S = \begin{bmatrix} 2.0 & 0.0 \\ 0.0 & 4.0 \end{bmatrix}$, and operating iterate $\Sigma_0 = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$.
+1. **Current Loss:**
+   - $\det(\Sigma_0) = (1.0)(2.0) = 2.0 \implies \log\det(\Sigma_0) = \log(2.0) \approx 0.693147$
+   - $\Sigma_0^{-1} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 0.5 \end{bmatrix}$
+   - $\Sigma_0^{-1} S = \begin{bmatrix} 1.0 & 0 \\ 0 & 0.5 \end{bmatrix} \begin{bmatrix} 2.0 & 0 \\ 0 & 4.0 \end{bmatrix} = \begin{bmatrix} 2.0 & 0 \\ 0 & 2.0 \end{bmatrix} \implies \text{Tr}(\Sigma_0^{-1} S) = 2.0 + 2.0 = 4.0$
+   - $\mathcal{L}(\Sigma_0) = 0.693147 + 4.0 = \mathbf{4.693147}$
+2. **Matrix Gradient Calculation:**
+   - $\Sigma_0^{-1} S \Sigma_0^{-1} = \begin{bmatrix} 2.0 & 0 \\ 0 & 2.0 \end{bmatrix} \begin{bmatrix} 1.0 & 0 \\ 0 & 0.5 \end{bmatrix} = \begin{bmatrix} 2.0 & 0 \\ 0 & 1.0 \end{bmatrix}$
+   - $\nabla_\Sigma \mathcal{L} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 0.5 \end{bmatrix} - \begin{bmatrix} 2.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{-1.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{-0.5} \end{bmatrix}$
+3. **Interpretation:** Both diagonal entries of the gradient are negative, correctly indicating that increasing $\Sigma_{11}$ (from 1 to 2) and $\Sigma_{22}$ (from 2 to 4) will strictly decrease the loss until $\Sigma = S$.
+
+---
+
+### Case E: Matrix Gradient of Bilinear Attention Form $s = q^T W k$
+In Transformer self-attention (Vaswani et al., 2017), the raw attention affinity score between query vector $q \in \mathbb{R}^d$ and key vector $k \in \mathbb{R}^d$ is mediated by a bilinear weight projection matrix $W \in \mathbb{R}^{d \times d}$:
+$$s = q^T W k \in \mathbb{R}$$
+Find the analytical matrix gradient $\nabla_W s = \frac{\partial s}{\partial W}$.
+
+#### Step 1: Trace Formulation & Differential
+1. Since $s$ is a scalar:
+   $$s = \text{Tr}(s) = \text{Tr}(q^T W k) = \text{Tr}(k q^T W)$$
+2. Take the total differential with respect to $W$:
+   $$ds = \text{Tr}(k q^T dW)$$
+3. Cast into canonical trace inner product form $\text{Tr}(G^T dW)$:
+   $$ds = \text{Tr}\left( (q k^T)^T dW \right)$$
+4. By Theorem 2.6.1 (Trace Identification Theorem):
+   $$\mathbf{\nabla_W s = q k^T}$$
+**The gradient of a bilinear score with respect to the weight matrix is precisely the outer product of the query and key vectors!**
+
+#### Step 2: Concrete Numerical Walkthrough
+Let $q = [1.0, 2.0]^T$ and $k = [3.0, -1.0]^T$.
+Current weight matrix:
+$$W_0 = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}$$
+1. Forward attention score:
+   $$W_0 k = \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix}$$
+   $$s = q^T (W_0 k) = [1.0, 2.0] \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix} = 1.0(3.0) + 2.0(-1.0) = 3.0 - 2.0 = \mathbf{1.0}$$
+2. Outer product matrix gradient:
+   $$\nabla_W s = q k^T = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} \begin{bmatrix} 3.0 & -1.0 \end{bmatrix} = \begin{bmatrix} 1(3) & 1(-1) \\ 2(3) & 2(-1) \end{bmatrix} = \begin{bmatrix} \mathbf{3.0} & \mathbf{-1.0} \\ \mathbf{6.0} & \mathbf{-2.0} \end{bmatrix}$$
+3. Perturbation check: Let $\Delta W = \begin{bmatrix} 0.01 & 0.00 \\ 0.00 & 0.01 \end{bmatrix}$.
+   - Linear prediction:
+     $$\Delta s = \text{Tr}((\nabla_W s)^T \Delta W) = 3.0(0.01) + (-2.0)(0.01) = 0.03 - 0.02 = \mathbf{0.010}$$
+   - Exact calculation:
+     $$s(W_0 + \Delta W) = [1, 2] \begin{bmatrix} 1.01 & 0 \\ 0 & 1.01 \end{bmatrix} \begin{bmatrix} 3 \\ -1 \end{bmatrix} = [1, 2] \begin{bmatrix} 3.03 \\ -1.01 \end{bmatrix} = 3.03 - 2.02 = 1.010$$
+     $$\Delta s_{\text{true}} = 1.010 - 1.000 = \mathbf{0.010} \quad \checkmark$$
 
 ---
 

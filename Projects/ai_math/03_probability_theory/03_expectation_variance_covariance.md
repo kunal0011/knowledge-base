@@ -88,6 +88,47 @@ $$= \mathbb{E}[X^2] - 2 \mu \mathbb{E}[X] + \mu^2 = \mathbb{E}[X^2] - 2 \mu (\mu
 
 ---
 
+#### Theorem 3.3.3b: Variance of the Product of Independent Random Variables
+If $X$ and $Y$ are statistically independent ($X \perp Y$):
+$$\mathbf{\text{Var}(X Y) = \text{Var}(X)\text{Var}(Y) + \text{Var}(X)(\mathbb{E}[Y])^2 + \text{Var}(Y)(\mathbb{E}[X])^2}$$
+In particular, if both variables have zero mean ($\mathbb{E}[X] = \mathbb{E}[Y] = 0$):
+$$\mathbf{\text{Var}(X Y) = \text{Var}(X) \text{Var}(Y)}$$
+
+##### First-Principles Derivation:
+1. By the computational formula for variance:
+   $$\text{Var}(X Y) = \mathbb{E}[(X Y)^2] - (\mathbb{E}[X Y])^2 = \mathbb{E}[X^2 Y^2] - (\mathbb{E}[X Y])^2$$
+2. Since $X \perp Y$, any functions of $X$ and $Y$ are independent. Therefore:
+   $$\mathbb{E}[X^2 Y^2] = \mathbb{E}[X^2] \mathbb{E}[Y^2], \quad \text{and} \quad \mathbb{E}[X Y] = \mathbb{E}[X] \mathbb{E}[Y]$$
+3. Express second moments in terms of variance: $\mathbb{E}[X^2] = \text{Var}(X) + (\mathbb{E}[X])^2$, and $\mathbb{E}[Y^2] = \text{Var}(Y) + (\mathbb{E}[Y])^2$.
+4. Substitute:
+   $$\text{Var}(X Y) = \left[ \text{Var}(X) + (\mathbb{E}[X])^2 \right] \left[ \text{Var}(Y) + (\mathbb{E}[Y])^2 \right] - (\mathbb{E}[X])^2 (\mathbb{E}[Y])^2$$
+5. Expanding the algebraic product:
+   $$= \text{Var}(X)\text{Var}(Y) + \text{Var}(X)(\mathbb{E}[Y])^2 + (\mathbb{E}[X])^2 \text{Var}(Y) + (\mathbb{E}[X])^2 (\mathbb{E}[Y])^2 - (\mathbb{E}[X])^2 (\mathbb{E}[Y])^2$$
+   $$= \text{Var}(X)\text{Var}(Y) + \text{Var}(X)(\mathbb{E}[Y])^2 + \text{Var}(Y)(\mathbb{E}[X])^2 \quad \blacksquare$$
+
+*Deep Learning Application:* This exact formula is used to derive **Xavier/Glorot and He/Kaiming initialization** rules for neural network weight matrices!
+
+---
+
+#### Theorem 3.3.3c: Law of Total Variance (Eve's Law)
+For any two random variables $X$ and $Y$ on the same probability space:
+$$\mathbf{\text{Var}(Y) = \mathbb{E}\left[ \text{Var}(Y \mid X) \right] + \text{Var}\left( \mathbb{E}[Y \mid X] \right)}$$
+$$\text{Total Variance} = \text{Expected Unexplained Variance} + \text{Variance of Explained Predictions}$$
+
+##### First-Principles Derivation:
+1. By the definition of conditional variance:
+   $$\text{Var}(Y \mid X) = \mathbb{E}[Y^2 \mid X] - (\mathbb{E}[Y \mid X])^2$$
+2. Take the expectation of both sides with respect to $X$:
+   $$\mathbb{E}[\text{Var}(Y \mid X)] = \mathbb{E}[\mathbb{E}[Y^2 \mid X]] - \mathbb{E}[(\mathbb{E}[Y \mid X])^2]$$
+3. By the Law of Total Expectation (Tower Property: $\mathbb{E}[\mathbb{E}[Y^2 \mid X]] = \mathbb{E}[Y^2]$):
+   $$\mathbb{E}[\text{Var}(Y \mid X)] = \mathbb{E}[Y^2] - \mathbb{E}[(\mathbb{E}[Y \mid X])^2]$$
+4. Now apply the variance formula to the random variable $Z \triangleq \mathbb{E}[Y \mid X]$:
+   $$\text{Var}(\mathbb{E}[Y \mid X]) = \mathbb{E}[(\mathbb{E}[Y \mid X])^2] - (\mathbb{E}[\mathbb{E}[Y \mid X]])^2 = \mathbb{E}[(\mathbb{E}[Y \mid X])^2] - (\mathbb{E}[Y])^2$$
+5. Sum the two equations:
+   $$\mathbb{E}[\text{Var}(Y \mid X)] + \text{Var}(\mathbb{E}[Y \mid X]) = \mathbb{E}[Y^2] - (\mathbb{E}[Y])^2 = \text{Var}(Y) \quad \blacksquare$$
+
+---
+
 ### 3. Covariance & Pearson Correlation
 
 #### Definition 3.3.3: Covariance
@@ -336,6 +377,78 @@ $$\text{Cov}(Z) = I \iff Z_i \text{ are uncorrelated and have unit variance}$$
 4. Compute its covariance using the affine covariance rule $\text{Cov}(A X) = A \Sigma A^T$:
    $$\text{Cov}(Z) = \Sigma^{-1/2} \Sigma (\Sigma^{-1/2})^T = \Sigma^{-1/2} \Sigma \Sigma^{-1/2} = \Sigma^{-1/2} \Sigma^{1/2} \Sigma^{1/2} \Sigma^{-1/2} = I \cdot I = \mathbf{I}$$
 Every feature in $Z$ now has variance $1.0$ and zero correlation with every other feature!
+
+---
+
+### Case C: Continuous 2D Joint Distribution Moments (Bivariate Calculus)
+Consider a continuous bivariate random vector $(X, Y)$ distributed on the unit square $[0, 1] \times [0, 1]$ with joint PDF:
+$$f_{X, Y}(x, y) = \frac{2}{3}(x + 2y), \quad 0 \le x \le 1, \; 0 \le y \le 1$$
+
+#### Step 1: Verify Normalization
+$$\int_0^1 \int_0^1 \frac{2}{3}(x + 2y) \, dx \, dy = \frac{2}{3} \int_0^1 \left[ \frac{x^2}{2} + 2xy \right]_0^1 dy = \frac{2}{3} \int_0^1 \left( \frac{1}{2} + 2y \right) dy$$
+$$= \frac{2}{3} \left[ \frac{y}{2} + y^2 \right]_0^1 = \frac{2}{3} \left( \frac{1}{2} + 1 \right) = \frac{2}{3} \left(\frac{3}{2}\right) = \mathbf{1.000000} \quad \checkmark$$
+
+#### Step 2: Compute Marginal PDFs
+- **Marginal PDF of $X$:**
+  $$f_X(x) = \int_0^1 \frac{2}{3}(x + 2y) \, dy = \frac{2}{3} \left[ xy + y^2 \right]_0^1 = \mathbf{\frac{2}{3}(x + 1)}$$
+- **Marginal PDF of $Y$:**
+  $$f_Y(y) = \int_0^1 \frac{2}{3}(x + 2y) \, dx = \frac{2}{3} \left[ \frac{x^2}{2} + 2xy \right]_0^1 = \mathbf{\frac{1}{3} + \frac{4}{3}y}$$
+
+#### Step 3: Compute Marginal Means $\mathbb{E}[X]$ and $\mathbb{E}[Y]$
+- **Mean of $X$:**
+  $$\mathbb{E}[X] = \int_0^1 x \cdot \frac{2}{3}(x + 1) \, dx = \frac{2}{3} \int_0^1 (x^2 + x) \, dx = \frac{2}{3} \left[ \frac{x^3}{3} + \frac{x^2}{2} \right]_0^1 = \frac{2}{3} \left( \frac{1}{3} + \frac{1}{2} \right) = \frac{2}{3} \left( \frac{5}{6} \right) = \mathbf{\frac{5}{9}} \approx \mathbf{0.555556}$$
+- **Mean of $Y$:**
+  $$\mathbb{E}[Y] = \int_0^1 y \left(\frac{1}{3} + \frac{4}{3}y\right) dy = \int_0^1 \left(\frac{y}{3} + \frac{4y^2}{3}\right) dy = \left[ \frac{y^2}{6} + \frac{4y^3}{9} \right]_0^1 = \frac{1}{6} + \frac{4}{9} = \frac{3 + 8}{18} = \mathbf{\frac{11}{18}} \approx \mathbf{0.611111}$$
+
+#### Step 4: Compute Cross-Moment $\mathbb{E}[X Y]$
+$$\mathbb{E}[X Y] = \int_0^1 \int_0^1 x y \cdot \frac{2}{3}(x + 2y) \, dx \, dy = \frac{2}{3} \int_0^1 \int_0^1 (x^2 y + 2 x y^2) \, dx \, dy$$
+$$= \frac{2}{3} \int_0^1 \left[ \frac{x^3 y}{3} + x^2 y^2 \right]_0^1 dy = \frac{2}{3} \int_0^1 \left( \frac{y}{3} + y^2 \right) dy = \frac{2}{3} \left[ \frac{y^2}{6} + \frac{y^3}{3} \right]_0^1 = \frac{2}{3} \left( \frac{1}{6} + \frac{1}{3} \right) = \frac{2}{3} \left( \frac{1}{2} \right) = \mathbf{\frac{1}{3}} \approx \mathbf{0.333333}$$
+
+#### Step 5: Compute Covariance and Correlation
+$$\text{Cov}(X, Y) = \mathbb{E}[X Y] - \mathbb{E}[X]\mathbb{E}[Y] = \frac{1}{3} - \left(\frac{5}{9}\right)\left(\frac{11}{18}\right) = \frac{1}{3} - \frac{55}{162} = \frac{54 - 55}{162} = \mathbf{-\frac{1}{162}} \approx \mathbf{-0.006173}$$
+Because $\text{Cov}(X, Y) < 0$, $X$ and $Y$ have a slight negative linear dependence.
+
+---
+
+### Case D: Concrete $2 \times 2$ ZCA Whitening Matrix Construction
+Consider a 2D data distribution with empirical covariance matrix:
+$$\Sigma = \begin{bmatrix} 4.0 & 2.0 \\ 2.0 & 4.0 \end{bmatrix}$$
+Construct the exact symmetric Zero-phase Component Analysis (ZCA) whitening matrix $\Sigma^{-1/2}$ and verify that $\Sigma^{-1/2} \Sigma \Sigma^{-1/2} = I$.
+
+#### Step 1: Eigendecomposition of $\Sigma$
+1. **Characteristic polynomial:**
+   $$\det(\Sigma - \lambda I) = (4 - \lambda)^2 - 2^2 = (4 - \lambda - 2)(4 - \lambda + 2) = (2 - \lambda)(6 - \lambda) = 0$$
+   $$\implies \lambda_1 = 6.0, \quad \lambda_2 = 2.0$$
+2. **Normalized Eigenvectors:**
+   - For $\lambda_1 = 6.0$:
+     $$(\Sigma - 6I) q_1 = \begin{bmatrix} -2 & 2 \\ 2 & -2 \end{bmatrix} q_1 = 0 \implies q_1 = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 \\ 1 \end{bmatrix}$$
+   - For $\lambda_2 = 2.0$:
+     $$(\Sigma - 2I) q_2 = \begin{bmatrix} 2 & 2 \\ 2 & 2 \end{bmatrix} q_2 = 0 \implies q_2 = \frac{1}{\sqrt{2}} \begin{bmatrix} -1 \\ 1 \end{bmatrix}$$
+   $$Q = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 \\ 1 & 1 \end{bmatrix}$$
+
+#### Step 2: Compute Inverse Square-Root Matrix $\Sigma^{-1/2} = Q \Lambda^{-1/2} Q^T$
+1. Inverse square-root eigenvalues:
+   $$\Lambda^{-1/2} = \begin{bmatrix} \frac{1}{\sqrt{6}} & 0 \\ 0 & \frac{1}{\sqrt{2}} \end{bmatrix}$$
+2. Compute matrix product:
+   $$\Sigma^{-1/2} = \left( \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 \\ 1 & 1 \end{bmatrix} \right) \begin{bmatrix} \frac{1}{\sqrt{6}} & 0 \\ 0 & \frac{1}{\sqrt{2}} \end{bmatrix} \left( \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & 1 \\ -1 & 1 \end{bmatrix} \right) = \frac{1}{2} \begin{bmatrix} \frac{1}{\sqrt{6}} & -\frac{1}{\sqrt{2}} \\ \frac{1}{\sqrt{6}} & \frac{1}{\sqrt{2}} \end{bmatrix} \begin{bmatrix} 1 & 1 \\ -1 & 1 \end{bmatrix}$$
+   $$\Sigma^{-1/2} = \frac{1}{2} \begin{bmatrix} \frac{1}{\sqrt{6}} + \frac{1}{\sqrt{2}} & \frac{1}{\sqrt{6}} - \frac{1}{\sqrt{2}} \\ \frac{1}{\sqrt{6}} - \frac{1}{\sqrt{2}} & \frac{1}{\sqrt{6}} + \frac{1}{\sqrt{2}} \end{bmatrix}$$
+3. Numerical evaluation:
+   - $\frac{1}{\sqrt{6}} \approx 0.408248, \quad \frac{1}{\sqrt{2}} \approx 0.707107$
+   - Diagonal entry: $\frac{1}{2}(0.408248 + 0.707107) = \frac{1}{2}(1.115355) \approx \mathbf{0.557678}$
+   - Off-diagonal entry: $\frac{1}{2}(0.408248 - 0.707107) = \frac{1}{2}(-0.298859) \approx \mathbf{-0.149429}$
+   $$\mathbf{\Sigma^{-1/2} \approx \begin{bmatrix} 0.557678 & -0.149429 \\ -0.149429 & 0.557678 \end{bmatrix}}$$
+
+#### Step 3: Numerical Verification $\Sigma^{-1/2} \Sigma \Sigma^{-1/2} = I$
+1. Compute intermediate product $M = \Sigma^{-1/2} \Sigma$:
+   $$M = \begin{bmatrix} 0.557678 & -0.149429 \\ -0.149429 & 0.557678 \end{bmatrix} \begin{bmatrix} 4.0 & 2.0 \\ 2.0 & 4.0 \end{bmatrix} = \begin{bmatrix} 4(0.557678) - 2(0.149429) & 2(0.557678) - 4(0.149429) \\ -4(0.149429) + 2(0.557678) & -2(0.149429) + 4(0.557678) \end{bmatrix}$$
+   $$M \approx \begin{bmatrix} 1.931854 & 0.517640 \\ 0.517640 & 1.931854 \end{bmatrix}$$
+2. Multiply by $\Sigma^{-1/2}$:
+   $$\text{Cov}(Z) = M \Sigma^{-1/2} = \begin{bmatrix} 1.931854 & 0.517640 \\ 0.517640 & 1.931854 \end{bmatrix} \begin{bmatrix} 0.557678 & -0.149429 \\ -0.149429 & 0.557678 \end{bmatrix}$$
+   - Entry $(1, 1)$: $(1.931854)(0.557678) + (0.517640)(-0.149429) = 1.077353 - 0.077351 = \mathbf{1.000002} \approx \mathbf{1.0}$
+   - Entry $(1, 2)$: $(1.931854)(-0.149429) + (0.517640)(0.557678) = -0.288676 + 0.288676 = \mathbf{0.000000} \equiv \mathbf{0.0}$
+   - Entry $(2, 2)$: $(0.517640)(-0.149429) + (1.931854)(0.557678) = \mathbf{1.000002} \approx \mathbf{1.0}$
+   $$\text{Cov}(Z) = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{I} \quad \checkmark$$
+The whitened random variables are strictly uncorrelated and normalized to unit variance.
 
 ---
 

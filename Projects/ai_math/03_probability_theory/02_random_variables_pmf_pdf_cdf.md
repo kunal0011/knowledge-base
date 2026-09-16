@@ -147,6 +147,26 @@ $$\mathbf{f_Y(y) = f_X(g^{-1}(y)) \cdot \left| \frac{d}{dy} g^{-1}(y) \right| = 
 3. Combining both cases with the absolute value:
    $$f_Y(y) = f_X(g^{-1}(y)) \left| \frac{d}{dy} g^{-1}(y) \right|. \quad \blacksquare$$
 
+---
+
+#### Theorem 3.2.2b: General Multi-Branch (Non-Monotonic) Change of Variables
+When the transformation $Y = g(X)$ is **not strictly monotonic** (e.g., $g(x) = x^2$), a single output $y$ may originate from multiple distinct input roots $x_1, x_2, \dots, x_k$ such that $g(x_k) = y$.
+In this case, the total density is the sum of probability densities contributed by each local branch:
+$$\mathbf{f_Y(y) = \sum_{k: g(x_k) = y} \frac{f_X(x_k)}{\left| g'(x_k) \right|}}$$
+
+##### Derivation (Deriving the $\chi^2(1)$ Distribution from Standard Normal):
+1. Let $X \sim \mathcal{N}(0, 1)$ with PDF $f_X(x) = \frac{1}{\sqrt{2\pi}} e^{-x^2/2}$, and let $Y = X^2$.
+2. For $y > 0$, the equation $x^2 = y$ has exactly two roots:
+   $$x_1 = +\sqrt{y}, \quad x_2 = -\sqrt{y}$$
+3. Differentiate the transformation $g(x) = x^2 \implies g'(x) = 2x$:
+   $$|g'(x_1)| = |2\sqrt{y}| = 2\sqrt{y}, \quad |g'(x_2)| = |-2\sqrt{y}| = 2\sqrt{y}$$
+4. Apply the multi-branch formula:
+   $$f_Y(y) = \frac{f_X(\sqrt{y})}{2\sqrt{y}} + \frac{f_X(-\sqrt{y})}{2\sqrt{y}} = \frac{\frac{1}{\sqrt{2\pi}} e^{-y/2}}{2\sqrt{y}} + \frac{\frac{1}{\sqrt{2\pi}} e^{-y/2}}{2\sqrt{y}} = \frac{2 \frac{1}{\sqrt{2\pi}} e^{-y/2}}{2\sqrt{y}}$$
+   $$\mathbf{f_Y(y) = \frac{1}{\sqrt{2\pi y}} e^{-y/2} = \frac{1}{2^{1/2} \Gamma(1/2)} y^{1/2 - 1} e^{-y/2}, \quad y > 0}$$
+5. This proves from first principles that the square of a standard Gaussian is identically a **Chi-squared distribution with 1 degree of freedom** ($\chi^2(1)$)! $\blacksquare$
+
+---
+
 #### Multivariate Extension (Normalizing Flows Foundation):
 If $Y = g(X)$ where $g: \mathbb{R}^D \to \mathbb{R}^D$ is a bijective, differentiable transformation with Jacobian matrix $J_g(x) = \frac{\partial g}{\partial x}$ (from Chapter 2.3):
 $$\mathbf{p_Y(y) = p_X(g^{-1}(y)) \cdot \left| \det \left( J_{g^{-1}}(y) \right) \right| = p_X(x) \cdot \left| \det \left( J_g(x) \right) \right|^{-1}}$$
@@ -352,6 +372,65 @@ Integrating to get the CDF:
 $$F_X(x) = \int_{-\infty}^x \sum_i p_i \delta(t - x_i) \, dt = \sum_{x_i \le x} p_i H(x - x_i)$$
 where $H(x)$ is the Heaviside step function.
 This unifies discrete and continuous probability under the single framework of **Lebesgue integration**!
+
+---
+
+### Case C: Non-Linear Transformation $Y = X^2$ on an Asymmetric Uniform Distribution
+Let $X \sim \text{Uniform}(-1, 2)$ with probability density:
+$$f_X(x) = \begin{cases} \frac{1}{3}, & -1 \le x \le 2 \\ 0, & \text{otherwise} \end{cases}$$
+Find the complete probability density function $f_Y(y)$ of the transformed variable $Y = X^2$.
+
+#### Step 1: Identify Output Range and Pre-Images
+Because $-1 \le X \le 2$, the transformed variable spans $Y \in [0, 4]$.
+For any $y > 0$, the roots of $g(x) = x^2 = y$ are:
+$$x_1 = -\sqrt{y}, \quad x_2 = +\sqrt{y}$$
+The derivative is $g'(x) = 2x \implies |g'(x_1)| = |g'(x_2)| = 2\sqrt{y}$.
+
+#### Step 2: Apply Multi-Branch Formula across Piecewise Regions
+By Theorem 3.2.2b:
+$$f_Y(y) = \sum_{k} \frac{f_X(x_k)}{|g'(x_k)|} = \frac{f_X(-\sqrt{y})}{2\sqrt{y}} + \frac{f_X(\sqrt{y})}{2\sqrt{y}}$$
+
+1. **Region 1: $0 < y < 1$ (Two Active Pre-Image Branches)**
+   - Negative root: $x_1 = -\sqrt{y} \in (-1, 0) \implies f_X(x_1) = \frac{1}{3}$ (inside support)
+   - Positive root: $x_2 = +\sqrt{y} \in (0, 1) \implies f_X(x_2) = \frac{1}{3}$ (inside support)
+   $$f_Y(y) = \frac{1/3}{2\sqrt{y}} + \frac{1/3}{2\sqrt{y}} = \mathbf{\frac{1}{3\sqrt{y}}}$$
+
+2. **Region 2: $1 \le y \le 4$ (One Active Pre-Image Branch)**
+   - Negative root: $x_1 = -\sqrt{y} \in [-2, -1] \implies f_X(x_1) = 0$ (outside support $[-1, 2]$!)
+   - Positive root: $x_2 = +\sqrt{y} \in [1, 2] \implies f_X(x_2) = \frac{1}{3}$ (inside support)
+   $$f_Y(y) = \frac{0}{2\sqrt{y}} + \frac{1/3}{2\sqrt{y}} = \mathbf{\frac{1}{6\sqrt{y}}}$$
+
+#### Step 3: Analytical Verification of Normalization
+$$\int_0^4 f_Y(y) \, dy = \int_0^1 \frac{1}{3\sqrt{y}} \, dy + \int_1^4 \frac{1}{6\sqrt{y}} \, dy = \left[ \frac{2}{3}\sqrt{y} \right]_0^1 + \left[ \frac{1}{3}\sqrt{y} \right]_1^4 = \frac{2}{3}(1 - 0) + \frac{1}{3}(2 - 1) = \frac{2}{3} + \frac{1}{3} = \mathbf{1.000000} \quad \checkmark$$
+
+#### Step 4: Concrete Numerical Evaluations
+- At $y = 0.25$: $f_Y(0.25) = \frac{1}{3\sqrt{0.25}} = \frac{1}{3(0.5)} = \mathbf{\frac{2}{3}} \approx \mathbf{0.666667}$
+- At $y = 2.25$: $f_Y(2.25) = \frac{1}{6\sqrt{2.25}} = \frac{1}{6(1.5)} = \frac{1}{9.0} \approx \mathbf{0.111111}$
+
+---
+
+### Case D: Inverse Transform Sampling for the Standard Cauchy Distribution
+Consider the heavy-tailed **Standard Cauchy distribution**:
+$$f_X(x) = \frac{1}{\pi (1 + x^2)}, \quad x \in (-\infty, \infty)$$
+Derive its closed-form sampling algorithm from a uniform generator $U \sim \text{Uniform}(0, 1)$.
+
+#### Step 1: Derive Analytical CDF $F_X(x)$
+$$F_X(x) = \int_{-\infty}^x \frac{1}{\pi (1 + t^2)} \, dt = \frac{1}{\pi} \left[ \arctan(t) \right]_{-\infty}^x = \frac{1}{\pi} \left( \arctan(x) - \left(-\frac{\pi}{2}\right) \right) = \mathbf{\frac{1}{\pi} \arctan(x) + \frac{1}{2}}$$
+
+#### Step 2: Invert the CDF $F_X(x) = u$
+Set $\frac{1}{\pi} \arctan(x) + \frac{1}{2} = u$ for $u \in (0, 1)$:
+$$\frac{1}{\pi} \arctan(x) = u - \frac{1}{2} \implies \arctan(x) = \pi \left( u - \frac{1}{2} \right)$$
+$$\mathbf{X = \tan\left( \pi \left( U - \frac{1}{2} \right) \right)}$$
+
+#### Step 3: Numerical Verification
+1. Median quantile $u = 0.50$:
+   $$x = \tan\left(\pi(0.50 - 0.50)\right) = \tan(0) = \mathbf{0.000000}$$
+2. Upper quartile $u = 0.75$:
+   $$x = \tan\left(\pi(0.75 - 0.50)\right) = \tan\left(\frac{\pi}{4}\right) = \mathbf{+1.000000}$$
+3. Lower quartile $u = 0.25$:
+   $$x = \tan\left(\pi(0.25 - 0.50)\right) = \tan\left(-\frac{\pi}{4}\right) = \mathbf{-1.000000}$$
+4. Interquartile interval probability:
+   $$P(-1.0 \le X \le 1.0) = F_X(1.0) - F_X(-1.0) = 0.75 - 0.25 = \mathbf{0.500000} \quad (\mathbf{50.0\%})$$
 
 ---
 

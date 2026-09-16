@@ -125,8 +125,24 @@ $$= \int_{-\infty}^\infty \int_{-\infty}^\infty y f_{X, Y}(x, y) \, dy \, dx = \
 
 How does uncertainty decompose across multiple variables?
 
-#### Theorem 3.5.3: Law of Total Variance
+#### Theorem 3.5.3: Law of Total Variance (Eve's Law)
 $$\mathbf{\text{Var}(Y) = \mathbb{E}_X\left[ \text{Var}(Y \mid X) \right] + \text{Var}_X\left( \mathbb{E}[Y \mid X] \right)}$$
+
+##### First-Principles Mathematical Proof:
+Recall the fundamental definition of variance:
+$$\text{Var}(Y) = \mathbb{E}[Y^2] - (\mathbb{E}[Y])^2$$
+
+1. By the Tower Property (Theorem 3.5.2), the unconditional expectation of $Y^2$ is:
+   $$\mathbb{E}[Y^2] = \mathbb{E}_X\left[ \mathbb{E}_{Y \mid X}[Y^2 \mid X] \right]$$
+2. For any fixed $X$, the definition of conditional variance is:
+   $$\text{Var}(Y \mid X) = \mathbb{E}[Y^2 \mid X] - (\mathbb{E}[Y \mid X])^2 \implies \mathbb{E}[Y^2 \mid X] = \text{Var}(Y \mid X) + (\mathbb{E}[Y \mid X])^2$$
+3. Taking the outer expectation over $X$ on both sides:
+   $$\mathbb{E}[Y^2] = \mathbb{E}_X\left[ \text{Var}(Y \mid X) + (\mathbb{E}[Y \mid X])^2 \right] = \mathbb{E}_X[\text{Var}(Y \mid X)] + \mathbb{E}_X\left[(\mathbb{E}[Y \mid X])^2\right]$$
+4. Now consider $(\mathbb{E}[Y])^2$. Again by the Tower Property:
+   $$\mathbb{E}[Y] = \mathbb{E}_X[\mathbb{E}[Y \mid X]] \implies (\mathbb{E}[Y])^2 = \left( \mathbb{E}_X[\mathbb{E}[Y \mid X]] \right)^2$$
+5. Substitute equations (3) and (4) into $\text{Var}(Y) = \mathbb{E}[Y^2] - (\mathbb{E}[Y])^2$:
+   $$\text{Var}(Y) = \mathbb{E}_X[\text{Var}(Y \mid X)] + \underbrace{\left( \mathbb{E}_X\left[(\mathbb{E}[Y \mid X])^2\right] - \left( \mathbb{E}_X[\mathbb{E}[Y \mid X]] \right)^2 \right)}_{\equiv \text{Var}_X(\mathbb{E}[Y \mid X])}$$
+   $$\mathbf{\text{Var}(Y) = \mathbb{E}_X[\text{Var}(Y \mid X)] + \text{Var}_X(\mathbb{E}[Y \mid X])} \quad \blacksquare$$
 
 ##### The Two Components:
 1. **$\mathbb{E}_X[\text{Var}(Y \mid X)]$ (Unexplained / Aleatoric Variance):**
@@ -134,6 +150,54 @@ $$\mathbf{\text{Var}(Y) = \mathbb{E}_X\left[ \text{Var}(Y \mid X) \right] + \tex
 2. **$\text{Var}_X(\mathbb{E}[Y \mid X])$ (Explained Variance):**
    The variance in our best prediction $\mathbb{E}[Y \mid X]$ due to fluctuations in $X$.
 This identity forms the mathematical foundation of the **Coefficient of Determination ($R^2$)** and ANOVA in statistics!
+
+---
+
+### 6. The MMSE Theorem: Conditional Expectation as the Optimal L2 Predictor
+
+In supervised regression, a neural network $g(X; \theta)$ is trained to predict $Y$ from input features $X$ by minimizing the Mean Squared Error (MSE) loss:
+$$\mathcal{L}(\theta) = \mathbb{E}_{(X, Y)} \left[ (Y - g(X))^2 \right]$$
+What is the theoretical performance ceiling of *any* arbitrary regression model, regardless of neural network capacity?
+
+#### Theorem 3.5.4: Minimum Mean Square Error (MMSE) Optimal Predictor
+Among all measurable functions $g(X)$, the **conditional expectation** $g^*(X) \triangleq \mathbb{E}[Y \mid X]$ is the unique global minimizer of the mean squared error:
+$$\mathbf{\arg\min_{g} \mathbb{E}\left[ (Y - g(X))^2 \right] = \mathbb{E}[Y \mid X]}$$
+
+##### First-Principles Proof:
+Add and subtract $\mathbb{E}[Y \mid X]$ inside the quadratic loss:
+$$Y - g(X) = (Y - \mathbb{E}[Y \mid X]) + (\mathbb{E}[Y \mid X] - g(X))$$
+Square both sides:
+$$(Y - g(X))^2 = (Y - \mathbb{E}[Y \mid X])^2 + 2(Y - \mathbb{E}[Y \mid X])(\mathbb{E}[Y \mid X] - g(X)) + (\mathbb{E}[Y \mid X] - g(X))^2$$
+Take the expected value of both sides. By linearity of expectation:
+$$\mathbb{E}[(Y - g(X))^2] = \mathbb{E}[(Y - \mathbb{E}[Y \mid X])^2] + 2 \mathbb{E}\left[ (Y - \mathbb{E}[Y \mid X])(\mathbb{E}[Y \mid X] - g(X)) \right] + \mathbb{E}[(\mathbb{E}[Y \mid X] - g(X))^2]$$
+
+Now evaluate the cross-term using the Tower Property (Theorem 3.5.2):
+$$\mathbb{E}\left[ (Y - \mathbb{E}[Y \mid X])(\mathbb{E}[Y \mid X] - g(X)) \right] = \mathbb{E}_X \left[ \mathbb{E}_{Y \mid X} \left[ (Y - \mathbb{E}[Y \mid X])(\mathbb{E}[Y \mid X] - g(X)) \;\middle|\; X \right] \right]$$
+Since $(\mathbb{E}[Y \mid X] - g(X))$ is a purely deterministic function of $X$, it pulls out of the inner conditional expectation:
+$$= \mathbb{E}_X \left[ (\mathbb{E}[Y \mid X] - g(X)) \cdot \underbrace{\mathbb{E}_{Y \mid X} [ Y - \mathbb{E}[Y \mid X] \mid X ]}_{= \mathbb{E}[Y \mid X] - \mathbb{E}[Y \mid X] = 0} \right] = \mathbb{E}_X [ 0 ] = 0$$
+The cross-term is identically zero! Therefore:
+$$\mathbb{E}[(Y - g(X))^2] = \mathbb{E}\left[(Y - \mathbb{E}[Y \mid X])^2\right] + \mathbb{E}\left[(\mathbb{E}[Y \mid X] - g(X))^2\right]$$
+- The first term $\mathbb{E}[(Y - \mathbb{E}[Y \mid X])^2] = \mathbb{E}[\text{Var}(Y \mid X)]$ is the **irreducible aleatoric noise** inherent to the universe. It does not depend on the choice of $g$.
+- The second term $\mathbb{E}[(\mathbb{E}[Y \mid X] - g(X))^2] \ge 0$ is strictly non-negative.
+To minimize the total MSE, we must set the second term to zero, which occurs if and only if:
+$$\mathbf{g(X) = \mathbb{E}[Y \mid X] \quad \text{almost surely.}} \quad \blacksquare$$
+*Deep Learning Takeaway:* When you train a deep neural network on regression with MSE loss, the network is explicitly approximating the mathematical conditional expectation $\mathbb{E}[Y \mid X]$!
+
+---
+
+### 7. Conditional Independence and Factorization
+
+#### Definition 3.5.4: Conditional Independence
+Two random variables $X$ and $Y$ are **conditionally independent given $Z$**, denoted:
+$$X \perp Y \mid Z$$
+if and only if their conditional joint distribution factorizes as the product of their individual conditional distributions:
+$$\mathbf{p(x, y \mid z) = p(x \mid z) \, p(y \mid z) \quad \forall x, y, z \text{ with } p(z) > 0}$$
+
+#### Equivalent Characterization:
+$$X \perp Y \mid Z \iff \mathbf{p(x \mid y, z) = p(x \mid z)}$$
+*Intuition:* Once you observe $Z$, learning the value of $Y$ provides **zero additional information** about $X$.
+- **In Naive Bayes Classifiers:** Features $X_i, X_j$ are assumed conditionally independent given class label $Y$: $p(x_1, \dots, x_D \mid y) = \prod_{i=1}^D p(x_i \mid y)$.
+- **In Markov Decision Processes (RL):** The future state $S_{t+1}$ depends on history only through the current state-action pair: $S_{t+1} \perp (S_0, A_0, \dots, S_{t-1}, A_{t-1}) \mid (S_t, A_t)$.
 
 ---
 
@@ -320,6 +384,111 @@ Compute both sides of $\text{Var}(Y) = \mathbb{E}_X[\text{Var}(Y \mid X)] + \tex
 5. **Sum of Terms:**
    $$\text{Total} = \frac{25}{675} + \frac{8}{675} = \frac{33}{675} = \frac{11}{225} \equiv \text{Var}(Y)! \quad \checkmark$$
 Eve's Law holds with exact fractional precision!
+
+---
+
+### Case B: Discrete Joint Contingency Table (User Rating vs. Ad Clicks)
+A recommendation system analyzes the interaction between a user's satisfaction rating $X \in \{1, 2, 3\}$ (Low, Medium, High) and the number of subsequent ad clicks $Y \in \{0, 1, 2\}$.
+The discrete joint PMF $p_{X, Y}(x, y) = P(X = x, Y = y)$ is given by the contingency matrix:
+
+$$\begin{array}{c|ccc|c}
+X \backslash Y & Y = 0 & Y = 1 & Y = 2 & \text{Marginal } p_X(x) \\
+\hline
+X = 1 & 0.15 & 0.10 & 0.05 & \mathbf{0.30} \\
+X = 2 & 0.10 & 0.20 & 0.10 & \mathbf{0.40} \\
+X = 3 & 0.05 & 0.10 & 0.15 & \mathbf{0.30} \\
+\hline
+\text{Marginal } p_Y(y) & \mathbf{0.30} & \mathbf{0.40} & \mathbf{0.30} & \mathbf{1.00}
+\end{array}$$
+
+1. **Step 1: Compute Marginal PMFs:**
+   - For $X$:
+     $$p_X(1) = 0.15 + 0.10 + 0.05 = \mathbf{0.30}$$
+     $$p_X(2) = 0.10 + 0.20 + 0.10 = \mathbf{0.40}$$
+     $$p_X(3) = 0.05 + 0.10 + 0.15 = \mathbf{0.30}$$
+   - For $Y$:
+     $$p_Y(0) = 0.15 + 0.10 + 0.05 = \mathbf{0.30}$$
+     $$p_Y(1) = 0.10 + 0.20 + 0.10 = \mathbf{0.40}$$
+     $$p_Y(2) = 0.05 + 0.10 + 0.15 = \mathbf{0.30}$$
+
+2. **Step 2: Compute Conditional PMF $p_{Y \mid X}(y \mid X = 2)$:**
+   Slice along row $X = 2$, dividing by marginal $p_X(2) = 0.40$:
+   $$p_{Y \mid X}(0 \mid 2) = \frac{p_{X, Y}(2, 0)}{p_X(2)} = \frac{0.10}{0.40} = \mathbf{0.250000}$$
+   $$p_{Y \mid X}(1 \mid 2) = \frac{p_{X, Y}(2, 1)}{p_X(2)} = \frac{0.20}{0.40} = \mathbf{0.500000}$$
+   $$p_{Y \mid X}(2 \mid 2) = \frac{p_{X, Y}(2, 2)}{p_X(2)} = \frac{0.10}{0.40} = \mathbf{0.250000}$$
+   *Verification:* $0.25 + 0.50 + 0.25 = 1.0000 \quad \checkmark$
+
+3. **Step 3: Compute Conditional Expectation & Variance:**
+   $$\mathbb{E}[Y \mid X = 2] = \sum_{y=0}^2 y \cdot p_{Y \mid X}(y \mid 2) = 0(0.25) + 1(0.50) + 2(0.25) = 0.50 + 0.50 = \mathbf{1.000000}$$
+   $$\mathbb{E}[Y^2 \mid X = 2] = 0^2(0.25) + 1^2(0.50) + 2^2(0.25) = 0 + 0.50 + 1.00 = \mathbf{1.500000}$$
+   $$\text{Var}(Y \mid X = 2) = \mathbb{E}[Y^2 \mid X = 2] - (\mathbb{E}[Y \mid X = 2])^2 = 1.50 - (1.00)^2 = \mathbf{0.500000}$$
+
+4. **Step 4: Formal Statistical Independence Test:**
+   Are user rating $X$ and ad clicks $Y$ independent?
+   Test cell $(X = 1, Y = 0)$:
+   $$p_{X, Y}(1, 0) = 0.150000$$
+   $$p_X(1) \cdot p_Y(0) = (0.30)(0.30) = 0.090000$$
+   Since $p_{X, Y}(1, 0) \ne p_X(1) p_Y(0)$ ($0.15 \ne 0.09$), the variables are **statistically dependent**. Low satisfaction users click significantly fewer ads than expected under independence.
+
+---
+
+### Case C: Joint Gaussian Conditioning & Prediction Intervals in Supervised Regression
+Suppose a continuous feature $X$ (e.g., years of experience) and target $Y$ (salary in thousands) follow a bivariate Gaussian distribution:
+$$\begin{bmatrix} X \\ Y \end{bmatrix} \sim \mathcal{N}\left( \begin{bmatrix} 10.0 \\ 50.0 \end{bmatrix}, \begin{bmatrix} 4.0 & 8.0 \\ 8.0 & 25.0 \end{bmatrix} \right)$$
+Here $\mu_X = 10, \mu_Y = 50, \sigma_X = \sqrt{4} = 2, \sigma_Y = \sqrt{25} = 5$.
+The Pearson correlation coefficient is:
+$$\rho = \frac{\text{Cov}(X, Y)}{\sigma_X \sigma_Y} = \frac{8.0}{(2.0)(5.0)} = \frac{8.0}{10.0} = \mathbf{0.80}$$
+
+A new candidate has $X = 13.0$ years of experience. Predict their salary distribution.
+
+1. **Step 1: Compute MMSE Regression Prediction (Conditional Mean):**
+   $$\hat{y} = \mathbb{E}[Y \mid X = 13.0] = \mu_Y + \rho \frac{\sigma_Y}{\sigma_X} (X - \mu_X)$$
+   $$\hat{y} = 50.0 + 0.80 \left( \frac{5.0}{2.0} \right) (13.0 - 10.0) = 50.0 + 0.80(2.5)(3.0) = 50.0 + 2.0(3.0) = 50.0 + 6.0 = \mathbf{56.000000 \quad (\$56{,}000)}$$
+
+2. **Step 2: Compute Conditional Variance (Residual Aleatoric Noise):**
+   $$\sigma^2_{Y \mid X} = \sigma_Y^2 (1 - \rho^2) = 25.0 \left( 1 - 0.80^2 \right) = 25.0(1 - 0.64) = 25.0(0.36) = \mathbf{9.000000}$$
+   $$\sigma_{Y \mid X} = \sqrt{9.0} = \mathbf{3.000000 \quad (\$3{,}000)}$$
+   *Insight:* Conditioned on $X$, the target variance drops from $25.0$ to $9.0$—an exact $64\%$ reduction in uncertainty ($R^2 = \rho^2 = 0.64$)!
+
+3. **Step 3: Construct Exact 95% Bayesian / Frequentist Prediction Interval:**
+   $$\mu_{Y \mid X} \pm 1.96 \, \sigma_{Y \mid X} = 56.0 \pm 1.96(3.0) = 56.0 \pm 5.88 = [\mathbf{50.120000, 61.880000}]$$
+   The model predicts a salary of $\$56{,}000$ with a $95\%$ confidence interval between $\$50{,}120$ and $\$61{,}880$.
+
+---
+
+### Case D: Simpson's Paradox in Machine Learning Model Evaluation
+A data science team evaluates two generative image models (Model A vs. Model B) on human preference ratings across two hardware modalities: Mobile vs. Desktop.
+
+#### 1. Conditional Win Rates within Each Modality:
+- **Mobile Users:**
+  - Model A: 90 preferences out of 100 evaluations $\implies \mathbf{90.0\%}$ win rate.
+  - Model B: 80 preferences out of 100 evaluations $\implies \mathbf{80.0\%}$ win rate.
+  *(Model A beats Model B by 10% on Mobile!)*
+- **Desktop Users:**
+  - Model A: 20 preferences out of 100 evaluations $\implies \mathbf{20.0\%}$ win rate.
+  - Model B: 15 preferences out of 100 evaluations $\implies \mathbf{15.0\%}$ win rate.
+  *(Model A beats Model B by 5% on Desktop!)*
+
+#### 2. The Unbalanced Real-World Traffic Distribution:
+In production, the deployment routing was biased:
+- Model A was assigned to 100 Mobile users and 900 Desktop users (total $N_A = 1000$).
+- Model B was assigned to 900 Mobile users and 100 Desktop users (total $N_B = 1000$).
+
+#### 3. Marginal (Aggregate) Win Rates:
+- **Model A Aggregate Win Rate:**
+  $$P(\text{Win} \mid \text{Model A}) = \frac{90(\text{Mobile wins}) + 180(\text{Desktop wins})}{1000} = \frac{270}{1000} = \mathbf{27.0\%}$$
+- **Model B Aggregate Win Rate:**
+  $$P(\text{Win} \mid \text{Model B}) = \frac{720(\text{Mobile wins}) + 15(\text{Desktop wins})}{1000} = \frac{735}{1000} = \mathbf{73.5\%}$$
+
+#### 4. The Paradox & Mathematical Explanation:
+Even though **Model A is strictly superior to Model B for every single sub-population** ($90\% > 80\%$ on Mobile, and $20\% > 15\%$ on Desktop), **Model B appears nearly $3\times$ superior in the aggregate marginal distribution ($73.5\%$ vs $27.0\%$)!**
+
+*The Causal Mechanism:*
+By the Law of Total Probability:
+$$P(\text{Win} \mid M) = P(\text{Win} \mid M, \text{Mobile}) P(\text{Mobile} \mid M) + P(\text{Win} \mid M, \text{Desktop}) P(\text{Desktop} \mid M)$$
+Here, user device $Z$ is a **confounder**. Mobile users are vastly more generous overall (average win rate $\approx 85\%$) than Desktop users (average win rate $\approx 17.5\%$).
+Because Model B was disproportionately tested on the easy Mobile cohort ($90\%$ vs $10\%$), marginalizing out $Z$ completely distorted the comparison!
+*Deep Learning Rule:* In A/B testing and RLHF reward modeling, **never compare marginal probabilities without conditioning on or balancing confounders!**
 
 ---
 

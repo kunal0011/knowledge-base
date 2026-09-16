@@ -96,6 +96,35 @@ Among all continuous distributions on $\mathbb{R}^d$ with a fixed mean $\mu$ and
 $$h(\mathcal{N}(\mu, \Sigma)) = \frac{1}{2} \ln \left( (2\pi e)^d \det(\Sigma) \right)$$
 *Deep Learning Meaning:* The Gaussian distribution is the most conservative (unbiased/least-assumption) prior when only second-order statistics are known.
 
+#### Deep Derivation 3.7.1: Proof of Maximum Differential Entropy for the Gaussian Distribution
+Let $g(x) = \frac{1}{(2\pi)^{d/2} |\det \Sigma|^{1/2}} \exp\left( -\frac{1}{2} (x - \mu)^T \Sigma^{-1} (x - \mu) \right)$ be the multivariate Gaussian density with mean $\mu$ and covariance $\Sigma$.
+Let $p(x)$ be *any* arbitrary continuous probability density on $\mathbb{R}^d$ that shares the same mean $\mu$ and covariance $\Sigma$:
+$$\mathbb{E}_p[x] = \mu, \qquad \mathbb{E}_p[(x - \mu)(x - \mu)^T] = \Sigma$$
+
+1. **Non-negativity of KL Divergence:**
+   By Gibbs' Inequality (Theorem 3.7.1):
+   $$D_{\text{KL}}(p \parallel g) = \int_{\mathbb{R}^d} p(x) \ln \frac{p(x)}{g(x)} \, dx \ge 0$$
+   Expanding the logarithm:
+   $$\int_{\mathbb{R}^d} p(x) \ln p(x) \, dx - \int_{\mathbb{R}^d} p(x) \ln g(x) \, dx \ge 0 \implies -h(p) - \int_{\mathbb{R}^d} p(x) \ln g(x) \, dx \ge 0$$
+
+2. **Evaluate the Cross-Integral $\int p(x) \ln g(x) dx$:**
+   $$\ln g(x) = -\frac{d}{2} \ln(2\pi) - \frac{1}{2} \ln \det \Sigma - \frac{1}{2} (x - \mu)^T \Sigma^{-1} (x - \mu)$$
+   Notice that $\ln g(x)$ is a quadratic polynomial in $x$. Taking its expectation under $p$:
+   $$\int_{\mathbb{R}^d} p(x) \ln g(x) \, dx = -\frac{d}{2} \ln(2\pi) - \frac{1}{2} \ln \det \Sigma - \frac{1}{2} \mathbb{E}_p\left[ (x - \mu)^T \Sigma^{-1} (x - \mu) \right]$$
+   Using the trace cycle identity $\mathbb{E}[z^T A z] = \text{Tr}(A \, \mathbb{E}[z z^T])$:
+   $$\mathbb{E}_p\left[ (x - \mu)^T \Sigma^{-1} (x - \mu) \right] = \text{Tr}\left( \Sigma^{-1} \mathbb{E}_p[(x - \mu)(x - \mu)^T] \right) = \text{Tr}(\Sigma^{-1} \Sigma) = \text{Tr}(I_d) = d$$
+   Therefore:
+   $$\int_{\mathbb{R}^d} p(x) \ln g(x) \, dx = -\frac{d}{2} \ln(2\pi) - \frac{1}{2} \ln \det \Sigma - \frac{d}{2} = -\frac{1}{2} \ln \left( (2\pi e)^d \det \Sigma \right)$$
+   Notice this value depends *only* on the covariance matrix $\Sigma$ and **not on any higher moments of $p$**!
+   Consequently, evaluating this integral under $g(x)$ itself yields the exact same value:
+   $$\int_{\mathbb{R}^d} p(x) \ln g(x) \, dx = \int_{\mathbb{R}^d} g(x) \ln g(x) \, dx = -h(g)$$
+
+3. **Conclusion:**
+   Substituting back into Gibbs' inequality:
+   $$-h(p) - (-h(g)) \ge 0 \implies \mathbf{h(p) \le h(g)}$$
+   with equality if and only if $p(x) = g(x)$ almost everywhere.
+   Thus, the Gaussian distribution uniquely maximizes differential entropy. $\blacksquare$
+
 ---
 
 ### 5. Kullback-Leibler (KL) Divergence (Relative Entropy)
@@ -110,6 +139,35 @@ $$D_{\text{KL}}(P \parallel Q) = \int_{\mathbb{R}^d} p(x) \log \frac{p(x)}{q(x)}
 The KL divergence is well-defined only if $P$ is **absolutely continuous** with respect to $Q$ ($P \ll Q$):
 $$Q(x) = 0 \implies P(x) = 0$$
 If there exists any $x$ where $P(x) > 0$ but $Q(x) = 0$, then $D_{\text{KL}}(P \parallel Q) = +\infty$!
+
+#### Deep Derivation 3.7.2: Closed-Form Formula for Multivariate Gaussian KL Divergence
+Let $p(x) = \mathcal{N}(\mu_1, \Sigma_1)$ and $q(x) = \mathcal{N}(\mu_0, \Sigma_0)$ be two $d$-dimensional Gaussians.
+$$D_{\text{KL}}(p \parallel q) = \int_{\mathbb{R}^d} p(x) \left[ \ln p(x) - \ln q(x) \right] dx = \mathbb{E}_p[\ln p(x)] - \mathbb{E}_p[\ln q(x)]$$
+
+1. **Log-Ratio Formulation:**
+   $$\ln p(x) = -\frac{d}{2}\ln(2\pi) - \frac{1}{2}\ln\det\Sigma_1 - \frac{1}{2}(x - \mu_1)^T \Sigma_1^{-1}(x - \mu_1)$$
+   $$\ln q(x) = -\frac{d}{2}\ln(2\pi) - \frac{1}{2}\ln\det\Sigma_0 - \frac{1}{2}(x - \mu_0)^T \Sigma_0^{-1}(x - \mu_0)$$
+   Subtracting $\ln q(x)$ from $\ln p(x)$:
+   $$\ln \frac{p(x)}{q(x)} = \frac{1}{2} \ln \frac{\det \Sigma_0}{\det \Sigma_1} - \frac{1}{2}(x - \mu_1)^T \Sigma_1^{-1}(x - \mu_1) + \frac{1}{2}(x - \mu_0)^T \Sigma_0^{-1}(x - \mu_0)$$
+
+2. **Taking Expectations under $p$:**
+   - Term 1: $\mathbb{E}_p\left[ (x - \mu_1)^T \Sigma_1^{-1}(x - \mu_1) \right] = \text{Tr}(\Sigma_1^{-1} \Sigma_1) = \text{Tr}(I_d) = d$.
+   - Term 2: Decompose $(x - \mu_0) = (x - \mu_1) + (\mu_1 - \mu_0)$:
+     $$\mathbb{E}_p\left[ (x - \mu_0)^T \Sigma_0^{-1}(x - \mu_0) \right] = \text{Tr}(\Sigma_0^{-1} \Sigma_1) + (\mu_1 - \mu_0)^T \Sigma_0^{-1} (\mu_1 - \mu_0)$$
+
+3. **General Multivariate Gaussian KL Formula:**
+   Combining all three expectations:
+   $$\mathbf{D_{\text{KL}}(\mathcal{N}(\mu_1, \Sigma_1) \parallel \mathcal{N}(\mu_0, \Sigma_0)) = \frac{1}{2} \left[ \text{Tr}(\Sigma_0^{-1} \Sigma_1) + (\mu_1 - \mu_0)^T \Sigma_0^{-1} (\mu_1 - \mu_0) - d + \ln \frac{\det \Sigma_0}{\det \Sigma_1} \right]}$$
+
+4. **Specialization for Variational Autoencoders (VAEs):**
+   In a standard VAE, $q_\phi(z \mid x) = \mathcal{N}(\mu, \text{diag}(\sigma^2))$ and the prior is standard normal $p(z) = \mathcal{N}(0, I_d)$.
+   Here $\mu_1 = \mu, \Sigma_1 = \text{diag}(\sigma_1^2, \dots, \sigma_d^2)$, and $\mu_0 = 0, \Sigma_0 = I_d$:
+   - $\text{Tr}(\Sigma_0^{-1} \Sigma_1) = \text{Tr}(\text{diag}(\sigma^2)) = \sum_{j=1}^d \sigma_j^2$
+   - $(\mu_1 - \mu_0)^T \Sigma_0^{-1} (\mu_1 - \mu_0) = \sum_{j=1}^d \mu_j^2$
+   - $\ln \frac{\det \Sigma_0}{\det \Sigma_1} = \ln(1) - \sum_{j=1}^d \ln(\sigma_j^2) = -\sum_{j=1}^d \ln(\sigma_j^2)$
+   Summing the components:
+   $$D_{\text{KL}}(q_\phi(z \mid x) \parallel \mathcal{N}(0, I)) = \frac{1}{2} \left[ \sum_{j=1}^d \sigma_j^2 + \sum_{j=1}^d \mu_j^2 - d - \sum_{j=1}^d \ln(\sigma_j^2) \right]$$
+   $$\mathbf{D_{\text{KL}}(q_\phi(z \mid x) \parallel \mathcal{N}(0, I)) = -\frac{1}{2} \sum_{j=1}^d \left( 1 + \ln(\sigma_j^2) - \mu_j^2 - \sigma_j^2 \right)} \quad \blacksquare$$
 
 ---
 
@@ -433,6 +491,84 @@ Suppose we fit a unimodal Gaussian $Q_\theta = \mathcal{N}(\mu, \sigma^2)$:
    $Q$ stretches out its variance to cover **both modes**, placing substantial probability mass in the dead valley between $-3$ and $+3$ (**zero-avoiding / mode-covering**).
 2. **Minimizing Reverse KL: $\min_\theta D_{\text{KL}}(Q_\theta \parallel P)$**
    To minimize $\mathbb{E}_{x \sim Q}[\ln \frac{Q(x)}{P(x)}]$, $Q$ will position itself tightly around **one of the modes** (either $\mu = -3$ or $\mu = +3$) with $\sigma^2 \approx 1$, completely ignoring the other mode (**zero-forcing / mode-seeking**).
+
+---
+
+### Illustration 4 (Numerical): Exact Closed-Form Gaussian KL Divergence in VAE Latent Space
+In a Variational Autoencoder (Kingma & Welling, 2013), an encoder network maps an input image to a $d = 3$ dimensional latent Gaussian distribution $q_\phi(z \mid x) = \mathcal{N}(\mu, \text{diag}(\sigma^2))$.
+The latent prior is a standard normal $\mathcal{N}(0, I_3)$.
+For a specific input image $x$, the encoder outputs:
+- Latent Mean Vector: $\mu = [0.50, -0.80, 0.00]^T$
+- Latent Log-Variance Vector: $\log(\sigma^2) = [-0.693147, 0.000000, 0.405465]^T$
+  Corresponding variances: $\sigma^2 = [e^{-0.693147}, e^0, e^{0.405465}]^T = [0.500000, 1.000000, 1.500000]^T$.
+
+Calculate the exact analytical KL divergence penalty $\mathcal{L}_{\text{KL}}$ and its analytical gradients for backpropagation.
+
+1. **Analytical Formula per Dimension:**
+   By Deep Derivation 3.7.2:
+   $$D_{\text{KL}, j} = -\frac{1}{2} \left[ 1 + \ln(\sigma_j^2) - \mu_j^2 - \sigma_j^2 \right]$$
+
+2. **Dimension-by-Dimension Computation:**
+   - **Dimension 1 ($j = 1$):**
+     $$\text{Bracket}_1 = 1 + (-0.693147) - (0.50)^2 - 0.50 = 1 - 0.693147 - 0.25 - 0.50 = -0.443147$$
+     $$D_{\text{KL}, 1} = -\frac{1}{2}(-0.443147) = \mathbf{0.221574\text{ nats}}$$
+   - **Dimension 2 ($j = 2$):**
+     $$\text{Bracket}_2 = 1 + (0.000000) - (-0.80)^2 - 1.00 = 1 - 0.64 - 1.00 = -0.640000$$
+     $$D_{\text{KL}, 2} = -\frac{1}{2}(-0.640000) = \mathbf{0.320000\text{ nats}}$$
+   - **Dimension 3 ($j = 3$):**
+     $$\text{Bracket}_3 = 1 + (0.405465) - (0.00)^2 - 1.50 = 1 + 0.405465 - 1.50 = -0.094535$$
+     $$D_{\text{KL}, 3} = -\frac{1}{2}(-0.094535) = \mathbf{0.047268\text{ nats}}$$
+
+3. **Total Latent KL Loss:**
+   $$\mathcal{L}_{\text{KL}} = \sum_{j=1}^3 D_{\text{KL}, j} = 0.221574 + 0.320000 + 0.047268 = \mathbf{0.588842\text{ nats}}$$
+
+4. **Analytical Gradients for Backpropagation:**
+   - With respect to mean $\mu_j$:
+     $$\frac{\partial \mathcal{L}_{\text{KL}}}{\partial \mu_j} = \mu_j \implies \nabla_\mu \mathcal{L}_{\text{KL}} = [\mathbf{0.500000, -0.800000, 0.000000}]^T$$
+   - With respect to log-variance $\nu_j \triangleq \ln(\sigma_j^2)$:
+     $$\frac{\partial \mathcal{L}_{\text{KL}}}{\partial \nu_j} = \frac{1}{2} \left( e^{\nu_j} - 1 \right) = \frac{1}{2}(\sigma_j^2 - 1)$$
+     $$\nabla_{\nu} \mathcal{L}_{\text{KL}} = \left[ \frac{0.50 - 1}{2}, \frac{1.00 - 1}{2}, \frac{1.50 - 1}{2} \right]^T = [\mathbf{-0.250000, 0.000000, +0.250000}]^T$$
+   *Observation:* When $\sigma_j^2 < 1$, gradient is negative, forcing the variance to increase toward 1. When $\sigma_j^2 > 1$, gradient is positive, forcing variance down toward 1. The prior $\mathcal{N}(0, I)$ acts as an elastic spring pulling latent embeddings toward the origin with unit variance!
+
+---
+
+### Illustration 5 (Numerical): Discrete Mutual Information on a Binary Symmetric Channel
+A noisy binary communications channel transmits input bit $X \in \{0, 1\}$ to receiver $Y \in \{0, 1\}$.
+- Input prior: $P(X = 0) = 0.60, P(X = 1) = 0.40$.
+- Channel noise flip rate: $\epsilon = P(Y = 1 \mid X = 0) = P(Y = 0 \mid X = 1) = 0.10$.
+- Channel fidelity: $P(Y = 0 \mid X = 0) = P(Y = 1 \mid X = 1) = 0.90$.
+
+All computations use base 2 logarithms (**bits**).
+
+1. **Step 1: Compute Joint PMF $P(X, Y)$:**
+   $$P(X = 0, Y = 0) = (0.60)(0.90) = \mathbf{0.540000}$$
+   $$P(X = 0, Y = 1) = (0.60)(0.10) = \mathbf{0.060000}$$
+   $$P(X = 1, Y = 0) = (0.40)(0.10) = \mathbf{0.040000}$$
+   $$P(X = 1, Y = 1) = (0.40)(0.90) = \mathbf{0.360000}$$
+
+2. **Step 2: Compute Output Marginals $P(Y)$:**
+   $$P(Y = 0) = 0.54 + 0.04 = \mathbf{0.580000}$$
+   $$P(Y = 1) = 0.06 + 0.36 = \mathbf{0.420000}$$
+
+3. **Step 3: Compute Input Entropy $H(X)$:**
+   $$H(X) = -0.60 \log_2(0.60) - 0.40 \log_2(0.40)$$
+   Since $\log_2(0.60) \approx -0.736966$ and $\log_2(0.40) \approx -1.321928$:
+   $$H(X) = -0.60(-0.736966) - 0.40(-1.321928) = 0.442179 + 0.528771 = \mathbf{0.970951\text{ bits}}$$
+
+4. **Step 4: Compute Output Entropy $H(Y)$:**
+   $$H(Y) = -0.58 \log_2(0.58) - 0.42 \log_2(0.42)$$
+   Since $\log_2(0.58) \approx -0.785875$ and $\log_2(0.42) \approx -1.251539$:
+   $$H(Y) = -0.58(-0.785875) - 0.42(-1.251539) = 0.455808 + 0.525646 = \mathbf{0.981454\text{ bits}}$$
+
+5. **Step 5: Compute Conditional Entropy $H(Y \mid X)$:**
+   For any transmitted bit $X = x$, the error distribution is $\text{Bernoulli}(0.10)$:
+   $$H(Y \mid X = 0) = H(Y \mid X = 1) = H_b(0.10) = -0.10 \log_2(0.10) - 0.90 \log_2(0.90)$$
+   $$H_b(0.10) = -0.10(-3.321928) - 0.90(-0.152003) = 0.332193 + 0.136803 = \mathbf{0.468996\text{ bits}}$$
+   $$H(Y \mid X) = P(X = 0) H_b(0.10) + P(X = 1) H_b(0.10) = \mathbf{0.468996\text{ bits}}$$
+
+6. **Step 6: Compute Mutual Information $I(X; Y)$:**
+   $$\mathbf{I(X; Y) = H(Y) - H(Y \mid X) = 0.981454 - 0.468996 = 0.512458\text{ bits}}$$
+   *Channel Capacity Implication:* Out of $0.971$ bits of input uncertainty, exactly $0.512$ bits ($52.8\%$) survive channel noise and reach the receiver!
 
 ---
 

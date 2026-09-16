@@ -165,6 +165,47 @@ $$\mathbf{\text{Posterior} = \frac{\text{Likelihood} \times \text{Prior}}{\text{
 
 ---
 
+#### Theorem 3.1.4: The Odds Form of Bayes' Rule & The Bayes Factor
+For two competing hypotheses $H_1$ and $H_2$ under evidence $D$:
+$$\mathbf{\frac{P(H_1 \mid D)}{P(H_2 \mid D)} = \frac{P(D \mid H_1)}{P(D \mid H_2)} \times \frac{P(H_1)}{P(H_2)}}$$
+$$\text{Posterior Odds} = \text{Bayes Factor (Likelihood Ratio)} \times \text{Prior Odds}$$
+
+##### Derivation:
+1. Write Bayes' theorem for hypothesis $H_1$:
+   $$P(H_1 \mid D) = \frac{P(D \mid H_1) P(H_1)}{P(D)}$$
+2. Write Bayes' theorem for hypothesis $H_2$:
+   $$P(H_2 \mid D) = \frac{P(D \mid H_2) P(H_2)}{P(D)}$$
+3. Divide the first equation by the second:
+   $$\frac{P(H_1 \mid D)}{P(H_2 \mid D)} = \frac{\frac{P(D \mid H_1) P(H_1)}{P(D)}}{\frac{P(D \mid H_2) P(H_2)}{P(D)}} = \frac{P(D \mid H_1)}{P(D \mid H_2)} \times \frac{P(H_1)}{P(H_2)} \quad \blacksquare$$
+
+*Advantage in AI:* The difficult-to-compute marginal evidence term $P(D) = \sum_k P(D \mid H_k) P(H_k)$ cancels out completely! This is why binary classification logits $\log \frac{P(y=1|x)}{P(y=0|x)}$ are so computationally friendly in deep learning.
+
+---
+
+#### Theorem 3.1.5: Laplace's Rule of Succession & Smoothing
+Suppose an experiment has an unknown success probability $p \in [0, 1]$ drawn from an uninformative uniform prior $p \sim \text{Uniform}(0, 1)$.
+If we observe $k$ successes in $n$ independent trials, the posterior predictive probability that the **next** trial is a success is:
+$$\mathbf{P(X_{n+1} = 1 \mid k \text{ successes in } n \text{ trials}) = \frac{k + 1}{n + 2}}$$
+
+##### First-Principles Derivation via Beta Integrals:
+1. The prior distribution on parameter $p$ is uniform on $[0, 1]$: $f(p) = 1$.
+2. The likelihood of observing $k$ successes in $n$ trials is proportional to the binomial kernel:
+   $$P(\text{data} \mid p) \propto p^k (1 - p)^{n - k}$$
+3. By Bayes' theorem, the posterior density over $p$ is:
+   $$f(p \mid \text{data}) = \frac{p^k (1 - p)^{n - k}}{\int_0^1 u^k (1 - u)^{n - k} du}$$
+4. Recall Euler's Beta function: $B(\alpha, \beta) = \int_0^1 u^{\alpha - 1} (1 - u)^{\beta - 1} du = \frac{\Gamma(\alpha) \Gamma(\beta)}{\Gamma(\alpha + \beta)}$.
+   The normalizing denominator is $B(k + 1, n - k + 1)$.
+5. The probability that the next trial $X_{n+1} = 1$ is the expected value of $p$ under the posterior:
+   $$P(X_{n+1} = 1 \mid \text{data}) = \mathbb{E}[p \mid \text{data}] = \int_0^1 p \cdot f(p \mid \text{data}) dp = \frac{\int_0^1 p^{k+1} (1 - p)^{n - k} dp}{\int_0^1 p^k (1 - p)^{n - k} dp}$$
+6. Evaluating the ratio of Beta functions:
+   $$\frac{B(k + 2, n - k + 1)}{B(k + 1, n - k + 1)} = \frac{\frac{\Gamma(k + 2) \Gamma(n - k + 1)}{\Gamma(n + 3)}}{\frac{\Gamma(k + 1) \Gamma(n - k + 1)}{\Gamma(n + 2)}} = \frac{\Gamma(k + 2)}{\Gamma(k + 1)} \cdot \frac{\Gamma(n + 2)}{\Gamma(n + 3)}$$
+7. Using the recurrence $\Gamma(m + 1) = m \Gamma(m)$:
+   $$\frac{(k + 1) \Gamma(k + 1)}{\Gamma(k + 1)} \cdot \frac{\Gamma(n + 2)}{(n + 2) \Gamma(n + 2)} = \frac{k + 1}{n + 2} \quad \blacksquare$$
+
+*Deep Learning Role:* If $k = 0$, the naive maximum likelihood estimate asserts $P(\text{event}) = \frac{0}{n} = 0$, causing log-probabilities $\log(0) = -\infty$ in language models and zero gradients. Laplace's rule replaces $0$ with $\frac{1}{n + 2}$, known in NLP and Naive Bayes as **Add-1 (Laplace) Smoothing**!
+
+---
+
 ### 6. Statistical Independence vs. Conditional Independence
 
 #### Definition 3.1.6: Mutual Independence
@@ -365,6 +406,95 @@ Combined:
 The treatment appears to **harm** patients in the aggregate, even though it helps every demographic!
 Why? Because the confounding variable (gender) was heavily unbalanced across the test arms.
 Conditioning on the correct variables via probability theory is essential to avoid lethal causal errors.
+
+---
+
+### Case C: Continuous Gaussian Naive Bayes Classifier
+Consider a classification task between two classes $C_1$ and $C_2$ with continuous feature vector $x = [x_1, x_2]^T \in \mathbb{R}^2$.
+- **Class Priors:** $P(C_1) = 0.60, \quad P(C_2) = 0.40$
+- **Class-Conditional Gaussian Models (unit variance $\sigma^2 = 1$):**
+  - Class 1: Centroid $\mu_1 = [0.0, 2.0]^T \implies x_1 \sim \mathcal{N}(0, 1), \; x_2 \sim \mathcal{N}(2, 1)$
+  - Class 2: Centroid $\mu_2 = [2.0, 0.0]^T \implies x_1 \sim \mathcal{N}(2, 1), \; x_2 \sim \mathcal{N}(0, 1)$
+
+Evaluate the posterior probability $P(C_1 \mid x)$ for query point $x = [1.0, 1.0]^T$.
+
+#### Step 1: Compute Feature Likelihoods via 1D Normal PDF
+Recall the 1D Gaussian probability density function:
+$$p(x_d \mid \mu, \sigma) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left( -\frac{(x_d - \mu)^2}{2\sigma^2} \right)$$
+Since $\sigma = 1$: $\frac{1}{\sqrt{2\pi}} \approx 0.398942$.
+
+1. **For Class $C_1$ ($\mu = [0.0, 2.0]^T$):**
+   - $x_1$: $(1.0 - 0.0)^2 = 1.0 \implies p(x_1 \mid C_1) = 0.398942 \cdot e^{-0.5} = (0.398942)(0.606531) \approx 0.241971$
+   - $x_2$: $(1.0 - 2.0)^2 = 1.0 \implies p(x_2 \mid C_1) = 0.398942 \cdot e^{-0.5} \approx 0.241971$
+   - Joint likelihood under Naive Bayes conditional independence:
+     $$p(x \mid C_1) = p(x_1 \mid C_1) \cdot p(x_2 \mid C_1) = (0.241971)^2 \approx \mathbf{0.058550}$$
+
+2. **For Class $C_2$ ($\mu = [2.0, 0.0]^T$):**
+   - $x_1$: $(1.0 - 2.0)^2 = 1.0 \implies p(x_1 \mid C_2) \approx 0.241971$
+   - $x_2$: $(1.0 - 0.0)^2 = 1.0 \implies p(x_2 \mid C_2) \approx 0.241971$
+   - Joint likelihood:
+     $$p(x \mid C_2) = p(x_1 \mid C_2) \cdot p(x_2 \mid C_2) = (0.241971)^2 \approx \mathbf{0.058550}$$
+
+#### Step 2: Incorporate Priors & Compute Marginal Evidence
+- Class 1 unnormalized joint:
+  $$p(x \cap C_1) = p(x \mid C_1) P(C_1) = (0.058550)(0.60) = \mathbf{0.035130}$$
+- Class 2 unnormalized joint:
+  $$p(x \cap C_2) = p(x \mid C_2) P(C_2) = (0.058550)(0.40) = \mathbf{0.023420}$$
+- Marginal Evidence $p(x)$:
+  $$p(x) = p(x \cap C_1) + p(x \cap C_2) = 0.035130 + 0.023420 = \mathbf{0.058550}$$
+
+#### Step 3: Compute Posterior Probabilities
+$$P(C_1 \mid x) = \frac{p(x \cap C_1)}{p(x)} = \frac{0.035130}{0.058550} = \mathbf{0.600000} \quad (\mathbf{60.0\%})$$
+$$P(C_2 \mid x) = \frac{p(x \cap C_2)}{p(x)} = \frac{0.023420}{0.058550} = \mathbf{0.400000} \quad (\mathbf{40.0\%})$$
+
+**Geometric Insight:** Point $x = [1, 1]^T$ sits exactly halfway between the two class means in Euclidean space ($\|x - \mu_1\|_2 = \|x - \mu_2\|_2 = \sqrt{2}$). Because the likelihood evidence is completely ambiguous ($0.058550 = 0.058550$), Bayes' Theorem gracefully defaults to the **prior ratio** $60:40$!
+
+---
+
+### Case D: Sequential Bayesian Updating (Online Learning)
+Consider three hypotheses regarding a mystery coin:
+- $H_1$: Fair coin ($P(\text{Heads} \mid H_1) = 0.50$)
+- $H_2$: Biased coin ($P(\text{Heads} \mid H_2) = 0.75$)
+- $H_3$: Two-headed coin ($P(\text{Heads} \mid H_3) = 1.00$)
+
+Initial uninformative prior: $P(H_1) = P(H_2) = P(H_3) = \frac{1}{3}$.
+We flip the coin twice and observe two consecutive Heads: $D_1 = \text{Heads}$, $D_2 = \text{Heads}$.
+
+#### Stage 1: Update Beliefs After Flip 1 ($D_1 = \text{Heads}$)
+1. **Likelihoods:** $P(D_1 \mid H_1) = 0.50$, $P(D_1 \mid H_2) = 0.75$, $P(D_1 \mid H_3) = 1.00$.
+2. **Joint probabilities:**
+   - $P(D_1 \cap H_1) = 0.50 \times \frac{1}{3} = \frac{0.50}{3}$
+   - $P(D_1 \cap H_2) = 0.75 \times \frac{1}{3} = \frac{0.75}{3}$
+   - $P(D_1 \cap H_3) = 1.00 \times \frac{1}{3} = \frac{1.00}{3}$
+3. **Marginal Evidence:**
+   $$P(D_1) = \frac{0.50 + 0.75 + 1.00}{3} = \frac{2.25}{3} = 0.75$$
+4. **Posteriors After 1st Flip:**
+   $$P(H_1 \mid D_1) = \frac{0.50 / 3}{2.25 / 3} = \frac{0.50}{2.25} = \mathbf{\frac{2}{9}} \approx \mathbf{22.22\%}$$
+   $$P(H_2 \mid D_1) = \frac{0.75 / 3}{2.25 / 3} = \frac{0.75}{2.25} = \mathbf{\frac{3}{9}} \approx \mathbf{33.33\%}$$
+   $$P(H_3 \mid D_1) = \frac{1.00 / 3}{2.25 / 3} = \frac{1.00}{2.25} = \mathbf{\frac{4}{9}} \approx \mathbf{44.44\%}$$
+
+#### Stage 2: Update Beliefs After Flip 2 ($D_2 = \text{Heads}$)
+In Bayesian online learning, the **posterior from step $t$ becomes the prior for step $t+1$**:
+1. **New Priors:** $P(H_1) = \frac{2}{9}$, $P(H_2) = \frac{3}{9}$, $P(H_3) = \frac{4}{9}$.
+2. **New Joint probabilities:**
+   - $P(D_2 \cap H_1) = 0.50 \times \frac{2}{9} = \frac{1.00}{9} = \frac{4}{36}$
+   - $P(D_2 \cap H_2) = 0.75 \times \frac{3}{9} = \frac{2.25}{9} = \frac{9}{36}$
+   - $P(D_2 \cap H_3) = 1.00 \times \frac{4}{9} = \frac{4.00}{9} = \frac{16}{36}$
+3. **New Marginal Evidence:**
+   $$P(D_2) = \frac{1.00 + 2.25 + 4.00}{9} = \frac{7.25}{9} = \frac{29}{36} \approx 0.805556$$
+4. **Posteriors After 2nd Flip:**
+   $$P(H_1 \mid D_1, D_2) = \frac{4 / 36}{29 / 36} = \mathbf{\frac{4}{29}} \approx \mathbf{13.79\%}$$
+   $$P(H_2 \mid D_1, D_2) = \frac{9 / 36}{29 / 36} = \mathbf{\frac{9}{29}} \approx \mathbf{31.03\%}$$
+   $$P(H_3 \mid D_1, D_2) = \frac{16 / 36}{29 / 36} = \mathbf{\frac{16}{29}} \approx \mathbf{55.17\%}$$
+
+#### Batch Verification:
+Joint likelihood of 2 independent heads:
+- $P(HH \mid H_1) = 0.5^2 = 0.25$
+- $P(HH \mid H_2) = 0.75^2 = 0.5625$
+- $P(HH \mid H_3) = 1.0^2 = 1.0000$
+Ratio: $0.25 : 0.5625 : 1.0000 \equiv 1 : 2.25 : 4 \equiv 4 : 9 : 16$.
+Normalized: $\frac{4}{29}, \frac{9}{29}, \frac{16}{29}$.
+**Theorem Confirmed:** Sequential online updating matches batch updating with 100% exact algebraic precision!
 
 ---
 

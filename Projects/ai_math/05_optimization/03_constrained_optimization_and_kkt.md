@@ -107,6 +107,114 @@ The condition $\lambda_i^* g_i(x^*) = 0$ allows only **two mutually exclusive st
 
 ---
 
+### Deep Derivation 5.3.1: Complete Proof of the Weak Duality Theorem
+
+We prove from first principles that the dual optimal value is always an absolute lower bound on the primal optimal value ($d^* \le p^*$), regardless of convexity.
+
+#### 1. Setup
+Let $\tilde{x} \in \mathbb{R}^n$ be any primal feasible point:
+$$g_i(\tilde{x}) \le 0 \quad \forall i = 1, \dots, m, \qquad h_j(\tilde{x}) = 0 \quad \forall j = 1, \dots, p$$
+Let $(\lambda, \nu)$ be any dual feasible pair: $\lambda_i \ge 0$ for all $i = 1, \dots, m$.
+
+#### 2. Lagrangian Inequality at Primal Feasible Points
+Evaluate the Lagrangian at $\tilde{x}$:
+$$\mathcal{L}(\tilde{x}, \lambda, \nu) = f(\tilde{x}) + \sum_{i=1}^m \underbrace{\lambda_i}_{\ge 0} \underbrace{g_i(\tilde{x})}_{\le 0} + \sum_{j=1}^p \nu_j \underbrace{h_j(\tilde{x})}_{= 0}$$
+Since each product $\lambda_i g_i(\tilde{x}) \le 0$ and each $\nu_j h_j(\tilde{x}) = 0$:
+$$\sum_{i=1}^m \lambda_i g_i(\tilde{x}) + \sum_{j=1}^p \nu_j h_j(\tilde{x}) \le 0$$
+Therefore:
+$$\mathcal{L}(\tilde{x}, \lambda, \nu) \le f(\tilde{x})$$
+
+#### 3. Infimum Property
+By definition, the dual function $g(\lambda, \nu)$ is the infimum of $\mathcal{L}(x, \lambda, \nu)$ over all $x \in \mathbb{R}^n$:
+$$g(\lambda, \nu) = \inf_{x \in \mathbb{R}^n} \mathcal{L}(x, \lambda, \nu) \le \mathcal{L}(\tilde{x}, \lambda, \nu)$$
+Combining this with step 2:
+$$g(\lambda, \nu) \le f(\tilde{x})$$
+This inequality holds for **every single primal feasible point** $\tilde{x} \in \mathcal{D}$.
+
+#### 4. Taking Infimum over Primal and Supremum over Dual
+Since $g(\lambda, \nu) \le f(\tilde{x})$ holds for all feasible $\tilde{x}$:
+$$g(\lambda, \nu) \le \inf_{\tilde{x} \in \mathcal{D}} f(\tilde{x}) = p^*$$
+Since this holds for every dual feasible pair $(\lambda \succeq \mathbf{0}, \nu)$:
+$$d^* = \sup_{\lambda \succeq \mathbf{0}, \,\, \nu} g(\lambda, \nu) \le p^*$$
+$$\mathbf{d^* \le p^*} \quad \blacksquare$$
+*Significance:* Weak duality requires zero assumptions on convexity, differentiability, or continuity. The dual objective always provides a rigorous certificate / lower bound for the primal problem!
+
+---
+
+### Deep Derivation 5.3.2: Complete Derivation of the Dual SVM & Kernel Trick
+
+We derive the Wolfe Dual quadratic program of the Hard-Margin Support Vector Machine from first principles.
+
+#### 1. Primal Formulation
+Given $N$ training examples $\{(\mathbf{x}_i, y_i)\}_{i=1}^N$ with $\mathbf{x}_i \in \mathbb{R}^D, y_i \in \{-1, +1\}$:
+$$\min_{\mathbf{w} \in \mathbb{R}^D, \,\, b \in \mathbb{R}} \quad \frac{1}{2} \|\mathbf{w}\|_2^2 \quad \text{subject to} \quad 1 - y_i(\mathbf{w}^T \mathbf{x}_i + b) \le 0, \quad i = 1, \dots, N$$
+
+#### 2. Formulating the Lagrangian
+Attach Lagrange multipliers $\alpha_i \ge 0$:
+$$\mathcal{L}(\mathbf{w}, b, \boldsymbol{\alpha}) = \frac{1}{2} \mathbf{w}^T \mathbf{w} + \sum_{i=1}^N \alpha_i \left[ 1 - y_i(\mathbf{w}^T \mathbf{x}_i + b) \right] = \frac{1}{2} \mathbf{w}^T \mathbf{w} - \sum_{i=1}^N \alpha_i y_i \mathbf{w}^T \mathbf{x}_i - b \sum_{i=1}^N \alpha_i y_i + \sum_{i=1}^N \alpha_i$$
+
+#### 3. Primal Stationarity Conditions
+Differentiate $\mathcal{L}$ with respect to the primal variables $\mathbf{w}$ and $b$ and set to zero:
+1. With respect to $\mathbf{w}$:
+   $$\nabla_{\mathbf{w}} \mathcal{L} = \mathbf{w} - \sum_{i=1}^N \alpha_i y_i \mathbf{x}_i = \mathbf{0} \implies \mathbf{\mathbf{w}^* = \sum_{i=1}^N \alpha_i y_i \mathbf{x}_i}$$
+2. With respect to $b$:
+   $$\frac{\partial \mathcal{L}}{\partial b} = -\sum_{i=1}^N \alpha_i y_i = 0 \implies \mathbf{\sum_{i=1}^N \alpha_i y_i = 0}$$
+
+#### 4. Substituting Stationarity back into the Lagrangian (Wolfe Dual)
+Substitute $\mathbf{w}^* = \sum_{i=1}^N \alpha_i y_i \mathbf{x}_i$ and $\sum_{i=1}^N \alpha_i y_i = 0$ back into $\mathcal{L}$:
+$$\mathcal{L} = \frac{1}{2} \left( \sum_{i=1}^N \alpha_i y_i \mathbf{x}_i \right)^T \left( \sum_{j=1}^N \alpha_j y_j \mathbf{x}_j \right) - \sum_{i=1}^N \alpha_i y_i \left( \sum_{j=1}^N \alpha_j y_j \mathbf{x}_j \right)^T \mathbf{x}_i - b(0) + \sum_{i=1}^N \alpha_i$$
+$$= \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j) - \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j) + \sum_{i=1}^N \alpha_i$$
+$$= \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j)$$
+
+#### 5. The Dual Quadratic Program
+The dual optimization problem depends **only on the dual multipliers $\boldsymbol{\alpha}$**:
+$$\mathbf{\max_{\boldsymbol{\alpha} \in \mathbb{R}^N} \quad \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j) \quad \text{s.t.} \quad \alpha_i \ge 0 \,\, \forall i, \quad \sum_{i=1}^N \alpha_i y_i = 0}$$
+
+#### 6. The Kernel Trick Emergence
+Notice that the features $\mathbf{x}_i$ appear **exclusively as inner products $\mathbf{x}_i^T \mathbf{x}_j$**!
+By replacing the Euclidean dot product with a positive definite kernel function:
+$$\mathbf{x}_i^T \mathbf{x}_j \longrightarrow k(\mathbf{x}_i, \mathbf{x}_j) = \phi(\mathbf{x}_i)^T \phi(\mathbf{x}_j)$$
+the SVM seamlessly operates in an infinite-dimensional Reproducing Kernel Hilbert Space (RKHS) (e.g. Gaussian RBF kernel $k(\mathbf{x}, \mathbf{z}) = \exp(-\gamma \|\mathbf{x} - \mathbf{z}\|_2^2)$) without ever calculating the explicit high-dimensional feature maps! $\blacksquare$
+
+---
+
+### Deep Derivation 5.3.3: Analytical Derivation of the Water-Filling Algorithm via KKT
+
+In distributed machine learning and information theory, allocating a finite resource $P$ across $M$ independent channels/workers to maximize total logarithmic throughput is solved by **Water-Filling**.
+
+#### 1. Optimization Formulation
+$$\min_{p_1, \dots, p_M} \quad -\sum_{i=1}^M \ln\left( 1 + \frac{p_i}{\sigma_i^2} \right) \quad \text{subject to} \quad \sum_{i=1}^M p_i = P, \quad -p_i \le 0 \,\, \forall i$$
+where $\sigma_i^2 > 0$ represents channel noise (or worker latency/variance).
+
+#### 2. Lagrangian Formulation
+Attach equality multiplier $\nu \in \mathbb{R}$ and inequality multipliers $\lambda_i \ge 0$:
+$$\mathcal{L}(\mathbf{p}, \nu, \boldsymbol{\lambda}) = -\sum_{i=1}^M \ln\left( \frac{p_i + \sigma_i^2}{\sigma_i^2} \right) + \nu \left( \sum_{i=1}^M p_i - P \right) - \sum_{i=1}^M \lambda_i p_i$$
+
+#### 3. KKT Conditions
+1. **Stationarity:**
+   $$\frac{\partial \mathcal{L}}{\partial p_i} = -\frac{1}{p_i + \sigma_i^2} + \nu - \lambda_i = 0 \implies \mathbf{\frac{1}{p_i + \sigma_i^2} = \nu - \lambda_i}$$
+2. **Primal Feasibility:** $\sum_{i=1}^M p_i = P, \quad p_i \ge 0$.
+3. **Dual Feasibility:** $\lambda_i \ge 0$.
+4. **Complementary Slackness:** $\lambda_i p_i = 0 \,\, \forall i$.
+
+#### 4. Disjunctive Analysis
+Let $\mu = \frac{1}{\nu}$ represent the constant **water level**.
+- **If $p_i > 0$ (Channel receives power):**
+  By complementary slackness, $\lambda_i = 0$.
+  Stationarity yields:
+  $$\frac{1}{p_i + \sigma_i^2} = \nu = \frac{1}{\mu} \implies p_i + \sigma_i^2 = \mu \implies \mathbf{p_i^* = \mu - \sigma_i^2}$$
+- **If $p_i = 0$ (Channel shut off due to high noise):**
+  Then $\lambda_i \ge 0$, which implies $\nu - \lambda_i \le \nu \implies \frac{1}{\sigma_i^2} \le \frac{1}{\mu} \implies \sigma_i^2 \ge \mu$.
+
+#### 5. Unified Water-Filling Solution
+Combining both cases:
+$$\mathbf{p_i^* = \max(0, \, \mu - \sigma_i^2) = (\mu - \sigma_i^2)^+}$$
+where the water level $\mu$ is uniquely determined by the total budget:
+$$\mathbf{\sum_{i=1}^M \max(0, \, \mu - \sigma_i^2) = P}$$
+Channels with noise floor $\sigma_i^2 \ge \mu$ receive zero resource, while lower-noise channels are filled up to the uniform level $\mu$!
+
+---
+
 ## Part 3: Geometric & Algebraic Interpretation
 
 ### The Force Balance Geometry of KKT Stationarity
@@ -279,6 +387,110 @@ where $\Pi_{\mathcal{C}}(v) = \arg\min_{z \in \mathcal{C}} \|z - v\|_2$ is the E
 In adversarial robustness, for an $L_\infty$ attack with budget $\epsilon$:
 $$\Pi_{[-\epsilon, \epsilon]}(\delta) = \text{clip}(\delta, -\epsilon, +\epsilon)$$
 The projection simply clamps each pixel perturbation between $-\epsilon$ and $+\epsilon$!
+
+---
+
+### Illustration 4 (Numerical): Step-by-Step 2D Hard-Margin SVM Solved by Hand
+
+Let us solve the dual quadratic program of a Support Vector Machine by hand on a 2D toy dataset and recover the optimal hyperplane parameters $(\mathbf{w}^*, b^*)$ and geometric margin.
+
+#### 1. Dataset Formulation
+Given $N = 3$ training points in $\mathbb{R}^2$:
+- $\mathbf{x}_1 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}, \quad y_1 = +1$
+- $\mathbf{x}_2 = \begin{bmatrix} 2 \\ 0 \end{bmatrix}, \quad y_2 = +1$
+- $\mathbf{x}_3 = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \quad y_3 = -1$
+
+#### 2. Kernel Matrix Gram Computations
+Compute the dot products $K_{ij} = \mathbf{x}_i^T \mathbf{x}_j$:
+- $K_{11} = 1^2 + 1^2 = 2, \quad K_{12} = 1(2) + 1(0) = 2, \quad K_{13} = 1(0) + 1(0) = 0$
+- $K_{22} = 2^2 + 0^2 = 4, \quad K_{23} = 2(0) + 0(0) = 0$
+- $K_{33} = 0^2 + 0^2 = 0$
+
+#### 3. Dual Quadratic Objective
+Recall from Deep Derivation 5.3.2:
+$$W(\alpha_1, \alpha_2, \alpha_3) = \sum_{i=1}^3 \alpha_i - \frac{1}{2} \sum_{i=1}^3 \sum_{j=1}^3 \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j)$$
+$$\sum_{i=1}^3 \alpha_i y_i = \alpha_1(+1) + \alpha_2(+1) + \alpha_3(-1) = 0 \implies \mathbf{\alpha_3 = \alpha_1 + \alpha_2}$$
+
+Substitute $\alpha_3 = \alpha_1 + \alpha_2$ to eliminate $\alpha_3$:
+$$W(\alpha_1, \alpha_2) = \alpha_1 + \alpha_2 + (\alpha_1 + \alpha_2) - \frac{1}{2} \left[ 2\alpha_1^2 + 4\alpha_2^2 + 4\alpha_1 \alpha_2 \right] = 2\alpha_1 + 2\alpha_2 - \alpha_1^2 - 2\alpha_2^2 - 2\alpha_1 \alpha_2$$
+
+#### 4. Stationary Points of the Dual Objective
+$$\frac{\partial W}{\partial \alpha_1} = 2 - 2\alpha_1 - 2\alpha_2 = 0 \implies \alpha_1 + \alpha_2 = 1.0$$
+$$\frac{\partial W}{\partial \alpha_2} = 2 - 4\alpha_2 - 2\alpha_1 = 0 \implies \alpha_1 + 2\alpha_2 = 1.0$$
+Subtracting the first equation from the second:
+$$\alpha_2 = 0.0000 \implies \mathbf{\alpha_1^* = 1.0000}$$
+Now solve for $\alpha_3^*$:
+$$\mathbf{\alpha_3^* = \alpha_1^* + \alpha_2^* = 1.0000 + 0.0000 = 1.0000}$$
+
+#### 5. Identifying the Support Vectors
+- $\alpha_1^* = 1.0000 > 0 \implies \mathbf{x}_1 = [1, 1]^T$ is an **Active Support Vector**!
+- $\alpha_2^* = 0.0000 \implies \mathbf{x}_2 = [2, 0]^T$ is a **Non-Support Vector** (zero influence on boundary).
+- $\alpha_3^* = 1.0000 > 0 \implies \mathbf{x}_3 = [0, 0]^T$ is an **Active Support Vector**!
+
+#### 6. Recovering Primal Parameters $\mathbf{w}^*$ and $b^*$
+1. **Weight Vector:**
+   $$\mathbf{w}^* = \sum_{i=1}^3 \alpha_i^* y_i \mathbf{x}_i = 1.0(+1)\begin{bmatrix} 1 \\ 1 \end{bmatrix} + 0.0(+1)\begin{bmatrix} 2 \\ 0 \end{bmatrix} + 1.0(-1)\begin{bmatrix} 0 \\ 0 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.0000 \\ 1.0000 \end{bmatrix}}$$
+2. **Bias Scalar $b^*$:**
+   Using support vector $\mathbf{x}_1 = [1, 1]^T$ ($y_1 = +1$):
+   $$y_1(\mathbf{w}^{*T} \mathbf{x}_1 + b^*) = 1 \implies 1(1(1) + 1(1) + b^*) = 1 \implies 2 + b^* = 1 \implies \mathbf{b^* = -1.0000}$$
+   Verify with support vector $\mathbf{x}_3 = [0, 0]^T$ ($y_3 = -1$):
+   $$y_3(\mathbf{w}^{*T} \mathbf{x}_3 + b^*) = 1 \implies -1(0 + b^*) = 1 \implies -b^* = 1 \implies \mathbf{b^* = -1.0000} \quad \checkmark$$
+
+#### 7. Margin and Duality Gap Check
+- **Geometric Separation Margin:**
+  $$\gamma = \frac{1}{\|\mathbf{w}^*\|_2} = \frac{1}{\sqrt{1^2 + 1^2}} = \frac{1}{\sqrt{2}} \approx \mathbf{0.707107}$$
+- **Primal Objective Value:**
+  $$p^* = \frac{1}{2} \|\mathbf{w}^*\|_2^2 = \frac{1}{2}(1^2 + 1^2) = \mathbf{1.0000}$$
+- **Dual Objective Value:**
+  $$d^* = W(\alpha_1^*, \alpha_2^*, \alpha_3^*) = 1.0 + 0.0 + 1.0 - \frac{1}{2}[2(1)^2] = 2.0 - 1.0 = \mathbf{1.0000}$$
+$$\mathbf{p^* = d^* = 1.0000 \implies \text{Duality Gap} = 0.0000 \quad (\text{Strong Duality Holds!})}$$
+
+---
+
+### Illustration 5 (Numerical): Concrete Water-Filling Resource Allocation by Hand
+
+Let us solve the KKT water-filling power allocation problem across $M = 3$ heterogeneous communication channels / cloud workers.
+
+#### 1. Setup
+- Total power budget: $P = 4.00$
+- Channel noise variance levels:
+  $$\sigma_1^2 = 1.00, \quad \sigma_2^2 = 2.00, \quad \sigma_3^2 = 5.00$$
+- Maximize capacity:
+  $$\max_{p_1, p_2, p_3 \ge 0} \sum_{i=1}^3 \ln\left( 1 + \frac{p_i}{\sigma_i^2} \right) \quad \text{subject to} \quad p_1 + p_2 + p_3 = 4.00$$
+
+#### 2. KKT Solution Structure
+Recall from Deep Derivation 5.3.3:
+$$p_i^* = \max(0, \, \mu - \sigma_i^2)$$
+where water level $\mu$ satisfies $\sum_{i=1}^3 \max(0, \, \mu - \sigma_i^2) = 4.00$.
+
+#### 3. Determining Active Channels via Hypothesis Testing
+- **Hypothesis 1: All 3 channels receive power ($p_1, p_2, p_3 > 0$):**
+  $$(\mu - 1.00) + (\mu - 2.00) + (\mu - 5.00) = 4.00 \implies 3\mu - 8.00 = 4.00 \implies 3\mu = 12.00 \implies \mu = 4.00$$
+  Check channel 3 allocation:
+  $$p_3 = \mu - \sigma_3^2 = 4.00 - 5.00 = -1.00 < 0 \quad (\mathbf{VIOLATION!})$$
+  Channel 3 is too noisy; it cannot be active.
+
+- **Hypothesis 2: Only Channels 1 and 2 are active ($p_3^* = 0$):**
+  $$(\mu - 1.00) + (\mu - 2.00) = 4.00 \implies 2\mu - 3.00 = 4.00 \implies 2\mu = 7.00 \implies \mathbf{\mu = 3.5000}$$
+  Verify feasibility:
+  - Channel 1: $p_1^* = 3.50 - 1.00 = \mathbf{2.5000} \ge 0 \quad \checkmark$
+  - Channel 2: $p_2^* = 3.50 - 2.00 = \mathbf{1.5000} \ge 0 \quad \checkmark$
+  - Channel 3: $\sigma_3^2 = 5.00 > \mu = 3.50 \implies p_3^* = \mathbf{0.0000} \quad \checkmark$
+
+#### 4. Total Budget and Multiplier Verification
+- **Total Power Consumed:**
+  $$p_1^* + p_2^* + p_3^* = 2.5000 + 1.5000 + 0.0000 = \mathbf{4.0000} \quad \checkmark$$
+- **Dual Multipliers:**
+  - Equality multiplier: $\nu^* = \frac{1}{\mu} = \frac{1}{3.50} \approx \mathbf{0.285714}$
+  - Inequality multiplier for inactive channel 3:
+    $$\lambda_3^* = \nu^* - \frac{1}{\sigma_3^2} = \frac{1}{3.50} - \frac{1}{5.00} = \frac{2}{7} - \frac{1}{5} = \frac{3}{35} \approx \mathbf{0.085714} \ge 0 \quad \checkmark$$
+
+#### 5. Capacity Comparison: Optimal Water-Filling vs. Uniform Allocation
+- **Water-Filling Capacity:**
+  $$C_{\text{opt}} = \ln\left(1 + \frac{2.5}{1.0}\right) + \ln\left(1 + \frac{1.5}{2.0}\right) + \ln\left(1 + \frac{0}{5.0}\right) = \ln(3.50) + \ln(1.75) + \ln(1.0) = \ln(6.125) \approx \mathbf{1.812379 \text{ nats}}$$
+- **Naive Uniform Allocation ($p_1 = p_2 = p_3 = 4/3 \approx 1.3333$):**
+  $$C_{\text{uniform}} = \ln\left(1 + \frac{1.333}{1}\right) + \ln\left(1 + \frac{1.333}{2}\right) + \ln\left(1 + \frac{1.333}{5}\right) = \ln(2.333) + \ln(1.667) + \ln(1.267) \approx \mathbf{1.594451 \text{ nats}}$$
+- **Gain:** Water-filling delivers a **$+13.67\%$ throughput improvement** by refusing to waste energy on high-noise channel 3!
 
 ---
 

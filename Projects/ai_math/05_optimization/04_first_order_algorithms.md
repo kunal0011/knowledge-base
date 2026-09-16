@@ -107,12 +107,123 @@ $$\eta_t = \frac{\eta_0}{t^\alpha} \quad \text{for } \alpha \in (0.5, 1.0]$$
 When distributing training across multiple GPUs, we scale the total batch size from $B \to k B$.
 Goyal et al. (2017, Facebook AI Research) proved the **Linear Scaling Rule**:
 $$\mathbf{\text{When batch size scales } B \to k B, \quad \text{scale learning rate } \eta \to k \eta}$$
-*Justification:*
-Over $k$ consecutive mini-batch steps of size $B$, the net weight change is:
-$$\Delta \theta_{\text{small}} = -\eta \sum_{j=1}^k \mathbf{g}_B^{(j)}(\theta) \approx -k \eta \nabla \mathcal{L}(\theta)$$
-A single giant mini-batch step of size $k B$ with scaled learning rate $\hat{\eta} = k \eta$ yields:
-$$\Delta \theta_{\text{large}} = -\hat{\eta} \mathbf{g}_{kB}(\theta) = -(k \eta) \nabla \mathcal{L}(\theta) \approx \Delta \theta_{\text{small}}$$
 The updates match!
+
+---
+
+### Deep Derivation 5.4.1: First-Principles Convergence Proof of Gradient Descent for $L$-Smooth Non-Convex Functions
+
+We prove that for any continuously differentiable, $L$-smooth function (the general class of deep neural network loss surfaces), Gradient Descent with step size $\eta \le 1/L$ converges to an approximate stationary point at rate $\mathcal{O}(1/\sqrt{T})$.
+
+#### 1. The Descent Lemma
+By definition of $L$-Lipschitz smoothness, $\|\nabla f(y) - \nabla f(x)\|_2 \le L \|y - x\|_2$.
+Integrating along the line segment between $x$ and $y$:
+$$f(y) \le f(x) + \nabla f(x)^T (y - x) + \frac{L}{2} \|y - x\|_2^2$$
+
+#### 2. Substituting the Gradient Step
+Apply this lemma to consecutive iterates $x_{t+1} = x_t - \eta \nabla f(x_t)$, so $x_{t+1} - x_t = -\eta \nabla f(x_t)$:
+$$f(x_{t+1}) \le f(x_t) + \nabla f(x_t)^T (-\eta \nabla f(x_t)) + \frac{L}{2} \|-\eta \nabla f(x_t)\|_2^2$$
+$$= f(x_t) - \eta \|\nabla f(x_t)\|_2^2 + \frac{\eta^2 L}{2} \|\nabla f(x_t)\|_2^2 = f(x_t) - \eta \left( 1 - \frac{\eta L}{2} \right) \|\nabla f(x_t)\|_2^2$$
+
+#### 3. Guaranteed Monotonic Descent
+For any learning rate $\eta \le \frac{1}{L}$, we have $1 - \frac{\eta L}{2} \ge \frac{1}{2}$.
+Setting $\eta = \frac{1}{L}$:
+$$f(x_{t+1}) \le f(x_t) - \frac{1}{2L} \|\nabla f(x_t)\|_2^2 \implies \|\nabla f(x_t)\|_2^2 \le 2L [f(x_t) - f(x_{t+1})]$$
+Notice: Every single step is guaranteed to strictly decrease the objective function unless the gradient is already zero!
+
+#### 4. Telescoping Summation Across $T$ Iterations
+Sum both sides from $t = 0$ to $T - 1$:
+$$\sum_{t=0}^{T-1} \|\nabla f(x_t)\|_2^2 \le 2L \sum_{t=0}^{T-1} [f(x_t) - f(x_{t+1})] = 2L [f(x_0) - f(x_T)]$$
+Let $f^*$ be the global infimum of $f$. Since $f(x_T) \ge f^*$, we have $f(x_0) - f(x_T) \le f(x_0) - f^*$:
+$$\sum_{t=0}^{T-1} \|\nabla f(x_t)\|_2^2 \le 2L [f(x_0) - f^*]$$
+
+#### 5. Deriving the Asymptotic Rate
+Divide by $T$:
+$$\min_{0 \le t \le T-1} \|\nabla f(x_t)\|_2^2 \le \frac{1}{T} \sum_{t=0}^{T-1} \|\nabla f(x_t)\|_2^2 \le \frac{2L (f(x_0) - f^*)}{T}$$
+Taking the square root:
+$$\mathbf{\min_{0 \le t \le T-1} \|\nabla f(x_t)\|_2 \le \sqrt{\frac{2L (f(x_0) - f^*)}{T}} = \mathcal{O}\left( \frac{1}{\sqrt{T}} \right)} \quad \blacksquare$$
+*Significance:* To achieve an $\epsilon$-approximate stationary point ($\|\nabla f\| \le \epsilon$), Gradient Descent requires at most $T = \mathcal{O}(1/\epsilon^2)$ steps.
+
+---
+
+### Deep Derivation 5.4.2: First-Principles Convergence Proof of Stochastic Gradient Descent (SGD)
+
+We prove that for convex objectives with bounded gradient variance, SGD converges at rate $\mathcal{O}(1/\sqrt{T})$.
+
+#### 1. Setup and Assumptions
+Let $f: \mathbb{R}^n \to \mathbb{R}$ be convex with minimizer $x^*$.
+Assume:
+1. Unbiased stochastic gradients: $\mathbb{E}[\mathbf{g}_t \mid x_t] = \nabla f(x_t)$.
+2. Bounded second moment: $\mathbb{E}[\|\mathbf{g}_t\|_2^2 \mid x_t] \le G^2$.
+Update rule: $x_{t+1} = x_t - \eta \mathbf{g}_t$.
+
+#### 2. Distance to Optimum Recurrence
+$$\|x_{t+1} - x^*\|_2^2 = \|x_t - x^* - \eta \mathbf{g}_t\|_2^2 = \|x_t - x^*\|_2^2 - 2\eta \mathbf{g}_t^T (x_t - x^*) + \eta^2 \|\mathbf{g}_t\|_2^2$$
+Take the conditional expectation $\mathbb{E}[\cdot \mid x_t]$:
+$$\mathbb{E}[\|x_{t+1} - x^*\|_2^2 \mid x_t] \le \|x_t - x^*\|_2^2 - 2\eta \nabla f(x_t)^T (x_t - x^*) + \eta^2 G^2$$
+
+#### 3. Invoking Convexity
+By the first-order definition of convexity: $\nabla f(x_t)^T (x_t - x^*) \ge f(x_t) - f(x^*)$.
+Substituting:
+$$\mathbb{E}[\|x_{t+1} - x^*\|_2^2 \mid x_t] \le \|x_t - x^*\|_2^2 - 2\eta [f(x_t) - f(x^*)] + \eta^2 G^2$$
+Rearranging to isolate the suboptimality gap:
+$$f(x_t) - f(x^*) \le \frac{\|x_t - x^*\|_2^2 - \mathbb{E}[\|x_{t+1} - x^*\|_2^2]}{2\eta} + \frac{\eta G^2}{2}$$
+
+#### 4. Telescoping Summation and Jensen's Average
+Sum over $t = 0, 1, \dots, T - 1$ and take total expectations:
+$$\sum_{t=0}^{T-1} \mathbb{E}[f(x_t) - f(x^*)] \le \frac{\|x_0 - x^*\|_2^2 - \mathbb{E}[\|x_T - x^*\|_2^2]}{2\eta} + \frac{T \eta G^2}{2} \le \frac{\|x_0 - x^*\|_2^2}{2\eta} + \frac{T \eta G^2}{2}$$
+
+Let $R = \|x_0 - x^*\|_2$. Define the averaged iterate $\bar{x}_T = \frac{1}{T}\sum_{t=0}^{T-1} x_t$.
+By Jensen's inequality:
+$$\mathbb{E}[f(\bar{x}_T) - f(x^*)] \le \frac{1}{T}\sum_{t=0}^{T-1} \mathbb{E}[f(x_t) - f(x^*)] \le \frac{R^2}{2\eta T} + \frac{\eta G^2}{2}$$
+
+#### 5. Optimal Learning Rate Minimization
+Minimize the upper bound with respect to $\eta$:
+$$\frac{d}{d\eta} \left( \frac{R^2}{2\eta T} + \frac{\eta G^2}{2} \right) = -\frac{R^2}{2\eta^2 T} + \frac{G^2}{2} = 0 \implies \mathbf{\eta^* = \frac{R}{G\sqrt{T}}}$$
+Substituting $\eta^*$ back into the error bound:
+$$\mathbf{\mathbb{E}[f(\bar{x}_T) - f(x^*)] \le \frac{R G}{\sqrt{T}} = \mathcal{O}\left( \frac{1}{\sqrt{T}} \right)} \quad \blacksquare$$
+
+---
+
+### Deep Derivation 5.4.3: Exact Finite-Population Correction Proof for Mini-Batch Variance
+
+In standard deep learning pipelines (e.g. PyTorch `DataLoader(shuffle=True)`), mini-batches are drawn **without replacement** within each epoch. We prove that this reduces gradient variance by the exact finite-population factor $\frac{N - B}{N - 1}$.
+
+#### 1. Setup
+Let $\mathbf{u}_i = \nabla \ell_i(\theta)$ for $i = 1, \dots, N$ with population mean $\bar{\mathbf{u}} = \frac{1}{N}\sum_{i=1}^N \mathbf{u}_i = \nabla \mathcal{L}(\theta)$.
+The population covariance matrix is:
+$$\Sigma = \frac{1}{N - 1} \sum_{i=1}^N (\mathbf{u}_i - \bar{\mathbf{u}})(\mathbf{u}_i - \bar{\mathbf{u}})^T$$
+A mini-batch $\mathcal{B} \subset \{1, \dots, N\}$ of size $B$ is drawn uniformly without replacement.
+The mini-batch sample mean is:
+$$\mathbf{g}_B = \frac{1}{B} \sum_{i \in \mathcal{B}} \mathbf{u}_i = \frac{1}{B} \sum_{i=1}^N I_i \mathbf{u}_i$$
+where $I_i = \mathbf{1}_{\{i \in \mathcal{B}\}}$ is the sample inclusion indicator variable.
+
+#### 2. Moments of Indicator Variables
+1. $\mathbb{E}[I_i] = P(i \in \mathcal{B}) = \frac{B}{N}$.
+2. $\mathbb{E}[I_i^2] = \mathbb{E}[I_i] = \frac{B}{N}$ (since $I_i \in \{0, 1\}$).
+3. $\text{Var}(I_i) = \mathbb{E}[I_i^2] - (\mathbb{E}[I_i])^2 = \frac{B}{N} - \frac{B^2}{N^2} = \frac{B(N - B)}{N^2}$.
+4. For $i \ne j$:
+   $$\mathbb{E}[I_i I_j] = P(i \in \mathcal{B} \text{ and } j \in \mathcal{B}) = \frac{B}{N} \cdot \frac{B - 1}{N - 1}$$
+   $$\text{Cov}(I_i, I_j) = \mathbb{E}[I_i I_j] - \mathbb{E}[I_i]\mathbb{E}[I_j] = \frac{B(B - 1)}{N(N - 1)} - \frac{B^2}{N^2} = -\frac{B(N - B)}{N^2(N - 1)}$$
+
+#### 3. Covariance of Mini-Batch Mean
+Without loss of generality, subtract the constant mean $\bar{\mathbf{u}}$ so that $\sum_{i=1}^N \mathbf{u}_i = \mathbf{0}$:
+$$\text{Cov}(\mathbf{g}_B) = \mathbb{E}\left[ \mathbf{g}_B \mathbf{g}_B^T \right] = \frac{1}{B^2} \sum_{i=1}^N \sum_{j=1}^N \mathbb{E}[I_i I_j] \mathbf{u}_i \mathbf{u}_j^T$$
+Separate into diagonal ($i = j$) and off-diagonal ($i \ne j$) terms:
+$$= \frac{1}{B^2} \left[ \sum_{i=1}^N \mathbb{E}[I_i^2] \mathbf{u}_i \mathbf{u}_i^T + \sum_{i \ne j} \mathbb{E}[I_i I_j] \mathbf{u}_i \mathbf{u}_j^T \right]$$
+$$= \frac{1}{B^2} \left[ \frac{B}{N} \sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T + \frac{B(B - 1)}{N(N - 1)} \sum_{i \ne j} \mathbf{u}_i \mathbf{u}_j^T \right]$$
+
+Since $\sum_{i=1}^N \mathbf{u}_i = \mathbf{0}$, we have:
+$$\left( \sum_{i=1}^N \mathbf{u}_i \right) \left( \sum_{j=1}^N \mathbf{u}_j \right)^T = \sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T + \sum_{i \ne j} \mathbf{u}_i \mathbf{u}_j^T = \mathbf{0} \implies \sum_{i \ne j} \mathbf{u}_i \mathbf{u}_j^T = -\sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T$$
+
+Substitute this into the covariance expression:
+$$\text{Cov}(\mathbf{g}_B) = \frac{1}{B^2} \left[ \frac{B}{N} - \frac{B(B - 1)}{N(N - 1)} \right] \sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T$$
+Simplify the bracketed coefficient:
+$$\frac{B}{N} - \frac{B(B - 1)}{N(N - 1)} = \frac{B(N - 1) - B(B - 1)}{N(N - 1)} = \frac{B(N - B)}{N(N - 1)}$$
+Therefore:
+$$\text{Cov}(\mathbf{g}_B) = \frac{1}{B^2} \left[ \frac{B(N - B)}{N(N - 1)} \right] \sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T = \frac{N - B}{B N} \left( \frac{1}{N - 1} \sum_{i=1}^N \mathbf{u}_i \mathbf{u}_i^T \right) = \mathbf{\frac{\Sigma}{B} \left( \frac{N - B}{N} \right)}$$
+or relative to the sample covariance:
+$$\mathbf{\text{Var}(\mathbf{g}_B) = \frac{\Sigma}{B} \left( \frac{N - B}{N - 1} \right)} \quad \blacksquare$$
 
 ---
 
@@ -296,6 +407,106 @@ $$B_{\text{crit}} = \frac{\text{tr}(\Sigma \mathcal{H})}{\|\nabla \mathcal{L}\|_
 - When $B \ll B_{\text{crit}}$: Gradient noise dominates. Doubling batch size $B \to 2B$ cuts the required optimizer steps in half (perfect linear speedup).
 - When $B \gg B_{\text{crit}}$: True gradient dominates. Doubling batch size yields almost zero reduction in steps, wasting millions of GPU hours!
 In modern LLM training, $B_{\text{crit}}$ starts small ($B \approx 512$) at the beginning of training and expands to massive sizes ($B \approx 4M$ tokens) near convergence!
+
+---
+
+### Illustration 4 (Numerical): Backtracking Armijo Line Search on an Ill-Conditioned Quadratic
+
+Choosing a fixed learning rate $\eta$ in first-order optimization often leads to catastrophic divergence or excruciatingly slow progress. The **Armijo Backtracking Line Search** guarantees monotonic descent by automatically adapting the step size.
+
+#### 1. The Armijo Condition
+A proposed step size $\eta$ is accepted if:
+$$f(x_t - \eta \nabla f(x_t)) \le f(x_t) - c \cdot \eta \|\nabla f(x_t)\|_2^2$$
+where $c \in (0, 1)$ is the required descent slope parameter (typically $c = 0.50$). If violated, the step size is contracted by factor $\beta \in (0, 1)$ (typically $\beta = 0.50$): $\eta \leftarrow \beta \eta$.
+
+#### 2. Problem Setup
+- **Objective:** $f(x, y) = 10 x^2 + y^2$ (Hessian $\mathcal{H} = \text{diag}(20, 2)$, condition number $\kappa = 10.0$).
+- **Current Position:** $(x_0, y_0) = (1.0, 1.0) \implies f(x_0, y_0) = 10(1)^2 + 1^2 = \mathbf{11.0000}$.
+- **Gradient Vector:**
+  $$\nabla f(x_0, y_0) = \begin{bmatrix} 20 x_0 \\ 2 y_0 \end{bmatrix} = \begin{bmatrix} 20.0 \\ 2.0 \end{bmatrix}$$
+- **Squared Gradient Norm:**
+  $$\|\nabla f(x_0, y_0)\|_2^2 = 20.0^2 + 2.0^2 = 400.0 + 4.0 = \mathbf{404.0000}$$
+- **Armijo Parameters:** $c = 0.50$, contraction $\beta = 0.50$, initial trial step size $\eta_0 = 0.20$.
+- **Required Upper Bound:**
+  $$\text{Bound}(\eta) = f(x_0) - c \eta \|\nabla f\|_2^2 = 11.0000 - 0.50 \times 404.0000 \times \eta = \mathbf{11.0000 - 202.0 \eta}$$
+
+#### 3. Backtracking Iteration 1 ($\eta = 0.20$)
+- Test position:
+  $$x_1 = 1.0 - 0.20(20.0) = 1.0 - 4.0 = -3.0$$
+  $$y_1 = 1.0 - 0.20(2.0) = 1.0 - 0.40 = 0.60$$
+- Function value at test point:
+  $$f(-3.0, 0.60) = 10(-3.0)^2 + 0.60^2 = 90.0 + 0.36 = \mathbf{90.3600}$$
+- Armijo condition check:
+  $$\text{Bound}(0.20) = 11.0000 - 202.0(0.20) = 11.0000 - 40.4000 = \mathbf{-29.4000}$$
+  $$f(-3.0, 0.60) = 90.3600 \le -29.4000 \quad (\mathbf{FAILED! \,\, Overshot, loss exploded from } 11 \to 90.36!)$$
+- Action: Contract step size: $\eta \leftarrow 0.20 \times 0.50 = \mathbf{0.1000}$.
+
+#### 4. Backtracking Iteration 2 ($\eta = 0.10$)
+- Test position:
+  $$x_1 = 1.0 - 0.10(20.0) = 1.0 - 2.0 = -1.0$$
+  $$y_1 = 1.0 - 0.10(2.0) = 1.0 - 0.20 = 0.80$$
+- Function value at test point:
+  $$f(-1.0, 0.80) = 10(-1.0)^2 + 0.80^2 = 10.0 + 0.64 = \mathbf{10.6400}$$
+- Armijo condition check:
+  $$\text{Bound}(0.10) = 11.0000 - 202.0(0.10) = 11.0000 - 20.2000 = \mathbf{-9.2000}$$
+  $$f(-1.0, 0.80) = 10.6400 \le -9.2000 \quad (\mathbf{FAILED!})$$
+- Action: Contract step size: $\eta \leftarrow 0.10 \times 0.50 = \mathbf{0.0500}$.
+
+#### 5. Backtracking Iteration 3 ($\eta = 0.0500$)
+- Test position:
+  $$x_1 = 1.0 - 0.05(20.0) = 1.0 - 1.0 = \mathbf{0.0000}$$
+  $$y_1 = 1.0 - 0.05(2.0) = 1.0 - 0.10 = \mathbf{0.9000}$$
+- Function value at test point:
+  $$f(0.0, 0.90) = 10(0.0)^2 + 0.90^2 = \mathbf{0.8100}$$
+- Armijo condition check:
+  $$\text{Bound}(0.05) = 11.0000 - 202.0(0.05) = 11.0000 - 10.1000 = \mathbf{0.9000}$$
+  $$\mathbf{f(0.0, 0.90) = 0.8100 \le 0.9000} \quad (\mathbf{ACCEPTED! \,\, \checkmark})$$
+
+- **Result:** The step size $\eta^* = 0.0500$ is accepted. The loss plummets from $11.0000 \to 0.8100$ (**92.6% reduction in a single step!**).
+
+---
+
+### Illustration 5 (Numerical): Step-by-Step Critical Batch Size Calculation
+
+Let us calculate the exact Critical Batch Size $B_{\text{crit}}$ by hand and analyze the step efficiency curve across batch sizes.
+
+#### 1. Setup & Matrix Quantities
+Let the empirical loss landscape have:
+- Mean gradient: $\mathbf{g} = \nabla \mathcal{L} = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$
+- Single-sample gradient covariance: $\Sigma = \begin{bmatrix} 8.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$
+- Local Hessian matrix: $\mathcal{H} = \begin{bmatrix} 4.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}$
+
+#### 2. Evaluating the Critical Batch Size Formula
+Recall McCandlish et al.'s formula from Deep Derivation 5.4.3:
+$$B_{\text{crit}} = \frac{\text{Tr}(\Sigma \mathcal{H})}{\|\mathbf{g}\|_2^2}$$
+
+1. **Squared Gradient Norm (True Signal):**
+   $$\|\mathbf{g}\|_2^2 = 2.0^2 + 1.0^2 = 4.0 + 1.0 = \mathbf{5.0000}$$
+2. **Curvature-Weighted Noise Matrix:**
+   $$\Sigma \mathcal{H} = \begin{bmatrix} 8.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix} \begin{bmatrix} 4.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} 32.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$$
+3. **Trace:**
+   $$\text{Tr}(\Sigma \mathcal{H}) = 32.0 + 2.0 = \mathbf{34.0000}$$
+4. **Critical Batch Size:**
+   $$\mathbf{B_{\text{crit}} = \frac{34.0000}{5.0000} = 6.8000 \approx 7 \text{ samples}}$$
+
+#### 3. Step Efficiency Analysis Across Batch Sizes
+The theoretical step efficiency $E(B)$ (the progress per gradient computation relative to pure batch GD) is:
+$$E(B) = \frac{1}{1 + \frac{B_{\text{crit}}}{B}} = \frac{B}{B + 6.8000}$$
+
+```
+Batch Size B │ Ratio B / B_crit │ Step Efficiency E(B) │ Optimization Regime
+─────────────┼──────────────────┼──────────────────────┼─────────────────────────────────────────────
+B = 1        │ 0.147            │ 1 / (1 + 6.8) = 0.128│ Noise Dominated (87.2% compute wasted)
+B = 2        │ 0.294            │ 2 / (2 + 6.8) = 0.227│ Strong Linear Scaling Speedup
+B = 7        │ 1.029            │ 7 / (7 + 6.8) = 0.507│ Critical Threshold (50% Efficiency Elbow)
+B = 20       │ 2.941            │20 / (20+ 6.8) = 0.746│ Moderate Returns
+B = 50       │ 7.353            │50 / (50+ 6.8) = 0.880│ Diminishing Returns
+B = 200      │ 29.41            │200/(200+6.8)  = 0.967│ Saturated (4x compute for 9% extra progress)
+```
+
+**Key Takeaway:**
+- Below $B = 7$, doubling the batch size almost doubles training throughput (linear scaling).
+- Above $B = 50$, doubling the batch size yields virtually zero speedup in terms of epochs required for convergence, wasting thousands of GPU hours. This analytical formula dictates modern distributed training batch budgets!
 
 ---
 

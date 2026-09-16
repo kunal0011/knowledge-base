@@ -100,6 +100,118 @@ $$\mathbf{P\left( \lim_{t \to \infty} x_t = x_{\text{saddle}} \right) = 0}$$
 
 ---
 
+### Deep Derivation 5.2.1: Rigorous Proof of the Second-Order Sufficient Condition (SOSC)
+
+We prove that if $x^*$ is a stationary point ($\nabla f(x^*) = \mathbf{0}$) and the Hessian matrix is strictly positive definite ($\nabla^2 f(x^*) \succ 0$), then $x^*$ is a strict local minimizer with quadratic local growth.
+
+#### 1. Setup
+Let $f: \mathbb{R}^n \to \mathbb{R}$ be $\mathcal{C}^2$ on an open neighborhood of $x^*$.
+Assume:
+1. $\nabla f(x^*) = \mathbf{0}$.
+2. $\nabla^2 f(x^*) \succ 0$, with minimum eigenvalue $\lambda_{\min} = \min_{\|v\|=1} v^T \nabla^2 f(x^*) v > 0$.
+
+#### 2. Multivariable Taylor Expansion with Peano Remainder
+For any displacement vector $h \in \mathbb{R}^n$ ($h \ne \mathbf{0}$):
+$$f(x^* + h) = f(x^*) + \nabla f(x^*)^T h + \frac{1}{2} h^T \nabla^2 f(x^*) h + o(\|h\|_2^2)$$
+Since $\nabla f(x^*) = \mathbf{0}$, the linear term vanishes:
+$$f(x^* + h) - f(x^*) = \frac{1}{2} h^T \nabla^2 f(x^*) h + o(\|h\|_2^2)$$
+
+#### 3. Quadratic Form Bounding
+By the Rayleigh-Ritz theorem, for any vector $h \in \mathbb{R}^n$:
+$$h^T \nabla^2 f(x^*) h \ge \lambda_{\min} \|h\|_2^2$$
+Substituting this lower bound:
+$$f(x^* + h) - f(x^*) \ge \frac{1}{2} \lambda_{\min} \|h\|_2^2 + o(\|h\|_2^2) = \|h\|_2^2 \left( \frac{\lambda_{\min}}{2} + \frac{o(\|h\|_2^2)}{\|h\|_2^2} \right)$$
+
+#### 4. Epsilon-Delta Argument
+By definition of the little-$o$ remainder:
+$$\lim_{\|h\|_2 \to 0} \frac{o(\|h\|_2^2)}{\|h\|_2^2} = 0$$
+Setting $\epsilon = \frac{\lambda_{\min}}{4} > 0$, there exists a radius $\delta > 0$ such that for all $0 < \|h\|_2 < \delta$:
+$$\left| \frac{o(\|h\|_2^2)}{\|h\|_2^2} \right| < \frac{\lambda_{\min}}{4} \implies \frac{o(\|h\|_2^2)}{\|h\|_2^2} > -\frac{\lambda_{\min}}{4}$$
+
+#### 5. Strict Positivity
+For all $h$ with $0 < \|h\|_2 < \delta$:
+$$\frac{\lambda_{\min}}{2} + \frac{o(\|h\|_2^2)}{\|h\|_2^2} > \frac{\lambda_{\min}}{2} - \frac{\lambda_{\min}}{4} = \frac{\lambda_{\min}}{4} > 0$$
+Therefore:
+$$f(x^* + h) - f(x^*) > \frac{\lambda_{\min}}{4} \|h\|_2^2 > 0 \implies \mathbf{f(x^* + h) > f(x^*)}$$
+Thus, $x^*$ is a **strict local minimizer**! $\blacksquare$
+
+---
+
+### Deep Derivation 5.2.2: Analytical Mechanics of Saddle Point Escape (Dynamical Systems View)
+
+Why does Gradient Descent escape strict saddle points? We analyze the discrete dynamical system around a saddle point $x^* = \mathbf{0}$.
+
+#### 1. Linearized Gradient Descent Dynamics
+Around a saddle point $x^* = \mathbf{0}$ with $\nabla f(\mathbf{0}) = \mathbf{0}$, the gradient is approximately:
+$$\nabla f(x) \approx \nabla f(\mathbf{0}) + \mathcal{H} x = \mathcal{H} x$$
+where $\mathcal{H} = \nabla^2 f(\mathbf{0})$ is the constant Hessian at the saddle.
+Gradient descent updates as:
+$$x_{t+1} = x_t - \eta \nabla f(x_t) \approx x_t - \eta \mathcal{H} x_t = (I - \eta \mathcal{H}) x_t$$
+
+#### 2. Spectral Eigendecomposition
+Let $\mathcal{H} = V \Lambda V^T = \sum_{i=1}^n \lambda_i v_i v_i^T$ be the eigendecomposition with orthonormal basis $\{v_1, \dots, v_n\}$.
+Project the state $x_t$ onto the eigenbasis: $x_t = \sum_{i=1}^n c_{i, t} v_i$, where $c_{i, t} = v_i^T x_t$.
+Substituting into the update equation:
+$$\sum_{i=1}^n c_{i, t+1} v_i = (I - \eta \mathcal{H}) \sum_{i=1}^n c_{i, t} v_i = \sum_{i=1}^n (1 - \eta \lambda_i) c_{i, t} v_i$$
+Because eigenvectors are orthogonal, the dynamics **completely decouple into $n$ scalar linear recurrences**:
+$$\mathbf{c_{i, t} = (1 - \eta \lambda_i)^t c_{i, 0}}$$
+
+#### 3. Separation into Stable and Unstable Manifolds
+Suppose the saddle point has at least one negative eigenvalue $\lambda_n \le -\gamma < 0$:
+1. **Stable Directions ($\lambda_i > 0$):**
+   Choose learning rate $\eta < 2 / \lambda_{\max}$. Then $|1 - \eta \lambda_i| < 1$.
+   $$c_{i, t} = (1 - \eta \lambda_i)^t c_{i, 0} \xrightarrow{t \to \infty} 0$$
+   Coordinates along positive curvature axes contract exponentially to zero (attracted to the stable ridge).
+2. **Unstable Escape Directions ($\lambda_j < 0$):**
+   For $\lambda_j < 0$:
+   $$1 - \eta \lambda_j = 1 + \eta |\lambda_j| > 1$$
+   The coordinate grows exponentially:
+   $$\mathbf{c_{j, t} = (1 + \eta |\lambda_j|)^t c_{j, 0} \approx \exp(t \eta |\lambda_j|) c_{j, 0}}$$
+
+#### 4. Time to Escape the Saddle Basin
+Let $R$ be the radius of the saddle region. The time $T$ required for the unstable coordinate to grow from initial noise $c_{j, 0} = \epsilon$ to radius $R$ is:
+$$(1 + \eta |\lambda_j|)^T \epsilon = R \implies T \ln(1 + \eta |\lambda_j|) = \ln(R / \epsilon)$$
+Using $\ln(1 + u) \approx u$ for small step size $\eta |\lambda_j|$:
+$$\mathbf{T_{\text{escape}} \approx \frac{1}{\eta |\lambda_j|} \ln\left( \frac{R}{\epsilon} \right) = \mathcal{O}\left( \frac{\ln(1/\epsilon)}{\eta \gamma} \right)}$$
+*Verdict:* As long as initialization has any infinitesimal component $\epsilon > 0$ along the negative eigenvector, gradient descent escapes the saddle in logarithmic time!
+
+---
+
+### Deep Derivation 5.2.3: Derivation of the SAM (Sharpness-Aware Minimization) Objective
+
+Foret et al. (2021) designed SAM to explicitly bias gradient-based training toward flat minima that generalize better.
+
+#### 1. The Min-Max Robust Optimization Problem
+$$\min_{\theta} \mathcal{L}^{\text{SAM}}(\theta) \quad \text{where} \quad \mathcal{L}^{\text{SAM}}(\theta) = \max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \mathcal{L}(\theta + \boldsymbol{\epsilon})$$
+where $\rho > 0$ defines the neighborhood perturbation ball.
+
+#### 2. Solving the Inner Maximization via Taylor Expansion
+Approximate the perturbed loss with a first-order Taylor expansion around $\theta$:
+$$\mathcal{L}(\theta + \boldsymbol{\epsilon}) \approx \mathcal{L}(\theta) + \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta)$$
+The inner maximization problem becomes:
+$$\max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \left[ \mathcal{L}(\theta) + \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta) \right] \iff \max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta)$$
+
+By the Cauchy-Schwarz inequality, $\boldsymbol{\epsilon}^T \nabla \mathcal{L} \le \|\boldsymbol{\epsilon}\|_2 \|\nabla \mathcal{L}\|_2 \le \rho \|\nabla \mathcal{L}\|_2$, with equality achieved when $\boldsymbol{\epsilon}$ is collinear with the gradient:
+$$\mathbf{\boldsymbol{\epsilon}^*(\theta) = \rho \frac{\nabla_\theta \mathcal{L}(\theta)}{\|\nabla_\theta \mathcal{L}(\theta)\|_2}}$$
+
+#### 3. Evaluating the SAM Gradient
+Substitute $\boldsymbol{\epsilon}^*(\theta)$ back into the objective:
+$$\mathcal{L}^{\text{SAM}}(\theta) \approx \mathcal{L}(\theta + \boldsymbol{\epsilon}^*(\theta))$$
+Differentiating with respect to $\theta$ using the chain rule:
+$$\nabla_\theta \mathcal{L}^{\text{SAM}}(\theta) \approx \left. \nabla_\theta \mathcal{L}(w) \right|_{w = \theta + \boldsymbol{\epsilon}^*(\theta)}$$
+Expanding this perturbed gradient via second-order Taylor series:
+$$\nabla_\theta \mathcal{L}(\theta + \boldsymbol{\epsilon}^*(\theta)) \approx \nabla_\theta \mathcal{L}(\theta) + \nabla^2 \mathcal{L}(\theta) \boldsymbol{\epsilon}^*(\theta) = \mathbf{\nabla_\theta \mathcal{L}(\theta) + \frac{\rho}{\|\nabla_\theta \mathcal{L}(\theta)\|_2} \nabla^2 \mathcal{L}(\theta) \nabla_\theta \mathcal{L}(\theta)}$$
+
+#### 4. The Implicit Hessian Regularizer
+Notice the second term:
+$$\frac{\rho}{\|\nabla \mathcal{L}\|_2} \nabla^2 \mathcal{L}(\theta) \nabla \mathcal{L}(\theta)$$
+- It projects the Hessian matrix $\nabla^2 \mathcal{L}(\theta)$ onto the current gradient direction!
+- If the current valley is **sharp** (eigenvalues of $\nabla^2 \mathcal{L}$ are huge), the SAM gradient shoots upward violently, ejecting the optimizer out of the sharp ravine.
+- If the current valley is **flat** (eigenvalues of $\nabla^2 \mathcal{L}$ are small), the penalty is negligible, allowing parameters to settle comfortably.
+This proves that SAM regularizes local spectral sharpness **without computing or storing the $P \times P$ Hessian**!
+
+---
+
 ## Part 3: Geometric & Algebraic Interpretation
 
 ### The Quadratic Form Expansion Around a Saddle Point
@@ -284,6 +396,115 @@ Both the gradient and the Hessian vanish:
 $$\|\nabla \mathcal{L}\| \to 0 \quad \text{and} \quad \|\nabla^2 \mathcal{L}\| \to 0$$
 This creates a **flat plateau / higher-order saddle point**.
 Standard Gradient Descent stalls completely because the step size $-\eta \nabla \mathcal{L} \approx \mathbf{0}$. This is why deep learning replaced Sigmoid with **ReLU / GELU** and introduced **Residual Connections (ResNets)**!
+
+---
+
+### Illustration 4 (Numerical): Critical Point Classification & Escaping an Asymmetric Saddle
+
+Let us perform a complete critical point analysis and simulate escaping a strict saddle point with asymmetric curvatures.
+
+#### 1. Problem Setup
+$$f(x, y) = x^3 - 3x + y^2 - 4y$$
+
+#### 2. Gradient Vector and Critical Points
+$$\nabla f(x, y) = \begin{bmatrix} 3x^2 - 3 \\ 2y - 4 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$$
+1. $3x^2 - 3 = 0 \implies x^2 = 1 \implies x \in \{+1.0, \, -1.0\}$.
+2. $2y - 4 = 0 \implies y = 2.0$.
+
+There are exactly two critical points:
+- **Point 1:** $\mathbf{x}_A^* = (1.0, 2.0)$
+  $$f(1, 2) = 1^3 - 3(1) + 2^2 - 4(2) = 1 - 3 + 4 - 8 = \mathbf{-6.0000}$$
+- **Point 2:** $\mathbf{x}_B^* = (-1.0, 2.0)$
+  $$f(-1, 2) = (-1)^3 - 3(-1) + 2^2 - 4(2) = -1 + 3 + 4 - 8 = \mathbf{-2.0000}$$
+
+#### 3. Hessian Eigenspectrum Classification
+$$\mathcal{H}(x, y) = \begin{bmatrix} \frac{\partial^2 f}{\partial x^2} & \frac{\partial^2 f}{\partial x \partial y} \\ \frac{\partial^2 f}{\partial y \partial x} & \frac{\partial^2 f}{\partial y^2} \end{bmatrix} = \begin{bmatrix} 6x & 0 \\ 0 & 2 \end{bmatrix}$$
+
+- **At Point 1 $(1.0, 2.0)$:**
+  $$\mathcal{H}(1, 2) = \begin{bmatrix} 6.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$$
+  Eigenvalues: $\lambda_1 = +6.0 > 0, \,\, \lambda_2 = +2.0 > 0$.
+  Both eigenvalues are strictly positive $\implies \mathcal{H} \succ 0 \implies$ **Strict Local Minimum**!
+- **At Point 2 $(-1.0, 2.0)$:**
+  $$\mathcal{H}(-1, 2) = \begin{bmatrix} -6.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$$
+  Eigenvalues: $\lambda_1 = -6.0 < 0, \,\, \lambda_2 = +2.0 > 0$.
+  Indefinite Hessian $\implies$ **Strict Saddle Point**!
+  The $x$-axis is the unstable escape direction ($\lambda = -6$), and the $y$-axis is the stable valley direction ($\lambda = +2$).
+
+#### 4. Step-by-Step Gradient Descent Trajectory Escaping the Saddle
+Let learning rate $\eta = 0.05$.
+Initialize near the saddle point with a small perturbation: $(x_0, y_0) = (-0.90, 2.20)$.
+(Note: $x_0 = -0.90$ is perturbed slightly rightward toward $+1$, and $y_0 = 2.20$ is perturbed off the ridge).
+
+- **Iteration 0:**
+  $$f(-0.9, 2.2) = (-0.9)^3 - 3(-0.9) + 2.2^2 - 4(2.2) = -0.729 + 2.700 + 4.840 - 8.800 = \mathbf{-1.9890}$$
+  $$\nabla f_x = 3(-0.90)^2 - 3 = 3(0.81) - 3 = 2.43 - 3 = \mathbf{-0.5700}$$
+  $$\nabla f_y = 2(2.20) - 4 = 4.40 - 4 = \mathbf{+0.4000}$$
+
+- **Iteration 1:**
+  $$x_1 = x_0 - \eta \nabla f_x = -0.90 - 0.05(-0.5700) = -0.90 + 0.0285 = \mathbf{-0.8715}$$
+  $$y_1 = y_0 - \eta \nabla f_y = 2.20 - 0.05(+0.4000) = 2.20 - 0.0200 = \mathbf{2.1800}$$
+  New Gradient:
+  $$\nabla f_x(x_1, y_1) = 3(-0.8715)^2 - 3 = 3(0.759512) - 3 = 2.278537 - 3 = \mathbf{-0.721463}$$
+  $$\nabla f_y(x_1, y_1) = 2(2.1800) - 4 = 4.3600 - 4 = \mathbf{+0.3600}$$
+
+- **Iteration 2:**
+  $$x_2 = x_1 - \eta \nabla f_x = -0.8715 - 0.05(-0.721463) = -0.8715 + 0.036073 = \mathbf{-0.835427}$$
+  $$y_2 = y_1 - \eta \nabla f_y = 2.1800 - 0.05(+0.3600) = 2.1800 - 0.0180 = \mathbf{2.1620}$$
+
+#### 5. Analysis of Dynamical Decoupling
+```
+Step t │ Param x  │ Param y  │ Grad ∇f_x (Escape)│ Grad ∇f_y (Stable)│ Dynamic Behavior
+───────┼──────────┼──────────┼───────────────────┼───────────────────┼───────────────────────────
+t = 0  │ -0.9000  │  2.2000  │     -0.5700       │      +0.4000      │ Initial perturbation
+t = 1  │ -0.8715  │  2.1800  │     -0.7215       │      +0.3600      │ |∇f_x| grows, |∇f_y| shrinks
+t = 2  │ -0.8354  │  2.1620  │     -0.9062       │      +0.3240      │ Exponential acceleration!
+```
+- Along the stable axis $y$, the gradient contracts by $(1 - 0.05 \times 2) = 0.90$ per step ($0.40 \to 0.36 \to 0.324$), pulling $y \to 2.0$.
+- Along the unstable axis $x$, the gradient magnitude **amplifies** by $(1 + 0.05 \times 6) = 1.30$ per step ($0.57 \to 0.72 \to 0.91$), propelling the trajectory away from the saddle toward the global minimum at $(1.0, 2.0)$!
+
+---
+
+### Illustration 5 (Numerical): Sharp vs. Flat Minima & SAM Perturbation by Hand
+
+Let us evaluate the mechanics of Sharpness-Aware Minimization (SAM) by comparing a sharp basin against a flat basin under adversarial perturbation.
+
+#### 1. Setup
+Consider two 1D loss functions with identical global minimum value $\mathcal{L}^* = 0.0$:
+- **Sharp Basin:** $\mathcal{L}_{\text{sharp}}(\theta) = 50 (\theta - 1)^2$ (Hessian $\mathcal{H}_{\text{sharp}} = 100$)
+- **Flat Basin:** $\mathcal{L}_{\text{flat}}(\theta) = 0.5 (\theta - 3)^2$ (Hessian $\mathcal{H}_{\text{flat}} = 1.0$)
+Let the SAM perturbation radius be $\rho = 0.10$.
+
+#### 2. Evaluation Near the Sharp Minimum ($\theta = 1.05$, offset $\Delta = +0.05$)
+1. **Nominal Loss and Gradient:**
+   $$\mathcal{L}_{\text{sharp}}(1.05) = 50(1.05 - 1.0)^2 = 50(0.05)^2 = 50(0.0025) = \mathbf{0.1250}$$
+   $$\nabla_\theta \mathcal{L}_{\text{sharp}}(1.05) = 100(1.05 - 1.0) = \mathbf{+5.0000}$$
+2. **Adversarial Perturbation $\epsilon^*$:**
+   $$\epsilon_{\text{sharp}}^* = \rho \frac{\nabla \mathcal{L}}{\|\nabla \mathcal{L}\|_2} = 0.10 \times \frac{+5.00}{5.00} = \mathbf{+0.1000}$$
+   Perturbed parameter: $\theta + \epsilon^* = 1.05 + 0.10 = \mathbf{1.1500}$.
+3. **SAM Perturbed Loss and SAM Gradient:**
+   $$\mathcal{L}^{\text{SAM}}(\theta) = \mathcal{L}_{\text{sharp}}(1.15) = 50(1.15 - 1.0)^2 = 50(0.15)^2 = 50(0.0225) = \mathbf{1.1250}$$
+   $$\nabla_\theta \mathcal{L}^{\text{SAM}}(\theta) = \nabla \mathcal{L}_{\text{sharp}}(1.15) = 100(1.15 - 1.0) = \mathbf{+15.0000}$$
+
+#### 3. Evaluation Near the Flat Minimum ($\theta = 3.05$, offset $\Delta = +0.05$)
+1. **Nominal Loss and Gradient:**
+   $$\mathcal{L}_{\text{flat}}(3.05) = 0.5(3.05 - 3.0)^2 = 0.5(0.05)^2 = 0.5(0.0025) = \mathbf{0.00125}$$
+   $$\nabla_\theta \mathcal{L}_{\text{flat}}(3.05) = 1.0(3.05 - 3.0) = \mathbf{+0.0500}$$
+2. **Adversarial Perturbation $\epsilon^*$:**
+   $$\epsilon_{\text{flat}}^* = \rho \frac{\nabla \mathcal{L}}{\|\nabla \mathcal{L}\|_2} = 0.10 \times \frac{+0.05}{0.05} = \mathbf{+0.1000}$$
+   Perturbed parameter: $\theta + \epsilon^* = 3.05 + 0.10 = \mathbf{3.1500}$.
+3. **SAM Perturbed Loss and SAM Gradient:**
+   $$\mathcal{L}^{\text{SAM}}(\theta) = \mathcal{L}_{\text{flat}}(3.15) = 0.5(3.15 - 3.0)^2 = 0.5(0.15)^2 = 0.5(0.0225) = \mathbf{0.01125}$$
+   $$\nabla_\theta \mathcal{L}^{\text{SAM}}(\theta) = \nabla \mathcal{L}_{\text{flat}}(3.15) = 1.0(3.15 - 3.0) = \mathbf{+0.1500}$$
+
+#### 4. Quantitative Comparison
+```
+Basin Type │ Curvature H │ Nominal Loss │ SAM Perturbed Loss │ Nominal Grad │ SAM Grad  │ Gradient Amplification
+───────────┼─────────────┼──────────────┼────────────────────┼──────────────┼───────────┼────────────────────────
+Sharp      │ 100.0       │ 0.12500      │ 1.12500 (9.0x)     │ +5.0000      │ +15.0000  │ 3.0x (+10.0 boost)
+Flat       │   1.0       │ 0.00125      │ 0.01125 (9.0x)     │ +0.0500      │  +0.1500  │ 3.0x (+0.10 boost)
+```
+- The SAM gradient penalty pushing the optimizer away from the sharp basin ($+15.0000$) is **$100\times$ stronger** than the gradient near the flat basin ($+0.1500$).
+- This concrete calculation illustrates why SAM systematically escapes sharp, brittle minima and guides training into wide, resilient basins that generalize to unseen test distributions!
 
 ---
 

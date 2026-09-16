@@ -128,6 +128,107 @@ $$g\left( \sum_{i=1}^N \lambda_i x_i \right) \le \sum_{i=1}^N \lambda_i g(x_i)$$
 
 ---
 
+### Deep Derivation 5.1.1: Complete Proof of the First-Order Characterization of Convexity
+
+We prove both directions of the theorem: A continuously differentiable function $f: \mathcal{C} \to \mathbb{R}$ on an open convex set $\mathcal{C}$ is convex if and only if $f(y) \ge f(x) + \nabla f(x)^T (y - x)$ for all $x, y \in \mathcal{C}$.
+
+#### Direction 1: $f$ is convex $\implies f(y) \ge f(x) + \nabla f(x)^T (y - x)$
+1. Let $x, y \in \mathcal{C}$. Since $\mathcal{C}$ is convex, the point $x + \theta(y - x) = (1 - \theta)x + \theta y \in \mathcal{C}$ for all $\theta \in (0, 1]$.
+2. By the definition of convexity:
+   $$f(x + \theta(y - x)) \le (1 - \theta) f(x) + \theta f(y) = f(x) + \theta(f(y) - f(x))$$
+3. Subtract $f(x)$ from both sides and divide by $\theta > 0$:
+   $$\frac{f(x + \theta(y - x)) - f(x)}{\theta} \le f(y) - f(x)$$
+4. Take the limit as $\theta \to 0^+$. By definition of the directional derivative of a differentiable function:
+   $$\lim_{\theta \to 0^+} \frac{f(x + \theta(y - x)) - f(x)}{\theta} = \nabla f(x)^T (y - x)$$
+5. Therefore:
+   $$\nabla f(x)^T (y - x) \le f(y) - f(x) \implies \mathbf{f(y) \ge f(x) + \nabla f(x)^T (y - x)}$$
+
+#### Direction 2: $f(y) \ge f(x) + \nabla f(x)^T (y - x) \,\, \forall x, y \in \mathcal{C} \implies f$ is convex
+1. Choose arbitrary $x, y \in \mathcal{C}$ and $\theta \in [0, 1]$.
+2. Define the convex combination $z = \theta x + (1 - \theta) y \in \mathcal{C}$.
+3. Apply the first-order condition at base point $z$ evaluated at $x$:
+   $$f(x) \ge f(z) + \nabla f(z)^T (x - z)$$
+4. Apply the first-order condition at base point $z$ evaluated at $y$:
+   $$f(y) \ge f(z) + \nabla f(z)^T (y - z)$$
+5. Multiply the first inequality by $\theta \ge 0$ and the second by $(1 - \theta) \ge 0$, and sum them:
+   $$\theta f(x) + (1 - \theta) f(y) \ge \theta [f(z) + \nabla f(z)^T (x - z)] + (1 - \theta) [f(z) + \nabla f(z)^T (y - z)]$$
+   $$= f(z) + \nabla f(z)^T \left[ \theta(x - z) + (1 - \theta)(y - z) \right]$$
+6. Examine the bracketed vector term:
+   $$\theta(x - z) + (1 - \theta)(y - z) = \theta x + (1 - \theta) y - (\theta + 1 - \theta) z = z - z = \mathbf{0}$$
+7. The gradient term vanishes completely!
+   $$\mathbf{\theta f(x) + (1 - \theta) f(y) \ge f(z) = f(\theta x + (1 - \theta) y)} \quad \blacksquare$$
+
+---
+
+### Deep Derivation 5.1.2: General Proof of Jensen's Inequality via Supporting Hyperplanes
+
+We provide the modern variational proof of Jensen's Inequality, valid for any arbitrary random variable $X$ (discrete, continuous, or mixed) taking values in convex set $\mathcal{C} \subseteq \mathbb{R}^n$.
+
+#### 1. Setup
+Let $X \in \mathcal{C}$ with finite expectation $\boldsymbol{\mu} = \mathbb{E}[X] \in \mathcal{C}$.
+Let $g: \mathcal{C} \to \mathbb{R}$ be a convex function.
+
+#### 2. Existence of Supporting Hyperplane (Subgradient)
+Because $g$ is convex on $\mathcal{C}$, at any point $\boldsymbol{\mu} \in \mathcal{C}$ there exists at least one supporting affine hyperplane (characterized by subgradient vector $\mathbf{s} \in \partial g(\boldsymbol{\mu})$):
+$$g(x) \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (x - \boldsymbol{\mu}) \quad \forall x \in \mathcal{C}$$
+(If $g$ is differentiable, $\mathbf{s} = \nabla g(\boldsymbol{\mu})$ is the unique gradient).
+
+#### 3. Evaluation on the Random Variable
+Since $X$ takes values in $\mathcal{C}$ with probability 1, this inequality holds pointwise for the random variable $X$:
+$$g(X) \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (X - \boldsymbol{\mu})$$
+
+#### 4. Taking Expectations
+Take the mathematical expectation $\mathbb{E}[\cdot]$ of both sides:
+$$\mathbb{E}[g(X)] \ge \mathbb{E}\left[ g(\boldsymbol{\mu}) + \mathbf{s}^T (X - \boldsymbol{\mu}) \right]$$
+By linearity of expectation, and noting that $g(\boldsymbol{\mu})$, $\mathbf{s}$, and $\boldsymbol{\mu}$ are deterministic constants:
+$$\mathbb{E}[g(X)] \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (\mathbb{E}[X] - \boldsymbol{\mu})$$
+Since $\boldsymbol{\mu} = \mathbb{E}[X]$, the deviation vector is identically zero:
+$$\mathbb{E}[X] - \boldsymbol{\mu} = \boldsymbol{\mu} - \boldsymbol{\mu} = \mathbf{0}$$
+Therefore:
+$$\mathbb{E}[g(X)] \ge g(\boldsymbol{\mu}) + \mathbf{s}^T \mathbf{0} = g(\boldsymbol{\mu}) = g(\mathbb{E}[X])$$
+$$\mathbf{g(\mathbb{E}[X]) \le \mathbb{E}[g(X)]} \quad \blacksquare$$
+
+*Significance:* This geometric proof avoids induction on discrete mixtures and holds unconditionally for high-dimensional continuous probability measures!
+
+---
+
+### Deep Derivation 5.1.3: Linear Convergence Contraction of Gradient Descent
+
+We derive the exact contraction factor $\rho = \frac{\kappa - 1}{\kappa + 1}$ for Gradient Descent on $\mu$-strongly convex and $L$-smooth objectives.
+
+#### 1. Setup
+Let $f: \mathbb{R}^n \to \mathbb{R}$ be $\mu$-strongly convex and $L$-smooth ($0 < \mu \le L$).
+Let $x^*$ be the unique global minimizer satisfying $\nabla f(x^*) = \mathbf{0}$.
+Gradient descent performs the update:
+$$x_{t+1} = x_t - \eta \nabla f(x_t)$$
+
+#### 2. Distance to Optimum Expansion
+Evaluate the squared Euclidean distance to $x^*$:
+$$\|x_{t+1} - x^*\|_2^2 = \|x_t - x^* - \eta \nabla f(x_t)\|_2^2 = \|x_t - x^*\|_2^2 - 2\eta \nabla f(x_t)^T (x_t - x^*) + \eta^2 \|\nabla f(x_t)\|_2^2$$
+
+#### 3. Co-coercivity / Interpolation Inequality
+For a function that is simultaneously $\mu$-strongly convex and $L$-smooth, Nesterov's theorem establishes the co-coercivity bound:
+$$\nabla f(x_t)^T (x_t - x^*) \ge \frac{\mu L}{\mu + L} \|x_t - x^*\|_2^2 + \frac{1}{\mu + L} \|\nabla f(x_t)\|_2^2$$
+*(Proof sketch: The shifted function $\phi(x) = f(x) - \frac{\mu}{2} \|x - x^*\|_2^2$ is $(L - \mu)$-smooth and convex; applying the standard cocoercivity theorem to $\nabla \phi$ yields this inequality).*
+
+#### 4. Substituting into Distance Bound
+Substitute this bound into the squared distance equation:
+$$\|x_{t+1} - x^*\|_2^2 \le \|x_t - x^*\|_2^2 - 2\eta \left[ \frac{\mu L}{\mu + L} \|x_t - x^*\|_2^2 + \frac{1}{\mu + L} \|\nabla f(x_t)\|_2^2 \right] + \eta^2 \|\nabla f(x_t)\|_2^2$$
+$$= \left( 1 - \frac{2\eta \mu L}{\mu + L} \right) \|x_t - x^*\|_2^2 + \eta \left( \eta - \frac{2}{\mu + L} \right) \|\nabla f(x_t)\|_2^2$$
+
+#### 5. Optimal Learning Rate Choice
+To eliminate the gradient norm $\|\nabla f(x_t)\|_2^2$ (which is non-negative and could otherwise hurt the bound), choose the optimal step size:
+$$\mathbf{\eta^* = \frac{2}{\mu + L}}$$
+At this step size, the gradient term $\eta(\eta - \frac{2}{\mu + L}) = 0$, leaving:
+$$\|x_{t+1} - x^*\|_2^2 \le \left( 1 - \frac{2 \cdot \frac{2}{\mu + L} \mu L}{\mu + L} \right) \|x_t - x^*\|_2^2 = \left( 1 - \frac{4\mu L}{(\mu + L)^2} \right) \|x_t - x^*\|_2^2$$
+Simplify the algebraic contraction factor:
+$$1 - \frac{4\mu L}{(\mu + L)^2} = \frac{(\mu + L)^2 - 4\mu L}{(\mu + L)^2} = \frac{\mu^2 + 2\mu L + L^2 - 4\mu L}{(\mu + L)^2} = \frac{(L - \mu)^2}{(L + \mu)^2}$$
+
+Taking the square root:
+$$\mathbf{\|x_{t+1} - x^*\|_2 \le \left( \frac{L - \mu}{L + \mu} \right) \|x_t - x^*\|_2 = \left( \frac{\kappa - 1}{\kappa + 1} \right) \|x_t - x^*\|_2} \quad \blacksquare$$
+
+---
+
 ## Part 3: Geometric & Algebraic Interpretation
 
 ### 1. The Epigraph Characterization
@@ -294,6 +395,93 @@ Hence, the loss is identical: $\mathcal{L}(\theta) = \mathcal{L}(\tilde{\theta})
 For $H$ hidden neurons, there are $H!$ distinct parameter vectors with the exact same loss!
 If the loss were strictly convex, it could have at most one global minimum.
 Because there are at least $H!$ distinct global minima, **neural network parameter spaces are fundamentally non-convex**!
+
+---
+
+### Illustration 4 (Numerical): Hessian Eigenvalues, Strong Convexity $\mu$, Lipschitz Constant $L$, and GD Contraction
+
+Let us calculate the exact conditioning and convergence rate of Gradient Descent on a 2D quadratic convex objective.
+
+#### 1. Problem Formulation
+$$f(x_1, x_2) = 3 x_1^2 + x_2^2 + 2 x_1 x_2 - 4 x_1 - 2 x_2$$
+
+#### 2. Gradient and Global Minimizer
+$$\nabla f(x) = \begin{bmatrix} \frac{\partial f}{\partial x_1} \\ \frac{\partial f}{\partial x_2} \end{bmatrix} = \begin{bmatrix} 6 x_1 + 2 x_2 - 4 \\ 2 x_1 + 2 x_2 - 2 \end{bmatrix}$$
+Setting $\nabla f(x^*) = \mathbf{0}$:
+$$\begin{cases} 3 x_1^* + x_2^* = 2 \\ x_1^* + x_2^* = 1 \end{cases} \implies 2 x_1^* = 1 \implies x_1^* = 0.50, \quad x_2^* = 0.50$$
+$$\mathbf{x^* = \begin{bmatrix} 0.50 \\ 0.50 \end{bmatrix}}, \quad f(x^*) = 3(0.25) + 0.25 + 2(0.25) - 4(0.5) - 2(0.5) = \mathbf{-1.5000}$$
+
+#### 3. Hessian Matrix and Curvature Spectrum
+$$H = \nabla^2 f(x) = \begin{bmatrix} 6 & 2 \\ 2 & 2 \end{bmatrix}$$
+Compute the eigenvalues via the characteristic equation $\det(H - \lambda I) = 0$:
+$$\det \begin{bmatrix} 6 - \lambda & 2 \\ 2 & 2 - \lambda \end{bmatrix} = (6 - \lambda)(2 - \lambda) - 4 = \lambda^2 - 8\lambda + 8 = 0$$
+$$\lambda = \frac{8 \pm \sqrt{64 - 32}}{2} = \frac{8 \pm 4\sqrt{2}}{2} = 4 \pm 2\sqrt{2}$$
+- Maximum eigenvalue (Lipschitz constant): $\mathbf{L = 4 + 2\sqrt{2} \approx 6.828427}$
+- Minimum eigenvalue (Strong convexity parameter): $\mathbf{\mu = 4 - 2\sqrt{2} \approx 1.171573}$
+Both eigenvalues are strictly positive $\implies H \succ 0$ (strictly convex everywhere).
+
+#### 4. Condition Number and Theoretical Contraction Factor
+$$\kappa = \frac{L}{\mu} = \frac{4 + 2\sqrt{2}}{4 - 2\sqrt{2}} = \frac{(4 + 2\sqrt{2})^2}{16 - 8} = \frac{24 + 16\sqrt{2}}{8} = \mathbf{3 + 2\sqrt{2} \approx 5.828427}$$
+Optimal learning rate:
+$$\mathbf{\eta^* = \frac{2}{\mu + L} = \frac{2}{8.0000} = 0.2500}$$
+Theoretical per-step contraction factor:
+$$\mathbf{\rho = \frac{L - \mu}{L + \mu} = \frac{4\sqrt{2}}{8} = \frac{\sqrt{2}}{2} \approx 0.707107}$$
+
+#### 5. Step-by-Step Manual Gradient Descent Simulation
+Start from the origin $\mathbf{x}_0 = [0.0, 0.0]^T$:
+Initial distance: $\|\mathbf{x}_0 - \mathbf{x}^*\|_2 = \sqrt{0.5^2 + 0.5^2} = \sqrt{0.50} \approx \mathbf{0.707107}$.
+
+- **Iteration 1:**
+  $$\nabla f(\mathbf{x}_0) = \begin{bmatrix} -4.00 \\ -2.00 \end{bmatrix}$$
+  $$\mathbf{x}_1 = \mathbf{x}_0 - \eta^* \nabla f(\mathbf{x}_0) = \begin{bmatrix} 0.00 \\ 0.00 \end{bmatrix} - 0.25 \begin{bmatrix} -4.00 \\ -2.00 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.00 \\ 0.50 \end{bmatrix}}$$
+  Error vector: $\mathbf{x}_1 - \mathbf{x}^* = [1.00 - 0.50, \, 0.50 - 0.50]^T = [0.50, \, 0.00]^T$.
+  Distance: $\|\mathbf{x}_1 - \mathbf{x}^*\|_2 = \mathbf{0.500000}$.
+  Contraction ratio: $\frac{0.500000}{0.707107} \approx \mathbf{0.707107} = \rho \quad \checkmark$
+
+- **Iteration 2:**
+  $$\nabla f(\mathbf{x}_1) = \begin{bmatrix} 6(1.0) + 2(0.5) - 4 \\ 2(1.0) + 2(0.5) - 2 \end{bmatrix} = \begin{bmatrix} 3.00 \\ 1.00 \end{bmatrix}$$
+  $$\mathbf{x}_2 = \mathbf{x}_1 - \eta^* \nabla f(\mathbf{x}_1) = \begin{bmatrix} 1.00 \\ 0.50 \end{bmatrix} - 0.25 \begin{bmatrix} 3.00 \\ 1.00 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.25 \\ 0.25 \end{bmatrix}}$$
+  Error vector: $\mathbf{x}_2 - \mathbf{x}^* = [0.25 - 0.50, \, 0.25 - 0.50]^T = [-0.25, \, -0.25]^T$.
+  Distance: $\|\mathbf{x}_2 - \mathbf{x}^*\|_2 = \sqrt{(-0.25)^2 + (-0.25)^2} = \sqrt{0.125} \approx \mathbf{0.353553}$.
+  Contraction ratio: $\frac{0.353553}{0.500000} \approx \mathbf{0.707107} = \rho \quad \checkmark$
+
+The observed error contracts by **exactly $\rho = 0.707107$ per step**, verifying the theoretical bound with zero slack!
+
+---
+
+### Illustration 5 (Numerical): Jensen's Inequality for Cross-Entropy Loss & Gibbs' Inequality
+
+In classification, we train networks by minimizing the Cross-Entropy loss between ground-truth distribution $P$ and predicted distribution $Q$. Gibbs' inequality states that $D_{\text{KL}}(P \parallel Q) \ge 0$, with equality if and only if $P = Q$.
+
+#### 1. First-Principles Derivation via Jensen's Inequality
+Let $P$ and $Q$ be probability distributions over discrete alphabet $\mathcal{X}$.
+$$-D_{\text{KL}}(P \parallel Q) = -\sum_{x \in \mathcal{X}} P(x) \ln \frac{P(x)}{Q(x)} = \sum_{x \in \mathcal{X}} P(x) \ln \frac{Q(x)}{P(x)} = \mathbb{E}_{X \sim P}\left[ \ln \frac{Q(X)}{P(X)} \right]$$
+
+Since $h(u) = \ln(u)$ is strictly concave, apply the concave form of Jensen's inequality:
+$$\mathbb{E}_{X \sim P}\left[ \ln \frac{Q(X)}{P(X)} \right] \le \ln\left( \mathbb{E}_{X \sim P}\left[ \frac{Q(X)}{P(X)} \right] \right) = \ln\left( \sum_{x \in \mathcal{X}} P(x) \frac{Q(x)}{P(x)} \right) = \ln\left( \sum_{x \in \mathcal{X}} Q(x) \right)$$
+Since $Q$ is a valid probability distribution, $\sum_{x} Q(x) = 1$:
+$$\ln(1) = 0 \implies -D_{\text{KL}}(P \parallel Q) \le 0 \implies \mathbf{D_{\text{KL}}(P \parallel Q) \ge 0} \quad \blacksquare$$
+
+#### 2. Numerical Walkthrough with Concrete Probabilities
+Let binary true distribution be $P = [0.70, 0.30]$ and model prediction be $Q = [0.50, 0.50]$ (uncertain uniform prediction):
+
+- **Class 1 ($x = 1$):**
+  $$P(1) \ln \frac{P(1)}{Q(1)} = 0.70 \ln\left( \frac{0.70}{0.50} \right) = 0.70 \ln(1.40) \approx 0.70(0.336472) = \mathbf{+0.235530}$$
+- **Class 2 ($x = 2$):**
+  $$P(2) \ln \frac{P(2)}{Q(2)} = 0.30 \ln\left( \frac{0.30}{0.50} \right) = 0.30 \ln(0.60) \approx 0.30(-0.510826) = \mathbf{-0.153248}$$
+
+Summing both classes yields the KL divergence:
+$$\mathbf{D_{\text{KL}}(P \parallel Q) = 0.235530 - 0.153248 = 0.082282 \ge 0} \quad \checkmark$$
+
+#### 3. Impact on Cross-Entropy Loss
+- **Shannon Entropy of Target:**
+  $$H(P) = -0.70 \ln(0.70) - 0.30 \ln(0.30) = -0.70(-0.356675) - 0.30(-1.203973) = 0.249672 + 0.361192 = \mathbf{0.610864 \text{ nats}}$$
+- **Cross-Entropy Loss:**
+  $$H(P, Q) = -\sum_{x} P(x) \ln Q(x) = -0.70 \ln(0.50) - 0.30 \ln(0.50) = -\ln(0.50) = \mathbf{0.693147 \text{ nats}}$$
+- **Decomposition Check:**
+  $$H(P) + D_{\text{KL}}(P \parallel Q) = 0.610864 + 0.082282 = \mathbf{0.693146 \approx H(P, Q)}$$
+
+By Jensen's inequality, Cross-Entropy loss is strictly lower-bounded by the data entropy $H(P)$; the extra $+0.0823$ nats is the exact Jensen penalty paid for the model's incorrect uniform hypothesis!
 
 ---
 

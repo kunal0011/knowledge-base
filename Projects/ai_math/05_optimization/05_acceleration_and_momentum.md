@@ -131,6 +131,89 @@ Compare $0.8182$ to standard GD's $0.9802$! The number of iterations to reduce e
 
 ---
 
+### Deep Derivation 5.5.1: First-Principles Proof of Optimal Polyak Hyperparameters $\alpha^*$ and $\beta^*$
+
+We rigorously derive the optimal step size $\alpha^*$ and momentum coefficient $\beta^*$ that minimize the spectral radius of the heavy-ball companion matrix over all eigenvalues $\lambda \in [\mu, L]$.
+
+#### 1. The Characteristic Polynomial
+For an eigenvalue $\lambda$, the error dynamics matrix is:
+$$T_\lambda = \begin{bmatrix} (1 + \beta - \alpha \lambda) & -\beta \\ 1 & 0 \end{bmatrix}$$
+The characteristic polynomial is:
+$$P(z) = \det(z I - T_\lambda) = z^2 - (1 + \beta - \alpha \lambda) z + \beta = 0$$
+The discriminant of this quadratic is:
+$$\Delta(\lambda) = (1 + \beta - \alpha \lambda)^2 - 4\beta$$
+
+#### 2. Complex Conjugate Roots and Constant Modulus
+When $\Delta(\lambda) \le 0$, the roots are complex conjugate pairs $z_{1, 2} = \frac{(1 + \beta - \alpha \lambda) \pm i \sqrt{4\beta - (1 + \beta - \alpha \lambda)^2}}{2}$.
+The squared modulus of the roots is:
+$$|z|^2 = \left( \frac{1 + \beta - \alpha \lambda}{2} \right)^2 + \frac{4\beta - (1 + \beta - \alpha \lambda)^2}{4} = \frac{4\beta}{4} = \beta$$
+$$|z| = \sqrt{\beta}$$
+Remarkably, whenever the roots are complex, **their magnitude is strictly constant and independent of the eigenvalue $\lambda$**:
+$$\rho(T_\lambda) = \sqrt{\beta} \quad \forall \lambda \text{ such that } \Delta(\lambda) \le 0$$
+
+#### 3. Enclosing the Entire Spectrum in the Complex Disc
+To ensure convergence across the entire spectrum $[\mu, L]$ while keeping $\sqrt{\beta}$ as small as possible, the discriminant $\Delta(\lambda)$ must remain non-positive across the full interval $\lambda \in [\mu, L]$, with critical damping (discriminant zero) at both endpoints:
+$$(1 + \beta - \alpha \mu)^2 = 4\beta \implies 1 + \beta - \alpha \mu = +2\sqrt{\beta}$$
+$$(1 + \beta - \alpha L)^2 = 4\beta \implies 1 + \beta - \alpha L = -2\sqrt{\beta}$$
+
+#### 4. Solving the Simultaneous Equations
+Subtract the second equation from the first:
+$$\alpha (L - \mu) = 4\sqrt{\beta} \implies \mathbf{\alpha = \frac{4\sqrt{\beta}}{L - \mu}}$$
+
+Add the two equations:
+$$2(1 + \beta) - \alpha(L + \mu) = 0 \implies 2(1 + \beta) = \alpha(L + \mu)$$
+Substitute $\alpha = \frac{4\sqrt{\beta}}{L - \mu}$:
+$$2(1 + \beta) = \frac{4\sqrt{\beta}(L + \mu)}{L - \mu} \implies 1 + \beta = 2\sqrt{\beta} \left( \frac{L + \mu}{L - \mu} \right)$$
+
+Let $u = \sqrt{\beta}$. The equation becomes a quadratic in $u$:
+$$u^2 - 2 \left( \frac{L + \mu}{L - \mu} \right) u + 1 = 0$$
+
+Apply the quadratic formula:
+$$u = \frac{2 \frac{L + \mu}{L - \mu} \pm \sqrt{4\left(\frac{L + \mu}{L - \mu}\right)^2 - 4}}{2} = \frac{L + \mu \pm \sqrt{(L + \mu)^2 - (L - \mu)^2}}{L - \mu} = \frac{L + \mu \pm \sqrt{4 L \mu}}{L - \mu}$$
+Factoring numerator and denominator:
+$$u = \frac{(\sqrt{L} \pm \sqrt{\mu})^2}{(\sqrt{L} - \sqrt{\mu})(\sqrt{L} + \sqrt{\mu})}$$
+For stability, we require $u = \sqrt{\beta} < 1$, selecting the minus sign:
+$$\mathbf{\sqrt{\beta^*} = \frac{\sqrt{L} - \sqrt{\mu}}{\sqrt{L} + \sqrt{\mu}} = \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}}$$
+Squaring yields the optimal momentum coefficient:
+$$\mathbf{\beta^* = \left( \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1} \right)^2}$$
+
+#### 5. Recovering the Optimal Step Size $\alpha^*$
+Substitute $\sqrt{\beta^*} = \frac{\sqrt{L} - \sqrt{\mu}}{\sqrt{L} + \sqrt{\mu}}$ into the expression for $\alpha$:
+$$\alpha^* = \frac{4 \left( \frac{\sqrt{L} - \sqrt{\mu}}{\sqrt{L} + \sqrt{\mu}} \right)}{L - \mu} = \frac{4 (\sqrt{L} - \sqrt{\mu})}{(\sqrt{L} - \sqrt{\mu})(\sqrt{L} + \sqrt{\mu})^2} = \mathbf{\frac{4}{(\sqrt{L} + \sqrt{\mu})^2}} \quad \blacksquare$$
+
+---
+
+### Deep Derivation 5.5.2: Algebraic Equivalence of Sutskever's PyTorch NAG Formulation
+
+In production frameworks, evaluating gradients at lookahead positions $\theta_t - \beta v_t$ is costly. Sutskever et al. (2013) proved that a simple change of variables eliminates the auxiliary forward-backward pass.
+
+#### 1. The Standard NAG Equations
+$$v_{t+1} = \beta v_t + \alpha \nabla f(\theta_t - \beta v_t)$$
+$$\theta_{t+1} = \theta_t - v_{t+1}$$
+
+#### 2. The Coordinate Transformation
+Define the lookahead variable as the primary state variable:
+$$\phi_t = \theta_t - \beta v_t \implies \theta_t = \phi_t + \beta v_t$$
+Substituting $\phi_t$ into the velocity update:
+$$v_{t+1} = \beta v_t + \alpha \nabla f(\phi_t)$$
+
+#### 3. Propagating the Transformed State
+Now compute the transformed state at step $t+1$:
+$$\phi_{t+1} = \theta_{t+1} - \beta v_{t+1}$$
+Substitute $\theta_{t+1} = \theta_t - v_{t+1}$:
+$$\phi_{t+1} = (\theta_t - v_{t+1}) - \beta v_{t+1} = (\phi_t + \beta v_t - v_{t+1}) - \beta v_{t+1}$$
+Notice that from the velocity update: $\beta v_t - v_{t+1} = -\alpha \nabla f(\phi_t)$.
+Substitute this relation:
+$$\phi_{t+1} = \phi_t - \alpha \nabla f(\phi_t) - \beta v_{t+1}$$
+
+#### 4. The Production Update Rule
+Renaming the dummy symbol $\phi_t \to \theta_t$:
+$$\mathbf{v_{t+1} = \beta v_t + \alpha \nabla f(\theta_t)}$$
+$$\mathbf{\theta_{t+1} = \theta_t - \alpha \nabla f(\theta_t) - \beta v_{t+1}}$$
+*Result:* The gradient is computed **strictly at the current parameter $\theta_t$**, exactly like standard SGD, while preserving the exact accelerated trajectory of Nesterov's lookahead! $\blacksquare$
+
+---
+
 ### 5. Summary of Convergence Rates
 
 | Setting | Standard GD | Polyak Heavy-Ball | Nesterov (NAG) | Theoretical Lower Bound |
@@ -386,6 +469,112 @@ Notice that this requires **zero auxiliary forward passes**:
 3. Update parameters using the linear combination of current gradient and newly accumulated velocity:
    $$\theta_{t+1} = \theta_t - (\alpha \nabla f(\theta_t) + \beta v_{t+1})$$
 This exact algebraic equivalence is what runs inside PyTorch's C++ backend!
+
+---
+
+### Problem 4: Step-by-Step 3-Iteration Trace of NAG vs. Polyak on an Asymmetric Ravine
+
+Let us trace how Polyak momentum overshoots along an ill-conditioned ravine while Nesterov Accelerated Gradient (NAG) applies anticipatory braking.
+
+#### 1. Problem Setup
+$$f(x, y) = 15 x^2 + y^2$$
+- Gradient: $\nabla f(x, y) = \begin{bmatrix} 30 x \\ 2 y \end{bmatrix}$
+- Curvatures: $\lambda_1 = 30$ (steep valley wall), $\lambda_2 = 2$ (gentle valley floor). Condition number $\kappa = 15$.
+- Initial state: $\mathbf{x}_0 = \begin{bmatrix} 1.0000 \\ 1.0000 \end{bmatrix}, \quad \mathbf{v}_0 = \begin{bmatrix} 0.0000 \\ 0.0000 \end{bmatrix}$.
+- Hyperparameters: learning rate $\alpha = 0.05$, momentum $\beta = 0.60$.
+
+#### 2. Iteration 1 (Identical for both methods since $\mathbf{v}_0 = \mathbf{0}$)
+$$\nabla f(\mathbf{x}_0) = \begin{bmatrix} 30(1.0) \\ 2(1.0) \end{bmatrix} = \begin{bmatrix} 30.0000 \\ 2.0000 \end{bmatrix}$$
+$$\mathbf{v}_1 = \beta \mathbf{v}_0 + \alpha \nabla f(\mathbf{x}_0) = 0.05 \begin{bmatrix} 30.0000 \\ 2.0000 \end{bmatrix} = \begin{bmatrix} 1.5000 \\ 0.1000 \end{bmatrix}$$
+$$\mathbf{x}_1 = \mathbf{x}_0 - \mathbf{v}_1 = \begin{bmatrix} 1.0000 - 1.5000 \\ 1.0000 - 0.1000 \end{bmatrix} = \mathbf{\begin{bmatrix} -0.5000 \\ 0.9000 \end{bmatrix}}$$
+
+#### 3. Iteration 2: Polyak Heavy-Ball vs. NAG
+- **Polyak Momentum:**
+  $$\nabla f(\mathbf{x}_1) = \begin{bmatrix} 30(-0.50) \\ 2(0.90) \end{bmatrix} = \begin{bmatrix} -15.0000 \\ 1.8000 \end{bmatrix}$$
+  $$\mathbf{v}_2^{\text{Polyak}} = 0.60 \begin{bmatrix} 1.5000 \\ 0.1000 \end{bmatrix} + 0.05 \begin{bmatrix} -15.0000 \\ 1.8000 \end{bmatrix} = \begin{bmatrix} 0.9000 - 0.7500 \\ 0.0600 + 0.0900 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.1500 \\ +0.1500 \end{bmatrix}}$$
+  $$\mathbf{x}_2^{\text{Polyak}} = \mathbf{x}_1 - \mathbf{v}_2 = \begin{bmatrix} -0.5000 - 0.1500 \\ 0.9000 - 0.1500 \end{bmatrix} = \mathbf{\begin{bmatrix} -0.6500 \\ 0.7500 \end{bmatrix}}$$
+  *(Notice: The positive residual inertia $0.9000$ overwhelmed the negative gradient $-0.7500$, causing $x$ to overshoot further from $-0.50 \to -0.65$!)*
+
+- **NAG Lookahead:**
+  Lookahead point:
+  $$\mathbf{x}_{\text{look}, 1} = \mathbf{x}_1 - \beta \mathbf{v}_1 = \begin{bmatrix} -0.5000 \\ 0.9000 \end{bmatrix} - 0.60 \begin{bmatrix} 1.5000 \\ 0.1000 \end{bmatrix} = \begin{bmatrix} -0.5000 - 0.9000 \\ 0.9000 - 0.0600 \end{bmatrix} = \mathbf{\begin{bmatrix} -1.4000 \\ 0.8400 \end{bmatrix}}$$
+  Gradient at lookahead point:
+  $$\nabla f(\mathbf{x}_{\text{look}, 1}) = \begin{bmatrix} 30(-1.40) \\ 2(0.84) \end{bmatrix} = \begin{bmatrix} -42.0000 \\ 1.6800 \end{bmatrix}$$
+  Velocity update with lookahead gradient:
+  $$\mathbf{v}_2^{\text{NAG}} = 0.60 \begin{bmatrix} 1.5000 \\ 0.1000 \end{bmatrix} + 0.05 \begin{bmatrix} -42.0000 \\ 1.6800 \end{bmatrix} = \begin{bmatrix} 0.9000 - 2.1000 \\ 0.0600 + 0.0840 \end{bmatrix} = \mathbf{\begin{bmatrix} -1.2000 \\ +0.1440 \end{bmatrix}}$$
+  Position update:
+  $$\mathbf{x}_2^{\text{NAG}} = \mathbf{x}_1 - \mathbf{v}_2^{\text{NAG}} = \begin{bmatrix} -0.5000 - (-1.2000) \\ 0.9000 - 0.1440 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.7000 \\ 0.7560 \end{bmatrix}}$$
+
+#### 4. Iteration 3
+- **Polyak Momentum:**
+  $$\nabla f(\mathbf{x}_2^{\text{Polyak}}) = \begin{bmatrix} 30(-0.65) \\ 2(0.75) \end{bmatrix} = \begin{bmatrix} -19.5000 \\ 1.5000 \end{bmatrix}$$
+  $$\mathbf{v}_3^{\text{Polyak}} = 0.60 \begin{bmatrix} 0.1500 \\ 0.1500 \end{bmatrix} + 0.05 \begin{bmatrix} -19.5000 \\ 1.5000 \end{bmatrix} = \begin{bmatrix} 0.0900 - 0.9750 \\ 0.0900 + 0.0750 \end{bmatrix} = \mathbf{\begin{bmatrix} -0.8850 \\ +0.1650 \end{bmatrix}}$$
+  $$\mathbf{x}_3^{\text{Polyak}} = \begin{bmatrix} -0.6500 - (-0.8850) \\ 0.7500 - 0.1650 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.2350 \\ 0.5850 \end{bmatrix}}$$
+
+- **NAG Lookahead:**
+  $$\mathbf{x}_{\text{look}, 2} = \mathbf{x}_2^{\text{NAG}} - \beta \mathbf{v}_2^{\text{NAG}} = \begin{bmatrix} 0.7000 \\ 0.7560 \end{bmatrix} - 0.60 \begin{bmatrix} -1.2000 \\ 0.1440 \end{bmatrix} = \begin{bmatrix} 0.7000 + 0.7200 \\ 0.7560 - 0.0864 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.4200 \\ 0.6696 \end{bmatrix}}$$
+  $$\nabla f(\mathbf{x}_{\text{look}, 2}) = \begin{bmatrix} 30(1.42) \\ 2(0.6696) \end{bmatrix} = \begin{bmatrix} 42.6000 \\ 1.3392 \end{bmatrix}$$
+  $$\mathbf{v}_3^{\text{NAG}} = 0.60 \begin{bmatrix} -1.2000 \\ 0.1440 \end{bmatrix} + 0.05 \begin{bmatrix} 42.6000 \\ 1.3392 \end{bmatrix} = \begin{bmatrix} -0.7200 + 2.1300 \\ 0.0864 + 0.0670 \end{bmatrix} = \mathbf{\begin{bmatrix} +1.4100 \\ +0.1534 \end{bmatrix}}$$
+  $$\mathbf{x}_3^{\text{NAG}} = \begin{bmatrix} 0.7000 - 1.4100 \\ 0.7560 - 0.1534 \end{bmatrix} = \mathbf{\begin{bmatrix} -0.7100 \\ 0.6026 \end{bmatrix}}$$
+
+#### 5. Comparison Verdict
+```
+Iteration │ Metric          │ Standard GD       │ Polyak Heavy-Ball │ Nesterov NAG
+──────────┼─────────────────┼───────────────────┼───────────────────┼───────────────────
+t = 0     │ Position [x, y] │ [ 1.0000, 1.0000] │ [ 1.0000, 1.0000] │ [ 1.0000, 1.0000]
+t = 1     │ Position [x, y] │ [-0.5000, 0.9000] │ [-0.5000, 0.9000] │ [-0.5000, 0.9000]
+t = 2     │ Position [x, y] │ [+0.2500, 0.8100] │ [-0.6500, 0.7500] │ [+0.7000, 0.7560]
+t = 3     │ Position [x, y] │ [-0.1250, 0.7290] │ [+0.2350, 0.5850] │ [-0.7100, 0.6026]
+──────────┼─────────────────┼───────────────────┼───────────────────┼───────────────────
+Progress  │ Valley Floor y  │ 1.0000 -> 0.7290  │ 1.0000 -> 0.5850  │ 1.0000 -> 0.6026
+```
+Both momentum methods advance along the flat valley floor $y$ nearly **$1.5\times$ faster** than standard GD ($0.5850$ vs $0.7290$).
+
+---
+
+### Problem 5: Concrete Euler Discretization of the Damped Harmonic Oscillator
+
+Let us demonstrate the exact mathematical mapping between a physical damped harmonic oscillator and Polyak momentum.
+
+#### 1. Continuous Physical Model
+Consider a unit-mass particle in a 1D quadratic potential $f(x) = \frac{1}{2} k x^2$ with viscous friction $\gamma$:
+$$\ddot{x}(t) + \gamma \dot{x}(t) + k x(t) = 0$$
+Let physical parameters be: spring stiffness $k = 25.0$, damping coefficient $\gamma = 4.0$.
+The analytical roots of the characteristic polynomial $r^2 + 4r + 25 = 0$ are:
+$$r = \frac{-4 \pm \sqrt{16 - 100}}{2} = -2 \pm i\sqrt{21} \approx -2.0 \pm 4.5826 i$$
+This is an **underdamped oscillator** with exponential decay envelope $e^{-2t}$ and oscillation period $T = \frac{2\pi}{\sqrt{21}} \approx 1.37$ seconds.
+
+#### 2. Discrete Finite-Difference Scheme
+Approximate derivatives with discrete time step $\Delta t = 0.10$ seconds:
+$$\dot{x}(t) \approx \frac{x_t - x_{t-1}}{\Delta t}, \qquad \ddot{x}(t) \approx \frac{x_{t+1} - 2x_t + x_{t-1}}{\Delta t^2}$$
+Substitute into the ODE:
+$$\frac{x_{t+1} - 2x_t + x_{t-1}}{\Delta t^2} + \gamma \frac{x_t - x_{t-1}}{\Delta t} + k x_t = 0$$
+Multiply through by $\Delta t^2$:
+$$x_{t+1} - 2x_t + x_{t-1} + \gamma \Delta t (x_t - x_{t-1}) + k \Delta t^2 x_t = 0$$
+Group terms for $x_{t+1}$:
+$$x_{t+1} = (2 - \gamma \Delta t - k \Delta t^2) x_t - (1 - \gamma \Delta t) x_{t-1}$$
+
+#### 3. Mapping to Polyak Momentum Recurrence
+Recall the Polyak momentum recurrence on $f(x) = \frac{1}{2} k x^2$:
+$$x_{t+1} - x_t = \beta(x_t - x_{t-1}) - \alpha k x_t \implies x_{t+1} = (1 + \beta - \alpha k) x_t - \beta x_{t-1}$$
+Comparing coefficients:
+1. **Momentum coefficient:** $\mathbf{\beta = 1 - \gamma \Delta t = 1 - 4.0(0.10) = 0.6000}$
+2. **Learning rate:** $\alpha k = k \Delta t^2 \implies \mathbf{\alpha = \Delta t^2 = 0.10^2 = 0.0100}$
+3. Coefficient of $x_t$: $1 + \beta - \alpha k = 1 + 0.60 - 0.25 = \mathbf{1.3500}$.
+$$(2 - \gamma \Delta t - k \Delta t^2) = 2 - 0.40 - 0.25 = \mathbf{1.3500} \quad (\text{Exact Match!})$$
+
+#### 4. Step-by-Step Trajectory Simulation
+Initialize at $x_0 = 1.0000$ from rest ($x_{-1} = 1.0000$):
+- **Step 1 ($t = 1$):**
+  $$x_1 = 1.3500(x_0) - 0.6000(x_{-1}) = 1.3500(1.0) - 0.6000(1.0) = 1.3500 - 0.6000 = \mathbf{0.7500}$$
+- **Step 2 ($t = 2$):**
+  $$x_2 = 1.3500(x_1) - 0.6000(x_0) = 1.3500(0.7500) - 0.6000(1.0000) = 1.0125 - 0.6000 = \mathbf{0.4125}$$
+- **Step 3 ($t = 3$):**
+  $$x_3 = 1.3500(x_2) - 0.6000(x_1) = 1.3500(0.4125) - 0.6000(0.7500) = 0.556875 - 0.4500 = \mathbf{0.106875}$$
+- **Step 4 ($t = 4$):**
+  $$x_4 = 1.3500(x_3) - 0.6000(x_2) = 1.3500(0.106875) - 0.6000(0.4125) = 0.144281 - 0.2475 = \mathbf{-0.103219}$$
+
+The particle smoothly glides from $+1.0 \to +0.75 \to +0.41 \to +0.11$, crosses zero at step 4 to $-0.10$, and dampens exponentially to the equilibrium $x^* = 0$, validating the mechanical oscillator equivalence with exact numerical fidelity!
 
 ---
 

@@ -159,6 +159,174 @@ Inverting $A \in \mathbb{R}^{d_1 \times d_1}$ and $S \in \mathbb{R}^{d_2 \times 
 
 ---
 
+### 5. Deep Mathematical Derivations
+
+#### Deep Derivation 5.7.1: Local Quadratic Convergence Proof of Newton's Method
+
+We prove that under standard smoothness and strong convexity assumptions, Newton's method exhibits local quadratic convergence: the error at iteration $t+1$ is proportional to the square of the error at iteration $t$.
+
+**1. Problem Setting & Assumptions**:
+- Let $f: \mathbb{R}^d \to \mathbb{R}$ be twice continuously differentiable ($C^2$).
+- Let $\theta^* \in \mathbb{R}^d$ be a local minimum satisfying the first-order optimality condition $\nabla f(\theta^*) = 0$.
+- **Assumption 1 (Strong Convexity / Strict Local Curvature)**: The Hessian at $\theta^*$ is strictly positive definite with minimum eigenvalue $\mu > 0$:
+  $$\nabla^2 f(\theta^*) \succeq \mu I, \quad \mu > 0$$
+  By continuity of the Hessian, there exists a ball $B(\theta^*, r)$ of radius $r > 0$ such that for all $\theta \in B(\theta^*, r)$:
+  $$\nabla^2 f(\theta) \succeq \mu I \implies \|[\nabla^2 f(\theta)]^{-1}\|_2 \le \frac{1}{\mu}$$
+- **Assumption 2 (Hessian Lipschitz Continuity)**: The Hessian is locally $L_2$-Lipschitz continuous in $B(\theta^*, r)$:
+  $$\|\nabla^2 f(x) - \nabla^2 f(y)\|_2 \le L_2 \|x - y\|_2, \quad \forall x, y \in B(\theta^*, r)$$
+
+**2. The Error Identity**:
+The classical Newton-Raphson update is:
+$$\theta_{t+1} = \theta_t - [\nabla^2 f(\theta_t)]^{-1} \nabla f(\theta_t)$$
+Subtracting the target optimum $\theta^*$ from both sides:
+$$\theta_{t+1} - \theta^* = \theta_t - \theta^* - [\nabla^2 f(\theta_t)]^{-1} \nabla f(\theta_t)$$
+Factoring out the inverse Hessian $[\nabla^2 f(\theta_t)]^{-1}$:
+$$\theta_{t+1} - \theta^* = [\nabla^2 f(\theta_t)]^{-1} \left[ \nabla^2 f(\theta_t) (\theta_t - \theta^*) - \nabla f(\theta_t) \right]$$
+Since $\nabla f(\theta^*) = 0$, we write $\nabla f(\theta_t) = \nabla f(\theta_t) - \nabla f(\theta^*)$:
+$$\theta_{t+1} - \theta^* = [\nabla^2 f(\theta_t)]^{-1} \left[ \nabla^2 f(\theta_t) (\theta_t - \theta^*) - (\nabla f(\theta_t) - \nabla f(\theta^*)) \right]$$
+
+**3. Fundamental Theorem of Calculus with Integral Remainder**:
+Express the gradient difference as a path integral along the line segment connecting $\theta^*$ to $\theta_t$:
+$$\nabla f(\theta_t) - \nabla f(\theta^*) = \int_0^1 \nabla^2 f\left(\theta^* + \tau(\theta_t - \theta^*)\right) (\theta_t - \theta^*) \, d\tau$$
+Similarly, express the term $\nabla^2 f(\theta_t) (\theta_t - \theta^*)$ as an integral:
+$$\nabla^2 f(\theta_t) (\theta_t - \theta^*) = \int_0^1 \nabla^2 f(\theta_t) (\theta_t - \theta^*) \, d\tau$$
+Subtracting the two integrals:
+$$\nabla^2 f(\theta_t) (\theta_t - \theta^*) - (\nabla f(\theta_t) - \nabla f(\theta^*)) = \int_0^1 \left[ \nabla^2 f(\theta_t) - \nabla^2 f\left(\theta^* + \tau(\theta_t - \theta^*)\right) \right] (\theta_t - \theta^*) \, d\tau$$
+
+**4. Applying Norm Bounds and Hessian Lipschitz Continuity**:
+Taking Euclidean vector norms:
+$$\left\| \nabla^2 f(\theta_t) (\theta_t - \theta^*) - (\nabla f(\theta_t) - \nabla f(\theta^*)) \right\|_2 \le \int_0^1 \left\| \nabla^2 f(\theta_t) - \nabla^2 f\left(\theta^* + \tau(\theta_t - \theta^*)\right) \right\|_2 \|\theta_t - \theta^*\|_2 \, d\tau$$
+By $L_2$-Lipschitz continuity of the Hessian:
+$$\left\| \nabla^2 f(\theta_t) - \nabla^2 f\left(\theta^* + \tau(\theta_t - \theta^*)\right) \right\|_2 \le L_2 \left\| \theta_t - \left(\theta^* + \tau(\theta_t - \theta^*)\right) \right\|_2 = L_2 (1 - \tau) \|\theta_t - \theta^*\|_2$$
+Substituting this back into the integral:
+$$\int_0^1 L_2 (1 - \tau) \|\theta_t - \theta^*\|_2^2 \, d\tau = L_2 \|\theta_t - \theta^*\|_2^2 \left[ \tau - \frac{\tau^2}{2} \right]_0^1 = \frac{L_2}{2} \|\theta_t - \theta^*\|_2^2$$
+
+**5. Quadratic Convergence Bound**:
+Substituting this bound into the error equation and applying the sub-multiplicative norm property:
+$$\|\theta_{t+1} - \theta^*\|_2 \le \left\| [\nabla^2 f(\theta_t)]^{-1} \right\|_2 \cdot \left\| \nabla^2 f(\theta_t) (\theta_t - \theta^*) - (\nabla f(\theta_t) - \nabla f(\theta^*)) \right\|_2$$
+Using $\|[\nabla^2 f(\theta_t)]^{-1}\|_2 \le \frac{1}{\mu}$:
+$$\|\theta_{t+1} - \theta^*\|_2 \le \frac{L_2}{2\mu} \|\theta_t - \theta^*\|_2^2$$
+
+**6. Region of Attraction and Doubly Exponential Convergence**:
+Define the error $e_t = \|\theta_t - \theta^*\|_2$ and constant $M = \frac{L_2}{2\mu}$. Then:
+$$e_{t+1} \le M e_t^2 \iff M e_{t+1} \le (M e_t)^2$$
+By induction:
+$$M e_t \le (M e_0)^{2^t} \implies e_t \le \frac{1}{M} (M e_0)^{2^t}$$
+Provided the initial point satisfies $e_0 < \frac{1}{M} = \frac{2\mu}{L_2}$, the quantity $M e_0 < 1$.
+The sequence $e_t$ converges **doubly exponentially fast**:
+- Iteration 1: $e_1 \le M e_0^2$
+- Iteration 2: $e_2 \le M^3 e_0^4$
+- Iteration 3: $e_3 \le M^7 e_0^8$
+- Iteration $t$: $e_t = \mathcal{O}\left((M e_0)^{2^t}\right)$
+This establishes that the number of accurate significant digits doubles at every single step near the optimum $\theta^*$.
+
+---
+
+#### Deep Derivation 5.7.2: Variational and Algebraic Derivation of the BFGS Update
+
+Quasi-Newton methods replace the explicit Hessian with an approximation $B_t \approx \nabla^2 f(\theta_t)$ or inverse $H_t \approx [\nabla^2 f(\theta_t)]^{-1}$. We derive the BFGS formula from first principles using constrained variational optimization and the Sherman-Morrison-Woodbury theorem.
+
+**1. The Secant Equation**:
+Let $s_t = \theta_{t+1} - \theta_t$ be the step displacement, and $y_t = \nabla f(\theta_{t+1}) - \nabla f(\theta_t)$ be the gradient variation.
+The Secant Equation requires the updated Hessian estimate $B_{t+1}$ to satisfy:
+$$B_{t+1} s_t = y_t \iff H_{t+1} y_t = s_t$$
+
+**2. Constrained Matrix Variational Problem**:
+To ensure stability, we seek an updated matrix $B_{t+1}$ that is symmetric, positive definite, satisfies the secant condition, and is closest to $B_t$ in a weighted Frobenius norm:
+$$\min_{B} \|B - B_t\|_{W}^2 \quad \text{subject to } B = B^T, \quad B s_t = y_t$$
+where $\|A\|_W = \|W^{1/2} A W^{1/2}\|_F$ and $W$ is any matrix satisfying $W y_t = s_t$.
+The unique closed-form solution to this variational problem (Dennis & Moré, 1977) yields the direct **BFGS Hessian update**:
+$$B_{t+1} = B_t - \frac{B_t s_t s_t^T B_t}{s_t^T B_t s_t} + \frac{y_t y_t^T}{y_t^T s_t}$$
+
+**3. Inverting the Update via Sherman-Morrison-Woodbury**:
+To avoid an $\mathcal{O}(d^3)$ matrix inversion of $B_{t+1}$, we derive the formula for $H_{t+1} = B_{t+1}^{-1}$ directly.
+Recall the **Sherman-Morrison formula** for rank-1 updates:
+$$(A + u v^T)^{-1} = A^{-1} - \frac{A^{-1} u v^T A^{-1}}{1 + v^T A^{-1} u}$$
+Write the BFGS update as a sequence of two rank-1 updates:
+Let $A = B_t - \frac{B_t s_t s_t^T B_t}{s_t^T B_t s_t}$, and $B_{t+1} = A + \frac{y_t y_t^T}{y_t^T s_t}$.
+Applying the Sherman-Morrison formula to $A + \frac{y_t y_t^T}{y_t^T s_t}$:
+$$B_{t+1}^{-1} = A^{-1} - \frac{A^{-1} y_t y_t^T A^{-1}}{y_t^T s_t + y_t^T A^{-1} y_t}$$
+Evaluating $A^{-1}$ using the Woodbury identity on $B_t - u u^T$ with $u = \frac{B_t s_t}{\sqrt{s_t^T B_t s_t}}$, and simplifying through algebraic recombination (Nocedal & Wright, Chapter 6):
+$$H_{t+1} = \left( I - \frac{s_t y_t^T}{y_t^T s_t} \right) H_t \left( I - \frac{y_t s_t^T}{y_t^T s_t} \right) + \frac{s_t s_t^T}{y_t^T s_t}$$
+Defining scalar $\rho_t = \frac{1}{y_t^T s_t}$:
+$$H_{t+1} = (I - \rho_t s_t y_t^T) H_t (I - \rho_t y_t s_t^T) + \rho_t s_t s_t^T$$
+
+**4. Proof of Guaranteed Positive Definiteness**:
+*Theorem*: If $H_t \succ 0$ and the curvature condition $y_t^T s_t > 0$ holds, then $H_{t+1} \succ 0$.
+*Proof*: For any non-zero vector $z \in \mathbb{R}^d \setminus \{0\}$:
+$$z^T H_{t+1} z = z^T (I - \rho_t s_t y_t^T) H_t (I - \rho_t y_t s_t^T) z + \rho_t (z^T s_t)^2$$
+Define $w = (I - \rho_t y_t s_t^T) z$. Then:
+$$z^T H_{t+1} z = w^T H_t w + \rho_t (z^T s_t)^2$$
+Since $H_t \succ 0$, $w^T H_t w \ge 0$, and $w^T H_t w = 0 \iff w = 0$.
+We examine two mutually exclusive cases:
+- **Case 1 ($s_t^T z \ne 0$)**: Since $\rho_t = \frac{1}{y_t^T s_t} > 0$, the second term satisfies $\rho_t (s_t^T z)^2 > 0$. Because $w^T H_t w \ge 0$, their sum $z^T H_{t+1} z > 0$.
+- **Case 2 ($s_t^T z = 0$)**: If $s_t^T z = 0$, then $w = (I - \rho_t y_t s_t^T) z = z - \rho_t y_t (s_t^T z) = z - 0 = z$.
+  Since $z \ne 0$, $w \ne 0$. Therefore, $w^T H_t w = z^T H_t z > 0$.
+In both cases, $z^T H_{t+1} z > 0$ for all $z \ne 0$. Hence $H_{t+1} \succ 0$ strictly $\blacksquare$.
+
+---
+
+#### Deep Derivation 5.7.3: Natural Gradient Descent and Invariance via Fisher Information Metric
+
+We derive Amari's Natural Gradient Descent from the Kullback-Leibler divergence on the statistical manifold, and prove its fundamental invariance under arbitrary parameter reparameterization.
+
+**1. The Riemannian Manifold of Probability Distributions**:
+Let $\mathcal{M} = \{p_\theta(x) : \theta \in \Theta \subset \mathbb{R}^d\}$ be a parametric statistical family of probability density functions on data space $\mathcal{X}$.
+Consider two infinitesimally close distributions $p_\theta$ and $p_{\theta + d\theta}$.
+The Kullback-Leibler divergence is:
+$$D_{\text{KL}}(p_\theta \parallel p_{\theta + d\theta}) = \int_{\mathcal{X}} p_\theta(x) \log \frac{p_\theta(x)}{p_{\theta + d\theta}(x)} \, dx = -\int_{\mathcal{X}} p_\theta(x) \log \frac{p_{\theta + d\theta}(x)}{p_\theta(x)} \, dx$$
+
+**2. Second-Order Taylor Expansion of the KL Divergence**:
+Expand the log ratio $\log p_{\theta + d\theta}(x) - \log p_\theta(x)$ around $\theta$:
+$$\log p_{\theta + d\theta}(x) = \log p_\theta(x) + d\theta^T \nabla_\theta \log p_\theta(x) + \frac{1}{2} d\theta^T \nabla_\theta^2 \log p_\theta(x) d\theta + \mathcal{O}(\|d\theta\|^3)$$
+Substitute into the integral:
+$$D_{\text{KL}}(p_\theta \parallel p_{\theta + d\theta}) = -\mathbb{E}_{p_\theta}\left[ d\theta^T \nabla_\theta \log p_\theta(x) + \frac{1}{2} d\theta^T \nabla_\theta^2 \log p_\theta(x) d\theta \right] + \mathcal{O}(\|d\theta\|^3)$$
+
+By linearity of expectation:
+$$D_{\text{KL}}(p_\theta \parallel p_{\theta + d\theta}) = -d\theta^T \mathbb{E}_{p_\theta}[\nabla_\theta \log p_\theta(x)] - \frac{1}{2} d\theta^T \mathbb{E}_{p_\theta}\left[\nabla_\theta^2 \log p_\theta(x)\right] d\theta$$
+
+**First Score Property**: The expectation of the score function is identically zero:
+$$\mathbb{E}_{p_\theta}[\nabla_\theta \log p_\theta(x)] = \int_{\mathcal{X}} p_\theta(x) \frac{\nabla_\theta p_\theta(x)}{p_\theta(x)} \, dx = \nabla_\theta \int_{\mathcal{X}} p_\theta(x) \, dx = \nabla_\theta (1) = 0$$
+
+**Second Score Property**: The expected negative Hessian equals the covariance of scores (Fisher Information Matrix):
+$$\nabla_\theta^2 \log p_\theta(x) = \nabla_\theta \left( \frac{\nabla_\theta p_\theta(x)}{p_\theta(x)} \right) = \frac{\nabla_\theta^2 p_\theta(x)}{p_\theta(x)} - \frac{\nabla_\theta p_\theta(x) \nabla_\theta p_\theta(x)^T}{p_\theta(x)^2} = \frac{\nabla_\theta^2 p_\theta(x)}{p_\theta(x)} - \nabla_\theta \log p_\theta(x) \nabla_\theta \log p_\theta(x)^T$$
+Taking expectation under $p_\theta(x)$:
+$$\mathbb{E}_{p_\theta}\left[ \frac{\nabla_\theta^2 p_\theta(x)}{p_\theta(x)} \right] = \int_{\mathcal{X}} \nabla_\theta^2 p_\theta(x) \, dx = \nabla_\theta^2 (1) = 0$$
+$$\implies \mathbb{E}_{p_\theta}\left[\nabla_\theta^2 \log p_\theta(x)\right] = -\mathbb{E}_{p_\theta}\left[\nabla_\theta \log p_\theta(x) \nabla_\theta \log p_\theta(x)^T\right] = -F(\theta)$$
+
+Substituting these two identities back into the KL expansion:
+$$D_{\text{KL}}(p_\theta \parallel p_{\theta + d\theta}) = \frac{1}{2} d\theta^T F(\theta) d\theta + \mathcal{O}(\|d\theta\|^3)$$
+The Fisher Information Matrix $F(\theta)$ is the **Riemannian metric tensor** of the probability manifold!
+
+**3. Constrained Steepest Descent Formulation**:
+To find the update direction that minimizes loss $\mathcal{L}(\theta)$ for a fixed change in predicted output distribution (bounded KL divergence $\epsilon > 0$):
+$$\min_{d\theta} \nabla \mathcal{L}(\theta)^T d\theta \quad \text{subject to } \frac{1}{2} d\theta^T F(\theta) d\theta \le \epsilon$$
+The Lagrangian for this problem is:
+$$\mathcal{L}(d\theta, \lambda) = \nabla \mathcal{L}(\theta)^T d\theta + \frac{\lambda}{2} \left( d\theta^T F(\theta) d\theta - 2\epsilon \right)$$
+Setting the gradient with respect to $d\theta$ to zero:
+$$\nabla_{d\theta} \mathcal{L} = \nabla \mathcal{L}(\theta) + \lambda F(\theta) d\theta = 0 \implies d\theta = -\frac{1}{\lambda} F(\theta)^{-1} \nabla \mathcal{L}(\theta)$$
+Setting base learning rate $\alpha = \frac{1}{\lambda}$:
+$$d\theta_{\text{Nat}} = -\alpha F(\theta)^{-1} \nabla \mathcal{L}(\theta)$$
+
+**4. Invariance to Parameterization Proof**:
+Let $\phi = \psi(\theta)$ be any smooth, invertible reparameterization with Jacobian $J \in \mathbb{R}^{d \times d}$ where $J_{i, j} = \frac{\partial \theta_i}{\partial \phi_j}$, so $\theta = \psi^{-1}(\phi)$.
+- **Gradient Transformation**:
+  By chain rule:
+  $$\nabla_\phi \mathcal{L} = J^T \nabla_\theta \mathcal{L}$$
+- **Fisher Metric Transformation**:
+  $$\nabla_\phi \log p_\phi(x) = J^T \nabla_\theta \log p_\theta(x)$$
+  $$F_\phi = \mathbb{E}\left[ \nabla_\phi \log p_\phi (\nabla_\phi \log p_\phi)^T \right] = \mathbb{E}\left[ J^T \nabla_\theta \log p_\theta (\nabla_\theta \log p_\theta)^T J \right] = J^T F_\theta J$$
+- **Inverse Fisher Metric Transformation**:
+  $$F_\phi^{-1} = (J^T F_\theta J)^{-1} = J^{-1} F_\theta^{-1} (J^T)^{-1}$$
+- **Natural Gradient in New Coordinates $\phi$**:
+  $$d\phi_{\text{Nat}} = -F_\phi^{-1} \nabla_\phi \mathcal{L} = -\left[ J^{-1} F_\theta^{-1} (J^T)^{-1} \right] \left[ J^T \nabla_\theta \mathcal{L} \right] = -J^{-1} F_\theta^{-1} \nabla_\theta \mathcal{L} = J^{-1} d\theta_{\text{Nat}}$$
+- **Induced Change in Original Parameter Space**:
+  $$d\theta_{\text{induced}} = J d\phi_{\text{Nat}} = J (J^{-1} d\theta_{\text{Nat}}) = d\theta_{\text{Nat}} \quad \blacksquare$$
+
+The physical trajectory of the model on the probability manifold is **completely invariant to the choice of coordinates**. Unlike Euclidean gradient descent, natural gradient descent moves along true distribution geodesics.
+
+---
+
 ## Part 3: Geometric Interpretation
 
 ### 1. Curvature Compensation on Quadratic Bowls
@@ -387,6 +555,155 @@ Show that the natural gradient update step in probability space is identical reg
 4. Induced change in probability $p$:
    $$\Delta p \approx \frac{\partial p}{\partial \theta} \widetilde{\nabla}_\theta \mathcal{L} = p(1-p) \nabla_p \mathcal{L} = \widetilde{\nabla}_p \mathcal{L}$$
    The step taken in model prediction space is **strictly identical**. Natural gradient eliminates arbitrary parameterization distortion!
+
+---
+
+### Problem 4: 2D Newton-Raphson Step on the Rosenbrock Valley with Manual $2 \times 2$ Inversion
+**Statement**: Consider the classic non-convex Rosenbrock objective function:
+$$f(x, y) = 100(y - x^2)^2 + (1 - x)^2$$
+whose global minimum lies at $(x^*, y^*) = (1, 1)$ with $f(1, 1) = 0$.
+A model is initialized along the parabolic bottom of the valley at $(x_0, y_0) = (1.2, 1.44)$ (where $y = x^2$).
+1. Compute the loss $f(x_0, y_0)$ and the gradient vector $\nabla f(x_0, y_0)$.
+2. Compute the exact $2 \times 2$ Hessian matrix $\mathcal{H}(x_0, y_0)$, its determinant, and its manual matrix inverse $\mathcal{H}^{-1}$.
+3. Compute the full Newton-Raphson step $\Delta \theta = -\mathcal{H}^{-1} \nabla f(x_0, y_0)$ and the resulting parameter vector $\theta_1$.
+4. Compare with a standard Gradient Descent step ($\alpha = 0.01$), explaining why second-order cross-coupling is essential for navigating curved ravines.
+
+**Solution**:
+
+#### 1. Function and Gradient Evaluation at $(1.2, 1.44)$:
+- Value of $f$:
+  $$f(1.2, 1.44) = 100\left(1.44 - (1.2)^2\right)^2 + (1 - 1.2)^2 = 100(0)^2 + (-0.2)^2 = \mathbf{0.040000}$$
+- Partial derivatives:
+  $$\frac{\partial f}{\partial x} = 200(y - x^2)(-2x) - 2(1 - x) = -400x(y - x^2) - 2(1 - x)$$
+  $$\frac{\partial f}{\partial y} = 200(y - x^2)$$
+- Evaluating at $(1.2, 1.44)$ where $y - x^2 = 1.44 - 1.44 = 0$:
+  $$\frac{\partial f}{\partial x} = -400(1.2)(0) - 2(1 - 1.2) = 0 - 2(-0.2) = \mathbf{0.400000}$$
+  $$\frac{\partial f}{\partial y} = 200(0) = \mathbf{0.000000}$$
+  $$\nabla f(1.2, 1.44) = \begin{bmatrix} 0.400000 \\ 0.000000 \end{bmatrix}$$
+  *(Notice: Along $y$, the gradient is EXACTLY ZERO because the current point sits at the bottom of the parabolic trough!)*
+
+---
+
+#### 2. Hessian Matrix and Manual Inversion:
+- Second partial derivatives:
+  $$\frac{\partial^2 f}{\partial x^2} = \frac{\partial}{\partial x}\left[-400xy + 400x^3 - 2 + 2x\right] = -400y + 1200x^2 + 2$$
+  $$\frac{\partial^2 f}{\partial x \partial y} = \frac{\partial}{\partial y}\left[-400xy + 400x^3 - 2 + 2x\right] = -400x$$
+  $$\frac{\partial^2 f}{\partial y^2} = \frac{\partial}{\partial y}\left[200y - 200x^2\right] = 200$$
+- Substituting $(x_0, y_0) = (1.2, 1.44)$:
+  $$\mathcal{H}_{11} = -400(1.44) + 1200(1.44) + 2 = (-576) + 1728 + 2 = 1152 + 2 = \mathbf{1154}$$
+  $$\mathcal{H}_{12} = \mathcal{H}_{21} = -400(1.2) = \mathbf{-480}$$
+  $$\mathcal{H}_{22} = \mathbf{200}$$
+  $$\mathcal{H}(1.2, 1.44) = \begin{bmatrix} 1154 & -480 \\ -480 & 200 \end{bmatrix}$$
+- Determinant of $\mathcal{H}$:
+  $$\det(\mathcal{H}) = (1154)(200) - (-480)^2 = 230{,}800 - 230{,}400 = \mathbf{400}$$
+  Since $\det(\mathcal{H}) = 400 > 0$ and $\text{Tr}(\mathcal{H}) = 1154 + 200 = 1354 > 0$, $\mathcal{H}$ is strictly positive definite!
+  *(Eigenvalues: $\lambda_1 \approx 0.2955$, $\lambda_2 \approx 1353.7$, condition number $\kappa \approx 4581$—extreme ill-conditioning!)*
+- Analytical $2 \times 2$ Inverse:
+  $$\mathcal{H}^{-1} = \frac{1}{\det(\mathcal{H})} \begin{bmatrix} \mathcal{H}_{22} & -\mathcal{H}_{12} \\ -\mathcal{H}_{21} & \mathcal{H}_{11} \end{bmatrix} = \frac{1}{400} \begin{bmatrix} 200 & 480 \\ 480 & 1154 \end{bmatrix} = \begin{bmatrix} \mathbf{0.500} & \mathbf{1.200} \\ \mathbf{1.200} & \mathbf{2.885} \end{bmatrix}$$
+
+---
+
+#### 3. Newton-Raphson Parameter Step:
+Compute $\Delta \theta = -\mathcal{H}^{-1} \nabla f$:
+$$\Delta \theta = -\begin{bmatrix} 0.500 & 1.200 \\ 1.200 & 2.885 \end{bmatrix} \begin{bmatrix} 0.400 \\ 0.000 \end{bmatrix} = -\begin{bmatrix} (0.500)(0.400) + (1.200)(0.000) \\ (1.200)(0.400) + (2.885)(0.000) \end{bmatrix} = \begin{bmatrix} \mathbf{-0.200} \\ \mathbf{-0.480} \end{bmatrix}$$
+
+Update parameter position:
+$$\theta_1^{\text{Newton}} = \begin{bmatrix} x_0 + \Delta x \\ y_0 + \Delta y \end{bmatrix} = \begin{bmatrix} 1.200 - 0.200 \\ 1.440 - 0.480 \end{bmatrix} = \begin{bmatrix} \mathbf{1.000000} \\ \mathbf{0.960000} \end{bmatrix}$$
+
+---
+
+#### 4. Comparison with First-Order Gradient Descent:
+Under standard Gradient Descent with learning rate $\alpha = 0.01$:
+$$\theta_1^{\text{GD}} = \begin{bmatrix} 1.200 \\ 1.440 \end{bmatrix} - 0.01 \begin{bmatrix} 0.400 \\ 0.000 \end{bmatrix} = \begin{bmatrix} \mathbf{1.196000} \\ \mathbf{1.440000} \end{bmatrix}$$
+- **The Blindness of GD**: Because $\frac{\partial f}{\partial y} = 0$, first-order GD moves only along $x$. But moving $x$ from $1.2 \to 1.196$ while keeping $y = 1.44$ immediately leaves the valley floor ($1.44 \ne 1.196^2 = 1.4304$). GD climbs directly onto the steep canyon wall, triggering severe zig-zagging.
+- **The Brilliance of Second-Order Cross-Coupling**: In Newton's method:
+  1. $x_1 = 1.000000$, hitting the **exact optimum coordinate** $x^* = 1.0$ in a single step!
+  2. Even though the gradient along $y$ was zero, the off-diagonal curvature $\mathcal{H}_{12} = -480$ informed the optimizer that changing $x$ shifts the parabolic minimum of $y$, taking a corrective step of $\Delta y = -0.480$ that steers down the valley.
+
+---
+
+### Problem 5: Natural Gradient vs. Euclidean Gradient on 1D Gaussian Parameter Estimation
+**Statement**: Consider fitting a univariate Gaussian model $p(x; \mu, \sigma) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)$ to incoming data.
+We observe a single training sample $x = 0.5$.
+The model's current parameter state has a small standard deviation:
+$$\mu_0 = 0.0, \quad \sigma_0 = 0.2$$
+1. Formulate the negative log-likelihood $\mathcal{L}(\mu, \sigma) = -\log p(x; \mu, \sigma)$ and compute the Euclidean gradient $\nabla_{(\mu, \sigma)} \mathcal{L}$.
+2. Compute the standard Euclidean Gradient Descent step with learning rate $\alpha = 0.01$.
+3. Formulate the exact Fisher Information Matrix $F(\mu, \sigma)$, its inverse $F^{-1}$, and compute the Natural Gradient vector $\widetilde{\nabla}_{(\mu, \sigma)} \mathcal{L} = F^{-1} \nabla \mathcal{L}$.
+4. Compute the Natural Gradient update with $\alpha = 0.01$ and compare the stability of both methods as $\sigma \to 0$.
+
+**Solution**:
+
+#### 1. Negative Log-Likelihood and Euclidean Gradient:
+$$\mathcal{L}(\mu, \sigma) = \frac{1}{2} \log(2\pi) + \log \sigma + \frac{(x - \mu)^2}{2\sigma^2}$$
+
+Partial derivatives:
+$$\frac{\partial \mathcal{L}}{\partial \mu} = -\frac{x - \mu}{\sigma^2}$$
+$$\frac{\partial \mathcal{L}}{\partial \sigma} = \frac{1}{\sigma} - \frac{(x - \mu)^2}{\sigma^3}$$
+
+Substitute $x = 0.5, \mu_0 = 0.0, \sigma_0 = 0.2$:
+- Deviation: $x - \mu = 0.5 - 0.0 = 0.5$
+- $\sigma_0^2 = 0.04$, $\sigma_0^3 = 0.008$
+$$\frac{\partial \mathcal{L}}{\partial \mu} = -\frac{0.5}{0.04} = \mathbf{-12.500000}$$
+$$\frac{\partial \mathcal{L}}{\partial \sigma} = \frac{1}{0.2} - \frac{0.5^2}{0.008} = 5.0 - \frac{0.25}{0.008} = 5.0 - 31.25 = \mathbf{-26.250000}$$
+$$\nabla \mathcal{L} = \begin{bmatrix} -12.500000 \\ -26.250000 \end{bmatrix}$$
+
+---
+
+#### 2. Euclidean Gradient Descent Step ($\alpha = 0.01$):
+$$\Delta \theta_{\text{Euclid}} = -\alpha \nabla \mathcal{L} = -0.01 \begin{bmatrix} -12.500 \\ -26.250 \end{bmatrix} = \begin{bmatrix} \mathbf{+0.125000} \\ \mathbf{+0.262500} \end{bmatrix}$$
+
+Updated parameters:
+$$\mu_1^{\text{Euclid}} = 0.0 + 0.125 = \mathbf{0.125000}$$
+$$\sigma_1^{\text{Euclid}} = 0.2 + 0.2625 = \mathbf{0.462500}$$
+*(Pathology: In a single step, the standard deviation more than doubled from $0.20 \to 0.4625$, destroying the sharpness of the distribution! If $\sigma_0$ had been $0.05$, the gradient would have exploded to $\approx -3980$, causing an uncontrollable divergence!)*
+
+---
+
+#### 3. Fisher Information Matrix and Natural Gradient:
+The log-likelihood for Gaussian $p(X; \mu, \sigma)$ is:
+$$\log p(X) = -\frac{1}{2}\log(2\pi) - \log \sigma - \frac{(X - \mu)^2}{2\sigma^2}$$
+Score functions:
+$$\frac{\partial \log p}{\partial \mu} = \frac{X - \mu}{\sigma^2}, \quad \frac{\partial \log p}{\partial \sigma} = -\frac{1}{\sigma} + \frac{(X - \mu)^2}{\sigma^3}$$
+
+Evaluating expectations under $X \sim \mathcal{N}(\mu, \sigma^2)$ where $\mathbb{E}[X - \mu] = 0$, $\mathbb{E}[(X-\mu)^2] = \sigma^2$, $\mathbb{E}[(X-\mu)^3] = 0$, and $\mathbb{E}[(X-\mu)^4] = 3\sigma^4$:
+1. $F_{\mu \mu} = \mathbb{E}\left[ \left(\frac{X - \mu}{\sigma^2}\right)^2 \right] = \frac{\mathbb{E}[(X-\mu)^2]}{\sigma^4} = \frac{\sigma^2}{\sigma^4} = \mathbf{\frac{1}{\sigma^2}}$
+2. $F_{\mu \sigma} = \mathbb{E}\left[ \left(\frac{X - \mu}{\sigma^2}\right) \left(-\frac{1}{\sigma} + \frac{(X - \mu)^2}{\sigma^3}\right) \right] = -\frac{\mathbb{E}[X-\mu]}{\sigma^3} + \frac{\mathbb{E}[(X-\mu)^3]}{\sigma^5} = 0 + 0 = \mathbf{0}$
+3. $F_{\sigma \sigma} = \mathbb{E}\left[ \left(-\frac{1}{\sigma} + \frac{(X - \mu)^2}{\sigma^3}\right)^2 \right] = \frac{1}{\sigma^2} - \frac{2\mathbb{E}[(X-\mu)^2]}{\sigma^4} + \frac{\mathbb{E}[(X-\mu)^4]}{\sigma^6} = \frac{1}{\sigma^2} - \frac{2}{\sigma^2} + \frac{3\sigma^4}{\sigma^6} = \mathbf{\frac{2}{\sigma^2}}$
+
+Thus, the Fisher Information Matrix and its exact inverse are:
+$$F(\mu, \sigma) = \begin{bmatrix} \frac{1}{\sigma^2} & 0 \\ 0 & \frac{2}{\sigma^2} \end{bmatrix} \implies F(\mu, \sigma)^{-1} = \begin{bmatrix} \sigma^2 & 0 \\ 0 & \frac{1}{2}\sigma^2 \end{bmatrix}$$
+
+At $\sigma_0 = 0.2$ ($\sigma_0^2 = 0.04$):
+$$F^{-1} = \begin{bmatrix} 0.04 & 0 \\ 0 & 0.02 \end{bmatrix}$$
+
+The Natural Gradient direction is:
+$$\widetilde{\nabla} \mathcal{L} = F^{-1} \nabla \mathcal{L} = \begin{bmatrix} 0.04 & 0 \\ 0 & 0.02 \end{bmatrix} \begin{bmatrix} -12.500 \\ -26.250 \end{bmatrix} = \begin{bmatrix} (0.04)(-12.500) \\ (0.02)(-26.250) \end{bmatrix} = \begin{bmatrix} \mathbf{-0.500000} \\ \mathbf{-0.525000} \end{bmatrix}$$
+
+*(Notice the mathematical miracle: In the Natural Gradient, the $\frac{1}{\sigma^2}$ explosion cancels out completely!)*
+$$\widetilde{\nabla}_\mu \mathcal{L} = \sigma^2 \left( -\frac{x - \mu}{\sigma^2} \right) = -(x - \mu) = -0.5$$
+$$\widetilde{\nabla}_\sigma \mathcal{L} = \frac{1}{2}\sigma^2 \left( \frac{1}{\sigma} - \frac{(x - \mu)^2}{\sigma^3} \right) = \frac{1}{2}\left( \sigma - \frac{(x - \mu)^2}{\sigma} \right) = \frac{1}{2}(0.2 - 1.25) = -0.525$$
+
+---
+
+#### 4. Natural Gradient Parameter Step ($\alpha = 0.01$):
+$$\Delta \theta_{\text{Nat}} = -\alpha \widetilde{\nabla} \mathcal{L} = -0.01 \begin{bmatrix} -0.500000 \\ -0.525000 \end{bmatrix} = \begin{bmatrix} \mathbf{+0.005000} \\ \mathbf{+0.005250} \end{bmatrix}$$
+
+Updated parameters:
+$$\mu_1^{\text{Nat}} = 0.0 + 0.005000 = \mathbf{0.005000}$$
+$$\sigma_1^{\text{Nat}} = 0.2 + 0.005250 = \mathbf{0.205250}$$
+
+#### Comparative Summary:
+
+| Metric / Parameter | Euclidean Gradient Descent ($\alpha = 0.01$) | Natural Gradient Descent ($\alpha = 0.01$) |
+| :--- | :--- | :--- |
+| **Step Vector $\Delta \theta$** | $[+0.125000, +0.262500]^T$ | $[+0.005000, +0.005250]^T$ |
+| **New Mean $\mu_1$** | $0.125000$ | $0.005000$ |
+| **New Std Dev $\sigma_1$** | $0.462500$ ($+131\%$ explosion!) | $0.205250$ ($+2.6\%$ controlled shift) |
+| **Induced KL Divergence** | $D_{\text{KL}}(p_{\theta_0} \parallel p_{\theta_1}) \approx 0.732$ (massive shock) | $D_{\text{KL}}(p_{\theta_0} \parallel p_{\theta_1}) \approx 0.0005$ (stable geodesic) |
+| **Behavior as $\sigma \to 0$** | Step size $\propto \frac{1}{\sigma^3} \to \infty$ (**Immediate Explosion**) | Step size $\propto \mathcal{O}(1)$ (**Completely Stable**) |
+
+This rigorously demonstrates why Natural Gradient Descent is the foundation of modern probabilistic optimization and reinforcement learning (e.g., TRPO, PPO, ACKTR): it measures distance in distribution space, preventing destructive updates when distributions are confident (small variance).
 
 ---
 

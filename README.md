@@ -6,6 +6,7 @@
 [![Design Patterns](https://img.shields.io/badge/Design%20Patterns-14%20Covered-orange.svg)](#part-1-head-first-design-patterns-14-patterns)
 [![Runnable Labs](https://img.shields.io/badge/Simulation%20Labs-45%20Python%20Engines-brightgreen.svg)](#the-4-pillar-chapter-architecture)
 [![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-40%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch--40-chapters)
+[![Streaming & Distributed Engines](https://img.shields.io/badge/Distributed%20Engines-30%20Chapters-crimson.svg)](#-pillar-v-distributed-data--streaming-engines-kafka-flink-airflow--30-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -53,6 +54,12 @@ knowledge-base/
 │   │   ├── Pandas/                            # Tabular Wrangling & Apache Arrow Backends
 │   │   ├── PySpark/                           # Distributed Big Data, Catalyst & Tungsten
 │   │   └── PyTorch/                           # Deep Learning, Dynamic Autograd & Compilation
+│   │
+│   ├── Distributed-Data-and-Streaming-Engines/ # Real-Time Streaming & Orchestration
+│   │   ├── README.md                          # Engine Matrix & Master Architecture
+│   │   ├── Kafka/                             # Distributed Event Store & Storage Topologies
+│   │   ├── Flink/                             # Stream Processing, Watermarks & State Backends
+│   │   └── Airflow/                           # Workflow Orchestration & Directed Acyclic Graphs
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
@@ -195,6 +202,20 @@ A publication-grade systems textbook covering the four foundational computing fr
 | **PyTorch** | Dynamic Autograd DAG, Mixed Precision (AMP), DDP/FSDP, `torch.compile` | *Deep Learning with PyTorch* (Eli Stevens et al.) & PyTorch Core Papers | [10 Chapters](Projects/Data-and-AI-Frameworks/PyTorch/README.md) |
 
 > Complete cross-framework comparison matrix & 40-chapter curriculum: **[Data & AI Frameworks Master Portal](Projects/Data-and-AI-Frameworks/README.md)**
+
+---
+
+## 🌊 Pillar V: Distributed Data & Streaming Engines (Kafka, Flink, Airflow — 30 Chapters)
+
+A rigorous, textbook-grade distributed systems curriculum covering the three canonical infrastructure engines powering enterprise real-time streaming, stateful computation, and workflow orchestration, citing authoritative literature (*Shapira, Stopford, Hueske, Kalavri, Harenslak, de Ruiter*):
+
+| Engine | Architectural Domain & Focus | Canonical Book References | Master Curriculum |
+| :--- | :--- | :--- | :---: |
+| **Apache Kafka** | Distributed Commit Log, Zero-Copy I/O, Partitioning, ISR, KRaft, Exactly-Once Semantics (EOS) | *Kafka: The Definitive Guide (2nd Ed)* (Shapira et al.) & *Designing Event-Driven Systems* (Stopford) | [10 Chapters](Projects/Distributed-Data-and-Streaming-Engines/Kafka/README.md) |
+| **Apache Flink** | True Stream-First Runtime, Chandy-Lamport Snapshots, Watermarks, RocksDB Backend, 2PC Sink | *Stream Processing with Apache Flink* (Fabian Hueske & Vasiliki Kalavri) | [10 Chapters](Projects/Distributed-Data-and-Streaming-Engines/Flink/README.md) |
+| **Apache Airflow**| Distributed Orchestration, TaskFlow API, Dynamic Task Mapping, Timetables, Deferrable Operators | *Data Pipelines with Apache Airflow* (Bas P. Harenslak & Julian Rutger de Ruiter) | [10 Chapters](Projects/Distributed-Data-and-Streaming-Engines/Airflow/README.md) |
+
+> Complete cross-engine comparative matrix & 30-chapter curriculum: **[Distributed Data & Streaming Engines Master Portal](Projects/Distributed-Data-and-Streaming-Engines/README.md)**
 
 ---
 

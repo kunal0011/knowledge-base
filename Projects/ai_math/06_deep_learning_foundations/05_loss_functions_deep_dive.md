@@ -194,6 +194,178 @@ $$\frac{\partial \mathcal{L}}{\partial f(n)} = 2 (f(a) - f(n))$$
 
 ---
 
+### 6. Deep Derivation 6.5.1: Fisher Consistency, Proper Scoring Rules, and Bayes-Optimal Predictors
+
+#### Context & Theoretical Foundation
+In classification, our ultimate operational goal is minimizing 0-1 classification risk:
+$$\mathcal{R}_{0-1}(f) = \mathbb{E}_{(X, Y)}\left[ \mathbb{I}(f(X) \ne Y) \right]$$
+However, the 0-1 step function is non-convex and has zero gradient almost everywhere, making direct gradient optimization impossible. We optimize a continuous, differentiable **surrogate loss** $\ell(\hat{y}, y)$ instead.
+
+A surrogate loss is defined as **Fisher consistent** (or classification-calibrated) if the minimizer of the surrogate population risk:
+$$f^* = \arg\min_f \mathbb{E}_{(X, Y)}\left[ \ell(f(X), Y) \right]$$
+preserves the exact decision boundary of the **Bayes-optimal classifier**:
+$$f_{\text{Bayes}}(x) = \begin{cases} 1 & \text{if } \eta(x) \ge \frac{1}{2} \\ 0 & \text{if } \eta(x) < \frac{1}{2} \end{cases} \quad \text{where } \eta(x) \equiv P(Y = 1 \mid X = x)$$
+
+---
+
+#### 1. Binary Cross-Entropy as a Strictly Proper Scoring Rule
+Let $p \in (0, 1)$ denote the model's predicted probability for $Y=1$.
+Conditioned on feature $X=x$, the conditional expected risk under BCE is:
+$$L_{\text{BCE}}(p; \eta) = \mathbb{E}_{Y \mid X=x}\left[ \mathcal{L}_{\text{BCE}}(p, Y) \right] = \eta [-\ln(p)] + (1 - \eta) [-\ln(1 - p)]$$
+
+To find the optimal prediction $p^*$, we set the first derivative with respect to $p$ to zero:
+$$\frac{\partial L_{\text{BCE}}}{\partial p} = -\frac{\eta}{p} + \frac{1 - \eta}{1 - p} = 0$$
+$$\frac{1 - \eta}{1 - p} = \frac{\eta}{p} \implies \eta(1 - p) = p(1 - \eta) \implies \eta - \eta p = p - \eta p \implies \mathbf{p^* = \eta}$$
+
+Checking the second derivative for strict convexity:
+$$\frac{\partial^2 L_{\text{BCE}}}{\partial p^2} = \frac{\eta}{p^2} + \frac{1 - \eta}{(1 - p)^2} > 0 \quad \forall p \in (0, 1), \; \eta \in (0, 1)$$
+Because the second derivative is strictly positive everywhere, $p^* = \eta(x) = P(Y = 1 \mid X = x)$ is the **unique global minimizer**.
+By definition (Gneiting & Raftery, 2007), a scoring rule where the expected penalty is uniquely minimized if and only if the forecast equals the true posterior distribution is a **strictly proper scoring rule**.
+Minimizing Cross-Entropy forces the model to produce **calibrated posterior probabilities**, not merely arbitrary ranking scores!
+
+---
+
+#### 2. Why MSE on Probabilities Fails in Deep Learning (Gradient Starvation)
+Now consider using Mean Squared Error to train a classification network:
+$$\mathcal{L}_{\text{MSE}}(p, y) = \frac{1}{2} (p - y)^2$$
+The conditional expected MSE loss is:
+$$L_{\text{MSE}}(p; \eta) = \frac{1}{2} \eta (p - 1)^2 + \frac{1}{2} (1 - \eta) p^2$$
+Differentiating with respect to $p$:
+$$\frac{\partial L_{\text{MSE}}}{\partial p} = \eta (p - 1) + (1 - \eta) p = p - \eta = 0 \implies \mathbf{p^* = \eta}$$
+At the infinite-data limit, MSE is also Fisher consistent! Why then is MSE virtually never used for classification in deep neural networks?
+
+The difference lies entirely in the **gradient dynamics with respect to the network logits $z$**, where $p = \sigma(z)$:
+
+##### Gradient under BCE with Logits:
+$$\frac{\partial \mathcal{L}_{\text{BCE}}}{\partial z} = \frac{\partial \mathcal{L}_{\text{BCE}}}{\partial p} \frac{dp}{dz} = \left( -\frac{y}{p} + \frac{1-y}{1-p} \right) \cdot p(1 - p) = \mathbf{p - y}$$
+The gradient is linear in the classification error $(p - y)$, completely bounded and non-saturating.
+
+##### Gradient under MSE with Logits:
+$$\frac{\partial \mathcal{L}_{\text{MSE}}}{\partial z} = \frac{\partial \mathcal{L}_{\text{MSE}}}{\partial p} \frac{dp}{dz} = (p - y) \cdot \sigma'(z) = \mathbf{(p - y) \cdot p (1 - p)}$$
+
+Suppose a training example has true label $y = 1$, but the network is currently completely wrong and confident: $z = -10 \implies p = \sigma(-10) \approx 4.54 \times 10^{-5}$.
+- **BCE Gradient**: $\frac{\partial \mathcal{L}_{\text{BCE}}}{\partial z} = 4.54 \times 10^{-5} - 1.0 \approx \mathbf{-1.0000}$ (Strong, immediate corrective gradient!).
+- **MSE Gradient**: $\frac{\partial \mathcal{L}_{\text{MSE}}}{\partial z} = (4.54 \times 10^{-5} - 1.0) \cdot (4.54 \times 10^{-5})(1 - 4.54 \times 10^{-5}) \approx \mathbf{-4.54 \times 10^{-5}}$ (The gradient vanishes by a factor of $22{,}000\times$!).
+
+Under MSE, the more confidently incorrect the network is, the smaller the gradient becomes! The network experiences **gradient starvation** and freezes, unable to escape catastrophic misclassifications. BCE completely eliminates this pathology.
+
+---
+
+### 7. Deep Derivation 6.5.2: Analytical Gradient & Curvature of Focal Loss vs. Cross-Entropy
+
+#### Step-by-Step Derivation of the Focal Loss Logit Gradient
+Recall the definition of Binary Focal Loss:
+$$\mathcal{L}_{\text{FL}}(p, y) = -y (1 - p)^\gamma \ln(p) - (1 - y) p^\gamma \ln(1 - p)$$
+where $p = \sigma(z) = \frac{1}{1 + e^{-z}}$ and $\frac{dp}{dz} = p(1 - p)$.
+
+We derive the exact analytical gradient $\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}$ by parts for both classes:
+
+##### Case 1: Positive Ground Truth ($y = 1$)
+Here, $\mathcal{L}_{\text{FL}} = -(1 - p)^\gamma \ln(p)$.
+Applying the calculus product rule:
+$$\frac{d\mathcal{L}_{\text{FL}}}{dp} = -\left[ \frac{d}{dp}(1 - p)^\gamma \cdot \ln(p) + (1 - p)^\gamma \cdot \frac{d}{dp}\ln(p) \right]$$
+Using $\frac{d}{dp}(1 - p)^\gamma = -\gamma (1 - p)^{\gamma - 1}$:
+$$\frac{d\mathcal{L}_{\text{FL}}}{dp} = \gamma (1 - p)^{\gamma - 1} \ln(p) - \frac{(1 - p)^\gamma}{p}$$
+
+Now apply the chain rule to differentiate with respect to logit $z$, using $\frac{dp}{dz} = p(1 - p)$:
+$$\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z} = \frac{d\mathcal{L}_{\text{FL}}}{dp} \cdot p(1 - p) = \left[ \gamma (1 - p)^{\gamma - 1} \ln(p) - \frac{(1 - p)^\gamma}{p} \right] p(1 - p)$$
+Multiplying through:
+$$\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}\Big|_{y=1} = \gamma p (1 - p)^\gamma \ln(p) - (1 - p)^{\gamma + 1}$$
+Factoring out $(1 - p)^\gamma$:
+$$\mathbf{\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}\Big|_{y=1} = (1 - p)^\gamma \left[ \gamma p \ln(p) - (1 - p) \right]}$$
+
+Notice that setting $\gamma = 0$ yields:
+$$\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}\Big|_{y=1, \gamma=0} = (1 - p)^0 [0 - (1 - p)] = p - 1 = p - y$$
+recovering the standard BCE gradient exactly!
+
+##### Case 2: Negative Ground Truth ($y = 0$)
+Here, $\mathcal{L}_{\text{FL}} = -p^\gamma \ln(1 - p)$.
+Differentiating with respect to $p$:
+$$\frac{d\mathcal{L}_{\text{FL}}}{dp} = -\left[ \gamma p^{\gamma - 1} \ln(1 - p) + p^\gamma \left(-\frac{1}{1 - p}\right) \right] = -\gamma p^{\gamma - 1} \ln(1 - p) + \frac{p^\gamma}{1 - p}$$
+
+Applying the chain rule with $\frac{dp}{dz} = p(1 - p)$:
+$$\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}\Big|_{y=0} = \left[ -\gamma p^{\gamma - 1} \ln(1 - p) + \frac{p^\gamma}{1 - p} \right] p(1 - p) = -\gamma p^\gamma (1 - p) \ln(1 - p) + p^{\gamma + 1}$$
+Factoring out $p^\gamma$:
+$$\mathbf{\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z}\Big|_{y=0} = p^\gamma \left[ p - \gamma (1 - p) \ln(1 - p) \right]}$$
+Setting $\gamma = 0$ recovers $p - 0 = p - y$.
+
+##### Unified Formula in Terms of $p_t$:
+Defining $p_t = p$ if $y = 1$ and $p_t = 1 - p$ if $y = 0$:
+$$\mathbf{\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z} = (2y - 1) \left[ \gamma p_t (1 - p_t)^\gamma \ln(p_t) - (1 - p_t)^{\gamma + 1} \right]}$$
+
+---
+
+#### Curvature Analysis (Second Derivative / Hessian Landscape)
+Consider the asymptotic behavior as an example becomes well-classified ($p_t \to 1$):
+- For Cross-Entropy ($\gamma = 0$):
+  $$\frac{\partial \mathcal{L}_{\text{CE}}}{\partial z} = -(1 - p_t) \implies \frac{\partial^2 \mathcal{L}_{\text{CE}}}{\partial z^2} = p_t(1 - p_t) \approx \mathcal{O}(1 - p_t)$$
+  The curvature vanishes **linearly**.
+- For Focal Loss ($\gamma = 2$):
+  $$(1 - p_t)^{\gamma + 1} = (1 - p_t)^3, \quad (1 - p_t)^\gamma = (1 - p_t)^2$$
+  The gradient and curvature scale as $\mathcal{O}((1 - p_t)^2)$.
+  The loss surface around well-classified points forms an **extremely flat plateau (basin of near-zero curvature)**. This topological flattening guarantees that thousands of easy background gradients sum to negligible magnitude, leaving gradient space completely unpolluted for hard foreground samples.
+
+---
+
+### 8. Deep Derivation 6.5.3: InfoNCE Loss as a Lower Bound on Mutual Information
+
+#### Context & Mathematical Definition
+In self-supervised representation learning (CLIP, SimCLR, CPC), we seek to learn feature representations $f(x)$ without human labels by maximizing the mutual information between different views of the same underlying data:
+$$I(X; Y) = \mathbb{E}_{p(x, y)}\left[ \log \frac{p(x, y)}{p(x) p(y)} \right] = \mathbb{E}_{p(x, y)}\left[ \log \frac{p(y \mid x)}{p(y)} \right]$$
+
+Given an anchor sample $x$, let $\{y_1, y_2, \dots, y_K\}$ be a set of $K$ candidate representations containing:
+- Exactly one **positive sample** $y_1 \sim p(y \mid x)$
+- $K - 1$ **negative samples** $y_2, \dots, y_K \sim p(y)$ drawn independently from the proposal distribution.
+
+The **InfoNCE loss** (van den Oord, Li, & Vinyals, 2018) is defined as:
+$$\mathbf{\mathcal{L}_{\text{InfoNCE}} = -\mathbb{E}_{X, Y}\left[ \log \frac{\exp(s(x, y_1) / \tau)}{\sum_{j=1}^K \exp(s(x, y_j) / \tau)} \right]}$$
+where $s(x, y) = \frac{f(x)^T g(y)}{\|f(x)\| \|g(y)\|}$ is cosine similarity and $\tau > 0$ is a temperature hyperparameter.
+
+---
+
+#### Proof: InfoNCE Bound on Mutual Information
+Let $C \in \{1, 2, \dots, K\}$ be a random variable indicating which of the $K$ candidates is the true positive sample.
+Assume a uniform prior across candidates: $P(C = j) = \frac{1}{K}$.
+The generative distribution of the tuple $(x, y_1, \dots, y_K)$ given $C = 1$ is:
+$$p(x, y_1, \dots, y_K \mid C = 1) = p(x, y_1) \prod_{j=2}^K p(y_j) = p(x) p(y_1 \mid x) \prod_{j=2}^K p(y_j)$$
+
+Applying Bayes' Theorem to compute the posterior probability that candidate 1 is the true match:
+$$P(C = 1 \mid x, y_1, \dots, y_K) = \frac{P(C=1) p(x, y_1, \dots, y_K \mid C=1)}{\sum_{k=1}^K P(C=k) p(x, y_1, \dots, y_K \mid C=k)}$$
+Canceling the uniform prior $P(C=k) = 1/K$ and dividing the numerator and denominator by $\prod_{j=1}^K p(y_j)$:
+$$P(C = 1 \mid x, y_1, \dots, y_K) = \frac{\frac{p(x, y_1)}{p(x) p(y_1)}}{\sum_{k=1}^K \frac{p(x, y_k)}{p(x) p(y_k)}} = \frac{\frac{p(y_1 \mid x)}{p(y_1)}}{\sum_{k=1}^K \frac{p(y_k \mid x)}{p(y_k)}}$$
+
+Notice that the InfoNCE objective:
+$$\mathcal{L}_{\text{InfoNCE}} = -\mathbb{E}\left[ \log \frac{\exp(s(x, y_1)/\tau)}{\sum_{k=1}^K \exp(s(x, y_k)/\tau)} \right]$$
+is precisely the multi-class categorical cross-entropy of predicting the correct positive index $C=1$, where the scoring function models the log-density ratio $\log \frac{p(y \mid x)}{p(y)} \approx s(x, y)/\tau$.
+
+Now consider the optimal scoring function $f^*(x, y) = \frac{p(y \mid x)}{p(y)}$. Under this optimal critic:
+$$\mathcal{L}_{\text{InfoNCE}}^* = -\mathbb{E}\left[ \log P(C = 1 \mid x, y_1, \dots, y_K) \right]$$
+
+Expanding the internal logarithm:
+$$\log P(C = 1 \mid x, y_1, \dots, y_K) = \log\left( \frac{\frac{p(y_1 \mid x)}{p(y_1)}}{\frac{p(y_1 \mid x)}{p(y_1)} + \sum_{k=2}^K \frac{p(y_k \mid x)}{p(y_k)}} \right) = -\log\left( 1 + \frac{p(y_1)}{p(y_1 \mid x)} \sum_{k=2}^K \frac{p(y_k \mid x)}{p(y_k)} \right)$$
+
+Taking the expectation over the $K - 1$ independent negative samples $y_2, \dots, y_K \sim p(y)$:
+$$\mathbb{E}_{y_2, \dots, y_K}\left[ \sum_{k=2}^K \frac{p(y_k \mid x)}{p(y_k)} \right] = \sum_{k=2}^K \int p(y_k) \frac{p(y_k \mid x)}{p(y_k)} dy_k = \sum_{k=2}^K \int p(y_k \mid x) dy_k = \sum_{k=2}^K 1 = K - 1$$
+
+Applying **Jensen's inequality** to the strictly concave function $\phi(t) = -\log(1 + c \cdot t)$:
+$$\mathbb{E}_{y_2, \dots, y_K}\left[ \log P(C = 1 \mid x, Y) \right] \le -\log\left( 1 + \frac{p(y_1)}{p(y_1 \mid x)} \cdot \mathbb{E}\left[ \sum_{k=2}^K \frac{p(y_k \mid x)}{p(y_k)} \right] \right)$$
+$$= -\log\left( 1 + \frac{p(y_1)}{p(y_1 \mid x)} (K - 1) \right) \le -\log\left( \frac{p(y_1)}{p(y_1 \mid x)} K \right) = \log \frac{p(y_1 \mid x)}{p(y_1)} - \log(K)$$
+
+Taking the outer expectation over $(x, y_1) \sim p(x, y)$:
+$$\mathbb{E}_{(x, y_1)}\left[ \mathbb{E}_{y_{2:K}}[\log P(C = 1 \mid x, Y)] \right] \le \mathbb{E}_{(x, y_1)}\left[ \log \frac{p(y_1 \mid x)}{p(y_1)} \right] - \log(K) = I(X; Y) - \log(K)$$
+
+Multiplying through by $-1$:
+$$\mathcal{L}_{\text{InfoNCE}} \ge \log(K) - I(X; Y)$$
+Rearranging terms yields the fundamental **InfoNCE Mutual Information Bound**:
+$$\mathbf{I(X; Y) \ge \log(K) - \mathcal{L}_{\text{InfoNCE}}}$$
+$\blacksquare$ **Q.E.D.**
+
+#### Theoretical Insights from the Bound:
+1. **Capacity Limit**: The maximum mutual information that InfoNCE can extract is strictly capped at $\log(K)$. To learn rich representations that capture high mutual information, models must scale the number of negative samples $K$ (e.g., CLIP's batch size of $K = 32{,}768$ yields $\log_2(32768) = 15 \text{ bits}$ of information capacity).
+2. **Temperature Parameter $\tau$**: The scale $\tau$ controls the hardness of negatives. As $\tau \to 0$, the softmax approaches an argmax, causing the gradient to focus exclusively on the single hardest negative in the mini-batch.
+
+---
+
 ## Part 3: Geometric & Information-Theoretic Interpretation
 
 ### 1. Cross-Entropy as Kullback-Leibler (KL) Divergence
@@ -375,6 +547,189 @@ $$\mathcal{L} = \max(0, \|f(a) - f(p)\|_2^2 - \|f(a) - f(n)\|_2^2 + \alpha)$$
 *Resolution*: Embeddings must strictly be projected onto the unit hypersphere:
 $$f(x) \leftarrow \frac{f(x)}{\|f(x)\|_2}$$
 This bounds all pairwise squared distances to $[0, 4]$, preventing both collapse to zero and explosion to infinity.
+
+---
+
+### Problem 3: MSE vs. Cross-Entropy Gradient Starvation on Confident Misclassification
+
+**Statement**:
+Consider a single output neuron with Sigmoid activation $p = \sigma(z) = \frac{1}{1 + e^{-z}}$.
+A training example has true binary label $y = 1.0$. The model currently outputs logit $z = -4.0$ (confident misclassification).
+1. Calculate the predicted probability $p$.
+2. Calculate the forward loss under MSE $\mathcal{L}_{\text{MSE}} = \frac{1}{2}(p - y)^2$ and BCE $\mathcal{L}_{\text{BCE}} = -\ln(p)$.
+3. Calculate the exact analytical gradient with respect to logit $z$ for both losses:
+   $$g_{\text{MSE}} = \frac{\partial \mathcal{L}_{\text{MSE}}}{\partial z} = (p - y) \cdot p(1 - p)$$
+   $$g_{\text{BCE}} = \frac{\partial \mathcal{L}_{\text{BCE}}}{\partial z} = p - y$$
+4. Compute the gradient ratio $\frac{|g_{\text{BCE}}|}{|g_{\text{MSE}}|}$ and explain why MSE stalls gradient descent.
+
+---
+
+#### Solution
+
+##### 1. Forward Predicted Probability
+Using $z = -4.0$:
+$$e^{-(-4.0)} = e^{4.0} \approx 54.5981500$$
+$$p = \frac{1}{1 + e^{4.0}} = \frac{1}{1 + 54.5981500} = \frac{1}{55.5981500} \approx \mathbf{0.0179862}$$
+$$1 - p \approx 0.9820138$$
+
+##### 2. Forward Loss Values
+- **Mean Squared Error**:
+  $$\mathcal{L}_{\text{MSE}} = \frac{1}{2}(0.0179862 - 1.0000000)^2 = \frac{1}{2}(-0.9820138)^2 = \frac{1}{2}(0.9643511) \approx \mathbf{0.4821756}$$
+- **Binary Cross-Entropy**:
+  $$\mathcal{L}_{\text{BCE}} = -\ln(0.0179862) \approx \mathbf{4.0181500}$$
+
+##### 3. Gradients with Respect to Logit $z$
+- **BCE Gradient**:
+  $$g_{\text{BCE}} = p - y = 0.0179862 - 1.0000000 = \mathbf{-0.9820138}$$
+- **MSE Gradient**:
+  $$g_{\text{MSE}} = (p - y) \cdot p(1 - p) = (-0.9820138) \cdot (0.0179862)(0.9820138) \approx (-0.9820138) \cdot (0.0176627) \approx \mathbf{-0.0173449}$$
+
+##### 4. Ratio & Mathematical Interpretation
+$$\frac{|g_{\text{BCE}}|}{|g_{\text{MSE}}|} = \frac{0.9820138}{0.0173449} \approx \mathbf{56.617 \times}$$
+- The BCE gradient is **over $56\times$ stronger**!
+- **Core Insight**: Under MSE, the gradient contains the multiplicative factor $\sigma'(z) = p(1 - p)$. When the network is confidently wrong ($z = -4.0$), $\sigma'(z) \approx 0.01766$, which almost completely extinguishes the error signal. The parameters receive virtually zero update, trapping the network in a severe local plateau.
+- Under BCE, the denominator $p$ in the log-likelihood derivative $\frac{\partial \mathcal{L}}{\partial p} = -\frac{1}{p}$ **exactly cancels** the $p$ term in $\sigma'(z) = p(1-p)$, preserving the unattenuated error signal $p - y \approx -0.982$.
+
+---
+
+### Problem 4: Huber Loss (Smooth $L_1$) Numerical Trace Across Regimes
+
+**Statement**:
+Let the Huber loss threshold parameter be $\delta = 1.0$:
+$$\mathcal{L}_\delta(r) = \begin{cases} \frac{1}{2} r^2 & \text{if } |r| \le \delta \\ \delta \left( |r| - \frac{1}{2} \delta \right) & \text{if } |r| > \delta \end{cases}$$
+For three residual errors $r = \hat{y} - y$:
+1. $r_1 = +0.500$ (inlier)
+2. $r_2 = +1.000$ (boundary point)
+3. $r_3 = +5.000$ (extreme outlier)
+
+Compute the exact loss values and gradients $\frac{\partial \mathcal{L}}{\partial r}$ under MSE ($\frac{1}{2} r^2$), MAE ($|r|$), and Huber Loss ($\mathcal{L}_\delta$). Verify the continuous differentiability ($C^1$) at the boundary and explain the influence function boundedness.
+
+---
+
+#### Solution
+
+##### 1. Residual $r_1 = +0.500$ (Quadratic Regime: $|r_1| \le \delta$)
+- **MSE**:
+  $$\mathcal{L}_{\text{MSE}} = \frac{1}{2}(0.5)^2 = \mathbf{0.125000}, \quad g_{\text{MSE}} = r_1 = \mathbf{+0.500000}$$
+- **MAE**:
+  $$\mathcal{L}_{\text{MAE}} = |0.5| = \mathbf{0.500000}, \quad g_{\text{MAE}} = \text{sign}(r_1) = \mathbf{+1.000000}$$
+- **Huber**:
+  $$\mathcal{L}_\delta = \frac{1}{2}(0.5)^2 = \mathbf{0.125000}, \quad g_\delta = r_1 = \mathbf{+0.500000}$$
+*(Huber matches MSE identically in the small error regime)*.
+
+---
+
+##### 2. Residual $r_2 = +1.000$ (Boundary: $|r_2| = \delta = 1.0$)
+- Approaching from left ($|r| \le 1.0$):
+  $$\mathcal{L}_{\text{left}} = \frac{1}{2}(1.0)^2 = \mathbf{0.500000}, \quad g_{\text{left}} = 1.0 = \mathbf{+1.000000}$$
+- Approaching from right ($|r| > 1.0$):
+  $$\mathcal{L}_{\text{right}} = 1.0 \left( 1.0 - \frac{1}{2}(1.0) \right) = 1.0(0.5) = \mathbf{0.500000}, \quad g_{\text{right}} = 1.0 \cdot \text{sign}(1.0) = \mathbf{+1.000000}$$
+Both loss and gradient agree from both sides: $\mathcal{L}_\delta(1.0) = \mathbf{0.500000}$ and $g_\delta(1.0) = \mathbf{+1.000000}$. The transition is smoothly $C^1$ differentiable!
+
+---
+
+##### 3. Residual $r_3 = +5.000$ (Linear Regime: $|r_3| > \delta$)
+- **MSE**:
+  $$\mathcal{L}_{\text{MSE}} = \frac{1}{2}(5.0)^2 = \mathbf{12.500000}, \quad g_{\text{MSE}} = r_3 = \mathbf{+5.000000}$$
+- **MAE**:
+  $$\mathcal{L}_{\text{MAE}} = |5.0| = \mathbf{5.000000}, \quad g_{\text{MAE}} = \text{sign}(r_3) = \mathbf{+1.000000}$$
+- **Huber**:
+  $$\mathcal{L}_\delta = 1.0 \left( 5.0 - \frac{1}{2}(1.0) \right) = 5.0 - 0.5 = \mathbf{4.500000}, \quad g_\delta = 1.0 \cdot \text{sign}(5.0) = \mathbf{+1.000000}$$
+
+##### Comparison & Robust Statistics Takeaway
+```
++----------+---------------+----------------+----------------+----------------+
+| Residual | Property      | MSE            | MAE            | Huber (delta=1)|
++----------+---------------+----------------+----------------+----------------+
+| r = 0.5  | Loss / Grad   | 0.125 / +0.500 | 0.500 / +1.000 | 0.125 / +0.500 |
+| r = 1.0  | Loss / Grad   | 0.500 / +1.000 | 1.000 / +1.000 | 0.500 / +1.000 |
+| r = 5.0  | Loss / Grad   | 12.50 / +5.000 | 5.000 / +1.000 | 4.500 / +1.000 |
++----------+---------------+----------------+----------------+----------------+
+```
+Under MSE, an outlier with error $r = 5.0$ exerts $5\times$ the gradient pull of a unit error, dominating parameter updates. Under Huber loss, the influence function $\psi(r) = \frac{\partial \mathcal{L}}{\partial r}$ is **strictly bounded**:
+$$\sup_{r \in \mathbb{R}} |\psi(r)| = \delta = 1.0$$
+This guarantees finite sample robustness against corrupted labels and heavy-tailed measurement noise.
+
+---
+
+### Problem 5: InfoNCE Contrastive Loss & Temperature Scaling Arithmetic
+
+**Statement**:
+In self-supervised contrastive learning (CLIP, SimCLR), an anchor embedding $a \in \mathbb{R}^2$ is compared against a positive embedding $p \in \mathbb{R}^2$ and two negative embeddings $n_1, n_2 \in \mathbb{R}^2$:
+$$a = \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix}, \quad p = \begin{bmatrix} 0.8 \\ 0.6 \end{bmatrix}, \quad n_1 = \begin{bmatrix} 0.6 \\ -0.8 \end{bmatrix}, \quad n_2 = \begin{bmatrix} -1.0 \\ 0.0 \end{bmatrix}$$
+All vectors are normalized to unit length ($\|v\|_2 = 1.0$).
+1. Calculate the cosine similarity scores $s(a, p), s(a, n_1), s(a, n_2)$.
+2. Calculate the InfoNCE loss $\mathcal{L}_{\text{InfoNCE}}$ and candidate posterior probabilities under temperature $\tau = 1.0$.
+3. Calculate the InfoNCE loss $\mathcal{L}_{\text{InfoNCE}}$ and candidate posterior probabilities under temperature $\tau = 0.2$.
+4. Analyze how temperature $\tau$ modulates the gradient focus on hard negatives.
+
+---
+
+#### Solution
+
+##### 1. Pairwise Cosine Similarities $s(a, v) = a^T v$
+$$s(a, p) = (1.0)(0.8) + (0.0)(0.6) = \mathbf{+0.800000}$$
+$$s(a, n_1) = (1.0)(0.6) + (0.0)(-0.8) = \mathbf{+0.600000} \quad (\text{Hard Negative!})$$
+$$s(a, n_2) = (1.0)(-1.0) + (0.0)(0.0) = \mathbf{-1.000000} \quad (\text{Easy Negative!})$$
+
+---
+
+##### 2. InfoNCE under Standard Temperature $\tau = 1.0$
+Scaled logits $z_i = s(a, \cdot) / \tau$:
+$$z_p = \frac{0.8}{1.0} = 0.8000, \quad z_{n_1} = \frac{0.6}{1.0} = 0.6000, \quad z_{n_2} = \frac{-1.0}{1.0} = -1.0000$$
+
+Exponentials:
+$$e^{0.8000} \approx 2.2255409$$
+$$e^{0.6000} \approx 1.8221188$$
+$$e^{-1.0000} \approx 0.3678794$$
+$$\sum = 2.2255409 + 1.8221188 + 0.3678794 = 4.4155391$$
+
+Softmax Probabilities:
+$$P(p) = \frac{2.2255409}{4.4155391} \approx \mathbf{0.504025} \quad (50.4\%)$$
+$$P(n_1) = \frac{1.8221188}{4.4155391} \approx \mathbf{0.412661} \quad (41.3\%)$$
+$$P(n_2) = \frac{0.3678794}{4.4155391} \approx \mathbf{0.083314} \quad (8.3\%)$$
+
+InfoNCE Loss:
+$$\mathcal{L}_{\text{InfoNCE}}(\tau = 1.0) = -\ln(0.504025) \approx \mathbf{0.685130}$$
+
+---
+
+##### 3. InfoNCE under Sharp Temperature $\tau = 0.2$
+Scaled logits $z_i = s(a, \cdot) / 0.2$:
+$$z_p = \frac{0.8}{0.2} = 4.0000, \quad z_{n_1} = \frac{0.6}{0.2} = 3.0000, \quad z_{n_2} = \frac{-1.0}{0.2} = -5.0000$$
+
+Exponentials:
+$$e^{4.0000} \approx 54.5981500$$
+$$e^{3.0000} \approx 20.0855369$$
+$$e^{-5.0000} \approx 0.0067379$$
+$$\sum = 54.5981500 + 20.0855369 + 0.0067379 = 74.6904248$$
+
+Softmax Probabilities:
+$$P(p) = \frac{54.5981500}{74.6904248} \approx \mathbf{0.730993} \quad (73.1\%)$$
+$$P(n_1) = \frac{20.0855369}{74.6904248} \approx \mathbf{0.268917} \quad (26.9\%)$$
+$$P(n_2) = \frac{0.0067379}{74.6904248} \approx \mathbf{0.000090} \quad (0.009\%)$$
+
+InfoNCE Loss:
+$$\mathcal{L}_{\text{InfoNCE}}(\tau = 0.2) = -\ln(0.730993) \approx \mathbf{0.313351}$$
+
+---
+
+##### 4. Comparative Analysis: The Temperature Sharpening Mechanism
+```
++------------------------------------------------------------------------------------+
+|                       TEMPERATURE EFFECT ON INFONCE PROBABILITIES                  |
++-------------------+-------------+-------------------+------------------------------+
+| Candidate         | Cosine Sim  | Prob (tau = 1.0)  | Prob (tau = 0.2)             |
++-------------------+-------------+-------------------+------------------------------+
+| Positive p        | +0.8000     | 50.40%            | 73.10%                       |
+| Hard Negative n_1 | +0.6000     | 41.27%            | 26.89% (Takes 99.9% of negs!)|
+| Easy Negative n_2 | -1.0000     |  8.33%            |  0.009% (Completely ignored!)|
++-------------------+-------------+-------------------+------------------------------+
+| InfoNCE Loss      | -           | 0.685130          | 0.313351                     |
++-------------------+-------------+-------------------+------------------------------+
+```
+- **Temperature Scaling Role**: Dividing by $\tau < 1$ acts as an inverse temperature (in Boltzmann distribution terms). It amplifies differences between logits: the difference $0.8 - 0.6 = 0.2$ becomes $\frac{0.2}{0.2} = 1.0$ in log-space, corresponding to an odds ratio of $e^1 \approx 2.718$.
+- **Negative Filtering**: Under $\tau = 0.2$, the easy negative $n_2$ receives probability $0.009\%$ and produces zero gradient, while the hard negative $n_1$ accounts for $99.96\%$ of all negative competition. Temperature $\tau$ acts as a **soft mining mechanism**!
 
 ---
 

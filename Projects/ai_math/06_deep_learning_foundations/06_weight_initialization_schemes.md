@@ -130,6 +130,127 @@ $$W^T W = I \implies \|W x\|_2 = \|x\|_2$$
 
 ---
 
+### 6. Deep Derivation 6.6.1: Xavier/Glorot Variance Preservation & Tanh Saturation Threshold
+
+#### 1. Dual Constraint System: Forward Signal vs. Backward Gradient
+Consider an $L$-layer network. Let layer $l$ have weight matrix $W^{(l)} \in \mathbb{R}^{d_l \times d_{l-1}}$.
+We desire two simultaneous invariance properties throughout the entire network:
+1. **Forward Activation Preservation**:
+   $$\text{Var}(z^{(1)}) = \text{Var}(z^{(2)}) = \dots = \text{Var}(z^{(L)}) = \text{Var}(x)$$
+2. **Backward Gradient Sensitivity Preservation**:
+   $$\text{Var}(\delta^{(1)}) = \text{Var}(\delta^{(2)}) = \dots = \text{Var}(\delta^{(L)}) = \text{Var}(\delta_{\text{out}})$$
+
+From Sections 1 and 2, under linear activation assumptions ($\sigma'(0) \approx 1$):
+$$\text{Forward}: \quad \text{Var}(z^{(l)}) = d_{l-1} \text{Var}(W^{(l)}) \text{Var}(z^{(l-1)}) \implies \text{Var}(W^{(l)}) = \frac{1}{d_{l-1}} = \frac{1}{n_{\text{in}}}$$
+$$\text{Backward}: \quad \text{Var}(\delta^{(l)}) = d_l \text{Var}(W^{(l)}) \text{Var}(\delta^{(l+1)}) \implies \text{Var}(W^{(l)}) = \frac{1}{d_l} = \frac{1}{n_{\text{out}}}$$
+
+When $n_{\text{in}} \ne n_{\text{out}}$, both conditions cannot be satisfied simultaneously by a single scalar variance.
+Glorot & Bengio reconciled this conflict by taking the **harmonic mean** of the two target variances:
+$$\frac{1}{\text{Var}^*(W)} = \frac{1}{2} \left( \frac{1}{\text{Var}_{\text{fwd}}} + \frac{1}{\text{Var}_{\text{bwd}}} \right) = \frac{1}{2} (n_{\text{in}} + n_{\text{out}})$$
+Inverting yields the canonical **Xavier/Glorot Variance**:
+$$\mathbf{\text{Var}(W) = \frac{2}{n_{\text{in}} + n_{\text{out}}}}$$
+
+---
+
+#### 2. The Tanh Saturation Threshold
+Glorot's derivation relies fundamentally on the first-order Taylor approximation around the origin:
+$$\tanh(z) \approx z - \frac{z^3}{3} + \dots \implies \tanh(z) \approx z \quad \text{for } |z| \ll 1$$
+What happens if the weight variance is slightly too large?
+Let $\text{Var}(w) = \frac{c}{n_{\text{in}}}$ with $c > 1$.
+Then $\text{Var}(z^{(l)}) = c \cdot \text{Var}(z^{(l-1)}) = c^l \text{Var}(x)$.
+As depth $l$ increases:
+- The standard deviation of pre-activations grows exponentially: $\sigma(z^{(l)}) = c^{l/2} \sigma_x$.
+- When $\sigma(z) > 2.5$, the pre-activations land with high probability in the flat saturation wings of $\tanh$:
+  $$\lim_{|z| \to \infty} \tanh(z) = \pm 1, \quad \lim_{|z| \to \infty} \tanh'(z) = 1 - \tanh^2(z) \to 0$$
+- In the backward pass, each backpropagated gradient is multiplied by $\tanh'(z^{(l)})$:
+  $$\delta^{(l)} = (W^{(l+1)T} \delta^{(l+1)}) \odot \tanh'(z^{(l)}) \approx (W^{(l+1)T} \delta^{(l+1)}) \odot 0 = 0$$
+Thus, initializing with variance exceeding the Xavier bound pushes Tanh units into **irreversible non-linear saturation**, permanently killing the gradient flow!
+
+---
+
+### 7. Deep Derivation 6.6.2: Generalized Kaiming (He) Variance for Leaky ReLU & Smooth Activations
+
+#### 1. Piecewise Integration for Leaky ReLU
+Consider the Leaky ReLU activation with negative slope parameter $\alpha \in [0, 1]$:
+$$\sigma(z) = \begin{cases} z & \text{if } z \ge 0 \\ \alpha z & \text{if } z < 0 \end{cases}$$
+Let pre-activation $z \sim \mathcal{N}(0, \sigma_z^2)$ be a zero-mean Gaussian with symmetric probability density function $p(z) = \frac{1}{\sqrt{2\pi}\sigma_z} e^{-z^2 / (2\sigma_z^2)}$.
+
+We calculate the second moment $\mathbb{E}[\sigma(z)^2]$:
+$$\mathbb{E}[\sigma(z)^2] = \int_{-\infty}^\infty \sigma(z)^2 p(z) \, dz = \int_{-\infty}^0 (\alpha z)^2 p(z) \, dz + \int_0^\infty z^2 p(z) \, dz$$
+$$= \alpha^2 \int_{-\infty}^0 z^2 p(z) \, dz + \int_0^\infty z^2 p(z) \, dz$$
+
+Since the integrand $z^2 p(z)$ is strictly symmetric about zero:
+$$\int_{-\infty}^0 z^2 p(z) \, dz = \int_0^\infty z^2 p(z) \, dz = \frac{1}{2} \int_{-\infty}^\infty z^2 p(z) \, dz = \frac{1}{2} \mathbb{E}[z^2] = \frac{1}{2} \text{Var}(z)$$
+
+Substituting this identity back:
+$$\mathbb{E}[\sigma(z)^2] = \alpha^2 \left( \frac{1}{2} \text{Var}(z) \right) + 1 \cdot \left( \frac{1}{2} \text{Var}(z) \right) = \mathbf{\left( \frac{1 + \alpha^2}{2} \right) \text{Var}(z)}$$
+
+Now, propagating this variance through the next linear layer $z_i^{(l+1)} = \sum_{j=1}^{n_{\text{in}}} w_{ij} a_j^{(l)}$:
+$$\text{Var}(z^{(l+1)}) = n_{\text{in}} \text{Var}(w) \cdot \mathbb{E}[(a^{(l)})^2] = n_{\text{in}} \text{Var}(w) \cdot \left( \frac{1 + \alpha^2}{2} \right) \text{Var}(z^{(l)})$$
+
+To enforce strict forward variance preservation $\text{Var}(z^{(l+1)}) = \text{Var}(z^{(l)})$:
+$$n_{\text{in}} \text{Var}(w) \left( \frac{1 + \alpha^2}{2} \right) = 1 \implies \mathbf{\text{Var}(w) = \frac{2}{(1 + \alpha^2) n_{\text{in}}}}$$
+
+##### Special Cases:
+- **Standard ReLU ($\alpha = 0$)**:
+  $$\text{Var}(w) = \frac{2}{(1 + 0) n_{\text{in}}} = \mathbf{\frac{2}{n_{\text{in}}}}$$
+- **Identity / Linear ($\alpha = 1$)**:
+  $$\text{Var}(w) = \frac{2}{(1 + 1) n_{\text{in}}} = \mathbf{\frac{1}{n_{\text{in}}}} \quad (\text{LeCun Initialization})$$
+- **Standard PyTorch Gain Definition**:
+  PyTorch defines $\text{Var}(w) = \frac{\text{gain}^2}{n_{\text{in}}}$.
+  Equating formulas: $\text{gain}^2 = \frac{2}{1 + \alpha^2} \implies \mathbf{\text{gain} = \sqrt{\frac{2}{1 + \alpha^2}}}$.
+  For standard ReLU ($\alpha = 0$): $\text{gain} = \sqrt{2} \approx 1.414213$.
+
+---
+
+#### 2. Generalization to Smooth Non-Linearities (GELU & SiLU / Swish)
+For smooth non-linearities such as GELU ($x \Phi(x)$) or SiLU ($x \sigma(x)$), negative values are smoothly attenuated rather than hard-clamped to zero.
+By numerically integrating $\mathbb{E}[\text{GELU}(z)^2]$ for $z \sim \mathcal{N}(0, 1)$:
+$$\mathbb{E}[\text{GELU}(z)^2] \approx 0.534 \cdot \text{Var}(z)$$
+Because $0.534$ is very close to $0.500$, Kaiming initialization with $\text{gain} = \sqrt{\frac{1}{0.534}} \approx \sqrt{1.87} \approx 1.37$ (or simply $\sqrt{2}$) preserves signal variance effectively for modern Transformer architectures!
+
+---
+
+### 8. Deep Derivation 6.6.3: Orthogonal Initialization & The Marchenko-Pastur Law
+
+#### Context: The Singular Value Spread of Random Gaussian Matrices
+Consider a weight matrix $W \in \mathbb{R}^{n \times n}$ whose entries are sampled i.i.d. from a Gaussian distribution: $W_{ij} \sim \mathcal{N}\left(0, \frac{1}{n}\right)$.
+A common misconception is that because $\mathbb{E}[\|W x\|^2] = \|x\|^2$, every vector is preserved in length.
+In reality, the geometric transformation depends on the **singular value spectrum** $\sigma(W)$:
+$$\min_{\|x\|=1} \|W x\| = \sigma_{\min}(W), \quad \max_{\|x\|=1} \|W x\| = \sigma_{\max}(W)$$
+
+##### Theorem (Marchenko & Pastur, 1967)
+As $n \to \infty$, the empirical spectral distribution of the sample covariance matrix $M = W^T W \in \mathbb{R}^{n \times n}$ for a square matrix ($n_{\text{out}} = n_{\text{in}}$, aspect ratio $\gamma = 1$) converges to the **Marchenko-Pastur density**:
+$$\rho(\lambda) = \frac{1}{2\pi \lambda} \sqrt{(4 - \lambda)\lambda} \quad \text{for } \lambda \in [0, 4]$$
+The singular values $\sigma_i = \sqrt{\lambda_i}$ are distributed over the interval:
+$$\sigma_i(W) \in [\sigma_{\min}, \sigma_{\max}] = [\sqrt{0}, \sqrt{4}] = [0, 2]$$
+- The smallest singular value is $\approx 0$. Vectors lying in this subspace are collapsed to zero!
+- The largest singular value is $\approx 2$. Vectors aligned with this principal singular vector are amplified by $2\times$ per layer!
+
+When compounded across $L = 100$ layers, the condition number of the end-to-end Jacobian explodes:
+$$\kappa(J) = \frac{\sigma_{\max}(J)}{\sigma_{\min}(J)} \approx \left( \frac{2}{0} \right)^L \to \infty$$
+This anisotropic distortion is why standard i.i.d. Gaussian initialization fails in extremely deep architectures without residual skip connections.
+
+---
+
+#### The Dynamical Isometry of Orthogonal Matrices
+Now suppose $W$ is initialized as an exact **orthogonal matrix** $Q \in \mathbb{R}^{n \times n}$, satisfying $Q^T Q = I$.
+- Every singular value of $Q$ is identically equal to 1:
+  $$\sigma_i(Q) = 1.0 \quad \forall i \in \{1, 2, \dots, n\}$$
+- Condition number is perfectly unitary:
+  $$\kappa(Q) = \frac{\sigma_{\max}(Q)}{\sigma_{\min}(Q)} = \frac{1.0}{1.0} = 1.0$$
+- For any input vector $x \in \mathbb{R}^n$:
+  $$\|Q x\|_2^2 = x^T Q^T Q x = x^T I x = \|x\|_2^2$$
+The transformation is an exact length-preserving rotation/reflection.
+
+##### Input-Output End-to-End Jacobian
+In a linear or dynamical-isometry regime, the end-to-end network Jacobian across $L$ layers is:
+$$J = Q_L Q_{L-1} \dots Q_2 Q_1$$
+Because the product of orthogonal matrices is strictly orthogonal ($J^T J = I$), **every singular value of the 1,000-layer Jacobian remains exactly 1.0**!
+This guarantees that error signals neither explode nor vanish, enabling successful training of arbitrarily deep feedforward and recurrent networks!
+
+---
+
 ## Part 3: Geometric Interpretation
 
 ### 1. Geometric Sphere Preservation
@@ -279,6 +400,198 @@ If each residual sub-layer adds a block with variance $\text{Var}(\text{MLP}(x_l
    This ensures $\text{Var}(\text{MLP}(x_l)) = \frac{1}{2L} \text{Var}(x_l)$, yielding:
    $$\text{Var}(x_L) \approx \text{Var}(x_0) \left( 1 + \frac{1}{2L} \right)^L \approx \text{Var}(x_0) \sqrt{e} \sim \mathcal{O}(1)$$
    The activation variance remains strictly $\mathcal{O}(1)$ regardless of depth!
+
+---
+
+### Problem 3: Exact Step-by-Step Numerical Variance Evolution Across 5 Layers
+
+**Statement**:
+Consider a 5-layer fully-connected feedforward network with constant layer widths:
+$$n_0 = 10, \quad n_1 = 10, \quad n_2 = 10, \quad n_3 = 10, \quad n_4 = 10, \quad n_5 = 10$$
+with ReLU activations $\sigma(z) = \max(0, z)$.
+The initial input feature vector has unit variance: $\text{Var}(a^{(0)}) = 1.000000$.
+Compute the exact theoretical pre-activation variances $\text{Var}(z^{(1)}), \dots, \text{Var}(z^{(5)})$ under:
+1. **Naive Gaussian**: $\text{Var}(w) = 1.000000$ ($\sigma = 1.0$)
+2. **Xavier Normal**: $\text{Var}(w) = \frac{2}{n_{\text{in}} + n_{\text{out}}} = \frac{2}{10 + 10} = 0.100000$
+3. **Kaiming Normal**: $\text{Var}(w) = \frac{2}{n_{\text{in}}} = \frac{2}{10} = 0.200000$
+
+---
+
+#### Solution
+
+##### Governing Variance Recurrence
+For Layer 1 (taking zero-mean input $a^{(0)}$ with variance $1.0$):
+$$\text{Var}(z^{(1)}) = n_0 \text{Var}(w) \text{Var}(a^{(0)}) = 10 \cdot \text{Var}(w) \cdot 1.0 = 10 \text{Var}(w)$$
+
+For subsequent layers $l \in \{2, 3, 4, 5\}$, ReLU zeroes out half the variance ($\mathbb{E}[(a^{(l-1)})^2] = \frac{1}{2} \text{Var}(z^{(l-1)})$):
+$$\text{Var}(z^{(l)}) = n_{\text{in}} \text{Var}(w) \left( \frac{1}{2} \text{Var}(z^{(l-1)}) \right) = \left( 5 \cdot \text{Var}(w) \right) \text{Var}(z^{(l-1)})$$
+The inter-layer multiplier is $M = 5 \cdot \text{Var}(w)$.
+
+---
+
+##### 1. Naive Gaussian Initialization ($\text{Var}(w) = 1.000000$)
+Multiplier $M = 5(1.0) = \mathbf{5.000000}$.
+- **Layer 1**: $\text{Var}(z^{(1)}) = 10(1.0)(1.0) = \mathbf{10.000000}$
+- **Layer 2**: $\text{Var}(z^{(2)}) = 5.0 \times 10.0 = \mathbf{50.000000}$
+- **Layer 3**: $\text{Var}(z^{(3)}) = 5.0 \times 50.0 = \mathbf{250.000000}$
+- **Layer 4**: $\text{Var}(z^{(4)}) = 5.0 \times 250.0 = \mathbf{1{,}250.000000}$
+- **Layer 5**: $\text{Var}(z^{(5)}) = 5.0 \times 1250.0 = \mathbf{6{,}250.000000}$
+
+*(Within just 5 layers, the signal variance has exploded by $625\times$! At layer 50, $\text{Var} \approx 10 \cdot 5^{49} \approx 1.77 \times 10^{35}$, resulting in `inf` / `NaN` crashes!)*
+
+---
+
+##### 2. Xavier Normal Initialization ($\text{Var}(w) = 0.100000$)
+Multiplier $M = 5(0.10) = \mathbf{0.500000}$.
+- **Layer 1**: $\text{Var}(z^{(1)}) = 10(0.10)(1.0) = \mathbf{1.000000}$
+- **Layer 2**: $\text{Var}(z^{(2)}) = 0.50 \times 1.000000 = \mathbf{0.500000}$
+- **Layer 3**: $\text{Var}(z^{(3)}) = 0.50 \times 0.500000 = \mathbf{0.250000}$
+- **Layer 4**: $\text{Var}(z^{(4)}) = 0.50 \times 0.250000 = \mathbf{0.125000}$
+- **Layer 5**: $\text{Var}(z^{(5)}) = 0.50 \times 0.125000 = \mathbf{0.062500}$
+
+*(Because Xavier was derived assuming linear activations, the ReLU gating halves the variance at every step ($0.5^l$). At layer 50, $\text{Var} \approx 0.5^{49} \approx 1.77 \times 10^{-15}$, starving the network of activation energy!)*
+
+---
+
+##### 3. Kaiming Normal Initialization ($\text{Var}(w) = 0.200000$)
+Multiplier $M = 5(0.20) = \mathbf{1.000000}$.
+- **Layer 1**: $\text{Var}(z^{(1)}) = 10(0.20)(1.0) = \mathbf{2.000000}$
+  *(Notice: Post-activation variance is $\mathbb{E}[(a^{(1)})^2] = \frac{1}{2}(2.0) = \mathbf{1.000000}$!)*
+- **Layer 2**: $\text{Var}(z^{(2)}) = 1.00 \times 2.000000 = \mathbf{2.000000}$
+- **Layer 3**: $\text{Var}(z^{(3)}) = 1.00 \times 2.000000 = \mathbf{2.000000}$
+- **Layer 4**: $\text{Var}(z^{(4)}) = 1.00 \times 2.000000 = \mathbf{2.000000}$
+- **Layer 5**: $\text{Var}(z^{(5)}) = 1.00 \times 2.000000 = \mathbf{2.000000}$
+
+*(The post-activation energy $\mathbb{E}[(a^{(l)})^2] \equiv 1.000000$ remains strictly invariant across all depths!)*
+
+---
+
+### Problem 4: Leaky ReLU Kaiming Variance & Gain Numerical Calculation
+
+**Statement**:
+A neural network layer has $n_{\text{in}} = 64$ inputs and $n_{\text{out}} = 128$ outputs.
+Calculate the exact Kaiming variance $\text{Var}(w)$, standard deviation $\sigma$, uniform bound $a = \sqrt{3 \text{Var}(w)}$, and PyTorch gain for:
+1. Standard ReLU: $\alpha = 0.0$
+2. Leaky ReLU: $\alpha = 0.1$
+3. Leaky ReLU: $\alpha = 0.2$
+4. Linear / Identity: $\alpha = 1.0$
+
+---
+
+#### Solution
+
+##### Mathematical Formulas:
+$$\text{gain} = \sqrt{\frac{2}{1 + \alpha^2}}, \quad \text{Var}(w) = \frac{\text{gain}^2}{n_{\text{in}}} = \frac{2}{(1 + \alpha^2) \cdot 64}, \quad \sigma = \sqrt{\text{Var}(w)}, \quad a = \sqrt{3 \text{Var}(w)}$$
+
+1. **Standard ReLU ($\alpha = 0.0$)**:
+   $$\text{gain} = \sqrt{\frac{2}{1 + 0}} = \sqrt{2} \approx \mathbf{1.414214}$$
+   $$\text{Var}(w) = \frac{2}{64} = \frac{1}{32} = \mathbf{0.031250}$$
+   $$\sigma = \sqrt{0.031250} \approx \mathbf{0.176777}$$
+   $$a = \sqrt{3 \times 0.031250} = \sqrt{0.093750} \approx \mathbf{0.306186}$$
+
+2. **Leaky ReLU with $\alpha = 0.1$**:
+   $$1 + \alpha^2 = 1 + 0.01 = 1.01$$
+   $$\text{gain} = \sqrt{\frac{2}{1.01}} \approx \sqrt{1.980198} \approx \mathbf{1.407195}$$
+   $$\text{Var}(w) = \frac{2}{1.01 \times 64} = \frac{2}{64.64} \approx \mathbf{0.0309405}$$
+   $$\sigma = \sqrt{0.0309405} \approx \mathbf{0.175899}$$
+   $$a = \sqrt{3 \times 0.0309405} \approx \mathbf{0.304668}$$
+
+3. **Leaky ReLU with $\alpha = 0.2$**:
+   $$1 + \alpha^2 = 1 + 0.04 = 1.04$$
+   $$\text{gain} = \sqrt{\frac{2}{1.04}} \approx \sqrt{1.923077} \approx \mathbf{1.386750}$$
+   $$\text{Var}(w) = \frac{2}{1.04 \times 64} = \frac{2}{66.56} \approx \mathbf{0.0300481}$$
+   $$\sigma = \sqrt{0.0300481} \approx \mathbf{0.173344}$$
+   $$a = \sqrt{3 \times 0.0300481} \approx \mathbf{0.300240}$$
+
+4. **Linear / Identity ($\alpha = 1.0$)**:
+   $$1 + \alpha^2 = 1 + 1 = 2.0$$
+   $$\text{gain} = \sqrt{\frac{2}{2}} = \mathbf{1.000000}$$
+   $$\text{Var}(w) = \frac{2}{2 \times 64} = \frac{1}{64} = \mathbf{0.015625}$$
+   $$\sigma = \sqrt{0.015625} = \mathbf{0.125000}$$
+   $$a = \sqrt{3 \times 0.015625} = \sqrt{0.046875} \approx \mathbf{0.216506}$$
+
+##### Summary Comparison Table
+```
++-------------------+---------+-----------+------------+------------+---------------+
+| Non-Linearity     | Slope a | Gain      | Variance   | Std Dev    | Uniform Bound |
++-------------------+---------+-----------+------------+------------+---------------+
+| Standard ReLU     | 0.00    | 1.414214  | 0.031250   | 0.176777   | 0.306186      |
+| Leaky ReLU (0.1)  | 0.10    | 1.407195  | 0.030941   | 0.175899   | 0.304668      |
+| Leaky ReLU (0.2)  | 0.20    | 1.386750  | 0.030048   | 0.173344   | 0.300240      |
+| Linear / Identity | 1.00    | 1.000000  | 0.015625   | 0.125000   | 0.216506      |
++-------------------+---------+-----------+------------+------------+---------------+
+```
+*(Key Insight: As the negative slope $\alpha$ increases from $0$ to $1$, the negative half of the distribution leaks more signal energy, requiring smaller weights to maintain unit variance. At $\alpha = 1$, the required variance drops to exactly half of ReLU!)*
+
+---
+
+### Problem 5: Manual Gram-Schmidt QR Orthogonal Matrix Construction
+
+**Statement**:
+Given a $2 \times 2$ raw Gaussian weight matrix:
+$$M = \begin{bmatrix} 3.0 & 1.0 \\ 4.0 & 2.0 \end{bmatrix}$$
+1. Construct the exact orthogonal matrix $Q$ by hand using the Gram-Schmidt orthogonalization process.
+2. Compute $Q^T Q$ by hand to verify orthogonality.
+3. For test vector $v = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$, compute the transformed vector $u = Q v$ and verify exact norm preservation ($\|u\|_2 = \|v\|_2$).
+4. Verify that the singular values are identically $\sigma_1 = 1.0, \sigma_2 = 1.0$.
+
+---
+
+#### Solution
+
+##### 1. Gram-Schmidt Orthogonalization Process
+The column vectors of $M$ are:
+$$a_1 = \begin{bmatrix} 3.0 \\ 4.0 \end{bmatrix}, \quad a_2 = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$$
+
+- **Step 1: Normalize First Column**:
+  $$\|a_1\|_2 = \sqrt{3.0^2 + 4.0^2} = \sqrt{9.0 + 16.0} = \sqrt{25.0} = 5.0$$
+  $$q_1 = \frac{a_1}{\|a_1\|_2} = \begin{bmatrix} 3.0 / 5.0 \\ 4.0 / 5.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.6} \\ \mathbf{0.8} \end{bmatrix}$$
+
+- **Step 2: Project Second Column onto $q_1$ and Subtract**:
+  $$\langle a_2, q_1 \rangle = (1.0)(0.6) + (2.0)(0.8) = 0.6 + 1.6 = 2.2$$
+  The orthogonal component is:
+  $$u_2 = a_2 - \langle a_2, q_1 \rangle q_1 = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} - 2.2 \begin{bmatrix} 0.6 \\ 0.8 \end{bmatrix} = \begin{bmatrix} 1.0 - 1.32 \\ 2.0 - 1.76 \end{bmatrix} = \begin{bmatrix} -0.32 \\ +0.24 \end{bmatrix}$$
+
+- **Step 3: Normalize $u_2$**:
+  $$\|u_2\|_2 = \sqrt{(-0.32)^2 + (0.24)^2} = \sqrt{0.1024 + 0.0576} = \sqrt{0.1600} = 0.40$$
+  $$q_2 = \frac{u_2}{\|u_2\|_2} = \begin{bmatrix} -0.32 / 0.40 \\ +0.24 / 0.40 \end{bmatrix} = \begin{bmatrix} \mathbf{-0.8} \\ \mathbf{+0.6} \end{bmatrix}$$
+
+The resulting orthogonal weight matrix is:
+$$\mathbf{Q = \begin{bmatrix} 0.6 & -0.8 \\ 0.8 & 0.6 \end{bmatrix}}$$
+
+---
+
+##### 2. Verification of Orthogonality $Q^T Q = I_2$
+$$Q^T = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix}$$
+$$Q^T Q = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 0.6 & -0.8 \\ 0.8 & 0.6 \end{bmatrix}$$
+- **Top-left**: $(0.6)(0.6) + (0.8)(0.8) = 0.36 + 0.64 = \mathbf{1.0}$
+- **Top-right**: $(0.6)(-0.8) + (0.8)(0.6) = -0.48 + 0.48 = \mathbf{0.0}$
+- **Bottom-left**: $(-0.8)(0.6) + (0.6)(0.8) = -0.48 + 0.48 = \mathbf{0.0}$
+- **Bottom-right**: $(-0.8)(-0.8) + (0.6)(0.6) = 0.64 + 0.36 = \mathbf{1.0}$
+$$Q^T Q = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = I_2 \quad (\text{Exact!})$$
+
+---
+
+##### 3. Vector Norm Preservation
+Given $v = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$:
+$$\|v\|_2^2 = 1.0^2 + 2.0^2 = 1.0 + 4.0 = 5.0 \implies \|v\|_2 = \sqrt{5} \approx \mathbf{2.236068}$$
+
+Transforming by $Q$:
+$$u = Q v = \begin{bmatrix} 0.6 & -0.8 \\ 0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} = \begin{bmatrix} (0.6)(1.0) + (-0.8)(2.0) \\ (0.8)(1.0) + (0.6)(2.0) \end{bmatrix} = \begin{bmatrix} 0.6 - 1.6 \\ 0.8 + 1.2 \end{bmatrix} = \begin{bmatrix} \mathbf{-1.0} \\ \mathbf{+2.0} \end{bmatrix}$$
+
+Computing norm of $u$:
+$$\|u\|_2^2 = (-1.0)^2 + (+2.0)^2 = 1.0 + 4.0 = 5.0 \implies \|u\|_2 = \sqrt{5} \approx \mathbf{2.236068}$$
+$$\|u\|_2 = \|v\|_2 \quad (\text{Exact Length Preservation!})$$
+
+---
+
+##### 4. Singular Value Spectrum & Condition Number
+The eigenvalues of $Q^T Q = I$ are $\lambda_1 = 1.0, \lambda_2 = 1.0$.
+The singular values of $Q$ are:
+$$\sigma_1 = \sqrt{\lambda_1} = \mathbf{1.000000}, \quad \sigma_2 = \sqrt{\lambda_2} = \mathbf{1.000000}$$
+Condition number:
+$$\kappa(Q) = \frac{\sigma_{\max}}{\sigma_{\min}} = \frac{1.000000}{1.000000} = \mathbf{1.000000}$$
+Because the condition number is exactly $1.0$, passing a gradient signal through $Q$ causes zero attenuation and zero amplification.
 
 ---
 

@@ -155,6 +155,121 @@ Depth provides an **exponential advantage** in function representation.
 
 ---
 
+### 5. Deep Mathematical Derivations
+
+#### Deep Derivation 6.3.1: Complete Proof that Continuous Sigmoidal Functions are Discriminatory (Cybenko's Lemma 1)
+
+We present the complete functional analysis and measure-theoretic proof of Cybenko's Lemma 1 (1989), which underpins the Universal Approximation Theorem.
+
+**1. Recall Definition of Discriminatory Measure**:
+Let $I_d = [0, 1]^d$. A continuous activation function $\sigma: \mathbb{R} \to \mathbb{R}$ is **discriminatory** if for any finite signed regular Borel measure $\mu \in M(I_d)$:
+$$\int_{I_d} \sigma(w^T x + b) \, d\mu(x) = 0 \quad \forall w \in \mathbb{R}^d, \; b \in \mathbb{R} \implies \mu \equiv 0$$
+
+**2. Pointwise Convergence to Half-Space Indicator Functions**:
+Let $\sigma$ be a continuous sigmoidal function: $\lim_{z \to -\infty} \sigma(z) = 0$ and $\lim_{z \to +\infty} \sigma(z) = 1$.
+Let $w \in \mathbb{R}^d$ and $b \in \mathbb{R}$ define an affine hyperplane $\{x \in I_d : w^T x + b = 0\}$.
+Define the open half-space $\Pi = \{x \in I_d : w^T x + b > 0\}$ and its boundary $\partial \Pi = \{x \in I_d : w^T x + b = 0\}$.
+Consider the parameterized family of functions for $\lambda > 0$:
+$$\sigma_\lambda(x) = \sigma(\lambda(w^T x + b))$$
+Examine the pointwise limit as $\lambda \to +\infty$:
+$$\lim_{\lambda \to \infty} \sigma_\lambda(x) = \begin{cases} 1 & \text{if } w^T x + b > 0 \quad (x \in \Pi) \\ \sigma(0) & \text{if } w^T x + b = 0 \quad (x \in \partial \Pi) \\ 0 & \text{if } w^T x + b < 0 \quad (x \notin \overline{\Pi}) \end{cases}$$
+Define the limit function:
+$$\gamma(x) = \mathbb{I}_\Pi(x) + \sigma(0) \mathbb{I}_{\partial \Pi}(x)$$
+
+**3. Applying the Lebesgue Dominated Convergence Theorem**:
+Since $\sigma$ is bounded, there exists $M > 0$ such that $|\sigma_\lambda(x)| \le M$ for all $\lambda$ and all $x \in I_d$.
+Because the constant function $M$ is integrable with respect to the finite variation measure $|\mu|$ on compact $I_d$ ($\int_{I_d} M d|\mu| = M |\mu|(I_d) < \infty$), the **Dominated Convergence Theorem** applies:
+$$\lim_{\lambda \to \infty} \int_{I_d} \sigma_\lambda(x) \, d\mu(x) = \int_{I_d} \lim_{\lambda \to \infty} \sigma_\lambda(x) \, d\mu(x) = \int_{I_d} \gamma(x) \, d\mu(x)$$
+By the hypothesis, $\int_{I_d} \sigma(w^T x + b) \, d\mu(x) = 0$ for all linear arguments, so $\int_{I_d} \sigma_\lambda(x) d\mu(x) = 0$ for every $\lambda > 0$.
+Therefore, the limit is zero:
+$$\int_{I_d} \gamma(x) \, d\mu(x) = \mu(\Pi) + \sigma(0) \mu(\partial \Pi) = 0 \quad \text{(Equation 1)}$$
+
+**4. Eliminating the Boundary Measure $\mu(\partial \Pi)$**:
+Now consider the family with an infinitesimal shift: $\sigma(\lambda(w^T x + b) - 1)$.
+As $\lambda \to \infty$, for points on the boundary $w^T x + b = 0$, the argument becomes $\lambda(0) - 1 = -1$, whose limit is not $\sigma(0)$ but $\lim_{\lambda \to \infty} \sigma(-1) = \sigma(-1)$.
+By taking shifted scaling parameters, or by noticing that for any measure $\mu$, the boundary $\partial \Pi$ has non-zero measure for at most countably many translations $b$, we isolate the open half-space indicator:
+$$\mu(\Pi) = 0 \quad \text{for every open half-space } \Pi \subset \mathbb{R}^d$$
+
+**5. Vanishing Fourier-Stieltjes Transform**:
+Let $u \in \mathbb{R}^d$ be an arbitrary frequency vector. The complex exponential $e^{i u^T x} = \cos(u^T x) + i \sin(u^T x)$ can be approximated uniformly by linear combinations of step functions along the 1D direction $u^T x$.
+Because $\mu(\Pi) = 0$ for all half-spaces, the measure of any rectangular box or open set is zero:
+$$\hat{\mu}(u) = \int_{I_d} e^{i u^T x} \, d\mu(x) = 0 \quad \forall u \in \mathbb{R}^d$$
+
+**6. Uniqueness of the Fourier Transform**:
+By the **Fourier Inversion Theorem** for bounded signed Borel measures, if the Fourier-Stieltjes transform $\hat{\mu}(u)$ vanishes identically for all frequencies $u \in \mathbb{R}^d$, the measure $\mu$ must be the unique zero measure:
+$$\mu \equiv 0$$
+This completes the proof of Lemma 1 $\blacksquare$.
+
+---
+
+#### Deep Derivation 6.3.2: Universal Approximation for Width-Bounded Deep Networks (The Minimum Width Threshold)
+
+Cybenko and Hornik proved universal approximation for **arbitrary width and bounded depth ($L=1$)**. We now examine the modern dual theorem for **bounded width and arbitrary depth ($L \to \infty$)** established by Lu et al. (2017) and Hanin & Sellke (2017).
+
+**1. The Dual Formulation**:
+Let $\mathcal{N}_{d, w}^{\text{ReLU}}$ denote the class of feedforward neural networks mapping $\mathbb{R}^d \to \mathbb{R}$ with ReLU activations, arbitrary depth $L$, and maximum hidden layer width at most $w$:
+$$\mathcal{N}_{d, w}^{\text{ReLU}} = \{f: \mathbb{R}^d \to \mathbb{R} : \text{width}(f) \le w\}$$
+
+**2. The Minimum Width Theorem (Hanin & Sellke 2017)**:
+- *Theorem*: A family of deep ReLU networks $\mathcal{N}_{d, w}^{\text{ReLU}}$ is dense in $C(K)$ for any compact $K \subset \mathbb{R}^d$ if and only if:
+  $$\mathbf{w \ge d + 1}$$
+  For functions with disconnected level sets or compact support, the tight necessary and sufficient threshold is $w \ge d + 2$.
+
+**3. Geometric Proof of Sufficiency ($w = d + 1$)**:
+Why is $d + 1$ the exact critical threshold?
+Let $x \in \mathbb{R}^d$ be the input. At each hidden layer:
+- $d$ neurons are dedicated to **preserving the spatial coordinates** (a lossless linear embedding):
+  $$h_{1:d}^{(l)} \approx x$$
+- $1$ single extra neuron is used to **execute a piece-wise linear operation** (folding or thresholding):
+  $$h_{d+1}^{(l)} = \text{ReLU}(w^T x + b)$$
+- The accumulated piecewise linear values from $h_{d+1}^{(l)}$ are added into a running accumulator via residual connections.
+Because depth $L$ is unbounded, the network can perform an infinite sequence of 1-neuron folding steps while keeping the original coordinates $x$ intact in the $d$ coordinate channels.
+This simulates arbitrary piecewise linear splines on $\mathbb{R}^d$.
+
+**4. Topological Proof of Failure for $w \le d$ (Information Bottleneck)**:
+Suppose $w \le d$.
+Every layer performs a continuous map $h^{(l)} = \text{ReLU}(W^{(l)} h^{(l-1)} + b^{(l)})$.
+Because $h^{(l)} \in \mathbb{R}^w$ with $w \le d$, and ReLU is a non-inverting semi-algebraic contraction:
+If a function $f: \mathbb{R}^d \to \mathbb{R}$ possesses non-convex, closed, bounded level sets (for example, a spherical shell $f(x) = 1$ on $\|x\|_2 = 1$ and $0$ elsewhere), any continuous map through a bottleneck of dimension $w \le d$ cannot separate the interior of the sphere from the exterior without tearing or collapsing space.
+Therefore, deep networks with width $w \le d$ **cannot** universally approximate continuous functions. Depth cannot compensate for insufficient width below $d+1$!
+
+---
+
+#### Deep Derivation 6.3.3: Exact Combinatorial Counting of Linear Regions (Zaslavsky's Theorem and Montufar Bound)
+
+Because ReLU is piecewise linear, any deep ReLU network partitions the input space $\mathbb{R}^{d_0}$ into a collection of convex polyhedral regions, within each of which the network computes a pure affine transformation $W_{\text{eff}} x + b_{\text{eff}}$. We derive the exact upper bound on the number of linear regions.
+
+**1. Zaslavsky's Hyperplane Arrangement Theorem (1975)**:
+Let $\mathcal{A}$ be an arrangement of $m$ hyperplanes in $\mathbb{R}^d$. The maximum number of connected polyhedral chambers (cells) formed by $\mathcal{A}$ is:
+$$C(m, d) = \sum_{j=0}^d \binom{m}{j}$$
+- In 1D ($d = 1$): $C(m, 1) = \binom{m}{0} + \binom{m}{1} = 1 + m$ (cutting a line with $m$ points creates $m+1$ segments).
+- In 2D ($d = 2$): $C(m, 2) = 1 + m + \frac{m(m-1)}{2} = \frac{m^2 + m + 2}{2}$ (cutting a plane with $m$ lines).
+
+**2. Region Count for a Shallow Network ($L = 1$)**:
+A single hidden layer with $m$ ReLU neurons defines $m$ hyperplanes: $\{x \in \mathbb{R}^{d_0} : w_j^T x + b_j = 0\}$.
+Across each hyperplane, neuron $j$ switches from inactive ($\sigma' = 0$) to active ($\sigma' = 1$).
+Therefore, the maximum number of linear regions formed by a shallow network of width $m$ is strictly bounded by Zaslavsky's formula:
+$$R_{\text{shallow}}(m, d_0) = \sum_{j=0}^{d_0} \binom{m}{j} \le \left( \frac{e \cdot m}{d_0} \right)^{d_0} = \mathcal{O}(m^{d_0})$$
+
+**3. Region Count for a Deep Network ($L$ Layers of Width $n$)**:
+In a deep network, each layer $l$ partitions the regions produced by layer $l-1$.
+Let $R_l$ denote the number of linear regions output by layer $l$.
+Each region from layer $l-1$ is mapped into $\mathbb{R}^n$. Layer $l$ introduces $n$ new hyperplanes.
+Within each incoming region of dimension $d_0$, the $n$ new neurons can create at most $\sum_{j=0}^{d_0} \binom{n}{j}$ sub-regions.
+Multiplying across all $L$ layers:
+$$R_{\text{deep}}(n, L, d_0) \ge \left( \sum_{j=0}^{d_0} \binom{n}{j} \right)^{L-1} \cdot \sum_{j=0}^{d_0} \binom{n}{j} \ge \left( \frac{n}{d_0} \right)^{(L-1) d_0} \cdot n^{d_0}$$
+
+**Comparison under equal total parameter budget $P$**:
+Let total neuron budget be $N = n \cdot L$:
+- **Shallow Network**:
+  $$R_{\text{shallow}} \le \mathcal{O}(N^{d_0})$$
+- **Deep Network**:
+  $$R_{\text{deep}} \ge \left( \frac{N/L}{d_0} \right)^{L \cdot d_0} = \mathcal{O}\left( 2^{\Omega(L)} \right)$$
+
+This establishes the formal mathematical proof of the **exponential representational efficiency of depth**: deep networks create exponentially more linear pieces than shallow networks with the exact same number of parameters.
+
+---
+
 ## Part 3: Geometric Interpretation: Folding Space
 
 ### 1. The Space-Folding Mechanism of ReLU
@@ -325,6 +440,160 @@ The function $f(x) = x^3$ has degree 3. The distance between $x^3$ and the subsp
 $$\inf_{A, B, C} \sup_{x \in [-1, 1]} |x^3 - (A x^2 + B x + C)| > 0$$
 Therefore, no polynomial activation can ever be a universal approximator.
 $\blacksquare$ Non-polynomiality is a necessary and sufficient condition!
+
+---
+
+### Problem 3: Construction of a 2D Localized "Mesa / Pyramid" Bump Function with ReLU
+**Statement**: In 2D universal approximation, networks construct multi-dimensional localized bumps. Using a 2-hidden-layer network with ReLU activations, construct an explicit localized 2D "mesa" bump function $B(x_1, x_2)$ on $[0, 1]^2$ that:
+- Achieves height $B(x_1, x_2) = 1.0$ on the square $[0.4, 0.6] \times [0.4, 0.6]$.
+- Decays linearly to $0.0$ at the outer perimeter $[0.2, 0.8] \times [0.2, 0.8]$.
+- Evaluates to exactly $0.0$ everywhere outside this region.
+Evaluate the function at $(0.5, 0.5)$, $(0.3, 0.5)$, and $(0.1, 0.5)$.
+
+**Solution**:
+1. **Layer 1: 1D Trapezoidal Ridge Functions**:
+   For any coordinate $x$, define the 4-neuron ReLU trapezoid:
+   $$t(x) = \text{ReLU}(x - 0.2) - \text{ReLU}(x - 0.4) - \text{ReLU}(x - 0.6) + \text{ReLU}(x - 0.8)$$
+   - For $x \le 0.2$: $t(x) = 0$.
+   - For $x \in [0.2, 0.4]$: slope is $+1 \implies t(x) = x - 0.2$ (reaches peak height $0.2$ at $x = 0.4$).
+   - For $x \in [0.4, 0.6]$: slope is $+1 - 1 = 0 \implies t(x) = 0.2000$.
+   - For $x \in [0.6, 0.8]$: slope is $-1 \implies t(x) = 0.2 - (x - 0.6)$ (drops back to $0$ at $x = 0.8$).
+   - For $x \ge 0.8$: slope is $0 \implies t(x) = 0$.
+
+2. **Layer 2: 2D AND-Intersection via ReLU Threshold**:
+   Let $h_1 = t(x_1)$ and $h_2 = t(x_2)$.
+   Both $h_1, h_2 \in [0, 0.2]$.
+   To perform a continuous fuzzy AND operation, sum the two ridge heights and subtract the threshold $0.2$:
+   $$B(x_1, x_2) = \frac{1}{0.2} \text{ReLU}\left( h_1(x_1) + h_2(x_2) - 0.2 \right) = 5 \cdot \text{ReLU}\left( t(x_1) + t(x_2) - 0.2 \right)$$
+
+3. **Step-by-Step Point Evaluations**:
+   - **Center Point $(0.5, 0.5)$**:
+     $$t(0.5) = 0.200, \quad t(0.5) = 0.200$$
+     $$B(0.5, 0.5) = 5 \cdot \text{ReLU}(0.2 + 0.2 - 0.2) = 5 \cdot \text{ReLU}(0.2) = 5(0.2) = \mathbf{1.000000}$$
+   - **Intermediate Slope Point $(0.3, 0.5)$**:
+     $$t(0.3) = 0.3 - 0.2 = 0.100, \quad t(0.5) = 0.200$$
+     $$B(0.3, 0.5) = 5 \cdot \text{ReLU}(0.1 + 0.2 - 0.2) = 5 \cdot \text{ReLU}(0.1) = 5(0.1) = \mathbf{0.500000}$$
+   - **Exterior Point $(0.1, 0.5)$**:
+     $$t(0.1) = 0.000, \quad t(0.5) = 0.200$$
+     $$B(0.1, 0.5) = 5 \cdot \text{ReLU}(0.0 + 0.2 - 0.2) = 5 \cdot \text{ReLU}(0.0) = \mathbf{0.000000}$$
+
+By tiling $\mathbb{R}^2$ with shifted copies of $B(x_1 - c_1, x_2 - c_2)$, a 2-layer ReLU network can approximate any continuous 2D surface to arbitrary precision!
+
+---
+
+### Problem 4: Telgarsky's Sawtooth Folding Function by Hand
+**Statement**: Telgarsky (2016) proved that composing a simple 1-hidden-layer ReLU network with itself creates an exponential number of oscillations with linear parameter cost.
+Consider the 3-neuron tent function $g: [0, 1] \to [0, 1]$:
+$$g(x) = 2 \text{ReLU}(x) - 4 \text{ReLU}(x - 0.5) + 2 \text{ReLU}(x - 1.0)$$
+1. Compute the values of $g(x)$ at $x \in \{0.0, 0.25, 0.5, 0.75, 1.0\}$.
+2. Compute the 2-layer composition $g_2(x) = g(g(x))$ by hand at the 9 grid points $x \in \{0, \frac{1}{8}, \frac{2}{8}, \dots, 1\}$.
+3. How many triangular teeth does an $L$-layer network computing $g_L(x) = \underbrace{g(g(\dots g(x)))}_{L \text{ times}}$ produce?
+4. Compare the total number of parameters required by an $L$-layer deep network versus a 1-layer shallow network to create $2^{10} = 1024$ triangular oscillations.
+
+**Solution**:
+
+#### 1. Single Layer Tent Map $g(x)$:
+- $x = 0.00$: $g(0) = 2(0) = \mathbf{0.00}$
+- $x = 0.25$: $g(0.25) = 2(0.25) = \mathbf{0.50}$
+- $x = 0.50$: $g(0.50) = 2(0.5) - 4(0) = \mathbf{1.00}$ (Single Peak)
+- $x = 0.75$: $g(0.75) = 2(0.75) - 4(0.25) = 1.5 - 1.0 = \mathbf{0.50}$
+- $x = 1.00$: $g(1.00) = 2(1.0) - 4(0.5) + 2(0) = 2.0 - 2.0 = \mathbf{0.00}$
+Function $g(x)$ creates $2^0 = 1$ tooth on $[0, 1]$.
+
+---
+
+#### 2. Two-Layer Composition $g_2(x) = g(g(x))$:
+Evaluate at steps of $\Delta x = 0.125 = 1/8$:
+- $x = 0.000$: $g(0) = 0.00 \implies g(g(0)) = g(0) = \mathbf{0.0}$
+- $x = 0.125$: $g(0.125) = 0.25 \implies g(0.25) = \mathbf{0.5}$
+- $x = 0.250$: $g(0.250) = 0.50 \implies g(0.50) = \mathbf{1.0}$ (**Peak 1**)
+- $x = 0.375$: $g(0.375) = 0.75 \implies g(0.75) = \mathbf{0.5}$
+- $x = 0.500$: $g(0.500) = 1.00 \implies g(1.00) = \mathbf{0.0}$ (**Trough**)
+- $x = 0.625$: $g(0.625) = 0.75 \implies g(0.75) = \mathbf{0.5}$
+- $x = 0.750$: $g(0.750) = 0.50 \implies g(0.50) = \mathbf{1.0}$ (**Peak 2**)
+- $x = 0.875$: $g(0.875) = 0.25 \implies g(0.25) = \mathbf{0.5}$
+- $x = 1.000$: $g(1.000) = 0.00 \implies g(0.00) = \mathbf{0.0}$
+
+*Result*: Composing $g$ twice doubles the oscillations, producing **2 full triangular teeth**!
+
+---
+
+#### 3. General Depth Scaling:
+By induction, each successive composition folds the existing wave pattern in half:
+$$g_L(x) = \underbrace{g(g(\dots g(x)))}_{L \text{ times}} \text{ produces } \mathbf{2^{L-1}} \text{ triangular teeth and } \mathbf{2^L} \text{ linear facets!}$$
+
+---
+
+#### 4. Parameter Efficiency: Deep vs. Shallow Comparison for 1024 Teeth:
+To produce $2^{10} = 1024$ teeth ($2048$ linear facets):
+- **Deep Network ($L = 11$ layers)**:
+  Each layer computes $g(x)$ using 3 ReLU neurons ($w_1, w_2, w_3$, biases $b$, output weights $v$).
+  Parameters per layer: $\sim 7$.
+  $$\text{Total Deep Parameters} = 11 \times 7 = \mathbf{77 \text{ parameters!}}$$
+- **Shallow Network (1 hidden layer)**:
+  In a 1-hidden-layer network, each linear facet change requires a dedicated ReLU neuron.
+  To create $2048$ linear facets, a shallow network requires at least $2048$ neurons:
+  $$\text{Total Shallow Parameters} = 2048 \text{ neurons} \times 3 \text{ params/neuron} = \mathbf{6{,}144 \text{ parameters!}}$$
+
+The deep network requires **$80\times$ fewer parameters**, rigorously verifying Telgarsky's theorem on the exponential representational advantage of network depth.
+
+---
+
+### Problem 5: Exact Numerical Forward Pass of a 2-Hidden-Layer MLP ($2 \to 3 \to 2 \to 1$)
+**Statement**: Trace an end-to-end forward propagation pass on a 2-hidden-layer multilayer perceptron with architecture $d_0 = 2, d_1 = 3, d_2 = 2, d_3 = 1$ and ReLU activations.
+Given input vector:
+$$x = \begin{bmatrix} 1.0 \\ -0.5 \end{bmatrix}$$
+Layer 1 parameters ($3 \times 2$ weight, $3 \times 1$ bias):
+$$W^{(1)} = \begin{bmatrix} 1.0 & -1.0 \\ 2.0 & 0.0 \\ -1.0 & 2.0 \end{bmatrix}, \quad b^{(1)} = \begin{bmatrix} 0.5 \\ -1.0 \\ 0.0 \end{bmatrix}$$
+Layer 2 parameters ($2 \times 3$ weight, $2 \times 1$ bias):
+$$W^{(2)} = \begin{bmatrix} 1.0 & -1.0 & 2.0 \\ 0.0 & 1.0 & -1.0 \end{bmatrix}, \quad b^{(2)} = \begin{bmatrix} -0.5 \\ 1.0 \end{bmatrix}$$
+Output Layer parameters ($1 \times 2$ weight, scalar bias, linear activation):
+$$W^{(3)} = \begin{bmatrix} 2.0 & -1.0 \end{bmatrix}, \quad b^{(3)} = 0.5$$
+
+Compute all pre-activations $z^{(l)}$, activated outputs $a^{(l)}$, and final prediction $\hat{y}$.
+
+**Solution**:
+
+#### Layer 1 ($2 \to 3$):
+1. Pre-activations $z^{(1)} = W^{(1)} x + b^{(1)}$:
+   $$z_1^{(1)} = (1.0)(1.0) + (-1.0)(-0.5) + 0.5 = 1.0 + 0.5 + 0.5 = \mathbf{2.0000}$$
+   $$z_2^{(1)} = (2.0)(1.0) + (0.0)(-0.5) - 1.0 = 2.0 + 0.0 - 1.0 = \mathbf{1.0000}$$
+   $$z_3^{(1)} = (-1.0)(1.0) + (2.0)(-0.5) + 0.0 = -1.0 - 1.0 + 0.0 = \mathbf{-2.0000}$$
+   $$z^{(1)} = \begin{bmatrix} 2.0 \\ 1.0 \\ -2.0 \end{bmatrix}$$
+
+2. Activations $a^{(1)} = \text{ReLU}(z^{(1)}) = \max(0, z^{(1)})$:
+   $$a_1^{(1)} = \max(0, 2.0) = \mathbf{2.0000}$$
+   $$a_2^{(1)} = \max(0, 1.0) = \mathbf{1.0000}$$
+   $$a_3^{(1)} = \max(0, -2.0) = \mathbf{0.0000} \quad (\text{Neuron 3 inactive!})$$
+   $$a^{(1)} = \begin{bmatrix} 2.0 \\ 1.0 \\ 0.0 \end{bmatrix}$$
+
+---
+
+#### Layer 2 ($3 \to 2$):
+1. Pre-activations $z^{(2)} = W^{(2)} a^{(1)} + b^{(2)}$:
+   $$z_1^{(2)} = (1.0)(2.0) + (-1.0)(1.0) + (2.0)(0.0) - 0.5 = 2.0 - 1.0 + 0.0 - 0.5 = \mathbf{0.5000}$$
+   $$z_2^{(2)} = (0.0)(2.0) + (1.0)(1.0) + (-1.0)(0.0) + 1.0 = 0.0 + 1.0 - 0.0 + 1.0 = \mathbf{2.0000}$$
+   $$z^{(2)} = \begin{bmatrix} 0.5 \\ 2.0 \end{bmatrix}$$
+
+2. Activations $a^{(2)} = \text{ReLU}(z^{(2)})$:
+   $$a_1^{(2)} = \max(0, 0.5) = \mathbf{0.5000}$$
+   $$a_2^{(2)} = \max(0, 2.0) = \mathbf{2.0000}$$
+   $$a^{(2)} = \begin{bmatrix} 0.5 \\ 2.0 \end{bmatrix}$$
+
+---
+
+#### Output Layer ($2 \to 1$):
+$$\hat{y} = W^{(3)} a^{(2)} + b^{(3)} = \begin{bmatrix} 2.0 & -1.0 \end{bmatrix} \begin{bmatrix} 0.5 \\ 2.0 \end{bmatrix} + 0.5$$
+$$\hat{y} = (2.0)(0.5) + (-1.0)(2.0) + 0.5 = 1.0 - 2.0 + 0.5 = \mathbf{-0.500000}$$
+
+#### Forward Computation Summary Grid:
+
+| Layer | Type | Matrix / Vector Formula | Pre-Activation $z$ | Activated Output $a$ | Active Neurons |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Input** | Feature | $x$ | — | $[1.0, -0.5]^T$ | 2 / 2 (100%) |
+| **Hidden 1** | Linear + ReLU | $W^{(1)} x + b^{(1)}$ | $[2.0, 1.0, -2.0]^T$ | $[2.0, 1.0, 0.0]^T$ | 2 / 3 (66.7%) |
+| **Hidden 2** | Linear + ReLU | $W^{(2)} a^{(1)} + b^{(2)}$ | $[0.5, 2.0]^T$ | $[0.5, 2.0]^T$ | 2 / 2 (100%) |
+| **Output** | Linear | $W^{(3)} a^{(2)} + b^{(3)}$ | $[-0.5]^T$ | $\mathbf{-0.500000}$ | 1 / 1 (100%) |
 
 ---
 

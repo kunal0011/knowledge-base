@@ -131,6 +131,144 @@ $\blacksquare$ **Q.E.D.**
 
 ---
 
+### 4. Deep Mathematical Derivations
+
+#### Deep Derivation 6.1.1: The Perceptron Criterion Loss Function, Clarke Subdifferential, and Stochastic Subgradient Descent Equivalence
+
+We prove that Rosenblatt's Perceptron Learning Algorithm (PLA) is mathematically equivalent to Stochastic Subgradient Descent (SGD) minimizing a convex surrogate loss function known as the **Perceptron Criterion**.
+
+**1. Formulation of the Perceptron Loss**:
+In binary classification with labels $y_i \in \{-1, +1\}$, the ideal empirical risk is the 0-1 classification error:
+$$\mathcal{L}_{0-1}(w) = \frac{1}{N} \sum_{i=1}^N \mathbb{I}(y_i (w^T x_i) \le 0)$$
+Because the indicator function $\mathbb{I}(\cdot)$ is discontinuous with zero gradient almost everywhere, it cannot be optimized by gradient methods.
+The **Perceptron Criterion** (Bishop, 2006) replaces this with a continuous, piece-wise linear convex surrogate loss:
+$$\ell_{\text{perc}}(w; x_i, y_i) = \max\left(0, -y_i (w^T x_i)\right)$$
+Notice the behavior:
+- If sample $i$ is correctly classified ($y_i (w^T x_i) > 0$), the penalty is $\ell_{\text{perc}} = 0$.
+- If sample $i$ is misclassified ($y_i (w^T x_i) \le 0$), the penalty is $-y_i (w^T x_i) \ge 0$, which increases linearly with the magnitude of the error.
+The total empirical risk is:
+$$\mathcal{L}_{\text{perc}}(w) = \frac{1}{N} \sum_{i=1}^N \max\left(0, -y_i (w^T x_i)\right)$$
+
+**2. Convexity of the Loss Function**:
+Let $h(z) = \max(0, -z)$. For any $z_1, z_2 \in \mathbb{R}$ and $\lambda \in [0, 1]$:
+$$h(\lambda z_1 + (1-\lambda)z_2) = \max(0, -\lambda z_1 - (1-\lambda)z_2) \le \lambda \max(0, -z_1) + (1-\lambda) \max(0, -z_2)$$
+Hence $h(z)$ is convex. Since $z(w) = y_i w^T x_i$ is an affine function of $w$, the composition $f_i(w) = h(z(w))$ is convex. Since the sum of convex functions is convex, $\mathcal{L}_{\text{perc}}(w)$ is a convex function on $\mathbb{R}^d$.
+
+**3. Clarke Subdifferential Calculus**:
+Because $\ell_{\text{perc}}$ has a "kink" at $y_i w^T x_i = 0$, it is non-differentiable at the decision boundary. We compute its **Clarke subdifferential** $\partial \ell_{\text{perc}}(w)$.
+For a scalar function $h(z) = \max(0, -z)$:
+$$\partial h(z) = \begin{cases} \{0\} & \text{if } z > 0 \\ [-1, 0] & \text{if } z = 0 \\ \{-1\} & \text{if } z < 0 \end{cases}$$
+
+By the chain rule for subdifferentials of convex functions composed with affine maps $\nabla_w z = y_i x_i$:
+$$\partial_w \ell_{\text{perc}}(w; x_i, y_i) = \left\{ c \cdot (-y_i x_i) : c \in \partial h(y_i w^T x_i) \right\}$$
+Evaluating this piece-wise:
+$$\partial_w \ell_{\text{perc}}(w; x_i, y_i) = \begin{cases} \{\vec{0}\} & \text{if } y_i w^T x_i > 0 \quad (\text{Correctly classified}) \\ \text{conv}\left(\{\vec{0}, -y_i x_i\}\right) & \text{if } y_i w^T x_i = 0 \quad (\text{Boundary case}) \\ \{-y_i x_i\} & \text{if } y_i w^T x_i < 0 \quad (\text{Misclassified}) \end{cases}$$
+where $\text{conv}(A)$ denotes the convex hull.
+
+**4. Equivalence to the Perceptron Learning Algorithm**:
+Consider online Stochastic Subgradient Descent (SGD) on $\mathcal{L}_{\text{perc}}(w)$ with step size $\eta > 0$.
+At step $t$, we observe a single sample $(x_i, y_i)$ and select a subgradient $g_t \in \partial_w \ell_{\text{perc}}(w_t; x_i, y_i)$:
+$$w_{t+1} = w_t - \eta g_t$$
+- **Case 1 (Correct Classification: $y_i w_t^T x_i > 0$)**:
+  The subdifferential is the singleton $\{\vec{0}\}$. Thus $g_t = \vec{0}$, yielding:
+  $$w_{t+1} = w_t - \eta(\vec{0}) = w_t \quad (\text{No update})$$
+- **Case 2 (Misclassification or Boundary: $y_i w_t^T x_i \le 0$)**:
+  Choosing the active subgradient $g_t = -y_i x_i$:
+  $$w_{t+1} = w_t - \eta (-y_i x_i) = w_t + \eta y_i x_i$$
+
+Setting $\eta = 1$, this is **identically Rosenblatt's Perceptron Learning Algorithm**.
+*Theoretical Conclusion*: Rosenblatt's 1958 heuristic bio-inspired rule is fundamentally a Stochastic Subgradient Descent method minimizing the convex Perceptron Criterion!
+
+---
+
+#### Deep Derivation 6.1.2: Dimension-Free Generalization and Rademacher Complexity Bounds for Margin Perceptrons
+
+A central mystery of early machine learning was why linear perceptrons with large margins do not overfit in high-dimensional spaces ($d \gg N$). We prove a dimension-free generalization error bound using **Empirical Rademacher Complexity**.
+
+**1. Formal Setup**:
+- Let $\mathcal{X} = \{x \in \mathbb{R}^d : \|x\|_2 \le R\}$ be a bounded input domain.
+- Consider the class of linear score functions with bounded $\ell_2$ norm:
+  $$\mathcal{F} = \{x \mapsto w^T x : \|w\|_2 \le 1\}$$
+- Given a sample $S = \{x_1, \dots, x_N\} \subset \mathcal{X}$, the **Empirical Rademacher Complexity** $\hat{\mathcal{R}}_S(\mathcal{F})$ measures the capacity of $\mathcal{F}$ to fit random noise:
+  $$\hat{\mathcal{R}}_S(\mathcal{F}) = \mathbb{E}_{\sigma}\left[ \sup_{\|w\|_2 \le 1} \frac{1}{N} \sum_{i=1}^N \sigma_i (w^T x_i) \right]$$
+  where $\sigma_1, \dots, \sigma_N$ are independent Rademacher random variables taking values in $\{-1, +1\}$ with equal probability $1/2$.
+
+**2. Bounding the Rademacher Complexity**:
+Rewrite the inner sum as a vector dot product:
+$$\sum_{i=1}^N \sigma_i (w^T x_i) = w^T \left( \sum_{i=1}^N \sigma_i x_i \right)$$
+By the Cauchy-Schwarz inequality, the supremum over $\|w\|_2 \le 1$ is achieved when $w$ is aligned with the vector $\sum_{i=1}^N \sigma_i x_i$:
+$$\sup_{\|w\|_2 \le 1} w^T \left( \sum_{i=1}^N \sigma_i x_i \right) = \left\| \sum_{i=1}^N \sigma_i x_i \right\|_2$$
+Therefore:
+$$\hat{\mathcal{R}}_S(\mathcal{F}) = \frac{1}{N} \mathbb{E}_{\sigma}\left[ \left\| \sum_{i=1}^N \sigma_i x_i \right\|_2 \right]$$
+
+Applying Jensen's Inequality to the concave function $g(u) = \sqrt{u}$:
+$$\mathbb{E}_{\sigma}\left[ \left\| \sum_{i=1}^N \sigma_i x_i \right\|_2 \right] \le \sqrt{\mathbb{E}_{\sigma}\left[ \left\| \sum_{i=1}^N \sigma_i x_i \right\|_2^2 \right]}$$
+
+Expanding the squared Euclidean norm:
+$$\left\| \sum_{i=1}^N \sigma_i x_i \right\|_2^2 = \sum_{i=1}^N \sum_{j=1}^N \sigma_i \sigma_j (x_i^T x_j) = \sum_{i=1}^N \sigma_i^2 \|x_i\|_2^2 + \sum_{i \ne j} \sigma_i \sigma_j (x_i^T x_j)$$
+Since $\sigma_i^2 = 1$ and $\mathbb{E}[\sigma_i \sigma_j] = \mathbb{E}[\sigma_i]\mathbb{E}[\sigma_j] = 0$ for $i \ne j$:
+$$\mathbb{E}_{\sigma}\left[ \left\| \sum_{i=1}^N \sigma_i x_i \right\|_2^2 \right] = \sum_{i=1}^N \|x_i\|_2^2 \le N R^2$$
+
+Taking the square root and dividing by $N$:
+$$\hat{\mathcal{R}}_S(\mathcal{F}) \le \frac{1}{N} \sqrt{N R^2} = \frac{R}{\sqrt{N}}$$
+
+**3. Generalization Bound with Geometric Margin $\gamma$**:
+Define the margin loss function $\phi_\gamma: \mathbb{R} \to [0, 1]$:
+$$\phi_\gamma(u) = \begin{cases} 1 & \text{if } u \le 0 \\ 1 - u/\gamma & \text{if } 0 < u < \gamma \\ 0 & \text{if } u \ge \gamma \end{cases}$$
+Notice that $\mathbb{I}(u \le 0) \le \phi_\gamma(u)$, and $\phi_\gamma$ is $\frac{1}{\gamma}$-Lipschitz continuous.
+By the **Talagrand Contraction Lemma**, the Rademacher complexity of the composed function class satisfies:
+$$\hat{\mathcal{R}}_S(\phi_\gamma \circ \mathcal{F}) \le \frac{1}{\gamma} \hat{\mathcal{R}}_S(\mathcal{F}) \le \frac{R}{\gamma \sqrt{N}}$$
+
+Applying the standard Rademacher generalization theorem (Bartlett & Mendelson, 2002): with probability at least $1 - \delta$ over the choice of training sample $S$, the true 0-1 generalization error $R(w) = \mathbb{P}(y \ne \text{sign}(w^T x))$ satisfies:
+$$R(w) \le \frac{1}{N} \sum_{i=1}^N \phi_\gamma(y_i w^T x_i) + \frac{2 R}{\gamma \sqrt{N}} + \sqrt{\frac{\log(1/\delta)}{2N}}$$
+
+If the training data is separated with margin $\gamma$, the empirical margin loss is zero: $\frac{1}{N} \sum_{i=1}^N \phi_\gamma(y_i w^T x_i) = 0$.
+Hence:
+$$R(w) \le \mathcal{O}\left( \frac{R}{\gamma \sqrt{N}} \right)$$
+
+**Significance**:
+The generalization error depends strictly on the scale ratio $\frac{R}{\gamma}$ and the sample size $N$. It has **zero explicit dependence on the dimension $d$**! A linear model operating in infinite dimensions (e.g., reproducing kernel Hilbert spaces) generalizes reliably as long as the geometric margin $\gamma$ remains bounded away from zero.
+
+---
+
+#### Deep Derivation 6.1.3: Dual Representation, the Kernel Trick, and the Non-Linear Kernel Perceptron
+
+We derive the dual representation of the perceptron weight vector and demonstrate how the Kernel Trick resolves non-linear classification problems (such as XOR) without expanding the explicit coordinate representation.
+
+**1. The Dual Representation**:
+The perceptron learning algorithm initializes $w_0 = \vec{0}$ and executes updates of the form:
+$$w_{t+1} = w_t + y_i x_i \quad \text{whenever sample } i \text{ is misclassified.}$$
+By unrolling this recurrence from $w_0$:
+$$w = \sum_{i=1}^N \alpha_i y_i x_i$$
+where the integer coefficient $\alpha_i \in \mathbb{N}_0 = \{0, 1, 2, \dots\}$ represents the **total number of times sample $i$ was misclassified** during training.
+- Samples that were never misclassified have $\alpha_i = 0$.
+- Points near the decision boundary or hard-to-classify samples have large $\alpha_i$ (the direct analog of *Support Vectors*).
+
+**2. Dual Prediction Function**:
+Substitute the dual weight representation into the primal hypothesis $h_w(x) = \text{sign}(w^T x)$:
+$$h(x) = \text{sign}\left( \left( \sum_{i=1}^N \alpha_i y_i x_i \right)^T x \right) = \text{sign}\left( \sum_{i=1}^N \alpha_i y_i (x_i^T x) \right)$$
+Notice that the feature vector $x$ appears **only through inner products** with the training examples $x_i$!
+
+**3. The Kernel Trick (Aizerman et al., 1964)**:
+Let $\Phi: \mathbb{R}^d \to \mathcal{H}$ be a non-linear mapping from the input space to a higher- (or infinite-) dimensional Hilbert feature space $\mathcal{H}$.
+By **Mercer's Theorem**, any symmetric, positive semi-definite kernel function $K(x, x') = \langle \Phi(x), \Phi(x') \rangle_\mathcal{H}$ computes the inner product in $\mathcal{H}$ without explicitly evaluating or storing $\Phi(x)$.
+
+Replacing $x_i^T x$ with $K(x_i, x)$, the **Kernel Perceptron hypothesis** becomes:
+$$h(x) = \text{sign}\left( \sum_{i=1}^N \alpha_i y_i K(x_i, x) \right)$$
+
+**4. The Kernel Perceptron Learning Algorithm**:
+1. **Precomputation**: Compute the $N \times N$ symmetric Gram matrix $K \in \mathbb{R}^{N \times N}$ where $K_{i, j} = K(x_i, x_j)$.
+2. **Initialization**: Set $\alpha = [0, 0, \dots, 0]^T \in \mathbb{N}_0^N$.
+3. **Training Loop**: For each sample $(x_i, y_i)$:
+   - Compute prediction score:
+     $$s_i = \sum_{j=1}^N \alpha_j y_j K(x_j, x_i) = \sum_{j=1}^N \alpha_j y_j K_{j, i}$$
+   - Check margin: If $y_i s_i \le 0$ (mistake):
+     $$\alpha_i \leftarrow \alpha_i + 1$$
+4. **Convergence Guarantee**: By Novikoff's theorem applied in Hilbert space $\mathcal{H}$, if the data is separable in $\mathcal{H}$ with margin $\gamma_\Phi > 0$, the Kernel Perceptron terminates in at most:
+   $$k \le \frac{R_\Phi^2}{\gamma_\Phi^2} = \frac{\max_i K(x_i, x_i)}{\gamma_\Phi^2} \text{ steps.}$$
+
+---
+
 ## Part 3: Geometric & Algebraic Interpretation
 
 ### 1. The Geometry of the Decision Boundary
@@ -377,6 +515,186 @@ Let us verify on all 4 input combinations:
 4. $(1, 1)$: $h_1 = H(1.5) = 1$, $h_2 = H(-0.5) = 0$. Output: $y = H(1 + 0 - 1.5) = H(-0.5) = \mathbf{0}$.
 
 *Conclusion*: A two-layer network solves XOR effortlessly by warping the feature space into a linearly separable representation!
+
+---
+
+### Problem 4: Solving XOR with a Non-Linear Kernel Perceptron by Hand
+**Statement**: In Problem 2, we proved that a primal linear perceptron cannot solve the XOR problem. We now solve XOR using a **Kernel Perceptron** with the inhomogeneous degree-2 polynomial kernel:
+$$K(u, v) = (u^T v + 1)^2$$
+The dataset with labels $y \in \{-1, +1\}$ is:
+- Sample 1: $x_1 = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, y_1 = -1$
+- Sample 2: $x_2 = \begin{bmatrix} 0 \\ 1 \end{bmatrix}, y_2 = +1$
+- Sample 3: $x_3 = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, y_3 = +1$
+- Sample 4: $x_4 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}, y_4 = -1$
+1. Compute the $4 \times 4$ Gram matrix $K_{i, j} = K(x_i, x_j)$.
+2. Trace the dual coefficients $\alpha = [\alpha_1, \alpha_2, \alpha_3, \alpha_4]^T$ initialized at $\vec{0}$ across training epochs until convergence.
+3. Verify that the final dual hypothesis correctly classifies all 4 samples with strictly positive margins $y_i s_i > 0$.
+4. Give the explicit feature map $\Phi(x)$ and explain how the kernel trick bypasses the XOR limitation.
+
+**Solution**:
+
+#### 1. Exact Gram Matrix Evaluation:
+Compute all pairwise kernel values $K(x_i, x_j) = (x_i^T x_j + 1)^2$:
+- $x_1 = [0, 0]^T$:
+  $$x_1^T x_1 = 0 \implies K_{11} = (0 + 1)^2 = \mathbf{1}$$
+  $$x_1^T x_2 = 0 \implies K_{12} = \mathbf{1}, \quad x_1^T x_3 = 0 \implies K_{13} = \mathbf{1}, \quad x_1^T x_4 = 0 \implies K_{14} = \mathbf{1}$$
+- $x_2 = [0, 1]^T$:
+  $$x_2^T x_2 = 1 \implies K_{22} = (1 + 1)^2 = \mathbf{4}$$
+  $$x_2^T x_3 = 0 \implies K_{23} = \mathbf{1}, \quad x_2^T x_4 = 1 \implies K_{24} = (1 + 1)^2 = \mathbf{4}$$
+- $x_3 = [1, 0]^T$:
+  $$x_3^T x_3 = 1 \implies K_{33} = (1 + 1)^2 = \mathbf{4}, \quad x_3^T x_4 = 1 \implies K_{34} = (1 + 1)^2 = \mathbf{4}$$
+- $x_4 = [1, 1]^T$:
+  $$x_4^T x_4 = 1 + 1 = 2 \implies K_{44} = (2 + 1)^2 = \mathbf{9}$$
+
+The full symmetric Gram matrix is:
+$$K = \begin{bmatrix} 1 & 1 & 1 & 1 \\ 1 & 4 & 1 & 4 \\ 1 & 1 & 4 & 4 \\ 1 & 4 & 4 & 9 \end{bmatrix}$$
+
+---
+
+#### 2. Dual Perceptron Execution Trace:
+Score formula for sample $i$:
+$$s_i = \sum_{j=1}^4 \alpha_j y_j K_{j, i}$$
+Mistake condition: $y_i s_i \le 0 \implies \alpha_i \leftarrow \alpha_i + 1$.
+
+##### Epoch 1 ($\alpha_{\text{init}} = [0, 0, 0, 0]$):
+- **Sample 1** ($y_1 = -1$): $s_1 = 0 \implies y_1 s_1 = 0 \le 0$ (**Mistake!**). $\alpha \leftarrow [1, 0, 0, 0]^T$.
+- **Sample 2** ($y_2 = +1$): $s_2 = 1(-1)(1) = -1 \implies y_2 s_2 = -1 \le 0$ (**Mistake!**). $\alpha \leftarrow [1, 1, 0, 0]^T$.
+- **Sample 3** ($y_3 = +1$): $s_3 = 1(-1)(1) + 1(+1)(1) = 0 \implies y_3 s_3 = 0 \le 0$ (**Mistake!**). $\alpha \leftarrow [1, 1, 1, 0]^T$.
+- **Sample 4** ($y_4 = -1$): $s_4 = 1(-1)(1) + 1(+1)(4) + 1(+1)(4) = -1 + 4 + 4 = 7 \implies y_4 s_4 = (-1)(7) = -7 \le 0$ (**Mistake!**). $\alpha \leftarrow [1, 1, 1, 1]^T$.
+End of Epoch 1: $\alpha = [1, 1, 1, 1]^T$ (4 mistakes).
+
+##### Epochs 2 to 7 (Evolution of Dual Weights):
+- **Epoch 2**: $\alpha$ increments uniformly: $\alpha = [2, 2, 2, 2]^T$ (4 mistakes).
+- **Epoch 3**: $\alpha = [3, 3, 3, 3]^T$ (4 mistakes).
+- **Epoch 4**: $\alpha = [4, 4, 4, 4]^T$ (4 mistakes).
+- **Epoch 5**: Symmetry breaks! On Sample 4, $s_4 = 5(-1)(1) + 5(1)(4) + 5(1)(4) + 4(-1)(9) = -5 + 20 + 20 - 36 = -1 \implies y_4 s_4 = +1 > 0$ (Correct!).
+  $\alpha \leftarrow [5, 5, 5, 4]^T$ (3 mistakes).
+- **Epoch 6**: Only Sample 1 triggers a mistake: $\alpha \leftarrow [6, 5, 5, 4]^T$ (1 mistake).
+- **Epoch 7**: Only Sample 1 triggers a mistake: $\alpha \leftarrow [7, 5, 5, 4]^T$ (1 mistake).
+
+##### Epoch 8 (Full Verification of Convergence):
+Current dual state: $\alpha^* = [7, 5, 5, 4]^T$.
+- **Sample 1** ($x_1 = [0, 0]^T, y_1 = -1$):
+  $$s_1 = 7(-1)(1) + 5(+1)(1) + 5(+1)(1) + 4(-1)(1) = -7 + 5 + 5 - 4 = -1.0$$
+  $$\text{Margin Check}: y_1 s_1 = (-1)(-1.0) = \mathbf{+1.000 > 0} \quad \text{(CORRECT!)}$$
+- **Sample 2** ($x_2 = [0, 1]^T, y_2 = +1$):
+  $$s_2 = 7(-1)(1) + 5(+1)(4) + 5(+1)(1) + 4(-1)(4) = -7 + 20 + 5 - 16 = +2.0$$
+  $$\text{Margin Check}: y_2 s_2 = (+1)(+2.0) = \mathbf{+2.000 > 0} \quad \text{(CORRECT!)}$$
+- **Sample 3** ($x_3 = [1, 0]^T, y_3 = +1$):
+  $$s_3 = 7(-1)(1) + 5(+1)(1) + 5(+1)(4) + 4(-1)(4) = -7 + 5 + 20 - 16 = +2.0$$
+  $$\text{Margin Check}: y_3 s_3 = (+1)(+2.0) = \mathbf{+2.000 > 0} \quad \text{(CORRECT!)}$$
+- **Sample 4** ($x_4 = [1, 1]^T, y_4 = -1$):
+  $$s_4 = 7(-1)(1) + 5(+1)(4) + 5(+1)(4) + 4(-1)(9) = -7 + 20 + 20 - 36 = -3.0$$
+  $$\text{Margin Check}: y_4 s_4 = (-1)(-3.0) = \mathbf{+3.000 > 0} \quad \text{(CORRECT!)}$$
+
+**0 MISTAKES IN EPOCH 8! ALGORITHM CONVERGES COMPLETELY.**
+
+---
+
+#### 3. How the Kernel Trick Bypasses the XOR Barrier:
+Expanding the polynomial kernel:
+$$K(u, v) = (u_1 v_1 + u_2 v_2 + 1)^2 = u_1^2 v_1^2 + u_2^2 v_2^2 + 2 u_1 u_2 v_1 v_2 + 2 u_1 v_1 + 2 u_2 v_2 + 1$$
+This corresponds to the inner product $\Phi(u)^T \Phi(v)$ in a 6-dimensional Hilbert feature space:
+$$\Phi(x) = \begin{bmatrix} x_1^2 \\ x_2^2 \\ \sqrt{2} x_1 x_2 \\ \sqrt{2} x_1 \\ \sqrt{2} x_2 \\ 1 \end{bmatrix} \in \mathbb{R}^6$$
+
+Evaluating $\Phi(x)$ on the 4 XOR samples:
+- $\Phi(x_1) = [0, 0, 0, 0, 0, 1]^T$ ($y_1 = -1$)
+- $\Phi(x_2) = [0, 1, 0, 0, \sqrt{2}, 1]^T$ ($y_2 = +1$)
+- $\Phi(x_3) = [1, 0, 0, \sqrt{2}, 0, 1]^T$ ($y_3 = +1$)
+- $\Phi(x_4) = [1, 1, \sqrt{2}, \sqrt{2}, \sqrt{2}, 1]^T$ ($y_4 = -1$)
+
+Notice the third coordinate $\phi_3(x) = \sqrt{2} x_1 x_2$: it evaluates to $\sqrt{2}$ **only** for $(1, 1)$, and $0$ for all others!
+In this 6D space, the data is linearly separable by a single affine hyperplane, proving that the Kernel Perceptron completely shatters the Minsky-Papert XOR barrier without requiring deep multilayer architectures.
+
+---
+
+### Problem 5: Multi-Class Perceptron (Kesler / Crammer-Singer) Hand Trace
+**Statement**: Consider a 3-class classification problem ($C \in \{1, 2, 3\}$) in $\mathbb{R}^2$. Using augmented homogeneous coordinates ($x_0 = 1$), we have 3 training examples:
+- Sample 1: $\tilde{x}_1 = [1, 1, 0]^T$, true class $y_1 = 1$
+- Sample 2: $\tilde{x}_2 = [1, 0, 1]^T$, true class $y_2 = 2$
+- Sample 3: $\tilde{x}_3 = [1, -1, -1]^T$, true class $y_3 = 3$
+
+We maintain three weight vectors $w_1, w_2, w_3 \in \mathbb{R}^3$, all initialized to $\vec{0}$.
+Prediction rule:
+$$\hat{y} = \arg\max_{c \in \{1, 2, 3\}} w_c^T \tilde{x}$$
+(Ties are broken by choosing the smallest class index).
+Update rule on mistake ($\hat{y} \ne y_i$):
+$$w_{y_i} \leftarrow w_{y_i} + \tilde{x}_i, \quad w_{\hat{y}} \leftarrow w_{\hat{y}} - \tilde{x}_i$$
+All other weight vectors remain unchanged.
+Execute the multi-class perceptron step-by-step until full convergence.
+
+**Solution**:
+
+#### Initial State:
+$$w_1 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}, \quad w_2 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}, \quad w_3 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}$$
+
+---
+
+#### Epoch 1:
+- **Sample 1** ($\tilde{x}_1 = [1, 1, 0]^T$, true $y_1 = 1$):
+  - Class scores: $w_1^T \tilde{x}_1 = 0$, $w_2^T \tilde{x}_1 = 0$, $w_3^T \tilde{x}_1 = 0$.
+  - Tie-breaking picks $\hat{y} = 1$.
+  - $\hat{y} = y_1 \implies$ **CORRECT! (No update)**.
+
+- **Sample 2** ($\tilde{x}_2 = [1, 0, 1]^T$, true $y_2 = 2$):
+  - Class scores: $w_1^T \tilde{x}_2 = 0$, $w_2^T \tilde{x}_2 = 0$, $w_3^T \tilde{x}_2 = 0$.
+  - Tie-breaking picks $\hat{y} = 1 \ne 2 \implies$ **MISTAKE!**
+  - Update: Promote true class $w_2$, penalize false class $w_1$:
+    $$w_2 \leftarrow w_2 + \tilde{x}_2 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} + \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix} = \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix}$$
+    $$w_1 \leftarrow w_1 - \tilde{x}_2 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} - \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix} = \begin{bmatrix} -1 \\ 0 \\ -1 \end{bmatrix}$$
+    $$w_3 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}$$
+
+- **Sample 3** ($\tilde{x}_3 = [1, -1, -1]^T$, true $y_3 = 3$):
+  - Class scores:
+    $$w_1^T \tilde{x}_3 = -1(1) + 0(-1) - 1(-1) = -1 + 0 + 1 = 0$$
+    $$w_2^T \tilde{x}_3 = 1(1) + 0(-1) + 1(-1) = 1 + 0 - 1 = 0$$
+    $$w_3^T \tilde{x}_3 = 0(1) + 0(-1) + 0(-1) = 0$$
+  - All scores are $0$. Tie-breaker picks $\hat{y} = 1 \ne 3 \implies$ **MISTAKE!**
+  - Update: Promote $w_3$, penalize $w_1$:
+    $$w_3 \leftarrow w_3 + \tilde{x}_3 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} + \begin{bmatrix} 1 \\ -1 \\ -1 \end{bmatrix} = \begin{bmatrix} 1 \\ -1 \\ -1 \end{bmatrix}$$
+    $$w_1 \leftarrow w_1 - \tilde{x}_3 = \begin{bmatrix} -1 \\ 0 \\ -1 \end{bmatrix} - \begin{bmatrix} 1 \\ -1 \\ -1 \end{bmatrix} = \begin{bmatrix} -2 \\ 1 \\ 0 \end{bmatrix}$$
+    $$w_2 = \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix}$$
+
+---
+
+#### Epoch 2:
+- **Sample 1** ($\tilde{x}_1 = [1, 1, 0]^T$, true $y_1 = 1$):
+  - Class scores:
+    $$w_1^T \tilde{x}_1 = -2(1) + 1(1) + 0(0) = -1$$
+    $$w_2^T \tilde{x}_1 = 1(1) + 0(1) + 1(0) = +1$$
+    $$w_3^T \tilde{x}_1 = 1(1) - 1(1) - 1(0) = 0$$
+  - Predicted: $\hat{y} = \arg\max(-1, +1, 0) = 2 \ne 1 \implies$ **MISTAKE!**
+  - Update: Promote $w_1$, penalize $w_2$:
+    $$w_1 \leftarrow w_1 + \tilde{x}_1 = \begin{bmatrix} -2 \\ 1 \\ 0 \end{bmatrix} + \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix} = \begin{bmatrix} -1 \\ 2 \\ 0 \end{bmatrix}$$
+    $$w_2 \leftarrow w_2 - \tilde{x}_1 = \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix} - \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix} = \begin{bmatrix} 0 \\ -1 \\ 1 \end{bmatrix}$$
+    $$w_3 = \begin{bmatrix} 1 \\ -1 \\ -1 \end{bmatrix}$$
+
+- **Sample 2** ($\tilde{x}_2 = [1, 0, 1]^T$, true $y_2 = 2$):
+  - Class scores:
+    $$w_1^T \tilde{x}_2 = -1(1) + 2(0) + 0(1) = -1$$
+    $$w_2^T \tilde{x}_2 = 0(1) - 1(0) + 1(1) = +1$$
+    $$w_3^T \tilde{x}_2 = 1(1) - 1(0) - 1(1) = 0$$
+  - Predicted: $\hat{y} = \arg\max(-1, +1, 0) = 2 == y_2 \implies$ **CORRECT!**
+
+- **Sample 3** ($\tilde{x}_3 = [1, -1, -1]^T$, true $y_3 = 3$):
+  - Class scores:
+    $$w_1^T \tilde{x}_3 = -1(1) + 2(-1) + 0(-1) = -3$$
+    $$w_2^T \tilde{x}_3 = 0(1) - 1(-1) + 1(-1) = 0$$
+    $$w_3^T \tilde{x}_3 = 1(1) - 1(-1) - 1(-1) = 1 + 1 + 1 = +3$$
+  - Predicted: $\hat{y} = \arg\max(-3, 0, +3) = 3 == y_3 \implies$ **CORRECT!**
+
+---
+
+#### Epoch 3 (Verification):
+- **Sample 1**: Scores: $w_1^T \tilde{x}_1 = +1$, $w_2^T \tilde{x}_1 = -1$, $w_3^T \tilde{x}_1 = 0 \implies \hat{y} = 1$ (**CORRECT!**)
+- **Sample 2**: Scores: $w_1^T \tilde{x}_2 = -1$, $w_2^T \tilde{x}_2 = +1$, $w_3^T \tilde{x}_2 = 0 \implies \hat{y} = 2$ (**CORRECT!**)
+- **Sample 3**: Scores: $w_1^T \tilde{x}_3 = -3$, $w_2^T \tilde{x}_3 = 0$, $w_3^T \tilde{x}_3 = +3 \implies \hat{y} = 3$ (**CORRECT!**)
+
+**0 MISTAKES IN EPOCH 3! ALGORITHM CONVERGES.**
+
+Final Learned Multi-Class Linear Model:
+$$w_1 = \begin{bmatrix} -1 \\ 2 \\ 0 \end{bmatrix}, \quad w_2 = \begin{bmatrix} 0 \\ -1 \\ 1 \end{bmatrix}, \quad w_3 = \begin{bmatrix} 1 \\ -1 \\ -1 \end{bmatrix}$$
+Every class region forms a convex polyhedral cone in $\mathbb{R}^2$, providing the exact mathematical template for modern linear classification heads in PyTorch (`nn.Linear(d_in, 3)`).
 
 ---
 

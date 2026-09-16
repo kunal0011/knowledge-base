@@ -210,3 +210,17 @@ class Solution {
 
 - **Time Complexity:** $O(N)$ — Exactly one single pass through the list.
 - **Space Complexity:** $O(1)$ — Only pointer manipulation in-place.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **The Four-Pointer Splicing Invariant:**
+   - In sublist reversal, moving nodes one-by-one to the head of the sublist avoids multiple passes:
+     - `then = curr.next` (isolate next node to bring forward)
+     - `curr.next = then.next` (bridge across `then`)
+     - `then.next = prev.next` (point `then` to current sublist head)
+     - `prev.next = then` (attach `then` after `prev`)
+2. **Sentinel Dummy Node Necessity:**
+   - When `left = 1`, the head itself changes. Having `dummy.next = head` provides a stable `prev` pointer right before the head, allowing uniform code without special-casing `left == 1`.
+

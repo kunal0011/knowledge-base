@@ -189,3 +189,14 @@ class Solution {
 
 - **Time Complexity:** $O(\log N)$ — Standard binary search halving search space on each comparison.
 - **Space Complexity:** $O(1)$ — Only constant pointers used.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Parity Alignment Trick:**
+   - In sorted duplicated arrays, the single element acts as a phase inverter. Before the single element, the first of each pair is at an **even** index; after the single element, the first of each pair shifts to an **odd** index.
+   - Forcing `mid` to be even (`if (mid % 2 == 1) mid--;` or using XOR `mid ^ 1`) simplifies the logic: if `nums[mid] == nums[mid + 1]`, the disruption must be to the right (`left = mid + 2`).
+2. **XOR Index Bitmask Shortcut:**
+   - Notice that for even indices $k$, $k \oplus 1 = k + 1$, and for odd indices $k$, $k \oplus 1 = k - 1$. Comparing `nums[mid] == nums[mid ^ 1]` works universally for both even and odd `mid` without manually branching!
+

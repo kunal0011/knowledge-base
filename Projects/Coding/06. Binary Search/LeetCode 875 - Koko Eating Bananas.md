@@ -8,15 +8,17 @@ tags:
   - leetcode
   - coding
   - binary-search
+  - arrays
   - amazon
   - google
+  - meta
 ---
 
 # LeetCode 875: Koko Eating Bananas
 
-**Target Companies:** Amazon (Top #1 Classic), Google, Meta  
+**Target Companies:** Amazon (Top #1 Classic), Google, Meta, Microsoft, Apple  
 **Difficulty:** Medium  
-**Topic:** Binary Search on Answer (Monotonic Predicate)
+**Topic:** Binary Search on Answer / Monotonic Feasibility Predicate
 
 ---
 
@@ -26,7 +28,7 @@ Koko loves to eat bananas. There are `n` piles of bananas, the $i$-th pile has `
 
 Koko can decide her bananas-per-hour eating speed of `k`. Each hour, she chooses some pile of bananas and eats `k` bananas from that pile. If the pile has less than `k` bananas, she eats all of them instead and will not eat any more bananas during this hour.
 
-Return the **minimum integer `k`** such that she can eat all the bananas within `h` hours.
+Return *the minimum integer `k` such that she can eat all the bananas within `h` hours*.
 
 ---
 
@@ -43,12 +45,99 @@ Return the **minimum integer `k`** such that she can eat all the bananas within 
 
 ### Key Idea & Intuition
 
-- **Monotonicity:**
-  - Let $f(k)$ be the hours needed to eat all bananas at speed $k$.
-  - As speed $k$ increases, hours $f(k)$ monotonically decreases!
-  - Search range for $k$: $[1, \max(\text{piles})]$.
-  - If at speed $k$, hours $\le h$, speed $k$ is feasible; try smaller speeds (`right = mid`).
-  - Otherwise, speed $k$ is too slow; must increase speed (`left = mid + 1`).
+#### 1. Binary Search on Answer (Monotonic Predicate):
+Let $T(k)$ be the total time required to finish all piles at speed $k$:
+$$T(k) = \sum_{p \in \text{piles}} \left\lceil \frac{p}{k} \right\rceil = \sum_{p \in \text{piles}} \left\lfloor \frac{p + k - 1}{k} \right\rfloor$$
+- Notice that as eating speed $k$ increases, total hours $T(k)$ strictly decreases or remains constant:
+  $$k_1 < k_2 \implies T(k_1) \ge T(k_2)$$
+- Therefore, the feasibility function $P(k) = (T(k) \le h)$ is **monotonic**:
+  $$\text{False, False, ..., False, True, True, ..., True}$$
+- We want to find the **first `True`** (the minimum speed $k$).
+
+#### 2. Search Space Boundaries:
+- Minimum possible speed: $left = 1$ (she must eat at least 1 banana per hour).
+- Maximum necessary speed: $right = \max(\text{piles})$ (at speed $\max(\text{piles})$, each pile takes exactly 1 hour, so $T(k) = n \le h$).
+- Thus, the search space $[1, \max(\text{piles})]$ is bounded and can be binary searched in $\mathcal{O}(\log(\max(\text{piles})))$ iterations.
+
+---
+
+### Solution Approach (Step-by-Step)
+
+1. **Initialize Search Range:**
+   - `left = 1`, `right = max(piles)`.
+2. **Binary Search Loop (`while left < right`):**
+   - `mid = left + (right - left) // 2`.
+   - Calculate total hours needed at speed `mid`:
+     $$\text{hours} = \sum_{p \in \text{piles}} \frac{p + \text{mid} - 1}{\text{mid}}$$
+   - If $\text{hours} \le h$:
+     - Speed `mid` is feasible. Try to find a smaller feasible speed by searching left: `right = mid`.
+   - Else:
+     - Speed `mid` is too slow ($\text{hours} > h$). We must increase speed: `left = mid + 1`.
+3. **Return Answer:**
+   - When `left == right`, `left` is the minimum integer speed. Return `left`.
+
+---
+
+### Visual Algorithm Walkthrough
+
+#### Example: `piles = [3, 6, 7, 11]`, `h = 8`
+Range: $left = 1, right = \max(piles) = 11$.
+
+```
+Iteration 1:
+  left = 1, right = 11 -> mid = 6
+  Hours for piles [3, 6, 7, 11] at speed 6:
+    ceil(3/6)  = 1
+    ceil(6/6)  = 1
+    ceil(7/6)  = 2
+    ceil(11/6) = 2
+    Total = 1 + 1 + 2 + 2 = 6 hours <= 8 -> Feasible!
+  right = mid = 6
+
+Iteration 2:
+  left = 1, right = 6 -> mid = 3
+  Hours at speed 3:
+    ceil(3/3)  = 1
+    ceil(6/3)  = 2
+    ceil(7/3)  = 3
+    ceil(11/3) = 4
+    Total = 1 + 2 + 3 + 4 = 10 hours > 8 -> Too slow!
+  left = mid + 1 = 4
+
+Iteration 3:
+  left = 4, right = 6 -> mid = 5
+  Hours at speed 5:
+    ceil(3/5)  = 1
+    ceil(6/5)  = 2
+    ceil(7/5)  = 2
+    ceil(11/5) = 3
+    Total = 1 + 2 + 2 + 3 = 8 hours <= 8 -> Feasible!
+  right = mid = 5
+
+Iteration 4:
+  left = 4, right = 5 -> mid = 4
+  Hours at speed 4:
+    ceil(3/4)  = 1
+    ceil(6/4)  = 2
+    ceil(7/4)  = 2
+    ceil(11/4) = 3
+    Total = 8 hours <= 8 -> Feasible!
+  right = mid = 4
+
+left == right == 4 -> Terminate.
+Result: k = 4.
+```
+
+---
+
+### Solved Examples with Multiple Inputs
+
+| `piles` | `h` | Speed Range $[1, \max]$ | Binary Search Transitions | Output $k$ |
+| :--- | :--- | :--- | :--- | :--- |
+| `[3, 6, 7, 11]` | 8 | $[1, 11]$ | $6 \to 3 \to 5 \to 4$ | `4` |
+| `[30, 11, 23, 4, 20]` | 5 | $[1, 30]$ | $h == n \implies$ must eat each pile in 1 hr $\implies k = \max(piles)$ | `30` |
+| `[30, 11, 23, 4, 20]` | 6 | $[1, 30]$ | Evaluates speeds to find minimum fitting in 6 hours | `23` |
+| `[1000000000]` | 2 | $[1, 10^9]$ | Two equal splits of $10^9$ | `500000000` |
 
 ---
 
@@ -64,7 +153,8 @@ class Solution:
         left, right = 1, max(piles)
         
         while left < right:
-            mid = (left + right) // 2
+            mid = left + (right - left) // 2
+            # Total hours at speed mid
             hours_needed = sum(math.ceil(p / mid) for p in piles)
             
             if hours_needed <= h:
@@ -83,12 +173,14 @@ class Solution:
 class Solution {
 public:
     int minEatingSpeed(std::vector<int>& piles, int h) {
-        int left = 1, right = *std::max_element(piles.begin(), piles.end());
+        int left = 1;
+        int right = *std::max_element(piles.begin(), piles.end());
 
         while (left < right) {
             int mid = left + (right - left) / 2;
             long long hoursNeeded = 0;
             for (int p : piles) {
+                // Integer ceil division: (p + mid - 1) / mid
                 hoursNeeded += (p + mid - 1) / mid;
             }
 
@@ -98,6 +190,7 @@ public:
                 left = mid + 1;
             }
         }
+
         return left;
     }
 };
@@ -108,12 +201,15 @@ public:
 class Solution {
     public int minEatingSpeed(int[] piles, int h) {
         int left = 1, right = 0;
-        for (int p : piles) right = Math.max(right, p);
+        for (int p : piles) {
+            right = Math.max(right, p);
+        }
 
         while (left < right) {
             int mid = left + (right - left) / 2;
             long hoursNeeded = 0;
             for (int p : piles) {
+                // Integer ceil division
                 hoursNeeded += (p + mid - 1) / mid;
             }
 
@@ -123,6 +219,7 @@ class Solution {
                 left = mid + 1;
             }
         }
+
         return left;
     }
 }
@@ -132,5 +229,14 @@ class Solution {
 
 ### Complexity Analysis
 
-- **Time Complexity:** $O(N \log(\max(\text{piles})))$ — Binary search over speed range $[1, 10^9]$.
-- **Space Complexity:** $O(1)$ auxiliary space.
+- **Time Complexity:** $\mathcal{O}(n \log(\max(\text{piles})))$, where $n$ is the number of piles. The binary search does $\mathcal{O}(\log(\max(\text{piles})))$ iterations. In each iteration, we do a linear pass of length $n$ summing the ceil divisions. For $\max(\text{piles}) \le 10^9$, $\log_2(10^9) \approx 30$ iterations, so $30 \times 10^4 = 3 \times 10^5$ operations (well under 5 ms).
+- **Space Complexity:** $\mathcal{O}(1)$ auxiliary space.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Integer Overflow in Hours Sum:**
+   - When testing small speeds like $mid = 1$ with $10^4$ piles of size $10^9$, the total hours needed can be $10^4 \times 10^9 = 10^{13}$, which exceeds the 32-bit signed integer limit ($2 \times 10^9$). Always use 64-bit integers (`long long` in C++, `long` in Java) for `hoursNeeded`.
+2. **Ceil Division without Floating Point:**
+   - Use the integer formula `(p + mid - 1) / mid` to avoid slow and precision-prone floating-point `ceil((double)p / mid)`.

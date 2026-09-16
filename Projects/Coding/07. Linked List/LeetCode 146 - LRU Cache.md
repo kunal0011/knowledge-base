@@ -101,6 +101,23 @@ put(3, 3): Capacity full! Evict tail.prev (Node 2):
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+| Operation Sequence | Cache State `[MRU ... LRU]` | Output / Eviction | Notes |
+| :--- | :--- | :--- | :--- |
+| `LRUCache(2)` | `[]` | `null` | Capacity initialized to 2 |
+| `put(1, 1)` | `[1:1]` | `null` | Insert 1 |
+| `put(2, 2)` | `[2:2, 1:1]` | `null` | Insert 2 at head |
+| `get(1)` | `[1:1, 2:2]` | `1` | 1 accessed $\to$ moves to head; 2 becomes LRU |
+| `put(3, 3)` | `[3:3, 1:1]` | `null` | Capacity exceeded $\to$ evicts 2 (LRU) |
+| `get(2)` | `[3:3, 1:1]` | `-1` | Key 2 was evicted |
+| `put(4, 4)` | `[4:4, 3:3]` | `null` | Capacity exceeded $\to$ evicts 1 (LRU) |
+| `get(1)` | `[4:4, 3:3]` | `-1` | Key 1 was evicted |
+| `get(3)` | `[3:3, 4:4]` | `3` | Key 3 found and refreshed to head |
+| `get(4)` | `[4:4, 3:3]` | `4` | Key 4 found and refreshed to head |
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -292,3 +309,15 @@ class LRUCache {
 
 - **Time Complexity:** Strict $O(1)$ for both `get` and `put` — Hash map lookup and pointer updates take constant time.
 - **Space Complexity:** $O(\text{capacity})$ — Stores at most `capacity` node objects in the DLL and hash map.
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **Why Store Both `key` and `value` in the DLL Node?**
+   - When evicting the least recently used node from the tail (`lru = tail.prev`), we must delete its entry from the hash map (`cache.remove(lru.key)`). If the node only stored `val`, finding which key to remove from the hash map would require an $\mathcal{O}(N)$ reverse search!
+2. **Sentinel Nodes Simplify Invariant Maintenance:**
+   - Always initialize `head` and `tail` dummy sentinels (`head.next = tail`, `tail.prev = head`). This completely eliminates null-checking branches when inserting into an empty list or deleting the last element.
+3. **Concurrency / Thread Safety (Interview Follow-Up):**
+   - In real-world multithreaded systems, wrap accesses with a `ReentrantReadWriteLock` or use concurrent segmentation (similar to Java's `ConcurrentHashMap`) to prevent race conditions on pointer rewiring.
+

@@ -70,6 +70,26 @@ Since the time window is strictly 300 seconds:
 
 ---
 
+### Solution Approach (Step-by-Step)
+
+1. **Circular Buffer Initialization:**
+   - Allocate two fixed-size arrays of length 300: `times` initialized to 0, and `hits` initialized to 0.
+2. **`hit(timestamp)` Execution:**
+   - Compute circular index: `idx = timestamp % 300`.
+   - If `times[idx] == timestamp`:
+     - Another hit at the exact same second $\implies$ increment `hits[idx] += 1`.
+   - Else:
+     - The slot holds stale data from a previous cycle $\implies$ overwrite `times[idx] = timestamp` and reset `hits[idx] = 1`.
+3. **`getHits(timestamp)` Execution:**
+   - Initialize `total = 0`.
+   - Loop $i$ from 0 to 299:
+     - If `timestamp - times[i] < 300`:
+       - The recorded hits in slot $i$ fall within the trailing 300-second sliding window.
+       - Add `hits[i]` to `total`.
+   - Return `total`.
+
+---
+
 ### Visual Algorithm Walkthrough
 
 ```

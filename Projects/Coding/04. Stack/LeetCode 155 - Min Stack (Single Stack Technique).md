@@ -60,6 +60,21 @@ If we store `(val, min_so_far)` as a pair on the stack:
 - When an element is popped, the stack naturally reverts to the previous frame's minimum without any search or recalculation.
 - Thus, `getMin()` simply reads `stack[-1].min` in strictly $\mathcal{O}(1)$ time.
 
+### Solution Approach (Step-by-Step)
+
+1. **Underlying Storage:**
+   - Maintain an underlying stack storing pairs or composite nodes: `(value, min_so_far)`.
+2. **`push(val)` Operation:**
+   - If the stack is empty, set `current_min = val`.
+   - Else, set `current_min = min(val, stack.top().min_val)`.
+   - Push `(val, current_min)` onto the stack.
+3. **`pop()` Operation:**
+   - Pop the top frame off the stack. The new top frame immediately exposes the minimum of all remaining elements below it.
+4. **`top()` Operation:**
+   - Return the `val` component of the top frame.
+5. **`getMin()` Operation:**
+   - Return the `min_so_far` component of the top frame in strict $\mathcal{O}(1)$ time.
+
 ---
 
 ### Visual Algorithm Walkthrough

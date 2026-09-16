@@ -80,6 +80,19 @@ Max length = 3 ("wke" or "kew")
 
 ---
 
+### Solved Examples with Multiple Inputs
+
+| Input `s` | Window Shifts & Jump Decisions | Longest Unique Substring | Max Length |
+| :--- | :--- | :--- | :--- |
+| `"abcabcbb"` | Jumps left past repeated 'a', 'b', 'c' | `"abc"` | `3` |
+| `"bbbbb"` | 'b' repeated at every step; window length stays 1 | `"b"` | `1` |
+| `"pwwkew"` | 'w' repeat triggers jump from 0 to 2; finds `"wke"` | `"wke"` | `3` |
+| `""` | Empty string $\implies$ loop doesn't run | `""` | `0` |
+| `" "` | Single space $\implies$ valid unique char | `" "` | `1` |
+| `"abba"` | At index 3 ('a'), last seen 'a' is 0 < left(2), so left does NOT jump back! | `"ab"`, `"ba"` | `2` |
+
+---
+
 ### Multi-Language Implementations
 
 #### 1. Python 3 (Clean, Typed)
@@ -153,3 +166,15 @@ class Solution {
 
 - **Time Complexity:** $O(N)$ — The `right` pointer iterates through the string once, and `left` only jumps forward.
 - **Space Complexity:** $O(\min(N, M))$ where $M$ is alphabet size ($\le 128$ for standard ASCII).
+
+---
+
+### Takeaway Pattern & Interview Traps
+
+1. **The Left-Pointer Regression Trap (`"abba"`):**
+   - When encountering a duplicate character, you must ensure its previously recorded index is $\ge left$.
+   - In `"abba"`, when reaching the second `'a'` at index 3, `char_map['a'] = 0`. But $left$ has already advanced to 2 (due to `'b'`). If you blindly set $left = char_map['a'] + 1$, $left$ would move backwards from 2 to 1, introducing duplicates into the window!
+   - Always use `if char_map[ch] >= left: left = char_map[ch] + 1` or `left = max(left, char_map[ch] + 1)`.
+2. **Fixed Alphabet Array vs Hash Map:**
+   - For ASCII strings, an `int[128]` array initialized to `-1` is significantly faster than a generic `HashMap` due to zero cache-miss pointer chasing.
+

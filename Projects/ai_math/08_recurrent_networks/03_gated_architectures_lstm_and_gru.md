@@ -137,6 +137,137 @@ The GRU eliminates the separate cell state $\mathbf{c}_t$, utilizing only the hi
 
 ---
 
+### 2.5 Deep Derivation 8.3.1: Full Analytical Backpropagation Through Time for LSTM Cells
+
+In this derivation, we derive the exact, complete analytical gradient equations for an LSTM cell at time step $t$, showing how upstream errors decompose across gates, the cell state, and historical hidden states.
+
+#### Step 1: Upstream Gradient Ingestion
+At time step $t$, the LSTM receives two gradient signals:
+1. $\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$ (from current loss $\ell_t$ and future recurrence $\mathbf{h}_{t+1}$),
+2. $\boldsymbol{\delta}_{t+1}^c \equiv \frac{\partial \mathcal{L}_{\text{future}}}{\partial \mathbf{c}_t} \in \mathbb{R}^{d_h}$ (from future cell state $\mathbf{c}_{t+1}$).
+
+#### Step 2: Total Cell State Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t}$
+The current cell state $\mathbf{c}_t$ affects the loss through two paths:
+1. Immediately through the hidden state $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$,
+2. Into the future through $\mathbf{c}_{t+1}$.
+Applying the multivariable chain rule:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \boldsymbol{\delta}_{t+1}^c + \boldsymbol{\delta}_t^h \odot \mathbf{o}_t \odot \left(1 - \tanh^2(\mathbf{c}_t)\right)$$
+
+#### Step 3: Gate Sensitivities and Pre-Activation Deltas
+Using the forward equations:
+$$\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t), \qquad \mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$$
+
+1. **Output Gate Gradient:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} = \boldsymbol{\delta}_t^h \odot \tanh(\mathbf{c}_t)$$
+   Since $\mathbf{o}_t = \sigma(\mathbf{a}_o)$, where $\sigma'(z) = \sigma(z)(1 - \sigma(z))$:
+   $$\boldsymbol{\delta}_t^{a_o} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_o} = \frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t) = \boldsymbol{\delta}_t^h \odot \tanh(\mathbf{c}_t) \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t)$$
+
+2. **Candidate Cell State Gradient:**
+   $$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{c}}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{i}_t$$
+   Since $\tilde{\mathbf{c}}_t = \tanh(\mathbf{a}_c)$, where $\tanh'(z) = 1 - \tanh^2(z)$:
+   $$\boldsymbol{\delta}_t^{a_c} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_c} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{c}}_t} \odot \left(1 - \tilde{\mathbf{c}}_t^2\right) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{i}_t \odot \left(1 - \tilde{\mathbf{c}}_t^2\right)$$
+
+3. **Input Gate Gradient:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{i}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \tilde{\mathbf{c}}_t$$
+   Since $\mathbf{i}_t = \sigma(\mathbf{a}_i)$:
+   $$\boldsymbol{\delta}_t^{a_i} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_i} = \frac{\partial \mathcal{L}}{\partial \mathbf{i}_t} \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \tilde{\mathbf{c}}_t \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t)$$
+
+4. **Forget Gate Gradient:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{f}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{c}_{t-1}$$
+   Since $\mathbf{f}_t = \sigma(\mathbf{a}_f)$:
+   $$\boldsymbol{\delta}_t^{a_f} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_f} = \frac{\partial \mathcal{L}}{\partial \mathbf{f}_t} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)$$
+
+#### Step 4: Backward Recurrence to Previous States
+1. **To Previous Cell State $\mathbf{c}_{t-1}$ (The CEC Highway):**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_{t-1}} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{f}_t$$
+2. **To Previous Hidden State $\mathbf{h}_{t-1}$ and Input $\mathbf{x}_t$:**
+   Stack all four pre-activation deltas into $\boldsymbol{\delta}_t^{\text{all}} = [\boldsymbol{\delta}_t^{a_i}; \, \boldsymbol{\delta}_t^{a_f}; \, \boldsymbol{\delta}_t^{a_c}; \, \boldsymbol{\delta}_t^{a_o}] \in \mathbb{R}^{4d_h}$.
+   Recall the concatenated forward projection: $\mathbf{a}_{\text{all}} = \mathbf{W}_{\text{all}} \mathbf{v}_t + \mathbf{b}_{\text{all}}$, where $\mathbf{v}_t = [\mathbf{h}_{t-1}; \, \mathbf{x}_t]$.
+   Then:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} = \mathbf{W}_{\text{all}}^T \boldsymbol{\delta}_t^{\text{all}} \in \mathbb{R}^{d_h + d_x}$$
+   Splitting the vector:
+   $$\frac{\partial \mathcal{L}_{\text{recurrent}}}{\partial \mathbf{h}_{t-1}} = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} \right)_{1:d_h}, \qquad \frac{\partial \mathcal{L}}{\partial \mathbf{x}_t} = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} \right)_{d_h+1 : d_h+d_x}$$
+3. **Parameter Gradient Accumulation:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{\text{all}}} = \sum_{t=1}^T \boldsymbol{\delta}_t^{\text{all}} \, \mathbf{v}_t^T \in \mathbb{R}^{4d_h \times (d_h + d_x)}, \qquad \frac{\partial \mathcal{L}}{\partial \mathbf{b}_{\text{all}}} = \sum_{t=1}^T \boldsymbol{\delta}_t^{\text{all}} \in \mathbb{R}^{4d_h}$$
+This completes the exact, closed-form BPTT derivation for LSTM cells. $\blacksquare$
+
+---
+
+### 2.6 Deep Derivation 8.3.2: Full Analytical Backpropagation Through Time for GRU Cells
+
+In this derivation, we derive the exact BPTT gradient equations for the Gated Recurrent Unit (GRU).
+
+#### Step 1: Upstream Gradient and Intermediate Derivatives
+Given upstream gradient $\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$.
+From the GRU update equation:
+$$\mathbf{h}_t = (1 - \mathbf{z}_t) \odot \mathbf{h}_{t-1} + \mathbf{z}_t \odot \tilde{\mathbf{h}}_t$$
+
+Taking partial derivatives:
+1. **Candidate Hidden State:**
+   $$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} = \boldsymbol{\delta}_t^h \odot \mathbf{z}_t$$
+2. **Update Gate:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} = \boldsymbol{\delta}_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1})$$
+
+#### Step 2: Pre-Activation Deltas for Candidate and Update Gate
+1. **Candidate Pre-activation $\mathbf{a}_h$:**
+   Since $\tilde{\mathbf{h}}_t = \tanh(\mathbf{a}_h)$:
+   $$\boldsymbol{\delta}_t^{a_h} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_h} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} \odot (1 - \tilde{\mathbf{h}}_t^2) = \boldsymbol{\delta}_t^h \odot \mathbf{z}_t \odot (1 - \tilde{\mathbf{h}}_t^2)$$
+
+2. **Update Gate Pre-activation $\mathbf{a}_z$:**
+   Since $\mathbf{z}_t = \sigma(\mathbf{a}_z)$:
+   $$\boldsymbol{\delta}_t^{a_z} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_z} = \frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t) = \boldsymbol{\delta}_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1}) \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t)$$
+
+#### Step 3: Backpropagation Through the Reset Gate
+The candidate pre-activation is $\mathbf{a}_h = \mathbf{W}_{hh} (\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{W}_{xh} \mathbf{x}_t + \mathbf{b}_h$.
+Differentiating with respect to the gated recurrent activation $\tilde{\mathbf{r}}_t \equiv \mathbf{r}_t \odot \mathbf{h}_{t-1}$:
+$$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h}$$
+
+Now differentiate with respect to the reset gate $\mathbf{r}_t$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} \odot \mathbf{h}_{t-1} = \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) \odot \mathbf{h}_{t-1}$$
+Since $\mathbf{r}_t = \sigma(\mathbf{a}_r)$:
+$$\boldsymbol{\delta}_t^{a_r} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_r} = \frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t) = \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) \odot \mathbf{h}_{t-1} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t)$$
+
+#### Step 4: Total Recurrent Gradient w.r.t. $\mathbf{h}_{t-1}$
+The previous hidden state $\mathbf{h}_{t-1}$ influences the loss along three distinct pathways:
+1. Directly through the linear interpolation shortcut: $(1 - \mathbf{z}_t) \odot \boldsymbol{\delta}_t^h$
+2. Through the gated candidate state: $\mathbf{r}_t \odot \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{r}_t \odot (\mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h})$
+3. Through the gate projections $[\mathbf{W}_{zr}; \, \mathbf{W}_{rr}]^T [\boldsymbol{\delta}_t^{a_z}; \, \boldsymbol{\delta}_t^{a_r}]$
+
+Summing all contributions:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_{t-1}} = \boldsymbol{\delta}_t^h \odot (1 - \mathbf{z}_t) + \mathbf{r}_t \odot \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) + \mathbf{W}_{z, h}^T \boldsymbol{\delta}_t^{a_z} + \mathbf{W}_{r, h}^T \boldsymbol{\delta}_t^{a_r}$$
+When $\mathbf{z}_t \to \mathbf{0}$, the term $\boldsymbol{\delta}_t^h \odot (1 - \mathbf{z}_t) \to \boldsymbol{\delta}_t^h$, guaranteeing that the gradient bypasses all non-linearities and matrix weights unimpeded. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 8.3.3: The Gradient Highway Equivalence: Constant Error Carousel vs. Residual Connections
+
+Here we establish the formal mathematical equivalence between the Constant Error Carousel (CEC) of LSTMs and the Identity Shortcuts of Residual Networks (ResNet).
+
+#### Step 1: Comparison of Dynamical State Equations
+Consider the state transition equations:
+- **LSTM Cell State:**
+  $$\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t(\mathbf{h}_{t-1}, \mathbf{x}_t)$$
+- **ResNet Layer Activation:**
+  $$\mathbf{x}_{l+1} = \mathbf{x}_l + \mathcal{F}(\mathbf{x}_l, \mathcal{W}_l)$$
+
+Notice that the ResNet residual connection is an exact special case of the LSTM Cell State where:
+$$\mathbf{f}_t \equiv \mathbf{1}, \qquad \mathbf{i}_t \equiv \mathbf{1}, \qquad \tilde{\mathbf{c}}_t \equiv \mathcal{F}(\mathbf{x}_l, \mathcal{W}_l)$$
+ResNet is mathematically an unrolled LSTM across depth with gates clamped permanently open!
+
+#### Step 2: Backward Adjoint Comparison
+Differentiating the state recursion from step $l$ to $L$:
+- **ResNet Adjoint Operator:**
+  $$\frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \left( \mathbf{I} + \sum_{k=l}^{L-1} \frac{\partial \mathcal{F}_k}{\partial \mathbf{x}_l} \right)$$
+- **LSTM Adjoint Operator (holding gates constant):**
+  $$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_T} \left( \prod_{k=t+1}^T \operatorname{diag}(\mathbf{f}_k) \right) + \sum_{k=t+1}^T \frac{\partial \ell_k}{\partial \mathbf{c}_t}$$
+
+In both architectures:
+1. The forward state is additive: $\mathbf{s}_{\text{new}} = \mathbf{s}_{\text{old}} + \Delta \mathbf{s}$.
+2. The backward gradient contains an additive identity component that avoids repeated multiplication by weight matrices.
+3. While ResNet provides an unconditional identity highway ($\mathbf{I}$), LSTM provides a **parameter-controlled conditional highway** ($\operatorname{diag}(\mathbf{f}_k)$), allowing the network to dynamically open the highway to remember or close it to forget. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### The Gated Phase Space Topology
@@ -283,6 +414,139 @@ $$\mathbf{i}_t = \sigma(\mathbf{W}_i \mathbf{v}_t + \mathbf{p}_i \odot \mathbf{c
 $$\mathbf{o}_t = \sigma(\mathbf{W}_o \mathbf{v}_t + \mathbf{p}_o \odot \mathbf{c}_t + \mathbf{b}_o)$$
 - *Theoretical Motivation:* Allows gates to time precise intervals by directly monitoring the accumulation level of the linear integrator $\mathbf{c}_t$.
 - *Why Abandoned:* Benchmarks across large-scale speech recognition and machine translation revealed negligible accuracy gains, while adding memory access synchronization overhead that prevents fusing all 4 gate matrix multiplications into a single cuBLAS GEMM call (`[W_f; W_i; W_c; W_o]`).
+
+---
+
+### Illustration 3: Hand Arithmetic for a Complete GRU Forward and Backward Step
+
+**Problem:**
+Let a 1D scalar GRU ($d_h = 1, d_x = 1$) process a single time step with inputs:
+$$x_t = 1.0, \quad h_{t-1} = 0.5$$
+The model parameters are:
+- **Reset Gate:** $W_{rx} = 0.0, \quad W_{rh} = 0.0, \quad b_r = 0.0$
+- **Update Gate:** $W_{zx} = 1.0, \quad W_{zh} = -1.0, \quad b_z = 0.5$
+- **Candidate State:** $W_{hx} = 0.5, \quad W_{hh} = 1.0, \quad b_h = -0.5$
+1. Compute the forward activations $r_t, z_t, \tilde{h}_t, h_t$.
+2. Given upstream loss gradient $\frac{\partial \mathcal{L}}{\partial h_t} = 1.0$, compute the gate deltas $\delta^{a_h}, \delta^{a_z}, \delta^{a_r}$.
+3. Compute the backpropagated gradient with respect to the previous hidden state $\frac{\partial \mathcal{L}}{\partial h_{t-1}}$.
+
+**Solution:**
+
+#### Step 1: Forward Pass Arithmetic
+1. **Reset Gate:**
+   $$a_r = W_{rx} x_t + W_{rh} h_{t-1} + b_r = 0.0(1.0) + 0.0(0.5) + 0.0 = 0.0$$
+   $$r_t = \sigma(0.0) = \mathbf{0.5}$$
+
+2. **Update Gate:**
+   $$a_z = W_{zx} x_t + W_{zh} h_{t-1} + b_z = 1.0(1.0) - 1.0(0.5) + 0.5 = 1.0$$
+   $$z_t = \sigma(1.0) = \frac{1}{1 + e^{-1.0}} \approx \mathbf{0.731059}$$
+
+3. **Candidate Hidden State:**
+   Gated state: $\tilde{r}_t = r_t h_{t-1} = (0.5)(0.5) = 0.25$
+   $$a_h = W_{hh} \tilde{r}_t + W_{hx} x_t + b_h = 1.0(0.25) + 0.5(1.0) - 0.5 = 0.25$$
+   $$\tilde{h}_t = \tanh(0.25) \approx \mathbf{0.244919}$$
+
+4. **Updated Hidden State:**
+   $$h_t = (1 - z_t) h_{t-1} + z_t \tilde{h}_t = (1 - 0.731059)(0.5) + (0.731059)(0.244919)$$
+   $$= (0.268941)(0.5) + 0.179049 = 0.134471 + 0.179049 = \mathbf{0.313520}$$
+
+#### Step 2: Backward Pass Arithmetic
+Given $\frac{\partial \mathcal{L}}{\partial h_t} = 1.0$:
+
+1. **Candidate Pre-activation Delta ($\delta^{a_h}$):**
+   $$\frac{\partial \mathcal{L}}{\partial \tilde{h}_t} = \frac{\partial \mathcal{L}}{\partial h_t} z_t = 1.0(0.731059) = 0.731059$$
+   $$1 - \tilde{h}_t^2 = 1 - (0.244919)^2 = 1 - 0.059985 = 0.940015$$
+   $$\delta^{a_h} = \frac{\partial \mathcal{L}}{\partial \tilde{h}_t} (1 - \tilde{h}_t^2) = (0.731059)(0.940015) = \mathbf{0.687206}$$
+
+2. **Update Gate Pre-activation Delta ($\delta^{a_z}$):**
+   $$\frac{\partial \mathcal{L}}{\partial z_t} = \frac{\partial \mathcal{L}}{\partial h_t} (\tilde{h}_t - h_{t-1}) = 1.0(0.244919 - 0.5) = -0.255081$$
+   $$z_t (1 - z_t) = (0.731059)(0.268941) \approx 0.196612$$
+   $$\delta^{a_z} = \frac{\partial \mathcal{L}}{\partial z_t} z_t (1 - z_t) = (-0.255081)(0.196612) = \mathbf{-0.050152}$$
+
+3. **Reset Gate Pre-activation Delta ($\delta^{a_r}$):**
+   $$\frac{\partial \mathcal{L}}{\partial \tilde{r}_t} = W_{hh} \delta^{a_h} = 1.0(0.687206) = 0.687206$$
+   $$\frac{\partial \mathcal{L}}{\partial r_t} = \frac{\partial \mathcal{L}}{\partial \tilde{r}_t} h_{t-1} = (0.687206)(0.5) = 0.343603$$
+   $$r_t (1 - r_t) = (0.5)(0.5) = 0.25$$
+   $$\delta^{a_r} = \frac{\partial \mathcal{L}}{\partial r_t} r_t (1 - r_t) = (0.343603)(0.25) = \mathbf{0.085901}$$
+
+#### Step 3: Gradient Flow into Previous Hidden State ($h_{t-1}$)
+$$\frac{\partial \mathcal{L}}{\partial h_{t-1}} = \underbrace{(1 - z_t) \frac{\partial \mathcal{L}}{\partial h_t}}_{\text{Linear Shortcut}} + \underbrace{r_t \frac{\partial \mathcal{L}}{\partial \tilde{r}_t}}_{\text{Candidate Branch}} + \underbrace{W_{zh} \delta^{a_z}}_{\text{Update Gate}} + \underbrace{W_{rh} \delta^{a_r}}_{\text{Reset Gate}}$$
+$$= (0.268941)(1.0) + (0.5)(0.687206) + (-1.0)(-0.050152) + 0.0(0.085901)$$
+$$= 0.268941 + 0.343603 + 0.050152 + 0.0 = \mathbf{0.662696}$$
+
+---
+
+### Illustration 4: Fused GEMM Weight Packing and FLOP Count for LSTM vs. GRU
+
+**Problem:**
+A sequence modeling task processes mini-batches of size $B = 64$ across sequence length $T = 100$, with input feature dimension $d_x = 256$ and recurrent hidden dimension $d_h = 512$.
+1. Compute the total number of trainable parameters for an LSTM layer vs. a GRU layer.
+2. Compute the total Multiply-Accumulate (MAC) count and FLOPs per sequence for the fused matrix multiplications of both architectures.
+3. Compute the memory footprint savings of the GRU.
+
+**Solution:**
+
+#### Step 1: Trainable Parameter Comparison
+Input-to-hidden concatenated dimension: $D_{\text{concat}} = d_h + d_x = 512 + 256 = 768$.
+- **LSTM Parameters (4 gates: $i, f, c, o$):**
+  $$\text{Params}_{\text{LSTM}} = 4 \times \left( D_{\text{concat}} \cdot d_h + d_h \right) = 4 \times (768 \times 512 + 512) = 4 \times (393,216 + 512) = 4 \times 393,728 = \mathbf{1,574,912}$$
+- **GRU Parameters (3 gates: $r, z, h$):**
+  $$\text{Params}_{\text{GRU}} = 3 \times \left( D_{\text{concat}} \cdot d_h + d_h \right) = 3 \times 393,728 = \mathbf{1,181,184}$$
+- **Parameter Savings:**
+  $$\frac{1,574,912 - 1,181,184}{1,574,912} = \mathbf{25.0\% \text{ reduction in weights}}$$
+
+#### Step 2: Fused GEMM Computation (per Sequence of Length $T=100$)
+At each time step $t$, the forward pass multiplies the concatenated batch matrix $\mathbf{V}_t \in \mathbb{R}^{B \times (d_h + d_x)} = \mathbb{R}^{64 \times 768}$ by the fused weight matrix:
+- **LSTM GEMM ($\mathbf{W}_{\text{all}} \in \mathbb{R}^{768 \times 2048}$):**
+  $$\text{MACs}_{\text{step}} = B \cdot D_{\text{concat}} \cdot (4d_h) = 64 \times 768 \times 2048 = 100,663,296 \text{ MACs}$$
+  Across $T = 100$ steps:
+  $$\text{MACs}_{\text{total}}^{\text{LSTM}} = 100 \times 100,663,296 = \mathbf{10,066,329,600} \approx \mathbf{10.07 \text{ GMACs}} \quad (\mathbf{20.13 \text{ GFLOPs}})$$
+
+- **GRU GEMM ($\mathbf{W}_{\text{all}} \in \mathbb{R}^{768 \times 1536}$):**
+  $$\text{MACs}_{\text{step}} = B \cdot D_{\text{concat}} \cdot (3d_h) = 64 \times 768 \times 1536 = 75,497,472 \text{ MACs}$$
+  Across $T = 100$ steps:
+  $$\text{MACs}_{\text{total}}^{\text{GRU}} = 100 \times 75,497,472 = \mathbf{7,549,747,200} \approx \mathbf{7.55 \text{ GMACs}} \quad (\mathbf{15.10 \text{ GFLOPs}})$$
+
+#### Step 3: Performance Summary
+The GRU saves over **$5.03$ GFLOPs** per forward pass while eliminating the storage buffer for the cell state $\mathbf{c}_t \in \mathbb{R}^{B \times T \times d_h} = \mathbb{R}^{64 \times 100 \times 512} \implies 3,276,800$ floating-point activations ($13.1 \text{ MB}$ per batch).
+
+---
+
+### Illustration 5: Multi-Step Forget Gate Attenuation Trace on a Long-Term Memory
+
+**Problem:**
+An LSTM cell stores an essential scalar memory token $c_0 = 10.0$ at time step $t = 0$.
+Over the subsequent $T = 100$ time steps, no new information is added ($\tilde{c}_t = 0$), so the cell state evolves purely via:
+$$c_t = f_t \, c_{t-1} \implies c_{100} = c_0 \prod_{t=1}^{100} f_t$$
+Similarly, an upstream gradient $\frac{\partial \mathcal{L}}{\partial c_{100}} = 1.0$ backpropagates along the CEC to $c_0$:
+$$\frac{\partial \mathcal{L}}{\partial c_0} = \frac{\partial \mathcal{L}}{\partial c_{100}} \prod_{t=1}^{100} f_t = \prod_{t=1}^{100} f_t$$
+Compare the retained memory $c_{100}$ and gradient transmission ratio $\frac{\partial \mathcal{L}}{\partial c_0}$ under four forget gate bias settings:
+1. Zero bias ($b_f = 0.0 \implies f_t = \sigma(0) = 0.5$)
+2. Default positive bias ($b_f = 1.0 \implies f_t = \sigma(1.0) \approx 0.731059$)
+3. High positive bias ($b_f = 3.0 \implies f_t = \sigma(3.0) \approx 0.952574$)
+4. Very high positive bias ($b_f = 5.0 \implies f_t = \sigma(5.0) \approx 0.993307$)
+
+**Solution:**
+
+#### Numerical Evaluations:
+1. **Case 1: $b_f = 0.0 \implies f = 0.5$:**
+   - Retained Memory: $c_{100} = 10.0 \times (0.5)^{100} = 10.0 \times 7.8886 \times 10^{-31} \approx \mathbf{7.89 \times 10^{-30}}$
+   - Gradient Flow: $\frac{\partial \mathcal{L}}{\partial c_0} = (0.5)^{100} \approx \mathbf{7.89 \times 10^{-31}}$ (Complete extinction).
+
+2. **Case 2: $b_f = 1.0 \implies f = 0.731059$:**
+   - Retained Memory: $c_{100} = 10.0 \times (0.731059)^{100} = 10.0 \times 2.625 \times 10^{-14} \approx \mathbf{2.63 \times 10^{-13}}$
+   - Gradient Flow: $\frac{\partial \mathcal{L}}{\partial c_0} \approx \mathbf{2.63 \times 10^{-14}}$ (Severe attenuation over 100 steps).
+
+3. **Case 3: $b_f = 3.0 \implies f = 0.952574$:**
+   - Retained Memory: $c_{100} = 10.0 \times (0.952574)^{100} \approx 10.0 \times 0.00762 = \mathbf{0.0762}$
+   - Gradient Flow: $\frac{\partial \mathcal{L}}{\partial c_0} \approx \mathbf{0.00762}$ ($0.76\%$ signal preserved).
+
+4. **Case 4: $b_f = 5.0 \implies f = 0.993307$:**
+   - Retained Memory: $c_{100} = 10.0 \times (0.993307)^{100} \approx 10.0 \times 0.5103 = \mathbf{5.103}$
+   - Gradient Flow: $\frac{\partial \mathcal{L}}{\partial c_0} \approx \mathbf{0.5103}$ (**$51.0\%$ of the gradient survives across 100 steps!**)
+
+**Conclusion:**
+This analytical trace proves why initializing forget gate biases to large positive values ($b_f \ge 1.0-2.0$) or learning near-identity gates ($f \approx 0.99$) is strictly required for the Constant Error Carousel to bridge century-scale sequence dependencies.
 
 ---
 

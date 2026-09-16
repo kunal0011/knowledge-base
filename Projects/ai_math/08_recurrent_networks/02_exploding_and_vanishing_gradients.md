@@ -136,6 +136,154 @@ Gradients neither explode nor vanish through the linear transition!
 
 ---
 
+### 2.5 Deep Derivation 8.2.1: Spectral Radius, Gelfand's Formula, and Jordan Decomposition of Recurrent Jacobians
+
+In this derivation, we rigorously establish the asymptotic behavior of matrix powers in recurrent neural networks using spectral theory and the Jordan canonical form.
+
+#### Step 1: Definition of the Spectral Radius
+Let $\mathbf{W} \in \mathbb{R}^{d \times d}$ be a real square matrix. The spectrum $\sigma(\mathbf{W}) \subset \mathbb{C}$ is the set of all eigenvalues $\lambda \in \mathbb{C}$ satisfying $\det(\lambda \mathbf{I} - \mathbf{W}) = 0$.
+The **spectral radius** $\rho(\mathbf{W})$ is defined as:
+$$\rho(\mathbf{W}) \equiv \max_{\lambda \in \sigma(\mathbf{W})} |\lambda|$$
+
+While the induced Euclidean matrix norm $\|\mathbf{W}\|_2 = \sigma_{\max}(\mathbf{W})$ (the largest singular value) satisfies $\rho(\mathbf{W}) \le \|\mathbf{W}\|_2$, equality holds if and only if $\mathbf{W}$ is a normal matrix ($\mathbf{W}^T \mathbf{W} = \mathbf{W} \mathbf{W}^T$). For non-normal matrices, $\|\mathbf{W}\|_2$ can be arbitrarily larger than $\rho(\mathbf{W})$.
+
+#### Step 2: Gelfand's Spectral Radius Formula
+To determine the asymptotic behavior of the matrix power $\mathbf{W}^k$ as $k \to \infty$, we invoke **Gelfand's Formula**:
+$$\rho(\mathbf{W}) = \lim_{k \to \infty} \|\mathbf{W}^k\|^{1/k}$$
+for any submultiplicative matrix norm $\|\cdot\|$.
+
+**Proof Outline via Complex Analysis:**
+The resolvent operator $R(z, \mathbf{W}) = (z \mathbf{I} - \mathbf{W})^{-1}$ is holomorphic on the open set $|z| > \rho(\mathbf{W})$.
+Its Neumann series expansion:
+$$(z \mathbf{I} - \mathbf{W})^{-1} = \frac{1}{z} \sum_{k=0}^\infty \left( \frac{\mathbf{W}}{z} \right)^k$$
+converges if and only if $|z| > \rho(\mathbf{W})$.
+By the Cauchy-Hadamard theorem for power series, the radius of convergence is $R = \limsup_{k \to \infty} \|\mathbf{W}^k\|^{1/k}$. Since the singularity occurs at $|z| = \rho(\mathbf{W})$, the limit exists and equals $\rho(\mathbf{W})$.
+
+#### Step 3: Jordan Canonical Form Decomposition
+Any matrix $\mathbf{W} \in \mathbb{R}^{d \times d}$ can be decomposed as $\mathbf{W} = \mathbf{P} \mathbf{J} \mathbf{P}^{-1}$, where $\mathbf{J} = \operatorname{diag}(\mathbf{J}_1, \dots, \mathbf{J}_m)$ is a block diagonal matrix of Jordan blocks:
+$$\mathbf{J}_i = \begin{bmatrix}
+\lambda_i & 1 & 0 & \dots & 0 \\
+0 & \lambda_i & 1 & \dots & 0 \\
+\vdots & \ddots & \ddots & \ddots & \vdots \\
+0 & \dots & 0 & \lambda_i & 1 \\
+0 & \dots & 0 & 0 & \lambda_i
+\end{bmatrix} \in \mathbb{C}^{n_i \times n_i}$$
+Decomposing each block as $\mathbf{J}_i = \lambda_i \mathbf{I} + \mathbf{N}_i$, where $\mathbf{N}_i$ is a strictly upper triangular nilpotent matrix ($\mathbf{N}_i^{n_i} = \mathbf{0}$).
+By the binomial theorem (since $\lambda_i \mathbf{I}$ and $\mathbf{N}_i$ commute):
+$$\mathbf{J}_i^k = \sum_{j=0}^{\min(k, n_i - 1)} \binom{k}{j} \lambda_i^{k - j} \mathbf{N}_i^j$$
+For $k \ge n_i$:
+$$\mathbf{J}_i^k = \begin{bmatrix}
+\lambda_i^k & \binom{k}{1} \lambda_i^{k-1} & \binom{k}{2} \lambda_i^{k-2} & \dots & \binom{k}{n_i-1} \lambda_i^{k-n_i+1} \\
+0 & \lambda_i^k & \binom{k}{1} \lambda_i^{k-1} & \dots & \binom{k}{n_i-2} \lambda_i^{k-n_i+2} \\
+\vdots & \ddots & \ddots & \ddots & \vdots \\
+0 & \dots & 0 & \lambda_i^k & \binom{k}{1} \lambda_i^{k-1} \\
+0 & \dots & 0 & 0 & \lambda_i^k
+\end{bmatrix}$$
+
+#### Step 4: Asymptotic Regimes of BPTT
+Taking the norm of the power $\mathbf{W}^k = \mathbf{P} \mathbf{J}^k \mathbf{P}^{-1}$:
+$$\|\mathbf{W}^k\| \le \|\mathbf{P}\| \|\mathbf{P}^{-1}\| \max_i \|\mathbf{J}_i^k\| \le \kappa(\mathbf{P}) \cdot \max_i \left( \sum_{j=0}^{n_i-1} \binom{k}{j} |\lambda_i|^{k-j} \right)$$
+where $\kappa(\mathbf{P}) = \|\mathbf{P}\| \|\mathbf{P}^{-1}\|$ is the condition number of the eigenvector basis.
+
+1. **Sub-unitary Spectral Radius ($\rho(\mathbf{W}) < 1$):**
+   Every eigenvalue satisfies $|\lambda_i| \le \rho < 1$.
+   The polynomial term $\binom{k}{j} \le k^{n_i}$ is exponentially dominated by $|\lambda_i|^k$:
+   $$\lim_{k \to \infty} k^{n_i} \rho^k = 0 \implies \lim_{k \to \infty} \|\mathbf{W}^k\| = 0$$
+   The recurrent error signal $\frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_t} \sim \mathbf{W}^{T-t}$ vanishes exponentially.
+2. **Super-unitary Spectral Radius ($\rho(\mathbf{W}) > 1$):**
+   There exists at least one eigenvalue $|\lambda_{\max}| > 1$.
+   The dominant Jordan block satisfies $\|\mathbf{J}_{\max}^k\| \ge |\lambda_{\max}|^k \to \infty$.
+   The error signal explodes exponentially.
+3. **Unitary Spectral Radius ($\rho(\mathbf{W}) = 1$):**
+   - If all Jordan blocks with $|\lambda_i| = 1$ are trivial ($n_i = 1$, i.e., semi-simple eigenvalues), then $\|\mathbf{W}^k\| \le \kappa(\mathbf{P})$, remaining strictly bounded for all $k$.
+   - If a Jordan block with $|\lambda_i| = 1$ has size $n_i > 1$ (defective matrix), then $\|\mathbf{W}^k\| \sim \binom{k}{n_i-1} = \mathcal{O}(k^{n_i-1})$, causing **polynomial gradient growth** (secular resonance). $\blacksquare$
+
+---
+
+### 2.6 Deep Derivation 8.2.2: Convergence and Step-Size Guarantees of Norm-Based Gradient Clipping Under Lipschitz Smoothness
+
+In this derivation, we prove that gradient clipping guarantees descent and prevents explosive updates on $L$-Lipschitz smooth loss surfaces.
+
+#### Step 1: Definition of $L$-Lipschitz Gradient Smoothness
+Let the objective function $\mathcal{L}: \mathbb{R}^d \to \mathbb{R}$ be continuously differentiable and $L$-Lipschitz smooth:
+$$\|\nabla \mathcal{L}(\mathbf{w}_1) - \nabla \mathcal{L}(\mathbf{w}_2)\| \le L \|\mathbf{w}_1 - \mathbf{w}_2\|, \quad \forall \mathbf{w}_1, \mathbf{w}_2 \in \mathbb{R}^d$$
+By the Descent Lemma (integration along the line segment between $\mathbf{w}_1$ and $\mathbf{w}_2$):
+$$\mathcal{L}(\mathbf{w}_{k+1}) \le \mathcal{L}(\mathbf{w}_k) + \langle \nabla \mathcal{L}(\mathbf{w}_k), \mathbf{w}_{k+1} - \mathbf{w}_k \rangle + \frac{L}{2} \|\mathbf{w}_{k+1} - \mathbf{w}_k\|^2$$
+
+#### Step 2: Parameter Update with Norm-Based Clipping
+Let $\mathbf{g}_k = \nabla \mathcal{L}(\mathbf{w}_k)$. The clipped gradient update with learning rate $\eta > 0$ is:
+$$\mathbf{w}_{k+1} = \mathbf{w}_k - \eta \, \mathbf{g}_k^{\text{clip}}, \qquad \text{where } \mathbf{g}_k^{\text{clip}} = \min\left(1, \frac{\theta_{\text{clip}}}{\|\mathbf{g}_k\|}\right) \mathbf{g}_k$$
+
+The step displacement is $\Delta \mathbf{w}_k = -\eta \mathbf{g}_k^{\text{clip}}$. Its magnitude is bounded unconditionally:
+$$\|\Delta \mathbf{w}_k\| = \eta \|\mathbf{g}_k^{\text{clip}}\| \le \eta \theta_{\text{clip}}$$
+
+#### Step 3: Guaranteed Descent Bound
+Substitute $\Delta \mathbf{w}_k$ into the Descent Lemma:
+$$\mathcal{L}(\mathbf{w}_{k+1}) \le \mathcal{L}(\mathbf{w}_k) - \eta \langle \mathbf{g}_k, \mathbf{g}_k^{\text{clip}} \rangle + \frac{L \eta^2}{2} \|\mathbf{g}_k^{\text{clip}}\|^2$$
+
+Observe that $\mathbf{g}_k$ and $\mathbf{g}_k^{\text{clip}}$ are collinear:
+$$\langle \mathbf{g}_k, \mathbf{g}_k^{\text{clip}} \rangle = \|\mathbf{g}_k\| \|\mathbf{g}_k^{\text{clip}}\|$$
+
+Case A: $\|\mathbf{g}_k\| \le \theta_{\text{clip}}$ (Unclipped):
+$$\mathcal{L}(\mathbf{w}_{k+1}) \le \mathcal{L}(\mathbf{w}_k) - \eta \left(1 - \frac{L \eta}{2}\right) \|\mathbf{g}_k\|^2$$
+For any $\eta < \frac{2}{L}$, this yields standard monotone loss descent.
+
+Case B: $\|\mathbf{g}_k\| > \theta_{\text{clip}}$ (Clipped):
+Here $\|\mathbf{g}_k^{\text{clip}}\| = \theta_{\text{clip}}$, and $\langle \mathbf{g}_k, \mathbf{g}_k^{\text{clip}} \rangle = \|\mathbf{g}_k\| \theta_{\text{clip}}$.
+$$\mathcal{L}(\mathbf{w}_{k+1}) \le \mathcal{L}(\mathbf{w}_k) - \eta \theta_{\text{clip}} \|\mathbf{g}_k\| + \frac{L \eta^2 \theta_{\text{clip}}^2}{2}$$
+$$\mathcal{L}(\mathbf{w}_{k+1}) - \mathcal{L}(\mathbf{w}_k) \le -\eta \theta_{\text{clip}} \left( \|\mathbf{g}_k\| - \frac{L \eta \theta_{\text{clip}}}{2} \right)$$
+
+Because $\|\mathbf{g}_k\| > \theta_{\text{clip}}$, if we choose the learning rate such that $\eta < \frac{2}{L}$:
+$$\|\mathbf{g}_k\| - \frac{L \eta \theta_{\text{clip}}}{2} > \theta_{\text{clip}} \left(1 - \frac{L \eta}{2}\right) > 0$$
+Thus:
+$$\mathcal{L}(\mathbf{w}_{k+1}) - \mathcal{L}(\mathbf{w}_k) \le -\eta \theta_{\text{clip}}^2 \left(1 - \frac{L \eta}{2}\right) < 0$$
+
+**Theorem:**
+Gradient clipping strictly guarantees monotonic loss decrease even when encountering steep loss ravines where $\|\nabla \mathcal{L}\| \to \infty$. It caps the maximum step size at $\eta \theta_{\text{clip}}$, preventing the optimizer from being catapulted into remote, chaotic regions of parameter space. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 8.2.3: Stiefel Manifolds, Skew-Symmetric Lie Algebras, and Unitary Recurrent Networks
+
+To permanently prevent gradient explosion and vanishing during training, Unitary/Orthogonal RNNs constrain the weight matrix $\mathbf{W}_{hh}$ to reside on the orthogonal group $\mathcal{O}(d)$ for real weights or unitary group $\mathcal{U}(d)$ for complex weights.
+
+#### Step 1: The Geometry of the Orthogonal Group (Stiefel Manifold)
+The orthogonal group of dimension $d$ is the compact Lie group:
+$$\mathcal{O}(d) = \left\{ \mathbf{W} \in \mathbb{R}^{d \times d} : \mathbf{W}^T \mathbf{W} = \mathbf{I} \right\}$$
+Any matrix $\mathbf{W} \in \mathcal{O}(d)$ is an isometry of Euclidean space:
+$$\|\mathbf{W} \mathbf{v}\|_2^2 = (\mathbf{W} \mathbf{v})^T (\mathbf{W} \mathbf{v}) = \mathbf{v}^T (\mathbf{W}^T \mathbf{W}) \mathbf{v} = \mathbf{v}^T \mathbf{I} \mathbf{v} = \|\mathbf{v}\|_2^2$$
+All singular values satisfy $\sigma_i(\mathbf{W}) = 1$. Consequently, the operator norm is strictly unity: $\|\mathbf{W}\|_2 = 1$.
+
+#### Step 2: The Lie Algebra $\mathfrak{so}(d)$ of Skew-Symmetric Matrices
+The tangent space at the identity $\mathbf{I} \in \mathcal{O}(d)$ is the Lie algebra of skew-symmetric matrices:
+$$\mathfrak{so}(d) = \left\{ \mathbf{A} \in \mathbb{R}^{d \times d} : \mathbf{A}^T = -\mathbf{A} \right\}$$
+The dimension of $\mathfrak{so}(d)$ is $\frac{d(d-1)}{2}$ independent parameters (all diagonal entries are zero, $A_{i, i} = 0$).
+
+#### Step 3: Parameterizing Orthogonal Matrices via the Matrix Exponential
+The Lie group exponential map $\exp: \mathfrak{so}(d) \to \mathcal{SO}(d)$ maps any unconstrained skew-symmetric matrix $\mathbf{A}$ onto a proper orthogonal matrix:
+$$\mathbf{W} = \exp(\mathbf{A}) = \sum_{k=0}^\infty \frac{\mathbf{A}^k}{k!}$$
+**Proof of Orthogonality:**
+$$\mathbf{W}^T = (\exp(\mathbf{A}))^T = \exp(\mathbf{A}^T) = \exp(-\mathbf{A})$$
+Since $\mathbf{A}$ and $-\mathbf{A}$ commute:
+$$\mathbf{W}^T \mathbf{W} = \exp(-\mathbf{A}) \exp(\mathbf{A}) = \exp(-\mathbf{A} + \mathbf{A}) = \exp(\mathbf{0}) = \mathbf{I}$$
+
+#### Step 4: The Cayley Transform (Computationally Efficient Alternative)
+Evaluating the matrix exponential requires computing Taylor series or Schur forms. The **Cayley Transform** provides a rational, matrix-inversion-based bijection between $\mathfrak{so}(d)$ and $\mathcal{SO}(d)$:
+$$\mathbf{W} = \operatorname{Cayley}(\mathbf{A}) = (\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A})^{-1}$$
+
+**Proof of Orthogonality:**
+1. Note that $(\mathbf{I} - \mathbf{A})$ and $(\mathbf{I} + \mathbf{A})^{-1}$ commute:
+   $$(\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A}) = \mathbf{I} - \mathbf{A}^2 = (\mathbf{I} + \mathbf{A}) (\mathbf{I} - \mathbf{A})$$
+   Multiplying both sides by $(\mathbf{I} + \mathbf{A})^{-1}$ yields commutativity.
+2. Transpose $\mathbf{W}$:
+   $$\mathbf{W}^T = \left( (\mathbf{I} + \mathbf{A})^{-1} \right)^T (\mathbf{I} - \mathbf{A})^T = (\mathbf{I} + \mathbf{A}^T)^{-1} (\mathbf{I} - \mathbf{A}^T) = (\mathbf{I} - \mathbf{A})^{-1} (\mathbf{I} + \mathbf{A})$$
+3. Compute $\mathbf{W}^T \mathbf{W}$:
+   $$\mathbf{W}^T \mathbf{W} = (\mathbf{I} - \mathbf{A})^{-1} (\mathbf{I} + \mathbf{A}) (\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A})^{-1} = (\mathbf{I} - \mathbf{A})^{-1} (\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A}) (\mathbf{I} + \mathbf{A})^{-1} = \mathbf{I} \cdot \mathbf{I} = \mathbf{I}$$
+
+By optimizing unconstrained skew-symmetric parameters $\mathbf{A} \in \mathbb{R}^{d \times d}$ (setting $A_{j, i} = -A_{i, j}$ and $A_{i, i} = 0$) and computing $\mathbf{W} = \operatorname{Cayley}(\mathbf{A})$, the recurrent weight matrix is **algebraically guaranteed to remain exactly orthogonal** throughout every step of gradient descent, eliminating exploding and vanishing gradients by construction. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### The Eigenspectrum on the Complex Unit Circle
@@ -296,6 +444,131 @@ Compute the cosine similarity of each clipped vector with the original gradient 
    Angle of deflection: $\theta = \arccos(0.9825) \approx 10.74^\circ$.
 
 Value clipping shifted the direction by over $10^\circ$, penalizing large components while leaving small components unscaled. In high dimensions ($d = 10,000$), value clipping can rotate the gradient by up to $80^\circ$ away from the true steepest descent direction!
+
+---
+
+### Illustration 3: Eigenspectrum and Singular Value Evolution Across 10 Time Steps
+
+**Problem:**
+Consider an RNN with a $2 \times 2$ diagonal recurrent weight matrix:
+$$\mathbf{W}_{hh} = \begin{bmatrix} 1.2 & 0.0 \\ 0.0 & 0.5 \end{bmatrix}$$
+Operating in the linear regime ($\mathbf{D}_k = \mathbf{I}$).
+1. Compute the matrix powers $\mathbf{W}_{hh}^t$ for $t \in \{1, 2, 5, 10\}$.
+2. Trace the transformation of two orthogonal unit vectors: $\mathbf{v}_1 = [1, 0]^T$ and $\mathbf{v}_2 = [0, 1]^T$.
+3. Compute the condition number $\kappa(\mathbf{W}_{hh}^t) = \frac{\sigma_{\max}(\mathbf{W}_{hh}^t)}{\sigma_{\min}(\mathbf{W}_{hh}^t)}$ at each step and explain the geometric distortion of the error surface.
+
+**Solution:**
+
+#### Step 1: Matrix Powers
+Since $\mathbf{W}_{hh}$ is diagonal, $\mathbf{W}_{hh}^t = \begin{bmatrix} (1.2)^t & 0 \\ 0 & (0.5)^t \end{bmatrix}$:
+- **$t = 1$:** $\mathbf{W}_{hh}^1 = \begin{bmatrix} 1.2 & 0.0 \\ 0.0 & 0.5 \end{bmatrix}$
+- **$t = 2$:** $\mathbf{W}_{hh}^2 = \begin{bmatrix} (1.2)^2 & 0 \\ 0 & (0.5)^2 \end{bmatrix} = \begin{bmatrix} 1.44 & 0.0 \\ 0.0 & 0.25 \end{bmatrix}$
+- **$t = 5$:** $\mathbf{W}_{hh}^5 = \begin{bmatrix} (1.2)^5 & 0 \\ 0 & (0.5)^5 \end{bmatrix} = \begin{bmatrix} 2.488320 & 0.0 \\ 0.0 & 0.031250 \end{bmatrix}$
+- **$t = 10$:** $\mathbf{W}_{hh}^{10} = \begin{bmatrix} (1.2)^{10} & 0 \\ 0 & (0.5)^{10} \end{bmatrix} \approx \begin{bmatrix} 6.191736 & 0.0 \\ 0.0 & 0.000977 \end{bmatrix}$
+
+#### Step 2: Vector Magnitudes Across Time
+- Mode 1 ($\mathbf{v}_1 = [1, 0]^T$, unstable manifold):
+  $$\|\mathbf{W}_{hh}^t \mathbf{v}_1\|_2 = (1.2)^t \implies \{1.2, \, 1.44, \, 2.488, \, 6.192\}$$
+  Mode 1 **explodes** by $6.19\times$ over 10 steps.
+- Mode 2 ($\mathbf{v}_2 = [0, 1]^T$, stable manifold):
+  $$\|\mathbf{W}_{hh}^t \mathbf{v}_2\|_2 = (0.5)^t \implies \{0.5, \, 0.25, \, 0.03125, \, 0.000977\}$$
+  Mode 2 **vanishes** by a factor of $1,024\times$ over 10 steps.
+
+#### Step 3: Condition Number Evolution
+$$\kappa(\mathbf{W}_{hh}^t) = \frac{(1.2)^t}{(0.5)^t} = (2.4)^t$$
+- $t = 1$: $\kappa = 2.4$
+- $t = 2$: $\kappa = (2.4)^2 = 5.76$
+- $t = 5$: $\kappa = (2.4)^5 \approx 79.63$
+- $t = 10$: $\kappa = (2.4)^{10} \approx \mathbf{6,340.34}$
+
+**Geometric Implication:**
+Across 10 steps, the error ellipsoid stretches by a factor of over $6,340$. Any gradient backpropagated across 10 steps will align almost strictly with the $x$-axis ($\mathbf{v}_1$), completely obliterating any learning signal in the $y$-direction ($\mathbf{v}_2$).
+
+---
+
+### Illustration 4: Multi-Tensor Norm-Based Gradient Clipping Arithmetic
+
+**Problem:**
+In PyTorch's `torch.nn.utils.clip_grad_norm_`, gradients across all parameter tensors are concatenated into a single global vector.
+Consider an RNN with two trainable tensors:
+1. Recurrent weight matrix $\mathbf{W} \in \mathbb{R}^{2 \times 2}$ with unclipped gradient:
+   $$\mathbf{G}_W = \begin{bmatrix} 3.0 & -4.0 \\ 0.0 & 5.0 \end{bmatrix}$$
+2. Bias vector $\mathbf{b} \in \mathbb{R}^2$ with unclipped gradient:
+   $$\mathbf{g}_b = \begin{bmatrix} 2.0 \\ -2.0 \end{bmatrix}$$
+Let the maximum global norm threshold be $\theta_{\text{clip}} = 4.0$.
+1. Compute the global Frobenius/Euclidean norm $\|\mathbf{g}_{\text{total}}\|_2$.
+2. Determine whether clipping triggers, and compute the global scaling factor $\alpha$.
+3. Compute the clipped tensors $\mathbf{G}_W^{\text{clip}}$ and $\mathbf{g}_b^{\text{clip}}$.
+4. Verify that the combined norm of the clipped tensors equals exactly $\theta_{\text{clip}} = 4.0$.
+
+**Solution:**
+
+#### Step 1: Global Norm Calculation
+Sum the squared elements across all tensors:
+$$\|\mathbf{G}_W\|_F^2 = (3.0)^2 + (-4.0)^2 + (0.0)^2 + (5.0)^2 = 9.0 + 16.0 + 0.0 + 25.0 = 50.0$$
+$$\|\mathbf{g}_b\|_2^2 = (2.0)^2 + (-2.0)^2 = 4.0 + 4.0 = 8.0$$
+$$\|\mathbf{g}_{\text{total}}\|_2 = \sqrt{\|\mathbf{G}_W\|_F^2 + \|\mathbf{g}_b\|_2^2} = \sqrt{50.0 + 8.0} = \sqrt{58.0} \approx \mathbf{7.615773}$$
+
+#### Step 2: Clipping Factor
+Since $\|\mathbf{g}_{\text{total}}\|_2 = 7.615773 > \theta_{\text{clip}} = 4.0$, clipping is triggered:
+$$\alpha = \frac{\theta_{\text{clip}}}{\|\mathbf{g}_{\text{total}}\|_2} = \frac{4.0}{\sqrt{58.0}} \approx \mathbf{0.525226}$$
+
+#### Step 3: Rescale Tensors
+- **Clipped Weight Gradient:**
+  $$\mathbf{G}_W^{\text{clip}} = \alpha \mathbf{G}_W = 0.525226 \begin{bmatrix} 3.0 & -4.0 \\ 0.0 & 5.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.575677} & \mathbf{-2.100903} \\ \mathbf{0.000000} & \mathbf{2.626129} \end{bmatrix}$$
+- **Clipped Bias Gradient:**
+  $$\mathbf{g}_b^{\text{clip}} = \alpha \mathbf{g}_b = 0.525226 \begin{bmatrix} 2.0 \\ -2.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.050451} \\ \mathbf{-1.050451} \end{bmatrix}$$
+
+#### Step 4: Verification of Clipped Global Norm
+$$\|\mathbf{G}_W^{\text{clip}}\|_F^2 = (1.575677)^2 + (-2.100903)^2 + 0^2 + (2.626129)^2 \approx 2.482759 + 4.413793 + 6.896552 = 13.793104$$
+$$\|\mathbf{g}_b^{\text{clip}}\|_2^2 = (1.050451)^2 + (-1.050451)^2 \approx 1.103448 + 1.103448 = 2.206896$$
+$$\text{Total Squared Norm} = 13.793104 + 2.206896 = \mathbf{16.000000}$$
+$$\|\mathbf{g}_{\text{total}}^{\text{clip}}\|_2 = \sqrt{16.000000} = \mathbf{4.000000} \equiv \theta_{\text{clip}}$$
+The global norm is constrained to exactly $4.0$ while preserving the relative proportions between weights and biases.
+
+---
+
+### Illustration 5: Cayley Transform for Exact Orthogonal Weight Transition and Norm Preservation
+
+**Problem:**
+Let an unconstrained skew-symmetric matrix parameter $\mathbf{A} \in \mathfrak{so}(2)$ be:
+$$\mathbf{A} = \begin{bmatrix} 0.0 & -0.5 \\ 0.5 & 0.0 \end{bmatrix}$$
+1. Compute the Cayley transform $\mathbf{W} = (\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A})^{-1}$.
+2. Verify algebraically that $\mathbf{W}^T \mathbf{W} = \mathbf{I}$.
+3. For a test gradient vector $\boldsymbol{\delta} = [3.0, 4.0]^T$, verify that $\|\mathbf{W} \boldsymbol{\delta}\|_2 = \|\boldsymbol{\delta}\|_2 = 5.0$, proving zero vanishing and zero exploding gradient flow.
+
+**Solution:**
+
+#### Step 1: Cayley Transform Computation
+$$\mathbf{I} - \mathbf{A} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} - \begin{bmatrix} 0.0 & -0.5 \\ 0.5 & 0.0 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.5 \\ -0.5 & 1.0 \end{bmatrix}$$
+$$\mathbf{I} + \mathbf{A} = \begin{bmatrix} 1.0 & -0.5 \\ 0.5 & 1.0 \end{bmatrix}$$
+
+Determinant of $(\mathbf{I} + \mathbf{A})$:
+$$\det(\mathbf{I} + \mathbf{A}) = (1.0)(1.0) - (-0.5)(0.5) = 1.0 + 0.25 = 1.25 = \frac{5}{4}$$
+
+Inverse $(\mathbf{I} + \mathbf{A})^{-1}$:
+$$(\mathbf{I} + \mathbf{A})^{-1} = \frac{1}{1.25} \begin{bmatrix} 1.0 & 0.5 \\ -0.5 & 1.0 \end{bmatrix} = 0.8 \begin{bmatrix} 1.0 & 0.5 \\ -0.5 & 1.0 \end{bmatrix} = \begin{bmatrix} 0.8 & 0.4 \\ -0.4 & 0.8 \end{bmatrix}$$
+
+Matrix Multiplication $\mathbf{W} = (\mathbf{I} - \mathbf{A})(\mathbf{I} + \mathbf{A})^{-1}$:
+$$\mathbf{W} = \begin{bmatrix} 1.0 & 0.5 \\ -0.5 & 1.0 \end{bmatrix} \begin{bmatrix} 0.8 & 0.4 \\ -0.4 & 0.8 \end{bmatrix}$$
+- $W_{1, 1} = (1.0)(0.8) + (0.5)(-0.4) = 0.8 - 0.2 = \mathbf{0.6}$
+- $W_{1, 2} = (1.0)(0.4) + (0.5)(0.8) = 0.4 + 0.4 = \mathbf{0.8}$
+- $W_{2, 1} = (-0.5)(0.8) + (1.0)(-0.4) = -0.4 - 0.4 = \mathbf{-0.8}$
+- $W_{2, 2} = (-0.5)(0.4) + (1.0)(0.8) = -0.2 + 0.8 = \mathbf{0.6}$
+
+$$\mathbf{W} = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix}$$
+
+#### Step 2: Verification of Orthogonality
+$$\mathbf{W}^T \mathbf{W} = \begin{bmatrix} 0.6 & -0.8 \\ 0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} = \begin{bmatrix} 0.36 + 0.64 & 0.48 - 0.48 \\ 0.48 - 0.48 & 0.64 + 0.36 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{I}$$
+
+#### Step 3: Norm Preservation Check
+For $\boldsymbol{\delta} = [3.0, 4.0]^T$:
+$$\|\boldsymbol{\delta}\|_2 = \sqrt{3.0^2 + 4.0^2} = \sqrt{9.0 + 16.0} = \sqrt{25.0} = \mathbf{5.0}$$
+Transforming $\boldsymbol{\delta}$:
+$$\mathbf{W} \boldsymbol{\delta} = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 3.0 \\ 4.0 \end{bmatrix} = \begin{bmatrix} 0.6(3.0) + 0.8(4.0) \\ -0.8(3.0) + 0.6(4.0) \end{bmatrix} = \begin{bmatrix} 1.8 + 3.2 \\ -2.4 + 2.4 \end{bmatrix} = \begin{bmatrix} 5.0 \\ 0.0 \end{bmatrix}$$
+$$\|\mathbf{W} \boldsymbol{\delta}\|_2 = \sqrt{5.0^2 + 0.0^2} = \mathbf{5.0}$$
+
+The gradient vector norm is preserved to machine precision without scaling distortion.
 
 ---
 

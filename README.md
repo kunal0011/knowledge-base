@@ -9,6 +9,7 @@
 [![Streaming & Distributed Engines](https://img.shields.io/badge/Distributed%20Engines-30%20Chapters-crimson.svg)](#-pillar-v-distributed-data--streaming-engines-kafka-flink-airflow--30-chapters)
 [![DDIA Systems](https://img.shields.io/badge/DDIA%20Systems-12%20Chapters-teal.svg)](#-pillar-vi-designing-data-intensive-applications-ddia--12-chapters)
 [![Microservices Architecture](https://img.shields.io/badge/Microservices%20Design-10%20Chapters-darkgreen.svg)](#-pillar-vii-microservices-architecture--design-10-chapters)
+[![Cloud Data Lake](https://img.shields.io/badge/Cloud%20Data%20Lake-10%20Chapters-indigo.svg)](#-pillar-viii-cloud-data-lake--lakehouse-architecture-10-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -81,6 +82,19 @@ knowledge-base/
 │   │   ├── 08. Security & Identity - OAuth2, OIDC, JWT & Zero-Trust mTLS.md
 │   │   ├── 09. Observability - OpenTelemetry, Tracing & Metrics.md
 │   │   └── 10. Multi-Language Microservice Blueprint (Java, Go, Python).md
+│   │
+│   ├── Designing-Cloud-Data-Lake-and-Lakehouse/ # Cloud Lakehouse, Open Table Formats & FinOps
+│   │   ├── README.md                          # Master Architecture Portal & Comparative Matrix
+│   │   ├── 01. Data Lake Foundations, Evolution & Lakehouse Paradigm.md
+│   │   ├── 02. Modern Open Table Formats (Iceberg, Delta Lake, Hudi).md
+│   │   ├── 03. Storage Optimization, File Layouts & Compression.md
+│   │   ├── 04. Lakehouse Catalogs & Metadata Governance.md
+│   │   ├── 05. Cloud Ingestion Topologies - Batch, Streaming & CDC.md
+│   │   ├── 06. Query Engines & Decoupled Compute (Trino, Spark, DuckDB).md
+│   │   ├── 07. Data Quality, Testing & Data Contracts.md
+│   │   ├── 08. Governance, Security & Fine-Grained Access Control.md
+│   │   ├── 09. Cloud Cost Engineering, Tiering & FinOps.md
+│   │   └── 10. Multi-Cloud Blueprints & Production Implementation.md
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
@@ -272,6 +286,27 @@ A publication-grade systems textbook covering the core architectural patterns, d
 | **10** | **Multi-Language Blueprint** | End-to-End E-Commerce Checkout: Spring Boot 3 + Go gRPC + FastAPI Async Ingestion | [Chapter 10](Projects/Microservices-Architecture-and-Design/10.%20Multi-Language%20Microservice%20Blueprint%20%28Java,%20Go,%20Python%29.md) |
 
 > Complete cross-language runtime matrix & pattern taxonomy: **[Microservices Architecture & Design Master Portal](Projects/Microservices-Architecture-and-Design/README.md)**
+
+---
+
+## ❄️ Pillar VIII: Cloud Data Lake & Lakehouse Architecture (10 Chapters)
+
+A publication-grade systems textbook covering modern open table formats, storage optimization, metadata catalogs, real-time CDC ingestion, decoupled query execution, data governance, and FinOps across **AWS**, **Azure**, and **GCP**, citing canonical literature (*Inmon, Gorelik, Reis & Housley, Blue, Zaharia, Sanderson, Storment & Fuller*):
+
+| Chapter | Architecture & Pattern Focus | Core Theoretical & Runtime Mechanics | Master Chapter |
+| :---: | :--- | :--- | :---: |
+| **01** | **Foundations, Evolution & Lakehouse** | Inmon vs Kimball, Data Swamp, Medallion Architecture, S3/ADLS/GCS request internals, strong consistency | [Chapter 01](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/01.%20Data%20Lake%20Foundations,%20Evolution%20&%20Lakehouse%20Paradigm.md) |
+| **02** | **Open Table Formats (Iceberg, Delta, Hudi)** | Failure of raw Parquet, Iceberg snapshot manifest tree, Delta Lake ACID log, Hudi MOR/COW, OCC | [Chapter 02](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/02.%20Modern%20Open%20Table%20Formats%20%28Iceberg,%20Delta%20Lake,%20Hudi%29.md) |
+| **03** | **Storage Optimization & Compression** | Columnar encoding (Dict, RLE, Delta), Snappy vs ZSTD, Small File Problem, Z-Ordering Hilbert curves | [Chapter 03](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/03.%20Storage%20Optimization,%20File%20Layouts%20&%20Compression.md) |
+| **04** | **Catalogs & Metadata Governance** | Role of Catalog, REST Catalog Spec, AWS Glue, Project Nessie (Git-for-Data), Apache Polaris, CAS updates | [Chapter 04](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/04.%20Lakehouse%20Catalogs%20&%20Metadata%20Governance.md) |
+| **05** | **Ingestion Topologies (Batch, Stream, CDC)** | Real-time CDC (Debezium/Kafka), Flink/Spark Streaming Sinks, Micro-compaction, Chandy-Lamport EOS | [Chapter 05](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/05.%20Cloud%20Ingestion%20Topologies%20-%20Batch,%20Streaming%20&%20CDC.md) |
+| **06** | **Query Engines & Decoupled Compute** | Storage-compute separation, Trino MPP distributed execution, Spark Catalyst/Tungsten, DuckDB local OLAP | [Chapter 06](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/06.%20Query%20Engines%20&%20Decoupled%20Compute%20%28Trino,%20Spark,%20DuckDB%29.md) |
+| **07** | **Data Quality, Testing & Data Contracts** | Data Contracts (Chad Sanderson), Great Expectations, AWS Deequ, Pipeline Circuit Breakers, Quarantine Tables | [Chapter 07](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/07.%20Data%20Quality,%20Testing%20&%20Data%20Contracts.md) |
+| **08** | **Governance, Security & Access Control** | Zero-Trust Lakehouse, KMS envelope encryption, Row/Column-Level Security (RLS/CLS), Lake Formation, GDPR purge | [Chapter 08](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/08.%20Governance,%20Security%20&%20Fine-Grained%20Access%20Control.md) |
+| **09** | **Cloud Cost Engineering & FinOps** | S3 tiering break-even math, Intelligent-Tiering small file trap, LIST API billing shock, VACUUM GC | [Chapter 09](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/09.%20Cloud%20Cost%20Engineering,%20Tiering%20&%20FinOps.md) |
+| **10** | **Multi-Cloud Production Blueprint** | End-to-end multi-cloud pipeline: CDC Stream -> Bronze S3 -> Quality Gateway -> Silver Iceberg -> Gold Mart -> Trino | [Chapter 10](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/10.%20Multi-Cloud%20Blueprints%20&%20Production%20Implementation.md) |
+
+> Complete comparative storage matrix & open lakehouse stack: **[Cloud Data Lake & Lakehouse Master Portal](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/README.md)**
 
 ---
 

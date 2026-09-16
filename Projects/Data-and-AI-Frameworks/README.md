@@ -5,25 +5,26 @@
 [![PySpark](https://img.shields.io/badge/Apache%20Spark-3.5%2B%20Distributed%20Engine-orange.svg)](#domain-iii-apache-spark-pyspark-distributed-cluster-computing)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x%20Deep%20Learning-red.svg)](#domain-iv-pytorch-deep-learning--tensor-compilation)
 [![Databricks](https://img.shields.io/badge/Databricks-Lakehouse%20%26%20Mosaic%20AI-crimson.svg)](#domain-v-databricks-unified-lakehouse-governance--generative-ai)
+[![Snowflake](https://img.shields.io/badge/Snowflake-Multi--Cluster%20Lakehouse-29B5E8.svg)](#domain-vi-snowflake-multi-cluster-shared-data-lakehouse-governance--cortex-ai)
 [![Target Level](https://img.shields.io/badge/Engineering%20Level-Staff%20%7C%20Principal%20ML%2FData%20Architect-purple.svg)](#the-6-part-technical-standard)
 
-> A production-grade, authoritative reference manual and systems textbook covering the five foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence: **NumPy**, **Pandas**, **Apache Spark (PySpark)**, **PyTorch**, and **Databricks**. 
+> A production-grade, authoritative reference manual and systems textbook covering the six foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence: **NumPy**, **Pandas**, **Apache Spark (PySpark)**, **PyTorch**, **Databricks**, and **Snowflake**. 
 > 
-> Grounded in canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga, Ghodsi*), low-level memory architectures, compiled execution engines, and production pitfalls.
+> Grounded in canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga, Ghodsi, Dageville, Cruanes, Zukowski, Avila*), low-level memory architectures, compiled execution engines, and production pitfalls.
 
 ---
 
 ## 🏛️ Architectural Comparison Matrix
 
-| Architectural Dimension | NumPy (`np.ndarray`) | Pandas (`DataFrame`) | Apache Spark (`DataFrame` / `Dataset`) | PyTorch (`torch.Tensor`) | Databricks Lakehouse Platform |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Primary Domain** | Strided N-D Numerical Computing | Tabular Wrangling & Relational Algebra | Large-Scale Distributed Big Data Processing | Deep Learning, Autograd & Neural Networks | Unified Lakehouse, Enterprise ETL, BI & Generative AI |
-| **Foundational Literature** | *Guide to NumPy* (Travis Oliphant) | *Python for Data Analysis* (Wes McKinney) | *Spark: The Definitive Guide* (Chambers & Zaharia) | *Deep Learning with PyTorch* (Stevens et al.) | *The Databricks Lakehouse Platform* (Zaharia & Ghodsi) |
-| **Underlying Memory Model** | Contiguous C/Fortran buffer, strides, shape | `BlockManager` (NumPy 2D blocks) / PyArrow | Tungsten off-heap row/column binary memory | 1D contiguous `Storage` pointer + strides | Native C++ SIMD Vectors (Photon) & Off-Heap Spark |
-| **Execution Paradigm** | Vectorized C loops via ufuncs | Vectorized C / Cython / PyArrow kernels | Lazy DAG evaluation, Whole-Stage CodeGen | Dynamic Tape Autograd DAG, eager or compiled | Photon C++ Vectorized Core & Serverless Spark |
-| **Hardware Targets** | Single-node CPU (MKL, OpenBLAS) | Single-node CPU (Arrow, SIMD) | Distributed cluster (JVM executors, off-heap) | Heterogeneous: CPU, NVIDIA CUDA, Apple MPS | Multi-Cloud Serverless CPU & GPU (AWS, Azure, GCP) |
-| **Compiler & Optimization** | Numba / Cython JIT | `pd.eval()`, PyArrow SIMD | Catalyst Query Optimizer & Tungsten Engine | TorchDynamo, AOTAutograd, TorchInductor | Photon Engine, Liquid Clustering, Predictive I/O |
-| **Scale Envelope** | In-Memory (RAM-bound), memmap for disk | In-Memory (RAM-bound, ~1/5x available RAM) | Out-of-Core, Petabyte scale across clusters | GPU VRAM-bound, multi-node scaling via DDP/FSDP | Exabyte Cloud Scale with Instant Serverless Elasticity |
+| Architectural Dimension | NumPy (`np.ndarray`) | Pandas (`DataFrame`) | Apache Spark (`DataFrame` / `Dataset`) | PyTorch (`torch.Tensor`) | Databricks Lakehouse Platform | Snowflake Data Cloud |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Domain** | Strided N-D Numerical Computing | Tabular Wrangling & Relational Algebra | Large-Scale Distributed Big Data Processing | Deep Learning, Autograd & Neural Networks | Unified Lakehouse, Enterprise ETL, BI & Generative AI | Multi-Cluster Shared Data Lakehouse, SQL Warehousing & Cortex AI |
+| **Foundational Literature** | *Guide to NumPy* (Travis Oliphant) | *Python for Data Analysis* (Wes McKinney) | *Spark: The Definitive Guide* (Chambers & Zaharia) | *Deep Learning with PyTorch* (Stevens et al.) | *The Databricks Lakehouse Platform* (Zaharia & Ghodsi) | *The Snowflake Elastic Data Warehouse* (Dageville et al.) |
+| **Underlying Memory Model** | Contiguous C/Fortran buffer, strides, shape | `BlockManager` (NumPy 2D blocks) / PyArrow | Tungsten off-heap row/column binary memory | 1D contiguous `Storage` pointer + strides | Native C++ SIMD Vectors (Photon) & Off-Heap Spark | Ephemeral NVMe SSD Cache, Worker RAM & S3/Blob Micro-Partitions |
+| **Execution Paradigm** | Vectorized C loops via ufuncs | Vectorized C / Cython / PyArrow kernels | Lazy DAG evaluation, Whole-Stage CodeGen | Dynamic Tape Autograd DAG, eager or compiled | Photon C++ Vectorized Core & Serverless Spark | Vectorized SIMD C++ Push-Pipeline across Stateless Warehouses |
+| **Hardware Targets** | Single-node CPU (MKL, OpenBLAS) | Single-node CPU (Arrow, SIMD) | Distributed cluster (JVM executors, off-heap) | Heterogeneous: CPU, NVIDIA CUDA, Apple MPS | Multi-Cloud Serverless CPU & GPU (AWS, Azure, GCP) | Multi-Cloud Stateless Virtual Warehouses (AWS, Azure, GCP) |
+| **Compiler & Optimization** | Numba / Cython JIT | `pd.eval()`, PyArrow SIMD | Catalyst Query Optimizer & Tungsten Engine | TorchDynamo, AOTAutograd, TorchInductor | Photon Engine, Liquid Clustering, Predictive I/O | Cloud Services CBO, FoundationDB Metadata Micro-Partition Pruning |
+| **Scale Envelope** | In-Memory (RAM-bound), memmap for disk | In-Memory (RAM-bound, ~1/5x available RAM) | Out-of-Core, Petabyte scale across clusters | GPU VRAM-bound, multi-node scaling via DDP/FSDP | Exabyte Cloud Scale with Instant Serverless Elasticity | Multi-Petabyte Elastic Decoupled Storage & Multi-Cluster Scale |
 
 ---
 
@@ -49,7 +50,8 @@ Projects/Data-and-AI-Frameworks/
 ├── Pandas/                                           # Domain II: Tabular Analytics & Relational Algebra
 ├── PySpark/                                          # Domain III: Distributed Big Data & Cluster Computing
 ├── PyTorch/                                          # Domain IV: Deep Learning, Autograd & Compilation
-└── Databricks/                                       # Domain V: Unified Lakehouse, MLOps & GenAI
+├── Databricks/                                       # Domain V: Unified Lakehouse, MLOps & GenAI
+└── Snowflake/                                        # Domain VI: Multi-Cluster Shared Data Lakehouse & Cortex AI
 ```
 
 ---
@@ -136,3 +138,21 @@ Projects/Data-and-AI-Frameworks/
 * **Chapter 08:** [`08. Generative AI, Mosaic AI & Model Serving.md`](Databricks/08.%20Generative%20AI%2C%20Mosaic%20AI%20%26%20Model%20Serving.md) — Mosaic AI Model Serving, Vector Search with Delta sync, Lakehouse RAG architectures, AI SQL Functions (`ai_query()`, `ai_summarize()`, `ai_classify()`).
 * **Chapter 09:** [`09. Lakehouse Security, Networking & Identity Federation.md`](Databricks/09.%20Lakehouse%20Security%2C%20Networking%20%26%20Identity%20Federation.md) — Secure Cluster Connectivity (No Public IPs), Storage Credentials & External Locations, SCIM provisioning, System Tables (`system.access.audit`, `system.billing.usage`).
 * **Chapter 10:** [`10. Enterprise Production Blueprint & CICD with Databricks Asset Bundles (DABs).md`](Databricks/10.%20Enterprise%20Production%20Blueprint%20%26%20CICD%20with%20Databricks%20Asset%20Bundles%20%28DABs%29.md) — Databricks Asset Bundles (`databricks.yml`), Multi-environment CI/CD (Dev/Staging/Prod), Auto Loader $\rightarrow$ DLT $\rightarrow$ MLflow $\rightarrow$ Serverless Job.
+
+---
+
+### Domain VI: Snowflake (Multi-Cluster Shared Data Lakehouse, Governance & Cortex AI)
+*Canonical References: Benoit Dageville, Thierry Cruanes, Marcin Zukowski (*The Snowflake Elastic Data Warehouse*, SIGMOD 2016), Joyce Kay Avila (*Snowflake: The Definitive Guide*)*
+
+* **Overview & Quick Reference:** [`Snowflake/README.md`](Snowflake/README.md)
+* **Chapter 01:** [`01. Snowflake Multi-Cluster Shared Data Architecture.md`](Snowflake/01.%20Snowflake%20Multi-Cluster%20Shared%20Data%20Architecture.md) — Three-tier decoupled architecture (Cloud Services, Virtual Warehouses, Central Storage), Editions, Multi-Cluster warehouse autoscaling, Terraform IaC.
+* **Chapter 02:** [`02. Storage Internals, Micro-Partitions & Clustering.md`](Snowflake/02.%20Storage%20Internals%2C%20Micro-Partitions%20%26%20Clustering.md) — Immutable FDN columnar format, metadata pruning, clustering depth/ratio, `CLUSTER BY`, and Automatic Clustering.
+* **Chapter 03:** [`03. Virtual Warehouses, Compute Sizing & Concurrency.md`](Snowflake/03.%20Virtual%20Warehouses%2C%20Compute%20Sizing%20%26%20Concurrency.md) — T-shirt sizing (XS-6XL), per-second billing, local NVMe SSD vs remote S3 spilling, Query Profile waterfall diagnostics, FinOps.
+* **Chapter 04:** [`04. Data Ingestion Topologies - Copy Into, Snowpipe & Snowpipe Streaming.md`](Snowflake/04.%20Data%20Ingestion%20Topologies%20-%20Copy%20Into%2C%20Snowpipe%20%26%20Snowpipe%20Streaming.md) — Batch `COPY INTO`, event-driven Snowpipe, sub-second Snowpipe Streaming API, `VARIANT` and `FLATTEN`.
+* **Chapter 05:** [`05. Continuous Data Pipelines - Streams, Tasks & Dynamic Tables.md`](Snowflake/05.%20Continuous%20Data%20Pipelines%20-%20Streams%2C%20Tasks%20%26%20Dynamic%20Tables.md) — Table Streams (CDC), Task DAG orchestration with `AFTER`, and declarative continuous Dynamic Tables (`TARGET_LAG`).
+* **Chapter 06:** [`06. Data Governance, Security & Access Control (RBAC, Masking, RLS).md`](Snowflake/06.%20Data%20Governance%2C%20Security%20%26%20Access%20Control%20%28RBAC%2C%20Masking%2C%20RLS%29.md) — RBAC hierarchy (Functional vs Access Roles), Dynamic Data Masking, Row Access Policies, Object Tagging ABAC, Tri-Secret Secure.
+* **Chapter 07:** [`07. Time Travel, Fail-Safe, Zero-Copy Cloning & Data Sharing.md`](Snowflake/07.%20Time%20Travel%2C%20Fail-Safe%2C%20Zero-Copy%20Cloning%20%26%20Data%20Sharing.md) — Continuous Data Protection (0-90 days), `UNDROP`, Fail-Safe, instantaneous Zero-Copy Cloning, Secure Data Sharing, Secure Views.
+* **Chapter 08:** [`08. Open Lakehouse Integration - Snowflake Apache Iceberg Tables.md`](Snowflake/08.%20Open%20Lakehouse%20Integration%20-%20Snowflake%20Apache%20Iceberg%20Tables.md) — External Volumes (S3/ADLS/GCS), Snowflake-managed vs External Catalog (Glue/Polaris), open Parquet interoperability.
+* **Chapter 09:** [`09. Snowpark, Python UDFs & Streamlit in Snowflake.md`](Snowflake/09.%20Snowpark%2C%20Python%20UDFs%20%26%20Streamlit%20in%20Snowflake.md) — Snowpark DataFrame lazy AST pushdown, Vectorized PyArrow UDFs, Anaconda sandbox, Streamlit in Snowflake (SiS).
+* **Chapter 10:** [`10. Cortex AI, Machine Learning & Production Lakehouse Blueprint.md`](Snowflake/10.%20Cortex%20AI%2C%20Machine%20Learning%20%26%20Production%20Lakehouse%20Blueprint.md) — Cortex LLM SQL functions (`COMPLETE()`, `SUMMARIZE()`), Vector embeddings, Cortex Search hybrid retrieval, Snowflake ML, production RAG.
+

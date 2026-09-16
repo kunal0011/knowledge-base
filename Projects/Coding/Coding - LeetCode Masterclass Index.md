@@ -30,6 +30,7 @@ tags:
 - [12. Dynamic Programming (71 problems)](#12-dynamic-programming)
 - [13. Greedy (46 problems)](#13-greedy)
 - [14. Bit Manipulation (14 problems)](#14-bit-manipulation)
+- [15. Languages (15 deep-dive guides)](#15-languages)
 
 ---
 
@@ -515,4 +516,38 @@ tags:
 | **LC 1125** | Smallest Sufficient Team | `Google Hard, Amazon` | [LeetCode 1125 - Smallest Sufficient Team](14.%20Bit%20Manipulation/LeetCode%201125%20-%20Smallest%20Sufficient%20Team.md) |
 
 ---
+
+## 15. Languages (15 Deep-Dive Guides)
+
+> Master technical reference guides for Python, Java, and C++ covering runtime internals, memory models, collections complexity, interview gotchas, and LeetCode templates. [Read Master Overview & Comparative Reference](15.%20Languages/README.md).
+
+### 🐍 Python
+| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
+|:---|:---|:---:|
+| **01. Runtime Internals & Memory Model** | `PyObject` structure, Small Integer caching, `pymalloc` arenas/pools, Cyclic Generational GC, and the GIL. | [Read Guide](15.%20Languages/Python/01.%20Runtime%20Internals%20&%20Memory%20Model.md) |
+| **02. Built-in Data Structures & Collections** | `list` dynamic array resizing, compact `dict` hash tables, `collections.deque`, `heapq` min-heap, and `bisect`. | [Read Guide](15.%20Languages/Python/02.%20Built-in%20Data%20Structures%20&%20Collections.md) |
+| **03. Interview Gotchas & Common Pitfalls** | Mutable default arguments, late-binding closures, floor division with negatives, 2D list reference replication, and `nonlocal` scoping. | [Read Guide](15.%20Languages/Python/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
+| **04. High-Performance Tricks & Idioms** | Extended unpacking, `itertools` power tools (`accumulate`, `groupby`), `@cache`, matrix rotations, and bit manipulation idioms. | [Read Guide](15.%20Languages/Python/04.%20High-Performance%20Tricks%20&%20Idioms.md) |
+| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D grids, DSU with Path Compression, Trie, Monotonic Queue, and Max-Heap wrapper. | [Read Guide](15.%20Languages/Python/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+
+### ☕ Java
+| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
+|:---|:---|:---:|
+| **01. JVM Architecture & Memory Management** | ClassLoader hierarchy, Metaspace, Object Header layout, G1/ZGC collectors, Integer Cache, String Pool, and JMM `volatile`. | [Read Guide](15.%20Languages/Java/01.%20JVM%20Architecture%20&%20Memory%20Management.md) |
+| **02. Java Collections Framework Deep-Dive** | `ArrayList` $1.5\times$ growth, `HashMap` treeification at threshold 8, `ArrayDeque` circular buffer, and `TreeMap` navigation methods. | [Read Guide](15.%20Languages/Java/02.%20Java%20Collections%20Framework%20Deep-Dive.md) |
+| **03. Interview Gotchas & Common Pitfalls** | `==` vs `.equals()`, `ConcurrentModificationException`, `Math.abs(MIN_VALUE)`, `Arrays.asList()` limitations, and generics type erasure. | [Read Guide](15.%20Languages/Java/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
+| **04. High-Performance Tricks & Idioms** | Avoiding the Dual-Pivot Quicksort $\mathcal{O}(N^2)$ trap, `BitSet` optimization, traditional loops vs Streams, and Fast I/O. | [Read Guide](15.%20Languages/Java/04.%20High-Performance%20Tricks%20&%20Idioms.md) |
+| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D intervals sorting, array Trie, DSU with rank, and Monotonic Stack. | [Read Guide](15.%20Languages/Java/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+
+### ⚡ C++
+| Guide Title | Core Focus & Runtime Mechanics | Guide Link |
+|:---|:---|:---:|
+| **01. Memory Layout, RAII & Modern Semantics** | Virtual memory segments, RAII invariants, `unique_ptr`/`shared_ptr`, Move semantics, and Undefined Behavior (UB). | [Read Guide](15.%20Languages/C++/01.%20Memory%20Layout,%20RAII%20&%20Modern%20Semantics.md) |
+| **02. STL Containers & Under-the-Hood** | `std::vector` capacity growth, Small String Optimization (SSO), `unordered_map` chaining, and the `priority_queue` Max-Heap default trap. | [Read Guide](15.%20Languages/C++/02.%20STL%20Containers%20&%20Under-the-Hood.md) |
+| **03. Interview Gotchas & Common Pitfalls** | Iterator invalidation, unsigned `size_t` loop underflow, strict weak ordering segfaults, and anti-hash collision attacks. | [Read Guide](15.%20Languages/C++/03.%20Interview%20Gotchas%20&%20Common%20Pitfalls.md) |
+| **04. High-Performance Tricks & STL Idioms** | Fast I/O mechanics, GCC hardware builtins (`__builtin_popcount`), C++17 structured bindings, and the 64x `std::bitset` knapsack trick. | [Read Guide](15.%20Languages/C++/04.%20High-Performance%20Tricks%20&%20STL%20Idioms.md) |
+| **05. LeetCode Coding Cheatsheet & Templates** | Boilerplate syntax, 2D vectors, Trie with raw pointers, DSU, Segment Tree, and custom comparator priority queues. | [Read Guide](15.%20Languages/C++/05.%20LeetCode%20Coding%20Cheatsheet%20&%20Templates.md) |
+
+---
+
 

@@ -121,17 +121,82 @@ The number of linearly independent rows in any matrix is **always identical** to
 - In the output domain $\mathbb{R}^m$: The Column Space is the **orthogonal complement** of the Left Nullspace:
   $$C(A) \perp N(A^T) \quad \text{and} \quad C(A) \oplus N(A^T) = \mathbb{R}^m$$
 
-#### Part 3: The Rank-Nullity Theorem
+#### Rigorous First-Principles Derivation / Proof: $C(A^T) \perp N(A)$
+**Assumptions:**
+1. $A \in \mathbb{R}^{m \times n}$ has rows $r_1^T, r_2^T, \dots, r_m^T \in \mathbb{R}^{1 \times n}$.
+2. $N(A) = \{x \in \mathbb{R}^n \mid A x = \mathbf{0}\}$.
+3. $C(A^T) = \text{span}(r_1, r_2, \dots, r_m) = \{A^T y \mid y \in \mathbb{R}^m\}$.
+
+**Proof Steps:**
+1. Let $x \in N(A)$. By definition of the nullspace:
+   $$A x = \begin{bmatrix} r_1^T \\ r_2^T \\ \vdots \\ r_m^T \end{bmatrix} x = \begin{bmatrix} r_1^T x \\ r_2^T x \\ \vdots \\ r_m^T x \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ \vdots \\ 0 \end{bmatrix}$$
+   Therefore, for every row vector $r_i$ of matrix $A$:
+   $$r_i^T x = \langle r_i, x \rangle = 0, \quad \forall i \in \{1, 2, \dots, m\}$$
+   Every vector in the nullspace is perpendicular to every row of $A$.
+2. Now choose an arbitrary vector $v$ in the row space $C(A^T)$. By definition, $v$ is a linear combination of the rows of $A$:
+   $$v = A^T y = \sum_{i=1}^m y_i r_i \quad \text{for some scalar vector } y \in \mathbb{R}^m$$
+3. Compute the inner product $\langle v, x \rangle$:
+   $$\langle v, x \rangle = v^T x = (A^T y)^T x = y^T (A x)$$
+   Since $x \in N(A)$, $A x = \mathbf{0}$:
+   $$\langle v, x \rangle = y^T \mathbf{0} = 0$$
+   Since this holds for every $v \in C(A^T)$ and every $x \in N(A)$, we conclude:
+   $$C(A^T) \perp N(A) \quad \blacksquare$$
+
+By applying this exact logic to the transposed matrix $A^T \in \mathbb{R}^{n \times m}$, where $N(A^T) = \{y \in \mathbb{R}^m \mid A^T y = \mathbf{0}\}$ and $C(A) = C((A^T)^T)$, we immediately obtain:
+$$C(A) \perp N(A^T) \quad \blacksquare$$
+
+---
+
+#### Part 3: The Rank-Nullity Theorem: First-Principles Derivation
 $$\text{rank}(A) + \dim(N(A)) = n$$
+
+**Assumptions & Setup:**
+1. Let $A \in \mathbb{R}^{m \times n}$.
+2. Perform Gaussian elimination using elementary row operations to reduce $A$ to its unique Reduced Row Echelon Form $R = \text{RREF}(A)$.
+3. Elementary row operations are invertible (represented by an invertible matrix $E \in \mathbb{R}^{m \times m}$ such that $R = E A$).
+
+**Proof Steps:**
+1. **Preservation of Nullspace:**
+   $$A x = \mathbf{0} \iff E A x = E \mathbf{0} \iff R x = \mathbf{0}$$
+   Thus, $N(A) = N(R)$.
+2. **Pivot vs. Free Columns in RREF:**
+   In $R$, every column corresponds to an unknown $x_j$ ($j = 1, \dots, n$):
+   - Let $r$ be the number of pivot columns (leading 1s). By definition, $r = \text{rank}(A)$.
+   - The remaining columns contain no pivots and correspond to **free variables**. The number of free variables is exactly $n - r$.
+3. **Constructing the Basis for $N(R)$:**
+   For each free variable $x_{f_k}$ ($k \in \{1, \dots, n - r\}$), set $x_{f_k} = 1$ and all other free variables to $0$.
+   Because each pivot variable appears in exactly one equation containing that pivot's leading 1, each pivot variable is uniquely determined in terms of the free variables:
+   $$x_{\text{pivot}, i} = - \sum_{k=1}^{n-r} R_{i, f_k} x_{f_k}$$
+   This yields exactly $n - r$ special nullspace solution vectors $\{s_1, s_2, \dots, s_{n-r}\} \subset \mathbb{R}^n$.
+4. **Independence and Spanning:**
+   - **Linearly Independent:** In each vector $s_k$, the coordinate corresponding to free variable $x_{f_k}$ is $1$, while in all other vectors $s_j$ ($j \neq k$), that coordinate is $0$. Therefore, no non-trivial combination can sum to zero.
+   - **Spanning:** Any solution to $R x = \mathbf{0}$ with free variable values $(c_1, \dots, c_{n-r})$ is identical to $\sum_{k=1}^{n-r} c_k s_k$, because both have identical free variables and RREF guarantees pivot variables are uniquely determined by free variables.
+5. **Conclusion:**
+   $\{s_1, \dots, s_{n-r}\}$ forms an exact basis for $N(A)$.
+   $$\dim(N(A)) = n - r = n - \text{rank}(A)$$
+   $$\text{rank}(A) + \dim(N(A)) = n \quad \blacksquare$$
 
 ---
 
 ### 5. Solvability of Linear Systems $A x = b$
 Consider $A \in \mathbb{R}^{m \times n}$ and target vector $b \in \mathbb{R}^m$.
 
-#### Consistency Criterion:
+#### Consistency Criterion (The Rouché-Capelli Theorem):
 A linear system $A x = b$ has at least one solution **if and only if** $b$ lies in the column space of $A$:
 $$b \in C(A) \iff \text{rank}(A) = \text{rank}([A \mid b])$$
+
+#### First-Principles Derivation of Rouché-Capelli Criterion:
+1. By the column picture of matrix multiplication:
+   $$A x = \sum_{j=1}^n x_j \text{col}_j(A)$$
+   $A x = b$ possesses a solution $x \in \mathbb{R}^n$ if and only if $b$ can be expressed as a linear combination of the columns of $A$, meaning $b \in \text{span}(\text{col}_1(A), \dots, \text{col}_n(A)) = C(A)$.
+2. Now consider the augmented matrix $[A \mid b] \in \mathbb{R}^{m \times (n+1)}$:
+   - If $b \in C(A)$, $b$ is linearly dependent on the columns of $A$. Appending $b$ introduces no new pivot column during row reduction. Thus, $\text{rank}([A \mid b]) = \text{rank}(A)$.
+   - If $b \notin C(A)$, $b$ is linearly independent of the columns of $A$. Appending $b$ creates an additional pivot column in the final augmented column during row reduction ($[0 \,\, 0 \,\, \dots \,\, 0 \mid d]$ with $d \neq 0$). Thus, $\text{rank}([A \mid b]) = \text{rank}(A) + 1$.
+3. **Fredholm Alternative Formulation:**
+   Since $C(A) \perp N(A^T)$, $b \in C(A) \iff \langle y, b \rangle = 0$ for all $y \in N(A^T)$.
+   If there exists any $y \in N(A^T)$ such that $y^T b \neq 0$, multiplying $A x = b$ by $y^T$ yields:
+   $$y^T A x = y^T b \implies (A^T y)^T x = y^T b \implies \mathbf{0}^T x = y^T b \implies 0 = y^T b \neq 0$$
+   A direct contradiction! Hence no solution exists. $\blacksquare$
 
 #### Complete Structure of the General Solution:
 If $A x = b$ is consistent, its general solution is:
@@ -368,6 +433,90 @@ Find the complete solution to $A x = b$ where $b = \begin{bmatrix} 3 \\ 1 \\ 4 \
 3. **Complete General Solution:**
    $$x = x_p + x_n = \begin{bmatrix} 1 \\ 1 \\ 0 \\ 0 \end{bmatrix} + c_1 \begin{bmatrix} 2 \\ -1 \\ 1 \\ 0 \end{bmatrix} + c_2 \begin{bmatrix} -1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \quad \forall c_1, c_2 \in \mathbb{R}$$
    There are infinitely many distinct inputs that map to the exact same target activation $b$!
+
+---
+
+### Scenario C: Inconsistent Linear System ($0 = k \neq 0$ and Left Nullspace Contradiction)
+
+**Problem Formulation:**
+Consider the overdetermined linear system $A x = b$:
+$$A = \begin{bmatrix} 1 & 1 \\ 2 & 2 \\ 1 & 3 \end{bmatrix}, \quad b = \begin{bmatrix} 2 \\ 5 \\ 4 \end{bmatrix}$$
+1. Set up the augmented matrix $[A \mid b]$ and apply Gaussian elimination to show that no exact solution exists.
+2. Identify the pivot structure and compare $\text{rank}(A)$ vs $\text{rank}([A \mid b])$.
+3. Find a non-zero left nullspace vector $y \in N(A^T)$ and verify that $y^T b \neq 0$, demonstrating Fredholm's obstruction directly.
+
+#### Step 1: Row Operations on Augmented Matrix
+$$\begin{bmatrix} 1 & 1 & | & 2 \\ 2 & 2 & | & 5 \\ 1 & 3 & | & 4 \end{bmatrix}$$
+- **Row Operation 1 ($R_2 \leftarrow R_2 - 2R_1$):**
+  - Col 1: $2 - 2(1) = 0$
+  - Col 2: $2 - 2(1) = 0$
+  - Target: $5 - 2(2) = 1$
+  $$\begin{bmatrix} 1 & 1 & | & 2 \\ 0 & 0 & | & 1 \\ 1 & 3 & | & 4 \end{bmatrix}$$
+- **Row Operation 2 ($R_3 \leftarrow R_3 - R_1$):**
+  - Col 1: $1 - 1 = 0$
+  - Col 2: $3 - 1 = 2$
+  - Target: $4 - 2 = 2$
+  $$\begin{bmatrix} 1 & 1 & | & 2 \\ 0 & 0 & | & 1 \\ 0 & 2 & | & 2 \end{bmatrix}$$
+- **Row Operation 3 (Swap $R_2 \leftrightarrow R_3$):**
+  $$\begin{bmatrix} 1 & 1 & | & 2 \\ 0 & 2 & | & 2 \\ 0 & 0 & | & 1 \end{bmatrix}$$
+
+Look at the third row:
+$$0 x_1 + 0 x_2 = 1 \implies 0 = 1 \quad \text{\bf (CONTRADICTION!)}$$
+
+#### Step 2: Rank Evaluation
+- Coefficient matrix $A$ has pivots in columns 1 and 2: $\text{rank}(A) = 2$.
+- Augmented matrix $[A \mid b]$ has pivots in column 1, column 2, and the augmented column: $\text{rank}([A \mid b]) = 3$.
+- Since $\text{rank}(A) = 2 \neq 3 = \text{rank}([A \mid b])$, by the Rouché-Capelli theorem the system is **inconsistent** (zero solutions).
+
+#### Step 3: Fredholm Left Nullspace Obstruction
+Solve $A^T y = \mathbf{0}$ for $y = [y_1, y_2, y_3]^T$:
+$$A^T = \begin{bmatrix} 1 & 2 & 1 \\ 1 & 2 & 3 \end{bmatrix} \begin{bmatrix} y_1 \\ y_2 \\ y_3 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$$
+Subtracting equation 1 from equation 2 gives $2y_3 = 0 \implies y_3 = 0$.
+Then $y_1 + 2y_2 = 0 \implies y_1 = -2y_2$.
+Pick $y_2 = 1 \implies y = \begin{bmatrix} -2 \\ 1 \\ 0 \end{bmatrix} \in N(A^T)$.
+Now compute the inner product with $b$:
+$$y^T b = (-2)(2) + (1)(5) + (0)(4) = -4 + 5 + 0 = 1 \neq 0$$
+Since $b$ has a non-zero projection onto the left nullspace $N(A^T)$, target vector $b$ lies strictly outside $C(A)$.
+
+---
+
+### Scenario D: Rank-Deficient Bottleneck Layer (Information Erasure in Autoencoders)
+
+**Problem Formulation:**
+In an autoencoder or low-rank adapter, consider an input $x \in \mathbb{R}^3$, an encoder down-projection $A \in \mathbb{R}^{1 \times 3}$, and a decoder up-projection $B \in \mathbb{R}^{3 \times 1}$:
+$$A = \begin{bmatrix} 1 & -1 & 2 \end{bmatrix}, \quad B = \begin{bmatrix} 2 \\ 0 \\ 1 \end{bmatrix}$$
+The composite end-to-end transformation is $W = B A \in \mathbb{R}^{3 \times 3}$.
+1. Compute the explicit matrix $W = B A$.
+2. Determine $\text{rank}(W)$ and the dimension of the nullspace $\dim(N(W))$.
+3. Find a basis for the nullspace $N(W) \subset \mathbb{R}^3$.
+4. Test two distinct inputs $x_1 = \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}$ and $x_2 = \begin{bmatrix} 3 \\ 5 \\ 1 \end{bmatrix}$, showing that their difference lies in $N(W)$ and that $W x_1 = W x_2$.
+
+#### Step 1: Compute Outer Product $W = B A$
+$$W = \begin{bmatrix} 2 \\ 0 \\ 1 \end{bmatrix} \begin{bmatrix} 1 & -1 & 2 \end{bmatrix} = \begin{bmatrix} 2(1) & 2(-1) & 2(2) \\ 0(1) & 0(-1) & 0(2) \\ 1(1) & 1(-1) & 1(2) \end{bmatrix} = \begin{bmatrix} 2 & -2 & 4 \\ 0 & 0 & 0 \\ 1 & -1 & 2 \end{bmatrix}$$
+
+#### Step 2: Rank & Nullspace Dimension
+- Row 1 is $2 \times$ Row 3, and Row 2 is all zeros.
+- Therefore, there is only $1$ linearly independent row $\implies \text{rank}(W) = 1$.
+- By the Rank-Nullity Theorem:
+  $$\dim(N(W)) = n - \text{rank}(W) = 3 - 1 = 2$$
+
+#### Step 3: Find Basis for $N(W)$
+Solve $W x = \mathbf{0}$, which reduces to the single equation:
+$$x_1 - x_2 + 2x_3 = 0 \implies x_1 = x_2 - 2x_3$$
+Setting free variables $(x_2 = 1, x_3 = 0)$ and $(x_2 = 0, x_3 = 1)$:
+$$\mathcal{B}_{N(W)} = \left\{ \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}, \begin{bmatrix} -2 \\ 0 \\ 1 \end{bmatrix} \right\}$$
+
+#### Step 4: Verification of Nullspace Information Collapse
+Let inputs be $x_1 = [1, 1, 0]^T$ and $x_2 = [3, 5, 1]^T$.
+Compute the difference vector $\Delta x = x_2 - x_1$:
+$$\Delta x = \begin{bmatrix} 3 - 1 \\ 5 - 1 \\ 1 - 0 \end{bmatrix} = \begin{bmatrix} 2 \\ 4 \\ 1 \end{bmatrix}$$
+Check membership in $N(W)$:
+$$W \Delta x = \begin{bmatrix} 2 & -2 & 4 \\ 0 & 0 & 0 \\ 1 & -1 & 2 \end{bmatrix} \begin{bmatrix} 2 \\ 4 \\ 1 \end{bmatrix} = \begin{bmatrix} 2(2) - 2(4) + 4(1) \\ 0 \\ 1(2) - 1(4) + 2(1) \end{bmatrix} = \begin{bmatrix} 4 - 8 + 4 \\ 0 \\ 2 - 4 + 2 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}$$
+Indeed, $\Delta x \in N(W)$.
+Now check forward passes:
+$$W x_1 = \begin{bmatrix} 2 & -2 & 4 \\ 0 & 0 & 0 \\ 1 & -1 & 2 \end{bmatrix} \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix} = \begin{bmatrix} 2 - 2 + 0 \\ 0 \\ 1 - 1 + 0 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}$$
+$$W x_2 = \begin{bmatrix} 2 & -2 & 4 \\ 0 & 0 & 0 \\ 1 & -1 & 2 \end{bmatrix} \begin{bmatrix} 3 \\ 5 \\ 1 \end{bmatrix} = \begin{bmatrix} 6 - 10 + 4 \\ 0 \\ 3 - 5 + 2 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}$$
+*Insight:* Even though $x_1$ and $x_2$ are distinct input states, the 2-dimensional nullspace wipes out their differences completely. This demonstrates how bottleneck dimensionality directly determines information loss in deep representations.
 
 ---
 

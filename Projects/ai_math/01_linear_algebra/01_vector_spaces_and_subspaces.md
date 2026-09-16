@@ -67,6 +67,35 @@ Let $S = \{v_1, v_2, \dots, v_k\}$ be a non-empty subset of vectors in $V$.
 > [!IMPORTANT]
 > **Theorem (Span is a Subspace):** For any subset $S \subseteq V$, $\text{span}(S)$ is guaranteed to be a subspace of $V$. Moreover, it is the smallest subspace containing $S$.
 
+#### Rigorous First-Principles Derivation / Proof:
+**Assumptions:**
+1. $V$ is a vector space over field $\mathbb{F}$ with additive identity $\mathbf{0}$.
+2. $S = \{v_1, v_2, \dots, v_k\} \subseteq V$ is an arbitrary non-empty subset of vectors.
+3. $\text{span}(S) = \left\{ \sum_{i=1}^k c_i v_i \;\middle|\; c_i \in \mathbb{F} \right\}$.
+
+**Proof Steps:**
+We verify the two-step subspace test for $W = \text{span}(S)$:
+1. **Contains Zero Vector $\mathbf{0}$:**
+   Choose scalar coefficients $c_1 = c_2 = \dots = c_k = 0 \in \mathbb{F}$.
+   Then:
+   $$\sum_{i=1}^k 0 \cdot v_i = \mathbf{0} + \mathbf{0} + \dots + \mathbf{0} = \mathbf{0} \in \text{span}(S)$$
+   Thus, the additive identity is guaranteed to lie in $\text{span}(S)$.
+
+2. **Closure under Addition and Scalar Multiplication (Linear Combinations):**
+   Let $u, w \in \text{span}(S)$ and let $\alpha, \beta \in \mathbb{F}$.
+   Since $u, w \in \text{span}(S)$, there exist scalar sets $\{a_1, \dots, a_k\} \subset \mathbb{F}$ and $\{b_1, \dots, b_k\} \subset \mathbb{F}$ such that:
+   $$u = \sum_{i=1}^k a_i v_i, \quad w = \sum_{i=1}^k b_i v_i$$
+   Now consider the linear combination $\alpha u + \beta w$:
+   $$\begin{aligned}
+   \alpha u + \beta w &= \alpha \left(\sum_{i=1}^k a_i v_i\right) + \beta \left(\sum_{i=1}^k b_i v_i\right) \\
+   &= \sum_{i=1}^k (\alpha a_i) v_i + \sum_{i=1}^k (\beta b_i) v_i \quad \text{(by scalar multiplication associativity M1 and distributivity D1)} \\
+   &= \sum_{i=1}^k (\alpha a_i + \beta b_i) v_i \quad \text{(by vector addition commutativity A1 and distributivity D2)}
+   \end{aligned}$$
+   Since $\mathbb{F}$ is a field closed under addition and multiplication, $\gamma_i \triangleq \alpha a_i + \beta b_i \in \mathbb{F}$ for each $i \in \{1, \dots, k\}$.
+   Therefore, $\alpha u + \beta w = \sum_{i=1}^k \gamma_i v_i$ is explicitly a linear combination of elements in $S$, which means $\alpha u + \beta w \in \text{span}(S)$.
+   
+   Hence, $\text{span}(S)$ is a subspace of $V$. $\blacksquare$
+
 ---
 
 ### 5. Linear Independence and Dependence
@@ -91,10 +120,50 @@ A set $\mathcal{B} = \{v_1, v_2, \dots, v_n\} \subset V$ is a **Basis** of $V$ i
 - **Unique Representation Theorem:** If $\mathcal{B} = \{v_1, \dots, v_n\}$ is a basis for $V$, then every vector $x \in V$ can be written in **exactly one way** as a linear combination:
   $$x = c_1 v_1 + c_2 v_2 + \dots + c_n v_n$$
   The unique tuple $[c_1, c_2, \dots, c_n]^T \in \mathbb{F}^n$ is called the **coordinate vector** of $x$ relative to $\mathcal{B}$, denoted $[x]_\mathcal{B}$.
+
+#### Rigorous First-Principles Derivation / Proof of Unique Representation:
+**Assumptions:**
+1. $\mathcal{B} = \{v_1, \dots, v_n\}$ spans $V$, ensuring that for any $x \in V$, at least one linear combination exists.
+2. $\mathcal{B}$ is linearly independent: $\sum_{i=1}^n \alpha_i v_i = \mathbf{0} \implies \alpha_1 = \alpha_2 = \dots = \alpha_n = 0$.
+
+**Proof Steps:**
+1. **Existence:** Because $\text{span}(\mathcal{B}) = V$, every $x \in V$ can be expressed as:
+   $$x = \sum_{i=1}^n c_i v_i \quad \text{for some } c_i \in \mathbb{F}$$
+2. **Uniqueness (by subtraction):**
+   Suppose there exists a second representation of $x$ with scalar coefficients $d_1, \dots, d_n \in \mathbb{F}$:
+   $$x = \sum_{i=1}^n d_i v_i$$
+   Subtracting the two equations:
+   $$x - x = \sum_{i=1}^n c_i v_i - \sum_{i=1}^n d_i v_i$$
+   $$\mathbf{0} = \sum_{i=1}^n (c_i - d_i) v_i$$
+   Because $\{v_1, \dots, v_n\}$ is linearly independent, the only combination that produces $\mathbf{0}$ has all zero coefficients:
+   $$c_i - d_i = 0 \iff c_i = d_i, \quad \forall i \in \{1, 2, \dots, n\}$$
+   Thus, both coefficient sets are identical, proving that coordinates are strictly unique. $\blacksquare$
+
 - **Invariance of Dimension:** Every basis of a finite-dimensional vector space $V$ has the exact same number of vectors.
 - **Dimension ($\dim(V)$):** The number of vectors in any basis of $V$ is called the **dimension** of $V$.
 
 ---
+
+### 7. Change of Basis Matrix & Coordinate Transformation: Full Derivation
+Let $\mathcal{B}_1 = \{u_1, \dots, u_n\}$ and $\mathcal{B}_2 = \{v_1, \dots, v_n\}$ be two distinct ordered bases of $V$.
+Any vector $x \in V$ can be represented in both bases:
+$$x = \sum_{j=1}^n c_j u_j \iff [x]_{\mathcal{B}_1} = \begin{bmatrix} c_1 \\ \vdots \\ c_n \end{bmatrix}, \qquad x = \sum_{i=1}^n d_i v_i \iff [x]_{\mathcal{B}_2} = \begin{bmatrix} d_1 \\ \vdots \\ d_n \end{bmatrix}$$
+
+#### First-Principles Derivation of Transition Matrix $P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1}$:
+Since $\mathcal{B}_2$ is a basis for $V$, every basis vector $u_j \in \mathcal{B}_1$ can be expressed uniquely as a linear combination of $\mathcal{B}_2$:
+$$u_j = \sum_{i=1}^n p_{ij} v_i \iff [u_j]_{\mathcal{B}_2} = \begin{bmatrix} p_{1j} \\ p_{2j} \\ \vdots \\ p_{nj} \end{bmatrix}$$
+Now substitute this expansion into the expression for $x$:
+$$x = \sum_{j=1}^n c_j u_j = \sum_{j=1}^n c_j \left( \sum_{i=1}^n p_{ij} v_i \right) = \sum_{i=1}^n \left( \sum_{j=1}^n p_{ij} c_j \right) v_i$$
+By the Unique Representation Theorem, the coordinate of $x$ along $v_i$ is uniquely given by $d_i$:
+$$d_i = \sum_{j=1}^n p_{ij} c_j = (P)_{i, :} [x]_{\mathcal{B}_1}$$
+In matrix form:
+$$[x]_{\mathcal{B}_2} = P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} [x]_{\mathcal{B}_1}$$
+where the columns of the transition matrix are precisely the coordinates of the old basis vectors relative to the new basis:
+$$P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} = \begin{bmatrix} [u_1]_{\mathcal{B}_2} & [u_2]_{\mathcal{B}_2} & \cdots & [u_n]_{\mathcal{B}_2} \end{bmatrix}$$
+Furthermore, if $\mathcal{E}$ is the standard canonical basis, then:
+$$P_{\mathcal{E} \leftarrow \mathcal{B}_1} = \begin{bmatrix} u_1 & \cdots & u_n \end{bmatrix}, \quad P_{\mathcal{E} \leftarrow \mathcal{B}_2} = \begin{bmatrix} v_1 & \cdots & v_n \end{bmatrix}$$
+Since $[x]_\mathcal{E} = P_{\mathcal{E} \leftarrow \mathcal{B}_1} [x]_{\mathcal{B}_1} = P_{\mathcal{E} \leftarrow \mathcal{B}_2} [x]_{\mathcal{B}_2}$, multiplying by $(P_{\mathcal{E} \leftarrow \mathcal{B}_2})^{-1}$ gives:
+$$P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} = \left( P_{\mathcal{E} \leftarrow \mathcal{B}_2} \right)^{-1} P_{\mathcal{E} \leftarrow \mathcal{B}_1}$$
 
 ## Part 3: Geometric & Algebraic Interpretation
 
@@ -467,6 +536,69 @@ $$\begin{bmatrix} 1 & 2 & 1 & | & 0 \\ 0 & 1 & 1 & | & 0 \\ 2 & 0 & -2 & | & 0 \
    Even if we pick a vector on $W_2$, say $u = [1, 0, 1]^T$ ($3(1) - 2(0) + 1 = 4 \implies u \in W_2$), scaling by scalar $c = 2$ gives $2u = [2, 0, 2]^T$:
    $$3(2) - 2(0) + 2 = 6 - 0 + 2 = 8 \neq 4 \implies 2u \notin W_2$$
    **Conclusion:** $W_2$ is an **affine plane**, NOT a vector subspace. In deep learning, unconstrained linear layers without bias are subspaces; adding a bias vector $b \neq \mathbf{0}$ shifts the subspace into an affine space.
+
+---
+
+### Scenario E: Change of Basis Coordinate Transformation (Full Numerical Problem with Inversion)
+
+**Problem Formulation:**
+Consider the 2D vector space $\mathbb{R}^2$ with standard canonical basis $\mathcal{E} = \{e_1, e_2\} = \left\{ \begin{bmatrix} 1 \\ 0 \end{bmatrix}, \begin{bmatrix} 0 \\ 1 \end{bmatrix} \right\}$.
+Suppose we are given two custom feature bases:
+- **Basis 1 ($\mathcal{B}_1$):** $u_1 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}, \quad u_2 = \begin{bmatrix} 1 \\ -1 \end{bmatrix}$ (e.g., diagonal and anti-diagonal feature axes)
+- **Basis 2 ($\mathcal{B}_2$):** $v_1 = \begin{bmatrix} 2 \\ 1 \end{bmatrix}, \quad v_2 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}$ (e.g., non-orthogonal latent representations)
+
+A token activation vector has coordinates relative to $\mathcal{B}_1$:
+$$[x]_{\mathcal{B}_1} = \begin{bmatrix} 3 \\ -2 \end{bmatrix}$$
+
+**Tasks:**
+1. Determine the canonical coordinate vector $x \in \mathbb{R}^2$.
+2. Derive and compute the transition matrix $P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1}$.
+3. Compute the transformed coordinates $[x]_{\mathcal{B}_2}$.
+4. Verify by expanding in $\mathcal{B}_2$ that the exact same canonical vector is recovered.
+
+#### Step 1: Compute Canonical Representation $x = [x]_\mathcal{E}$
+By definition of coordinate representation with respect to $\mathcal{B}_1$:
+$$x = 3 u_1 + (-2) u_2 = 3 \begin{bmatrix} 1 \\ 1 \end{bmatrix} - 2 \begin{bmatrix} 1 \\ -1 \end{bmatrix}$$
+$$x = \begin{bmatrix} 3(1) - 2(1) \\ 3(1) - 2(-1) \end{bmatrix} = \begin{bmatrix} 3 - 2 \\ 3 + 2 \end{bmatrix} = \begin{bmatrix} 1 \\ 5 \end{bmatrix}$$
+
+#### Step 2: Form Canonical Transition Matrices and Invert $P_{\mathcal{E} \leftarrow \mathcal{B}_2}$
+The matrix converting $\mathcal{B}_1$ coordinates to standard coordinates is:
+$$P_{\mathcal{E} \leftarrow \mathcal{B}_1} = \begin{bmatrix} u_1 & u_2 \end{bmatrix} = \begin{bmatrix} 1 & 1 \\ 1 & -1 \end{bmatrix}$$
+The matrix converting $\mathcal{B}_2$ coordinates to standard coordinates is:
+$$P_{\mathcal{E} \leftarrow \mathcal{B}_2} = \begin{bmatrix} v_1 & v_2 \end{bmatrix} = \begin{bmatrix} 2 & 1 \\ 1 & 1 \end{bmatrix}$$
+
+To convert from standard coordinates back to $\mathcal{B}_2$, we need $(P_{\mathcal{E} \leftarrow \mathcal{B}_2})^{-1}$.
+For a $2 \times 2$ matrix $M = \begin{bmatrix} a & b \\ c & d \end{bmatrix}$, the inverse is:
+$$M^{-1} = \frac{1}{ad - bc} \begin{bmatrix} d & -b \\ -c & a \end{bmatrix}$$
+Here:
+- $\det(P_{\mathcal{E} \leftarrow \mathcal{B}_2}) = (2)(1) - (1)(1) = 2 - 1 = 1 \neq 0$ (confirming $\mathcal{B}_2$ is a valid basis).
+- The inverse matrix is:
+  $$(P_{\mathcal{E} \leftarrow \mathcal{B}_2})^{-1} = \frac{1}{1} \begin{bmatrix} 1 & -1 \\ -1 & 2 \end{bmatrix} = \begin{bmatrix} 1 & -1 \\ -1 & 2 \end{bmatrix}$$
+
+#### Step 3: Compute Transition Matrix $P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1}$
+Using our derived formula:
+$$P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} = (P_{\mathcal{E} \leftarrow \mathcal{B}_2})^{-1} P_{\mathcal{E} \leftarrow \mathcal{B}_1} = \begin{bmatrix} 1 & -1 \\ -1 & 2 \end{bmatrix} \begin{bmatrix} 1 & 1 \\ 1 & -1 \end{bmatrix}$$
+
+Let us compute each entry explicitly:
+- Row 1, Col 1: $(1)(1) + (-1)(1) = 1 - 1 = 0$
+- Row 1, Col 2: $(1)(1) + (-1)(-1) = 1 + 1 = 2$
+- Row 2, Col 1: $(-1)(1) + (2)(1) = -1 + 2 = 1$
+- Row 2, Col 2: $(-1)(1) + (2)(-1) = -1 - 2 = -3$
+
+$$P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} = \begin{bmatrix} 0 & 2 \\ 1 & -3 \end{bmatrix}$$
+
+#### Step 4: Calculate Coordinates $[x]_{\mathcal{B}_2}$
+Multiply the transition matrix by $[x]_{\mathcal{B}_1}$:
+$$[x]_{\mathcal{B}_2} = P_{\mathcal{B}_2 \leftarrow \mathcal{B}_1} [x]_{\mathcal{B}_1} = \begin{bmatrix} 0 & 2 \\ 1 & -3 \end{bmatrix} \begin{bmatrix} 3 \\ -2 \end{bmatrix}$$
+- First coordinate: $(0)(3) + (2)(-2) = 0 - 4 = -4$
+- Second coordinate: $(1)(3) + (-3)(-2) = 3 + 6 = 9$
+
+$$[x]_{\mathcal{B}_2} = \begin{bmatrix} -4 \\ 9 \end{bmatrix}$$
+
+#### Step 5: Verification of Geometric Equivalence
+Let us reconstruct the vector in standard coordinates using the newly found coordinates $[-4, 9]^T$ along basis $\mathcal{B}_2$:
+$$x = (-4) v_1 + (9) v_2 = -4 \begin{bmatrix} 2 \\ 1 \end{bmatrix} + 9 \begin{bmatrix} 1 \\ 1 \end{bmatrix} = \begin{bmatrix} -8 + 9 \\ -4 + 9 \end{bmatrix} = \begin{bmatrix} 1 \\ 5 \end{bmatrix}$$
+This matches the original canonical vector $[1, 5]^T$ from Step 1 with mathematical precision. $\checkmark$
 
 ---
 

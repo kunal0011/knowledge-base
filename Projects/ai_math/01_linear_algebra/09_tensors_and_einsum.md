@@ -59,9 +59,46 @@ $$T = u \otimes v \implies T_{ij} = u_i v_j \quad (\text{Rank } 1 + \text{Rank }
 Multiplies corresponding elements of two tensors of identical shape:
 $$C_{ijk} = A_{ijk} B_{ijk}$$
 
+#### Rigorous First-Principles Derivation: Tensor Contraction as Canonical Dual Pairing
+**Mathematical Setup:**
+1. Let $V_1, V_2, \dots, V_p$ be finite-dimensional vector spaces over $\mathbb{R}$, and let $V_1^*, \dots, V_p^*$ be their dual spaces (spaces of linear functionals).
+2. A tensor $T$ of type $(r, s)$ is formally defined as a multilinear map:
+   $$T: \underbrace{V_1^* \times \dots \times V_r^*}_{r \text{ dual arguments}} \times \underbrace{V_1 \times \dots \times V_s}_{s \text{ primal arguments}} \to \mathbb{R}$$
+3. Choose ordered bases $\{e_i\}$ for $V$ and dual bases $\{e^j\}$ for $V^*$ satisfying $e^j(e_i) = \delta^j_i$.
+   The components of $T$ are given by evaluating on basis vectors:
+   $$T^{i_1 \dots i_r}_{j_1 \dots j_s} = T(e^{i_1}, \dots, e^{i_r}, e_{j_1}, \dots, e_{j_s})$$
+4. **The Contraction Operator:**
+   Contracting the $a$-th upper index with the $b$-th lower index is the linear map:
+   $$\mathcal{C}^a_b: T^{(r, s)} \to T^{(r-1, s-1)}$$
+   defined by evaluating the natural dual pairing $\langle e^k, e_k \rangle = 1$ over the complete basis:
+   $$(\mathcal{C}^a_b(T))^{i_1 \dots \hat{i}_a \dots i_r}_{j_1 \dots \hat{j}_b \dots j_s} = \sum_{k=1}^{\dim(V)} T^{i_1 \dots k \dots i_r}_{j_1 \dots k \dots j_s}$$
+   This proves that tensor contraction is coordinate-invariant: it does not depend on the choice of basis! $\blacksquare$
+
 ---
 
-### 3. The Einstein Summation Convention
+### 3. The Einstein Summation Convention & FLOP Complexity
+
+#### The Einsum FLOP Counting Theorem:
+For any general `einsum` contraction equation:
+$$\text{'[input indices] -> [output indices]'}$$
+1. Identify the set of **Free Indices** $\mathcal{F} = \{f_1, f_2, \dots, f_m\}$ that appear on the right side of `->`.
+2. Identify the set of **Contracted Indices** $\mathcal{C} = \{c_1, c_2, \dots, c_p\}$ that appear on the left but NOT on the right.
+3. Let $d(i)$ be the dimension size of index $i$.
+4. **Total Floating Point Operations (FLOPs):**
+   Each output element requires a multiply-accumulate operation (1 multiply + 1 add = 2 FLOPs) across all contracted combinations:
+   $$\text{Total FLOPs} = 2 \cdot \left( \prod_{f \in \mathcal{F}} d(f) \right) \cdot \left( \prod_{c \in \mathcal{C}} d(c) \right)$$
+
+##### Deep Learning Examples:
+- **Matrix Multiply** `'i k, k j -> i j'`:
+  $\mathcal{F} = \{i, j\}$ ($M \times N$), $\mathcal{C} = \{k\}$ ($K$).
+  $$\text{FLOPs} = 2 M N K$$
+- **Transformer Self-Attention Logits** `'b h i d, b h j d -> b h i j'`:
+  $\mathcal{F} = \{b, h, i, j\}$ ($B \times H \times T \times T$), $\mathcal{C} = \{d\}$ ($d_k$).
+  $$\text{FLOPs} = 2 B H T^2 d_k \quad (\text{Explains the } \mathcal{O}(T^2) \text{ quadratic context scaling!})$$
+
+---
+
+### 4. The Three Universal Rules of Einsum
 Einstein's summation convention establishes three universal rules:
 
 1. **Rule 1 (Repeated Index Summation):**
@@ -285,6 +322,69 @@ Given matrix $M = \begin{bmatrix} 2 & 7 \\ 3 & 5 \end{bmatrix}$:
 2. **Compute Trace:**
    - Signature: `'i i ->'`
    - Sums entries where row equals column: $M_{00} + M_{11} = 2 + 5 = \mathbf{7}$.
+
+---
+
+### Scenario C: Multimodal Bilinear Tensor Contraction by Hand
+
+**Problem Formulation:**
+In vision-language alignment models (e.g., VQA, CLIP projection), an image feature vector $v \in \mathbb{R}^2$ and a text feature vector $t \in \mathbb{R}^2$ are fused via a learned 3D weight tensor $W \in \mathbb{R}^{2 \times 2 \times 2}$ into output representation $y \in \mathbb{R}^2$:
+$$y_o = \sum_{v=0}^1 \sum_{t=0}^1 v_v W_{o, v, t} t_t \iff \text{'v, o v t, t -> o'}$$
+
+Given:
+- Visual embedding: $v = \begin{bmatrix} 1 \\ 2 \end{bmatrix}$
+- Text embedding: $t = \begin{bmatrix} 3 \\ -1 \end{bmatrix}$
+- Weight tensor slices:
+  $$W_{o=0} = \begin{bmatrix} 1 & 0 \\ 0 & 2 \end{bmatrix}, \quad W_{o=1} = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix}$$
+
+Calculate the 2D fused output vector $y = \begin{bmatrix} y_0 \\ y_1 \end{bmatrix}$ completely by hand.
+
+#### Step 1: Compute Output Channel $0$ ($y_0 = v^T W_{o=0} t$)
+$$W_{o=0} t = \begin{bmatrix} 1 & 0 \\ 0 & 2 \end{bmatrix} \begin{bmatrix} 3 \\ -1 \end{bmatrix} = \begin{bmatrix} 1(3) + 0(-1) \\ 0(3) + 2(-1) \end{bmatrix} = \begin{bmatrix} 3 \\ -2 \end{bmatrix}$$
+$$y_0 = v^T (W_{o=0} t) = \begin{bmatrix} 1 & 2 \end{bmatrix} \begin{bmatrix} 3 \\ -2 \end{bmatrix} = (1)(3) + (2)(-2) = 3 - 4 = \mathbf{-1}$$
+
+#### Step 2: Compute Output Channel $1$ ($y_1 = v^T W_{o=1} t$)
+$$W_{o=1} t = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \begin{bmatrix} 3 \\ -1 \end{bmatrix} = \begin{bmatrix} 0(3) + 1(-1) \\ -1(3) + 0(-1) \end{bmatrix} = \begin{bmatrix} -1 \\ -3 \end{bmatrix}$$
+$$y_1 = v^T (W_{o=1} t) = \begin{bmatrix} 1 & 2 \end{bmatrix} \begin{bmatrix} -1 \\ -3 \end{bmatrix} = (1)(-1) + (2)(-3) = -1 - 6 = \mathbf{-7}$$
+
+#### Step 3: Final Output Tensor
+$$y = \begin{bmatrix} -1 \\ -7 \end{bmatrix}$$
+*Insight:* `einsum('v, o v t, t -> o', v, W, t)` performs this multi-linear contraction in a single hardware kernel without ever allocating intermediate $2 \times 2 \times 2$ outer product memory tensors.
+
+---
+
+### Scenario D: Batched Matrix Multiplication & Index Permutation Mechanics
+
+**Problem Formulation:**
+Consider a mini-batch of 2 samples, each containing a $2 \times 2$ transformation matrix:
+$$A \in \mathbb{R}^{2 \times 2 \times 2}, \quad B \in \mathbb{R}^{2 \times 2 \times 2}$$
+where:
+$$A_{b=0} = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix}, \quad A_{b=1} = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}$$
+$$B_{b=0} = \begin{bmatrix} 3 & 1 \\ 0 & 2 \end{bmatrix}, \quad B_{b=1} = \begin{bmatrix} 2 & 0 \\ 1 & 3 \end{bmatrix}$$
+
+Compute the batched product $C$ via:
+$$\text{'b i k, b k j -> b i j'}$$
+
+#### Step 1: Batch Item $b = 0$
+$$C_{b=0} = A_{b=0} B_{b=0} = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix} \begin{bmatrix} 3 & 1 \\ 0 & 2 \end{bmatrix}$$
+- $(C_{0})_{11} = (1)(3) + (0)(0) = 3$
+- $(C_{0})_{12} = (1)(1) + (0)(2) = 1$
+- $(C_{0})_{21} = (2)(3) + (1)(0) = 6$
+- $(C_{0})_{22} = (2)(1) + (1)(2) = 2 + 2 = 4$
+$$C_{b=0} = \begin{bmatrix} 3 & 1 \\ 6 & 4 \end{bmatrix}$$
+
+#### Step 2: Batch Item $b = 1$
+$$C_{b=1} = A_{b=1} B_{b=1} = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix} \begin{bmatrix} 2 & 0 \\ 1 & 3 \end{bmatrix}$$
+- $(C_{1})_{11} = (0)(2) + (1)(1) = 1$
+- $(C_{1})_{12} = (0)(0) + (1)(3) = 3$
+- $(C_{1})_{21} = (1)(2) + (0)(1) = 2$
+- $(C_{1})_{22} = (1)(0) + (0)(3) = 0$
+$$C_{b=1} = \begin{bmatrix} 1 & 3 \\ 2 & 0 \end{bmatrix}$$
+
+#### Step 3: Transposed Output Permutation `'b i k, b k j -> b j i'`
+If the einsum string is modified to transpose each output matrix:
+$$C^T_{b=0} = \begin{bmatrix} 3 & 6 \\ 1 & 4 \end{bmatrix}, \quad C^T_{b=1} = \begin{bmatrix} 1 & 2 \\ 3 & 0 \end{bmatrix}$$
+The indices on the right hand side dictate the exact layout and stride ordering of the result!
 
 ---
 

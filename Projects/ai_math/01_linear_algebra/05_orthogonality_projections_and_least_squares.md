@@ -91,6 +91,46 @@ We want to project $b \in \mathbb{R}^m$ onto the entire $n$-dimensional column s
 3. Substitute $e = b - A \hat{x}$:
    $$A^T (b - A \hat{x}) = \mathbf{0}$$
    $$A^T A \hat{x} = A^T b \quad \text{\bf [The Fundamental Normal Equations]}$$
+
+#### First-Principles Derivation via Multivariable Optimization (Loss Gradient):
+Rather than geometry, we can derive the Normal Equations by minimizing the squared Euclidean error loss:
+$$J(x) = \|A x - b\|_2^2$$
+
+**Derivation Steps:**
+1. Expand the squared norm into matrix-vector inner products:
+   $$\begin{aligned}
+   J(x) &= (A x - b)^T (A x - b) \\
+   &= (x^T A^T - b^T) (A x - b) \\
+   &= x^T A^T A x - x^T A^T b - b^T A x + b^T b
+   \end{aligned}$$
+   Since $x^T A^T b = (b^T A x)^T$ is a scalar, $x^T A^T b = b^T A x$:
+   $$J(x) = x^T (A^T A) x - 2 b^T A x + b^T b$$
+2. Compute the vector gradient with respect to $x$ ($\nabla_x J(x)$):
+   - For quadratic form: $\nabla_x \left( x^T (A^T A) x \right) = 2 A^T A x$ (since $A^T A$ is symmetric).
+   - For linear term: $\nabla_x \left( -2 b^T A x \right) = -2 A^T b$.
+   - For constant: $\nabla_x (b^T b) = \mathbf{0}$.
+   $$\nabla_x J(x) = 2 A^T A x - 2 A^T b$$
+3. Setting the gradient to zero gives the first-order necessary condition for a critical point:
+   $$2 A^T A \hat{x} - 2 A^T b = \mathbf{0} \implies A^T A \hat{x} = A^T b$$
+4. **Hessian & Convexity Verification:**
+   $$\nabla_x^2 J(x) = 2 A^T A$$
+   For any non-zero vector $v \neq \mathbf{0}$, $v^T (A^T A) v = (A v)^T (A v) = \|A v\|_2^2 \ge 0$.
+   Since the columns of $A$ are linearly independent, $A v = \mathbf{0} \iff v = \mathbf{0}$.
+   Thus $v^T (A^T A) v > 0$ for all $v \neq \mathbf{0}$, meaning the Hessian $\nabla^2 J(x) = 2 A^T A$ is **strictly positive definite**.
+   The objective $J(x)$ is strictly convex, guaranteeing that $\hat{x} = (A^T A)^{-1} A^T b$ is the **unique global minimum**. $\blacksquare$
+
+---
+
+#### Proof of Pythagorean Decomposition $\|b\|^2 = \|p\|^2 + \|e\|^2$:
+By definition, $b = p + e$ where $p = A \hat{x} \in C(A)$ and $e = b - A \hat{x} \in N(A^T)$.
+Compute inner product $\langle p, e \rangle$:
+$$\langle p, e \rangle = p^T e = (A \hat{x})^T (b - A \hat{x}) = \hat{x}^T A^T (b - A \hat{x}) = \hat{x}^T (A^T b - A^T A \hat{x})$$
+By the Normal Equations, $A^T b - A^T A \hat{x} = \mathbf{0}$:
+$$\langle p, e \rangle = \hat{x}^T \mathbf{0} = 0$$
+Thus $p$ and $e$ are strictly orthogonal ($p \perp e$).
+Now compute squared length:
+$$\|b\|_2^2 = \|p + e\|_2^2 = \langle p + e, p + e \rangle = \|p\|_2^2 + 2\langle p, e \rangle + \|e\|_2^2 = \|p\|_2^2 + \|e\|_2^2 \quad \blacksquare$$
+
 4. Since the columns of $A$ are linearly independent, the symmetric square matrix $A^T A \in \mathbb{R}^{n \times n}$ is strictly positive-definite and **invertible**:
    $$\hat{x} = (A^T A)^{-1} A^T b$$
 5. The projected vector $p$ is:
@@ -351,6 +391,87 @@ $$R = \begin{bmatrix} \|u_1\| & q_1^T a_2 & q_1^T a_3 \\ 0 & \|u_2\| & q_2^T a_3
    Then $A^T b = \mathbf{0}$.
    $$P b = A (A^T A)^{-1} (A^T b) = A (A^T A)^{-1} \mathbf{0} = \mathbf{0}$$
    Residual error: $e = b - P b = b - \mathbf{0} = b$.
+
+---
+
+### Scenario C: Fast Least Squares via QR Back-Substitution
+
+**Problem Formulation:**
+Using the $QR$ factorization obtained in Scenario A:
+$$Q = \begin{bmatrix} 1/\sqrt{2} & 1/\sqrt{6} & -1/\sqrt{3} \\ 1/\sqrt{2} & -1/\sqrt{6} & 1/\sqrt{3} \\ 0 & 2/\sqrt{6} & 1/\sqrt{3} \end{bmatrix}, \quad R = \begin{bmatrix} \sqrt{2} & 1/\sqrt{2} & 1/\sqrt{2} \\ 0 & \sqrt{3/2} & 1/\sqrt{6} \\ 0 & 0 & 2/\sqrt{3} \end{bmatrix}$$
+Solve the system $A x = b$ for target $b = \begin{bmatrix} 2 \\ 4 \\ 2 \end{bmatrix}$ directly via $R \hat{x} = Q^T b$.
+
+#### Step 1: Compute RHS Vector $d = Q^T b$
+$$d_1 = \text{col}_1(Q)^T b = \frac{1}{\sqrt{2}}(2) + \frac{1}{\sqrt{2}}(4) + 0(2) = \frac{6}{\sqrt{2}} = 3\sqrt{2}$$
+$$d_2 = \text{col}_2(Q)^T b = \frac{1}{\sqrt{6}}(2) - \frac{1}{\sqrt{6}}(4) + \frac{2}{\sqrt{6}}(2) = \frac{2 - 4 + 4}{\sqrt{6}} = \frac{2}{\sqrt{6}} = \sqrt{\frac{2}{3}}$$
+$$d_3 = \text{col}_3(Q)^T b = -\frac{1}{\sqrt{3}}(2) + \frac{1}{\sqrt{3}}(4) + \frac{1}{\sqrt{3}}(2) = \frac{-2 + 4 + 2}{\sqrt{3}} = \frac{4}{\sqrt{3}}$$
+
+$$d = Q^T b = \begin{bmatrix} 3\sqrt{2} \\ \sqrt{2/3} \\ 4/\sqrt{3} \end{bmatrix}$$
+
+#### Step 2: Triangular Back-Substitution ($R \hat{x} = d$)
+$$\begin{bmatrix} \sqrt{2} & 1/\sqrt{2} & 1/\sqrt{2} \\ 0 & \sqrt{3/2} & 1/\sqrt{6} \\ 0 & 0 & 2/\sqrt{3} \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix} = \begin{bmatrix} 3\sqrt{2} \\ \sqrt{2/3} \\ 4/\sqrt{3} \end{bmatrix}$$
+
+1. **Row 3 ($x_3$):**
+   $$\frac{2}{\sqrt{3}} x_3 = \frac{4}{\sqrt{3}} \implies x_3 = \frac{4/\sqrt{3}}{2/\sqrt{3}} = 2$$
+2. **Row 2 ($x_2$):**
+   $$\sqrt{\frac{3}{2}} x_2 + \frac{1}{\sqrt{6}} (2) = \sqrt{\frac{2}{3}} = \frac{2}{\sqrt{6}}$$
+   $$\sqrt{\frac{3}{2}} x_2 + \frac{2}{\sqrt{6}} = \frac{2}{\sqrt{6}} \implies \sqrt{\frac{3}{2}} x_2 = 0 \implies x_2 = 0$$
+3. **Row 1 ($x_1$):**
+   $$\sqrt{2} x_1 + \frac{1}{\sqrt{2}} (0) + \frac{1}{\sqrt{2}} (2) = 3\sqrt{2}$$
+   $$\sqrt{2} x_1 + \sqrt{2} = 3\sqrt{2} \implies \sqrt{2} x_1 = 2\sqrt{2} \implies x_1 = 2$$
+
+$$\hat{x} = \begin{bmatrix} 2 \\ 0 \\ 2 \end{bmatrix}$$
+
+#### Step 3: Verification
+$$A \hat{x} = \begin{bmatrix} 1 & 1 & 0 \\ 1 & 0 & 1 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 0 \\ 2 \end{bmatrix} = \begin{bmatrix} 1(2) + 1(0) + 0(2) \\ 1(2) + 0(0) + 1(2) \\ 0(2) + 1(0) + 1(2) \end{bmatrix} = \begin{bmatrix} 2 \\ 4 \\ 2 \end{bmatrix} = b \quad \checkmark$$
+
+---
+
+### Scenario D: Explicit 2D Projection Matrix in $\mathbb{R}^3$ & Pythagorean Verification
+
+**Problem Formulation:**
+Let subspace $W \subset \mathbb{R}^3$ be spanned by the columns of:
+$$A = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix}$$
+Target vector is $b = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} \in \mathbb{R}^3$.
+1. Compute the explicit $3 \times 3$ projection matrix $P = A (A^T A)^{-1} A^T$.
+2. Verify that $P^T = P$ and $P^2 = P$.
+3. Compute projected vector $p = P b$ and residual error $e = b - p$.
+4. Check that $A^T e = \mathbf{0}$ and verify Pythagorean decomposition $\|b\|_2^2 = \|p\|_2^2 + \|e\|_2^2$.
+
+#### Step 1: Compute $P = A (A^T A)^{-1} A^T$
+$$A^T A = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} 1(1) + 1(1) + 0(0) & 1(0) + 1(1) + 0(1) \\ 0(1) + 1(1) + 1(0) & 0(0) + 1(1) + 1(1) \end{bmatrix} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$$
+$$\det(A^T A) = (2)(2) - (1)(1) = 3$$
+$$(A^T A)^{-1} = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}$$
+
+$$A (A^T A)^{-1} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} \left( \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix} \right) = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ 1 & 1 \\ -1 & 2 \end{bmatrix}$$
+
+$$P = \left( \frac{1}{3} \begin{bmatrix} 2 & -1 \\ 1 & 1 \\ -1 & 2 \end{bmatrix} \right) \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 2 & 1 & -1 \\ 1 & 2 & 1 \\ -1 & 1 & 2 \end{bmatrix}$$
+
+#### Step 2: Idempotence & Symmetry Verification
+1. **Symmetry:**
+   $$P^T = \frac{1}{3} \begin{bmatrix} 2 & 1 & -1 \\ 1 & 2 & 1 \\ -1 & 1 & 2 \end{bmatrix} = P \quad \checkmark$$
+2. **Idempotence ($P^2 = P$):**
+   $$P^2 = \frac{1}{9} \begin{bmatrix} 2 & 1 & -1 \\ 1 & 2 & 1 \\ -1 & 1 & 2 \end{bmatrix} \begin{bmatrix} 2 & 1 & -1 \\ 1 & 2 & 1 \\ -1 & 1 & 2 \end{bmatrix}$$
+   - Row 1 $\times$ Col 1: $2(2) + 1(1) + (-1)(-1) = 4 + 1 + 1 = 6$
+   - Row 1 $\times$ Col 2: $2(1) + 1(2) + (-1)(1) = 2 + 2 - 1 = 3$
+   - Row 1 $\times$ Col 3: $2(-1) + 1(1) + (-1)(2) = -2 + 1 - 2 = -3$
+   Dividing by $9$: $[6/9, 3/9, -3/9] = \frac{1}{3}[2, 1, -1]$, exactly matching Row 1 of $P$.
+   $$\implies P^2 = P \quad \checkmark$$
+
+#### Step 3: Compute $p$ and $e$
+$$p = P b = \frac{1}{3} \begin{bmatrix} 2 & 1 & -1 \\ 1 & 2 & 1 \\ -1 & 1 & 2 \end{bmatrix} \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 2(1) + 1(2) - 1(3) \\ 1(1) + 2(2) + 1(3) \\ -1(1) + 1(2) + 2(3) \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 1 \\ 8 \\ 7 \end{bmatrix} = \begin{bmatrix} 1/3 \\ 8/3 \\ 7/3 \end{bmatrix}$$
+
+$$e = b - p = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} - \begin{bmatrix} 1/3 \\ 8/3 \\ 7/3 \end{bmatrix} = \begin{bmatrix} 3/3 - 1/3 \\ 6/3 - 8/3 \\ 9/3 - 7/3 \end{bmatrix} = \begin{bmatrix} 2/3 \\ -2/3 \\ 2/3 \end{bmatrix}$$
+
+#### Step 4: Orthogonality & Pythagorean Verification
+1. **Orthogonality ($A^T e = \mathbf{0}$):**
+   $$A^T e = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 2/3 \\ -2/3 \\ 2/3 \end{bmatrix} = \begin{bmatrix} 2/3 - 2/3 + 0 \\ 0 - 2/3 + 2/3 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix} \quad \checkmark$$
+2. **Pythagorean Decomposition:**
+   $$\|b\|_2^2 = 1^2 + 2^2 + 3^2 = 1 + 4 + 9 = 14$$
+   $$\|p\|_2^2 = (1/3)^2 + (8/3)^2 + (7/3)^2 = \frac{1 + 64 + 49}{9} = \frac{114}{9} = \frac{38}{3}$$
+   $$\|e\|_2^2 = (2/3)^2 + (-2/3)^2 + (2/3)^2 = \frac{4 + 4 + 4}{9} = \frac{12}{9} = \frac{4}{3}$$
+   $$\|p\|_2^2 + \|e\|_2^2 = \frac{38}{3} + \frac{4}{3} = \frac{42}{3} = 14 \equiv \|b\|_2^2 \quad \checkmark$$
+Exact Pythagorean decomposition holds!
 
 ---
 

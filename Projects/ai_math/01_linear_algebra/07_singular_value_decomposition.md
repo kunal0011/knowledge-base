@@ -74,6 +74,37 @@ $$A A^T = (U \Sigma V^T) (U \Sigma V^T)^T = U \Sigma \underbrace{V^T V}_{I_n} \S
 
 ---
 
+#### Rigorous First-Principles Derivation / Proof of SVD Existence:
+**Theorem:** For any matrix $A \in \mathbb{R}^{m \times n}$ with rank $r \le \min(m, n)$, there exist orthonormal sets $\{v_1, \dots, v_n\} \subset \mathbb{R}^n$ and $\{u_1, \dots, u_m\} \subset \mathbb{R}^m$, and positive scalars $\sigma_1 \ge \sigma_2 \ge \dots \ge \sigma_r > 0$ such that:
+$$A = \sum_{i=1}^r \sigma_i u_i v_i^T = U \Sigma V^T$$
+
+**Proof Steps:**
+1. Form the symmetric matrix $M = A^T A \in \mathbb{R}^{n \times n}$.
+   By the Spectral Theorem, $M$ has an orthonormal basis of eigenvectors $\{v_1, \dots, v_n\}$ with real eigenvalues:
+   $$\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_n$$
+2. Since $\|A x\|_2^2 = x^T A^T A x \ge 0$, all eigenvalues are non-negative: $\lambda_i \ge 0$.
+   Because $\text{rank}(A^T A) = \text{rank}(A) = r$, exactly $r$ eigenvalues are strictly positive:
+   $$\lambda_1 \ge \dots \ge \lambda_r > 0, \quad \lambda_{r+1} = \dots = \lambda_n = 0$$
+   Define the singular values as $\sigma_i = \sqrt{\lambda_i} > 0$ for $i \in \{1, \dots, r\}$.
+3. For $i \in \{1, \dots, r\}$, define:
+   $$u_i \triangleq \frac{1}{\sigma_i} A v_i \in \mathbb{R}^m$$
+4. **Prove $\{u_1, \dots, u_r\}$ is Orthonormal in $\mathbb{R}^m$:**
+   $$\begin{aligned}
+   u_i^T u_j &= \left(\frac{1}{\sigma_i} A v_i\right)^T \left(\frac{1}{\sigma_j} A v_j\right) = \frac{1}{\sigma_i \sigma_j} v_i^T (A^T A v_j) \\
+   &= \frac{1}{\sigma_i \sigma_j} v_i^T (\lambda_j v_j) = \frac{\lambda_j}{\sigma_i \sigma_j} v_i^T v_j
+   \end{aligned}$$
+   - If $i \neq j$: $v_i^T v_j = 0 \implies u_i^T u_j = 0$ (Orthogonal).
+   - If $i = j$: $\frac{\lambda_i}{\sigma_i^2} \|v_i\|_2^2 = \frac{\sigma_i^2}{\sigma_i^2} (1) = 1$ (Unit length).
+5. Using Gram-Schmidt orthogonalization, extend $\{u_1, \dots, u_r\}$ to a full orthonormal basis $\{u_1, \dots, u_m\}$ for $\mathbb{R}^m$.
+6. Form orthogonal matrices $U = [u_1 \dots u_m]$ and $V = [v_1 \dots v_n]$.
+   For any basis vector $v_j$:
+   - For $j \le r$: $A v_j = \sigma_j u_j$.
+   - For $j > r$: $v_j \in N(A^T A) = N(A) \implies A v_j = \mathbf{0}$.
+   Thus in matrix form:
+   $$A V = U \Sigma \implies A = U \Sigma V^T \quad \blacksquare$$
+
+---
+
 ### 3. Full SVD vs. Compact (Thin) SVD vs. Truncated SVD
 
 | SVD Form | Dimensions | When to Use in Deep Learning |
@@ -92,6 +123,30 @@ is the **globally optimal rank-$k$ approximation** to $A$ under both the Spectra
 
 $$\min_{\text{rank}(B) \le k} \|A - B\|_2 = \|A - A_k\|_2 = \sigma_{k+1}$$
 $$\min_{\text{rank}(B) \le k} \|A - B\|_F^2 = \|A - A_k\|_F^2 = \sum_{j=k+1}^r \sigma_j^2$$
+
+#### First-Principles Derivation / Proof for Spectral Norm:
+1. **Upper Bound:** For $B = A_k$:
+   $$A - A_k = \sum_{j=k+1}^r \sigma_j u_j v_j^T$$
+   The largest singular value of this remainder matrix is $\sigma_{k+1}$.
+   Therefore: $\|A - A_k\|_2 = \sigma_{k+1}$.
+2. **Lower Bound for Any Arbitrary Matrix $B$ with $\text{rank}(B) \le k$:**
+   - By the Rank-Nullity Theorem, the nullspace of $B$ has dimension:
+     $$\dim(N(B)) = n - \text{rank}(B) \ge n - k$$
+   - Define the subspace spanned by the first $k+1$ right singular vectors of $A$:
+     $$W = \text{span}(v_1, v_2, \dots, v_{k+1}) \subseteq \mathbb{R}^n, \quad \dim(W) = k + 1$$
+   - By the dimension formula for vector subspaces:
+     $$\dim(W \cap N(B)) = \dim(W) + \dim(N(B)) - \dim(W + N(B)) \ge (k + 1) + (n - k) - n = 1$$
+   - Therefore, there exists at least one unit vector $z \in W \cap N(B)$ with $\|z\|_2 = 1$.
+   - Because $z \in N(B)$, $B z = \mathbf{0}$.
+   - Thus:
+     $$\|(A - B) z\|_2 = \|A z - \mathbf{0}\|_2 = \|A z\|_2$$
+   - Since $z \in W$ and $\|z\|_2 = 1$, write $z = \sum_{j=1}^{k+1} c_j v_j$ with $\sum_{j=1}^{k+1} c_j^2 = 1$.
+   - Compute $\|A z\|_2^2$:
+     $$\|A z\|_2^2 = \left\| \sum_{j=1}^{k+1} c_j \sigma_j u_j \right\|_2^2 = \sum_{j=1}^{k+1} c_j^2 \sigma_j^2 \ge \sigma_{k+1}^2 \sum_{j=1}^{k+1} c_j^2 = \sigma_{k+1}^2$$
+   - Hence $\|A - B\|_2 = \sup_{\|x\|=1} \|(A - B) x\|_2 \ge \|(A - B) z\|_2 \ge \sigma_{k+1}$.
+3. **Conclusion:**
+   $$\|A - B\|_2 \ge \sigma_{k+1} \quad \text{for all } \text{rank}(B) \le k$$
+   Since $A_k$ achieves this lower bound with equality, $A_k$ is the unique optimal rank-$k$ approximation. $\blacksquare$
 
 > [!IMPORTANT]
 > **Why this matters for AI:**
@@ -284,6 +339,80 @@ $$A_1 = \begin{bmatrix} 2.5 & 2.5 \\ 2.5 & 2.5 \\ 0 & 0 \end{bmatrix}$$
 5. Therefore:
    $$M = \underbrace{(\sqrt{5} \times \sqrt{5})}_{\sigma_1 = 5} \hat{u} \hat{v}^T = 5 \hat{u} \hat{v}^T$$
    The singular values are $\sigma_1 = 5, \sigma_2 = 0$.
+
+---
+
+### Scenario C: Complete SVD of a Rectangular Underdetermined Matrix ($2 \times 3$)
+
+**Problem Formulation:**
+Find the complete SVD $A = U \Sigma V^T$ for the rectangular matrix:
+$$A = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \in \mathbb{R}^{2 \times 3}$$
+
+#### Step 1: Compute $A A^T$ ($2 \times 2$) to find Left Singular Vectors $U$
+$$A A^T = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$$
+Characteristic equation of $A A^T$:
+$$\det(A A^T - \lambda I) = (2 - \lambda)^2 - 1 = \lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0$$
+$$\lambda_1 = 3 \implies \sigma_1 = \sqrt{3}$$
+$$\lambda_2 = 1 \implies \sigma_2 = 1$$
+Singular value matrix $\Sigma \in \mathbb{R}^{2 \times 3}$:
+$$\Sigma = \begin{bmatrix} \sqrt{3} & 0 & 0 \\ 0 & 1 & 0 \end{bmatrix}$$
+
+#### Step 2: Compute Orthonormal Eigenvectors of $A A^T$ ($U$)
+- **For $\lambda_1 = 3$:**
+  $$(A A^T - 3I) u_1 = \begin{bmatrix} -1 & 1 \\ 1 & -1 \end{bmatrix} \begin{bmatrix} x \\ y \end{bmatrix} = \mathbf{0} \implies x = y \implies u_1 = \begin{bmatrix} 1/\sqrt{2} \\ 1/\sqrt{2} \end{bmatrix}$$
+- **For $\lambda_2 = 1$:**
+  $$(A A^T - 1I) u_2 = \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix} \begin{bmatrix} x \\ y \end{bmatrix} = \mathbf{0} \implies x = -y \implies u_2 = \begin{bmatrix} 1/\sqrt{2} \\ -1/\sqrt{2} \end{bmatrix}$$
+
+$$U = \begin{bmatrix} 1/\sqrt{2} & 1/\sqrt{2} \\ 1/\sqrt{2} & -1/\sqrt{2} \end{bmatrix}$$
+
+#### Step 3: Compute Right Singular Vectors via $v_i = \frac{1}{\sigma_i} A^T u_i$
+- **For $\sigma_1 = \sqrt{3}$:**
+  $$v_1 = \frac{1}{\sqrt{3}} \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1/\sqrt{2} \\ 1/\sqrt{2} \end{bmatrix} = \frac{1}{\sqrt{3}} \begin{bmatrix} 1/\sqrt{2} \\ 2/\sqrt{2} \\ 1/\sqrt{2} \end{bmatrix} = \begin{bmatrix} 1/\sqrt{6} \\ 2/\sqrt{6} \\ 1/\sqrt{6} \end{bmatrix}$$
+- **For $\sigma_2 = 1$:**
+  $$v_2 = \frac{1}{1} \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1/\sqrt{2} \\ -1/\sqrt{2} \end{bmatrix} = \begin{bmatrix} 1/\sqrt{2} \\ 0 \\ -1/\sqrt{2} \end{bmatrix}$$
+- **For nullspace direction $v_3 \in N(A)$ ($\sigma_3 = 0$):**
+  Solve $A v_3 = \mathbf{0}$:
+  $$\begin{cases} x_1 + x_2 = 0 \implies x_1 = -x_2 \\ x_2 + x_3 = 0 \implies x_3 = -x_2 \end{cases} \implies v_3 = \begin{bmatrix} 1/\sqrt{3} \\ -1/\sqrt{3} \\ 1/\sqrt{3} \end{bmatrix}$$
+
+$$V = \begin{bmatrix} 1/\sqrt{6} & 1/\sqrt{2} & 1/\sqrt{3} \\ 2/\sqrt{6} & 0 & -1/\sqrt{3} \\ 1/\sqrt{6} & -1/\sqrt{2} & 1/\sqrt{3} \end{bmatrix}$$
+
+#### Step 4: Verification of Reconstruction ($A = U \Sigma V^T$)
+$$\sigma_1 u_1 v_1^T = \sqrt{3} \begin{bmatrix} 1/\sqrt{2} \\ 1/\sqrt{2} \end{bmatrix} \begin{bmatrix} 1/\sqrt{6} & 2/\sqrt{6} & 1/\sqrt{6} \end{bmatrix} = \frac{\sqrt{3}}{\sqrt{12}} \begin{bmatrix} 1 & 2 & 1 \\ 1 & 2 & 1 \end{bmatrix} = \begin{bmatrix} 0.5 & 1.0 & 0.5 \\ 0.5 & 1.0 & 0.5 \end{bmatrix}$$
+$$\sigma_2 u_2 v_2^T = 1 \begin{bmatrix} 1/\sqrt{2} \\ -1/\sqrt{2} \end{bmatrix} \begin{bmatrix} 1/\sqrt{2} & 0 & -1/\sqrt{2} \end{bmatrix} = \frac{1}{2} \begin{bmatrix} 1 & 0 & -1 \\ -1 & 0 & 1 \end{bmatrix} = \begin{bmatrix} 0.5 & 0.0 & -0.5 \\ -0.5 & 0.0 & 0.5 \end{bmatrix}$$
+Summing:
+$$A = \begin{bmatrix} 0.5+0.5 & 1.0+0.0 & 0.5-0.5 \\ 0.5-0.5 & 1.0+0.0 & 0.5+0.5 \end{bmatrix} = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \quad \checkmark$$
+
+---
+
+### Scenario D: Minimum-Norm Solution via Pseudoinverse ($x^+ = A^+ b$)
+
+**Problem Formulation:**
+Consider the underdetermined system $A x = b$ where $A = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix}$ and $b = \begin{bmatrix} 2 \\ 2 \end{bmatrix}$.
+Because there are 3 variables and 2 equations, there are infinitely many valid solutions.
+1. Compute the Moore-Penrose Pseudoinverse $A^+$.
+2. Compute the minimum-norm solution $x^+ = A^+ b$.
+3. Verify that $A x^+ = b$.
+4. Prove that $x^+$ is strictly orthogonal to the nullspace $N(A)$, confirming it has minimal Euclidean length among all possible solutions.
+
+#### Step 1: Compute $A^+$
+Since $A$ has full row rank ($m = 2$), $A^+ = A^T (A A^T)^{-1}$:
+$$(A A^T)^{-1} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}^{-1} = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}$$
+$$A^+ = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix} \left( \frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix} \right) = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ 1 & 1 \\ -1 & 2 \end{bmatrix}$$
+
+#### Step 2: Compute $x^+ = A^+ b$
+$$x^+ = \frac{1}{3} \begin{bmatrix} 2 & -1 \\ 1 & 1 \\ -1 & 2 \end{bmatrix} \begin{bmatrix} 2 \\ 2 \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 2(2) - 1(2) \\ 1(2) + 1(2) \\ -1(2) + 2(2) \end{bmatrix} = \frac{1}{3} \begin{bmatrix} 2 \\ 4 \\ 2 \end{bmatrix} = \begin{bmatrix} 2/3 \\ 4/3 \\ 2/3 \end{bmatrix}$$
+
+#### Step 3: Verification of Consistency ($A x^+ = b$)
+$$A x^+ = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix} \begin{bmatrix} 2/3 \\ 4/3 \\ 2/3 \end{bmatrix} = \begin{bmatrix} 2/3 + 4/3 + 0 \\ 0 + 4/3 + 2/3 \end{bmatrix} = \begin{bmatrix} 6/3 \\ 6/3 \end{bmatrix} = \begin{bmatrix} 2 \\ 2 \end{bmatrix} = b \quad \checkmark$$
+
+#### Step 4: Verification of Minimum Norm Property
+From Scenario C, the nullspace $N(A)$ is spanned by $v_3 = [1, -1, 1]^T$.
+Compute the inner product $\langle x^+, v_3 \rangle$:
+$$(x^+)^T v_3 = \frac{2}{3}(1) + \frac{4}{3}(-1) + \frac{2}{3}(1) = \frac{2 - 4 + 2}{3} = 0$$
+Since $x^+ \perp N(A)$, any other solution has the form $x = x^+ + c v_3$ ($c \neq 0$).
+By the Pythagorean theorem:
+$$\|x\|_2^2 = \|x^+ + c v_3\|_2^2 = \|x^+\|_2^2 + c^2 \|v_3\|_2^2 = \left( \frac{4 + 16 + 4}{9} \right) + 3c^2 = \frac{8}{3} + 3c^2 > \frac{8}{3}$$
+Thus $\|x\|_2 > \|x^+\|_2$ for any $c \neq 0$. The pseudoinverse solution $x^+$ strictly minimizes parameter norm!
 
 ---
 

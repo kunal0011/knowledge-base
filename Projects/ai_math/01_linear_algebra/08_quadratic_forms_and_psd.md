@@ -30,12 +30,43 @@ is called the **Quadratic Form** associated with matrix $A$.
 #### The Symmetry Principle:
 Any square matrix $A$ can be decomposed into symmetric and skew-symmetric parts:
 $$A = \frac{A + A^T}{2} + \frac{A - A^T}{2} = A_{\text{sym}} + A_{\text{skew}}$$
-For any vector $x$, the skew-symmetric part always evaluates to zero:
-$$x^T A_{\text{skew}} x = 0$$
-Therefore:
-$$x^T A x \equiv x^T A_{\text{sym}} x$$
+
+#### First-Principles Derivation / Proof: $x^T A_{\text{skew}} x \equiv 0$
+Let $K = A_{\text{skew}} \in \mathbb{R}^{n \times n}$ be any skew-symmetric matrix, satisfying $K^T = -K$.
+Let $x \in \mathbb{R}^n$ be any vector.
+The quadratic expression $s = x^T K x$ is a scalar ($1 \times 1$ matrix).
+Taking the transpose of a scalar yields the identical scalar:
+$$s = s^T = (x^T K x)^T = x^T K^T (x^T)^T = x^T K^T x$$
+Substitute the defining skew-symmetry condition $K^T = -K$:
+$$s = x^T (-K) x = - (x^T K x) = -s$$
+$$s = -s \implies 2s = 0 \implies s = 0$$
+Therefore, for any matrix $A$:
+$$x^T A x = x^T (A_{\text{sym}} + A_{\text{skew}}) x = x^T A_{\text{sym}} x + x^T A_{\text{skew}} x = x^T A_{\text{sym}} x + 0 \equiv x^T A_{\text{sym}} x \quad \blacksquare$$
+
 > [!NOTE]
 > Throughout machine learning and optimization, **we can assume without loss of generality that the matrix in any quadratic form is real and symmetric ($A = A^T$)**.
+
+---
+
+#### The Rayleigh Quotient & Constrained Curvature Optimization:
+For a real symmetric matrix $A \in \mathbb{R}^{n \times n}$, the **Rayleigh Quotient** is:
+$$R(x) \triangleq \frac{x^T A x}{x^T x}, \quad \forall x \neq \mathbf{0}$$
+
+##### First-Principles Derivation of Rayleigh Bounds:
+$$\lambda_{\min}(A) \le \frac{x^T A x}{x^T x} \le \lambda_{\max}(A)$$
+
+**Proof Steps:**
+1. By the Spectral Theorem, $A = Q \Lambda Q^T$ where $Q = [q_1 \dots q_n]$ is orthogonal and eigenvalues are sorted: $\lambda_1 = \lambda_{\max} \ge \lambda_2 \ge \dots \ge \lambda_n = \lambda_{\min}$.
+2. Change coordinates to the eigenvector basis: $y = Q^T x \iff x = Q y$.
+   - Denominator: $x^T x = (Q y)^T (Q y) = y^T Q^T Q y = y^T y = \sum_{i=1}^n y_i^2$.
+   - Numerator: $x^T A x = (Q y)^T (Q \Lambda Q^T) (Q y) = y^T \Lambda y = \sum_{i=1}^n \lambda_i y_i^2$.
+3. Bound the numerator using $\lambda_{\max}$ and $\lambda_{\min}$:
+   $$\lambda_{\min} \sum_{i=1}^n y_i^2 \le \sum_{i=1}^n \lambda_i y_i^2 \le \lambda_{\max} \sum_{i=1}^n y_i^2$$
+4. Divide through by $\sum_{i=1}^n y_i^2 = \|x\|_2^2 > 0$:
+   $$\lambda_{\min} \le \frac{x^T A x}{x^T x} \le \lambda_{\max}$$
+5. Setting $x = q_1$ yields $R(q_1) = \frac{\lambda_1 (1)}{1} = \lambda_{\max}$; setting $x = q_n$ yields $R(q_n) = \lambda_{\min}$.
+   Therefore:
+   $$\max_{\|x\|_2 = 1} x^T A x = \lambda_{\max}(A), \quad \min_{\|x\|_2 = 1} x^T A x = \lambda_{\min}(A) \quad \blacksquare$$
 
 ---
 
@@ -264,6 +295,80 @@ $$p_1 = \begin{bmatrix} 2 \\ 0 \end{bmatrix}, \quad p_2 = \begin{bmatrix} 0 \\ 2
    $$d_M(p_1) = \sqrt{\begin{bmatrix} 2 & 0 \end{bmatrix} \begin{bmatrix} 1/4 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 0 \end{bmatrix}} = \sqrt{4/4 + 0} = \sqrt{1} = \mathbf{1.0}$$
    $$d_M(p_2) = \sqrt{\begin{bmatrix} 0 & 2 \end{bmatrix} \begin{bmatrix} 1/4 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 0 \\ 2 \end{bmatrix}} = \sqrt{0 + 4(1)} = \sqrt{4} = \mathbf{2.0}$$
 *Insight:* Although $p_1$ and $p_2$ have identical Euclidean distance from the origin, $p_1$ lies along the high-variance axis ($\sigma_1^2 = 4$) and is only **1 standard deviation** away, while $p_2$ lies along the low-variance axis ($\sigma_2^2 = 1$) and is **2 standard deviations** away! Mahalanobis distance measures statistical distance in units of standard deviations.
+
+---
+
+### Scenario C: Complete $3 \times 3$ Cholesky Factorization by Hand
+
+**Problem Formulation:**
+Perform Cholesky factorization $A = L L^T$ for the symmetric matrix:
+$$A = \begin{bmatrix} 4 & 2 & -2 \\ 2 & 10 & 2 \\ -2 & 2 & 6 \end{bmatrix}$$
+1. Verify Sylvester's Criterion (Leading Principal Minors).
+2. Compute each entry of lower-triangular matrix $L$ step-by-step.
+3. Compute $\det(A)$ directly from the diagonal of $L$.
+
+#### Step 1: Sylvester's Criterion Test
+- $D_1 = \det([4]) = 4 > 0$
+- $D_2 = \det \begin{bmatrix} 4 & 2 \\ 2 & 10 \end{bmatrix} = (4)(10) - (2)^2 = 40 - 4 = 36 > 0$
+- $D_3 = \det(A) = 4(10 \times 6 - 2 \times 2) - 2(2 \times 6 - 2 \times (-2)) + (-2)(2 \times 2 - 10 \times (-2))$
+  $$D_3 = 4(60 - 4) - 2(12 + 4) - 2(4 + 20) = 4(56) - 2(16) - 2(24) = 224 - 32 - 48 = 144 > 0$$
+All leading principal minors are strictly positive; $A$ is guaranteed **Positive Definite**.
+
+#### Step 2: Compute Entries of $L$
+Set up $L L^T = A$:
+$$\begin{bmatrix} L_{11} & 0 & 0 \\ L_{21} & L_{22} & 0 \\ L_{31} & L_{32} & L_{33} \end{bmatrix} \begin{bmatrix} L_{11} & L_{21} & L_{31} \\ 0 & L_{22} & L_{32} \\ 0 & 0 & L_{33} \end{bmatrix} = \begin{bmatrix} 4 & 2 & -2 \\ 2 & 10 & 2 \\ -2 & 2 & 6 \end{bmatrix}$$
+
+1. **Column 1:**
+   - $L_{11}^2 = 4 \implies L_{11} = \sqrt{4} = \mathbf{2}$
+   - $L_{21} L_{11} = 2 \implies L_{21}(2) = 2 \implies L_{21} = \mathbf{1}$
+   - $L_{31} L_{11} = -2 \implies L_{31}(2) = -2 \implies L_{31} = \mathbf{-1}$
+2. **Column 2:**
+   - $L_{21}^2 + L_{22}^2 = 10 \implies 1^2 + L_{22}^2 = 10 \implies L_{22}^2 = 9 \implies L_{22} = \mathbf{3}$
+   - $L_{31} L_{21} + L_{32} L_{22} = 2 \implies (-1)(1) + L_{32}(3) = 2 \implies 3 L_{32} = 3 \implies L_{32} = \mathbf{1}$
+3. **Column 3:**
+   - $L_{31}^2 + L_{32}^2 + L_{33}^2 = 6 \implies (-1)^2 + 1^2 + L_{33}^2 = 6 \implies 1 + 1 + L_{33}^2 = 6 \implies L_{33}^2 = 4 \implies L_{33} = \mathbf{2}$
+
+$$L = \begin{bmatrix} 2 & 0 & 0 \\ 1 & 3 & 0 \\ -1 & 1 & 2 \end{bmatrix}$$
+
+#### Step 3: Fast Determinant Evaluation via Cholesky
+$$\det(A) = \left( \prod_{i=1}^3 L_{ii} \right)^2 = (2 \times 3 \times 2)^2 = (12)^2 = \mathbf{144}$$
+Matches the cofactor determinant from Step 1 bit-for-bit with zero polynomial expansion overhead. $\checkmark$
+
+---
+
+### Scenario D: Loss Landscape Saddle Point Analysis via Indefinite Hessian
+
+**Problem Formulation:**
+Consider a toy neural network loss objective with two parameters:
+$$\mathcal{L}(w_1, w_2) = w_1^2 - 3w_2^2 + 4w_1 w_2$$
+1. Find the stationary point by solving $\nabla \mathcal{L} = \mathbf{0}$.
+2. Compute the Hessian matrix $H = \nabla^2 \mathcal{L}$.
+3. Solve for the eigenvalues of $H$ to classify the stationary point.
+4. Show why standard Newton's step diverges and how Levenberg-Marquardt damping stabilizes it.
+
+#### Step 1: Compute Gradient & Stationary Point
+$$\nabla \mathcal{L}(w) = \begin{bmatrix} \frac{\partial \mathcal{L}}{\partial w_1} \\ \frac{\partial \mathcal{L}}{\partial w_2} \end{bmatrix} = \begin{bmatrix} 2w_1 + 4w_2 \\ -6w_2 + 4w_1 \end{bmatrix}$$
+Setting $\nabla \mathcal{L} = \mathbf{0}$:
+$$\begin{cases} 2w_1 + 4w_2 = 0 \implies w_1 = -2w_2 \\ 4(-2w_2) - 6w_2 = 0 \implies -14w_2 = 0 \implies w_2 = 0, w_1 = 0 \end{cases}$$
+The unique critical point is the origin $w^* = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$.
+
+#### Step 2: Compute Hessian Matrix $H$
+$$H = \begin{bmatrix} \frac{\partial^2 \mathcal{L}}{\partial w_1^2} & \frac{\partial^2 \mathcal{L}}{\partial w_1 \partial w_2} \\ \frac{\partial^2 \mathcal{L}}{\partial w_2 \partial w_1} & \frac{\partial^2 \mathcal{L}}{\partial w_2^2} \end{bmatrix} = \begin{bmatrix} 2 & 4 \\ 4 & -6 \end{bmatrix}$$
+
+#### Step 3: Eigenvalues & Definiteness
+$$\det(H - \lambda I) = (2 - \lambda)(-6 - \lambda) - 16 = \lambda^2 + 4\lambda - 12 - 16 = \lambda^2 + 4\lambda - 28 = 0$$
+$$\lambda = \frac{-4 \pm \sqrt{16 - 4(1)(-28)}}{2} = \frac{-4 \pm \sqrt{128}}{2} = -2 \pm 4\sqrt{2}$$
+- $\lambda_1 = -2 + 4\sqrt{2} \approx -2 + 5.657 = \mathbf{+3.657} > 0$ (Upward curvature)
+- $\lambda_2 = -2 - 4\sqrt{2} \approx -2 - 5.657 = \mathbf{-7.657} < 0$ (Downward curvature)
+- **Conclusion:** $H$ is strictly **Indefinite**. The origin $w^*$ is a **Saddle Point**, not a local minimum!
+
+#### Step 4: Damped Newton Stabilization
+To turn the indefinite Hessian into a guaranteed descent direction:
+$$H_{\text{damped}} = H + \lambda_{\text{damp}} I$$
+By choosing $\lambda_{\text{damp}} = 8.0 > |\lambda_2| = 7.657$:
+- $\lambda_1(H_{\text{damped}}) = 3.657 + 8.0 = 11.657 > 0$
+- $\lambda_2(H_{\text{damped}}) = -7.657 + 8.0 = 0.343 > 0$
+Now $H_{\text{damped}} \succ 0$ is strictly Positive Definite, eliminating negative curvature and allowing the optimizer to escape the saddle point safely.
 
 ---
 

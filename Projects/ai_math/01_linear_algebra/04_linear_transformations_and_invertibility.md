@@ -88,6 +88,33 @@ Suppose we have a vector $x$ and a linear transformation $T$. The coordinate rep
 > [!IMPORTANT]
 > **Matrix Similarity:** Two matrices $A$ and $B$ are **similar** if there exists an invertible matrix $P$ such that $B = P^{-1} A P$. Similar matrices represent the **exact same linear transformation** viewed under different coordinate systems! They share identical eigenvalues, trace, and determinant.
 
+#### Rigorous First-Principles Derivation: Similarity Invariance of Spectrum, Trace, and Determinant
+**Theorem:** If $B = P^{-1} A P$, then:
+1. $B$ and $A$ have the exact same characteristic polynomial: $p_B(\lambda) = p_A(\lambda)$.
+2. $B$ and $A$ share identical eigenvalues with identical algebraic and geometric multiplicities.
+3. $\det(B) = \det(A)$ and $\text{Tr}(B) = \text{Tr}(A)$.
+
+**Proof Steps:**
+1. **Characteristic Polynomial:**
+   By definition, the characteristic polynomial of $B$ is $p_B(\lambda) = \det(B - \lambda I)$.
+   Substitute $B = P^{-1} A P$ and express the identity matrix as $I = P^{-1} I P$:
+   $$B - \lambda I = P^{-1} A P - \lambda P^{-1} I P = P^{-1} (A - \lambda I) P$$
+   Taking the determinant and applying the multiplicative rule $\det(X Y) = \det(X) \det(Y)$:
+   $$\begin{aligned}
+   p_B(\lambda) &= \det\left( P^{-1} (A - \lambda I) P \right) \\
+   &= \det(P^{-1}) \cdot \det(A - \lambda I) \cdot \det(P) \\
+   &= \frac{1}{\det(P)} \cdot \det(A - \lambda I) \cdot \det(P) \quad \text{(since scalars commute)} \\
+   &= \det(A - \lambda I) = p_A(\lambda)
+   \end{aligned}$$
+2. **Eigenvalues:**
+   Because $p_B(\lambda) \equiv p_A(\lambda)$ are identical polynomials in $\lambda$, their roots (the eigenvalues) are strictly identical.
+3. **Trace and Determinant Invariance:**
+   - The determinant is the constant term of the characteristic polynomial (and the product of all eigenvalues $\prod_{i=1}^n \lambda_i$):
+     $$\det(B) = \det(P^{-1} A P) = \det(P^{-1})\det(A)\det(P) = \frac{1}{\det(P)}\det(A)\det(P) = \det(A) \quad \blacksquare$$
+   - The trace is the coefficient of $(-\lambda)^{n-1}$ in the characteristic polynomial (and the sum of all eigenvalues $\sum_{i=1}^n \lambda_i$).
+   - Direct algebraic proof via the cyclic permutation property of trace:
+     $$\text{Tr}(B) = \text{Tr}(P^{-1} A P) = \text{Tr}\left( (P^{-1} A) P \right) = \text{Tr}\left( P (P^{-1} A) \right) = \text{Tr}\left( (P P^{-1}) A \right) = \text{Tr}(I A) = \text{Tr}(A) \quad \blacksquare$$
+
 ---
 
 ### 6. The Determinant: The Signed Volume Scaling Factor
@@ -118,11 +145,13 @@ The **determinant** $\det(A)$ (or $|A|$) of a square matrix $A \in \mathbb{R}^{n
 3. **Orientation**:
    - $\det(A) > 0$: Preserves spatial orientation (right-handed remains right-handed).
    - $\det(A) < 0$: Inverts orientation (mirror reflection).
-4. **Multiplication Rule**:
-   $$\det(A B) = \det(A) \det(B)$$
-5. **Inverse Rule**:
-   $$\det(A^{-1}) = \frac{1}{\det(A)}$$
-6. **Triangular / Diagonal Matrices**:
+4. **Multiplication Rule & Inverse Rule: First-Principles Derivation**:
+   - **Multiplication Rule:** An elementary row matrix $E$ scales volume by $\det(E)$. If $A$ is invertible, $A = E_k \dots E_1 I$, so:
+     $$\det(A B) = \det(E_k \dots E_1 B) = \det(E_k) \dots \det(E_1) \det(B) = \det(A) \det(B)$$
+     If $A$ is singular, $\text{rank}(A) < n \implies \text{rank}(AB) \le \text{rank}(A) < n$, so $\det(AB) = 0 = 0 \cdot \det(B) = \det(A)\det(B)$.
+   - **Inverse Rule:** Since $A A^{-1} = I$, taking the determinant on both sides yields:
+     $$\det(A A^{-1}) = \det(I) \implies \det(A) \det(A^{-1}) = 1 \implies \det(A^{-1}) = \frac{1}{\det(A)}$$
+5. **Triangular / Diagonal Matrices**:
    If $A$ is upper-triangular, lower-triangular, or diagonal:
    $$\det(A) = \prod_{i=1}^n A_{ii}$$
 
@@ -353,6 +382,60 @@ $$\left[\begin{array}{cc|cc} 1 & 2 & 1 & 0 \\ 2 & 4 & 0 & 1 \end{array}\right] \
 - The rank is $r = 1 < 2$.
 - $\det(M) = (1 \times 4) - (2 \times 2) = 0$.
 - **Conclusion:** Space has collapsed onto the 1D line $y = 2x$. The matrix cannot be inverted.
+
+---
+
+### Scenario D: 2D Affine Transformation in Homogeneous Coordinates (Forward & Inverse Mapping)
+
+**Problem Formulation:**
+In computer vision and spatial transformer networks (STNs), spatial transformations compose linear operations (rotations, scales) with non-linear translations:
+$$y = R x + t$$
+Because translation $t \neq \mathbf{0}$ is not linear, it cannot be represented as a $2 \times 2$ matrix multiplication. We lift 2D coordinates into 3D **Homogeneous Coordinates**:
+$$\tilde{x} = \begin{bmatrix} x_1 \\ x_2 \\ 1 \end{bmatrix} \in \mathbb{R}^3, \quad T_{\text{affine}} = \begin{bmatrix} R & t \\ \mathbf{0}^T & 1 \end{bmatrix} \in \mathbb{R}^{3 \times 3}$$
+
+Consider a counter-clockwise rotation by $\theta = 90^\circ$ followed by translation $t = \begin{bmatrix} 2 \\ -3 \end{bmatrix}$ applied to point $p = \begin{bmatrix} 1 \\ 2 \end{bmatrix}$:
+1. Construct the 2D rotation matrix $R$ and the $3 \times 3$ homogeneous affine transformation matrix $T_{\text{affine}}$.
+2. Compute the forward transformed point $\tilde{p}' = T_{\text{affine}} \tilde{p}$.
+3. Derive the analytical formula for $T_{\text{affine}}^{-1}$ in block form.
+4. Calculate $T_{\text{affine}}^{-1}$ and verify that it maps $p'$ back to $p$.
+
+#### Step 1: Construct Homogeneous Transformation Matrix
+For $\theta = 90^\circ$:
+$$R = \begin{bmatrix} \cos(90^\circ) & -\sin(90^\circ) \\ \sin(90^\circ) & \cos(90^\circ) \end{bmatrix} = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$$
+With translation $t = \begin{bmatrix} 2 \\ -3 \end{bmatrix}$:
+$$T_{\text{affine}} = \begin{bmatrix} 0 & -1 & 2 \\ 1 & 0 & -3 \\ 0 & 0 & 1 \end{bmatrix}$$
+
+#### Step 2: Forward Mapping
+Point $p = [1, 2]^T$ becomes $\tilde{p} = [1, 2, 1]^T$:
+$$\tilde{p}' = T_{\text{affine}} \tilde{p} = \begin{bmatrix} 0 & -1 & 2 \\ 1 & 0 & -3 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} 1 \\ 2 \\ 1 \end{bmatrix}$$
+- Row 1: $(0 \times 1) + (-1 \times 2) + (2 \times 1) = 0 - 2 + 2 = 0$
+- Row 2: $(1 \times 1) + (0 \times 2) + (-3 \times 1) = 1 + 0 - 3 = -2$
+- Row 3: $(0 \times 1) + (0 \times 2) + (1 \times 1) = 1$
+
+$$\tilde{p}' = \begin{bmatrix} 0 \\ -2 \\ 1 \end{bmatrix} \implies p' = \begin{bmatrix} 0 \\ -2 \end{bmatrix}$$
+
+#### Step 3: Analytical Inverse in Block Form
+For any affine matrix $T = \begin{bmatrix} R & t \\ \mathbf{0}^T & 1 \end{bmatrix}$ where $R$ is orthogonal ($R^{-1} = R^T$):
+We require $T^{-1} T = I$:
+$$\begin{bmatrix} R^T & -R^T t \\ \mathbf{0}^T & 1 \end{bmatrix} \begin{bmatrix} R & t \\ \mathbf{0}^T & 1 \end{bmatrix} = \begin{bmatrix} R^T R & R^T t - R^T t \\ \mathbf{0}^T & 1 \end{bmatrix} = \begin{bmatrix} I & \mathbf{0} \\ \mathbf{0}^T & 1 \end{bmatrix} = I_3$$
+Therefore:
+$$T_{\text{affine}}^{-1} = \begin{bmatrix} R^T & -R^T t \\ \mathbf{0}^T & 1 \end{bmatrix}$$
+
+Compute the blocks:
+- $R^T = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix}$
+- $-R^T t = - \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \begin{bmatrix} 2 \\ -3 \end{bmatrix} = - \begin{bmatrix} (0)(2) + (1)(-3) \\ (-1)(2) + (0)(-3) \end{bmatrix} = - \begin{bmatrix} -3 \\ -2 \end{bmatrix} = \begin{bmatrix} 3 \\ 2 \end{bmatrix}$
+
+$$T_{\text{affine}}^{-1} = \begin{bmatrix} 0 & 1 & 3 \\ -1 & 0 & 2 \\ 0 & 0 & 1 \end{bmatrix}$$
+
+#### Step 4: Verification of Inverse Mapping
+Apply $T_{\text{affine}}^{-1}$ to $\tilde{p}' = [0, -2, 1]^T$:
+$$\tilde{p}_{\text{recovered}} = \begin{bmatrix} 0 & 1 & 3 \\ -1 & 0 & 2 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} 0 \\ -2 \\ 1 \end{bmatrix}$$
+- Row 1: $(0 \times 0) + (1 \times -2) + (3 \times 1) = 0 - 2 + 3 = 1$
+- Row 2: $(-1 \times 0) + (0 \times -2) + (2 \times 1) = 0 + 0 + 2 = 2$
+- Row 3: $(0 \times 0) + (0 \times -2) + (1 \times 1) = 1$
+
+$$\tilde{p}_{\text{recovered}} = \begin{bmatrix} 1 \\ 2 \\ 1 \end{bmatrix} \implies p = \begin{bmatrix} 1 \\ 2 \end{bmatrix} \quad \checkmark$$
+The original point is exactly recovered!
 
 ---
 

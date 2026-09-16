@@ -93,6 +93,54 @@ Every real symmetric matrix $A \in \mathbb{R}^{n \times n}$ satisfies:
    $$A = Q \Lambda Q^T$$
    where $Q$ is an **orthogonal matrix** ($Q^T Q = Q Q^T = I$).
 
+#### Rigorous First-Principles Derivation / Proof of the Spectral Properties:
+
+##### 1. Proof that All Eigenvalues of a Real Symmetric Matrix are Real:
+Let $A \in \mathbb{R}^{n \times n}$ with $A = A^T$.
+Suppose $\lambda \in \mathbb{C}$ is an eigenvalue with non-zero eigenvector $v \in \mathbb{C}^n \setminus \{\mathbf{0}\}$:
+$$A v = \lambda v$$
+Take the complex conjugate transpose (Hermitian conjugate) of both sides:
+$$(A v)^H = (\lambda v)^H \implies v^H A^H = \bar{\lambda} v^H$$
+Since $A$ is real and symmetric, $A^H = (A^*)^T = A^T = A$. Therefore:
+$$v^H A = \bar{\lambda} v^H$$
+Multiply on the right by $v$:
+$$(v^H A) v = \bar{\lambda} v^H v$$
+On the other hand, multiply $A v = \lambda v$ on the left by $v^H$:
+$$v^H (A v) = \lambda v^H v$$
+Since matrix multiplication is associative, $v^H (A v) = (v^H A) v$:
+$$\lambda v^H v = \bar{\lambda} v^H v \implies (\lambda - \bar{\lambda}) v^H v = 0$$
+Because $v \neq \mathbf{0}$, the inner product $v^H v = \sum_{i=1}^n |v_i|^2 > 0$ is strictly positive.
+Therefore:
+$$\lambda - \bar{\lambda} = 0 \implies \lambda = \bar{\lambda}$$
+A complex number equal to its own complex conjugate is strictly real. Hence $\lambda \in \mathbb{R}$. $\blacksquare$
+
+##### 2. Proof that Eigenvectors of Distinct Eigenvalues are Strictly Orthogonal:
+Suppose $A v_1 = \lambda_1 v_1$ and $A v_2 = \lambda_2 v_2$, where $\lambda_1 \neq \lambda_2 \in \mathbb{R}$.
+Consider the scalar quantity $v_1^T A v_2$:
+- Evaluating $A$ applied to $v_2$:
+  $$v_1^T (A v_2) = v_1^T (\lambda_2 v_2) = \lambda_2 (v_1^T v_2)$$
+- Evaluating $A$ applied to $v_1$ using symmetry $A = A^T$:
+  $$(v_1^T A) v_2 = (A^T v_1)^T v_2 = (A v_1)^T v_2 = (\lambda_1 v_1)^T v_2 = \lambda_1 (v_1^T v_2)$$
+Equating both expressions:
+$$\lambda_1 (v_1^T v_2) = \lambda_2 (v_1^T v_2) \implies (\lambda_1 - \lambda_2) (v_1^T v_2) = 0$$
+Since $\lambda_1 \neq \lambda_2$, the difference $(\lambda_1 - \lambda_2) \neq 0$.
+Therefore:
+$$v_1^T v_2 = 0 \implies v_1 \perp v_2 \quad \blacksquare$$
+
+---
+
+#### The Cayley-Hamilton Theorem
+**Theorem:** Every square matrix $A \in \mathbb{R}^{n \times n}$ satisfies its own characteristic equation:
+$$p(A) = (-1)^n A^n + c_{n-1} A^{n-1} + \dots + c_1 A + \det(A) I_n = \mathbf{0}$$
+
+##### First-Principles Derivation for Diagonalizable Matrices:
+If $A = S \Lambda S^{-1}$, then for any polynomial $p(x)$:
+$$p(A) = S p(\Lambda) S^{-1} = S \begin{bmatrix} p(\lambda_1) & & 0 \\ & \ddots & \\ 0 & & p(\lambda_n) \end{bmatrix} S^{-1}$$
+Since each $\lambda_i$ is a root of the characteristic polynomial, $p(\lambda_i) = 0$ for all $i \in \{1, \dots, n\}$.
+Therefore $p(\Lambda) = \mathbf{0}$, which implies:
+$$p(A) = S \mathbf{0} S^{-1} = \mathbf{0} \quad \blacksquare$$
+*Deep Learning Application:* Enables computing high matrix powers $A^k$ as linear combinations of lower powers $\{I, A, \dots, A^{n-1}\}$, accelerating graph neural networks and diffusion transitions.
+
 #### The Spectral Decomposition (Outer Product Expansion):
 Expanding $Q \Lambda Q^T$ using Gilbert Strang's outer product perspective:
 $$A = \begin{bmatrix} q_1 & \dots & q_n \end{bmatrix} \begin{bmatrix} \lambda_1 & & \\ & \ddots & \\ & & \lambda_n \end{bmatrix} \begin{bmatrix} q_1^T \\ \vdots \\ q_n^T \end{bmatrix} = \sum_{i=1}^n \lambda_i q_i q_i^T$$
@@ -297,6 +345,72 @@ $$A = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}$$
    $$\det(R - \lambda I) = (-\lambda)(-\lambda) - (-1)(1) = \lambda^2 + 1 = 0 \implies \lambda = \pm i$$
 2. **Geometric Insight:**
    A rotation by $90^\circ$ turns *every* real vector in the 2D plane into an orthogonal direction. No real vector can ever satisfy $R v = \lambda v$ with real $\lambda$. The eigenvectors exist only in the complex plane $\mathbb{C}^2$!
+
+---
+
+### Scenario D: Power Iteration for Dominant Eigenvalue & Eigenvector
+
+**Problem Formulation:**
+In large-scale graph neural networks (PageRank) and spectral clustering, computing the full eigendecomposition of an $N \times N$ matrix ($N = 10^7$) is impossible.
+Instead, **Power Iteration** estimates the dominant eigenvalue $\lambda_1$ and eigenvector $q_1$ via repeated matrix-vector multiplication:
+$$y_{k+1} = A x_k, \quad x_{k+1} = \frac{y_{k+1}}{\|y_{k+1}\|_2}, \quad \mu_{k+1} = x_{k+1}^T A x_{k+1} \; \text{(Rayleigh Quotient)}$$
+
+Trace 3 iterations of Power Iteration for symmetric matrix $A = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}$ starting from $x_0 = \begin{bmatrix} 1 \\ 0 \end{bmatrix}$.
+
+#### Step 1: Iteration 1 ($k = 0 \to 1$)
+$$y_1 = A x_0 = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} 1 \\ 0 \end{bmatrix} = \begin{bmatrix} 3 \\ 1 \end{bmatrix}$$
+$$\|y_1\|_2 = \sqrt{3^2 + 1^2} = \sqrt{10} \approx 3.162278$$
+$$x_1 = \frac{1}{\sqrt{10}} \begin{bmatrix} 3 \\ 1 \end{bmatrix} \approx \begin{bmatrix} 0.948683 \\ 0.316228 \end{bmatrix}$$
+**Rayleigh Quotient Estimate $\mu_1$:**
+$$\mu_1 = x_1^T A x_1 = \frac{1}{10} \begin{bmatrix} 3 & 1 \end{bmatrix} \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} 3 \\ 1 \end{bmatrix} = \frac{1}{10} \begin{bmatrix} 3 & 1 \end{bmatrix} \begin{bmatrix} 10 \\ 6 \end{bmatrix} = \frac{30 + 6}{10} = \mathbf{3.600000}$$
+
+#### Step 2: Iteration 2 ($k = 1 \to 2$)
+$$y_2 = A x_1 = \frac{1}{\sqrt{10}} \begin{bmatrix} 10 \\ 6 \end{bmatrix}$$
+$$\|y_2\|_2 = \frac{1}{\sqrt{10}} \sqrt{10^2 + 6^2} = \frac{\sqrt{136}}{\sqrt{10}} \approx 3.687818$$
+$$x_2 = \frac{1}{\sqrt{136}} \begin{bmatrix} 10 \\ 6 \end{bmatrix} = \frac{1}{2\sqrt{34}} \begin{bmatrix} 10 \\ 6 \end{bmatrix} = \begin{bmatrix} 5/\sqrt{34} \\ 3/\sqrt{34} \end{bmatrix} \approx \begin{bmatrix} 0.857493 \\ 0.514496 \end{bmatrix}$$
+**Rayleigh Quotient Estimate $\mu_2$:**
+$$\mu_2 = x_2^T A x_2 = \frac{1}{34} \begin{bmatrix} 5 & 3 \end{bmatrix} \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} 5 \\ 3 \end{bmatrix} = \frac{1}{34} \begin{bmatrix} 5 & 3 \end{bmatrix} \begin{bmatrix} 18 \\ 14 \end{bmatrix} = \frac{90 + 42}{34} = \frac{132}{34} \approx \mathbf{3.882353}$$
+
+#### Step 3: Iteration 3 ($k = 2 \to 3$)
+$$y_3 = A x_2 = \frac{1}{\sqrt{34}} \begin{bmatrix} 18 \\ 14 \end{bmatrix} = \frac{2}{\sqrt{34}} \begin{bmatrix} 9 \\ 7 \end{bmatrix}$$
+$$\|y_3\|_2 = \frac{2}{\sqrt{34}} \sqrt{9^2 + 7^2} = \frac{2\sqrt{130}}{\sqrt{34}}$$
+$$x_3 = \frac{1}{\sqrt{130}} \begin{bmatrix} 9 \\ 7 \end{bmatrix} \approx \begin{bmatrix} 0.789352 \\ 0.613941 \end{bmatrix}$$
+**Rayleigh Quotient Estimate $\mu_3$:**
+$$\mu_3 = x_3^T A x_3 = \frac{1}{130} \begin{bmatrix} 9 & 7 \end{bmatrix} \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} 9 \\ 7 \end{bmatrix} = \frac{1}{130} \begin{bmatrix} 9 & 7 \end{bmatrix} \begin{bmatrix} 34 \\ 30 \end{bmatrix} = \frac{306 + 210}{130} = \frac{516}{130} \approx \mathbf{3.969231}$$
+
+*Convergence Summary:*
+- $k=1$: $\mu_1 = 3.600000$ (Error: $10.0\%$)
+- $k=2$: $\mu_2 = 3.882353$ (Error: $2.94\%$)
+- $k=3$: $\mu_3 = 3.969231$ (Error: $0.77\%$)
+- True eigenvalue $\lambda_1 = 4.0$. Convergence is governed by the spectral gap ratio $\left|\frac{\lambda_2}{\lambda_1}\right|^k = \left(\frac{2}{4}\right)^k = (0.5)^k$, halving error every iteration!
+
+---
+
+### Scenario E: High Matrix Powers via Spectral Decomposition
+
+**Problem Formulation:**
+In graph neural networks and diffusion processes, we must compute high powers of transition matrices $A^k$ where $k = 10$ and $A = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}$.
+1. Compute $A^{10}$ analytically via its spectral decomposition $A = Q \Lambda Q^T$.
+2. Write down the exact integer matrix result.
+
+#### Step 1: Diagonal Matrix Power $\Lambda^{10}$
+From Scenario A:
+$$\Lambda = \begin{bmatrix} 4 & 0 \\ 0 & 2 \end{bmatrix} \implies \Lambda^{10} = \begin{bmatrix} 4^{10} & 0 \\ 0 & 2^{10} \end{bmatrix}$$
+Notice that $4^{10} = (2^2)^{10} = 2^{20} = 1,048,576$ and $2^{10} = 1,024$.
+
+#### Step 2: Outer Product Reconstruction $A^{10} = Q \Lambda^{10} Q^T$
+With $Q = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 \\ 1 & 1 \end{bmatrix}$:
+$$A^{10} = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 \\ 1 & 1 \end{bmatrix} \begin{bmatrix} 4^{10} & 0 \\ 0 & 2^{10} \end{bmatrix} \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & 1 \\ -1 & 1 \end{bmatrix}$$
+$$A^{10} = \frac{1}{2} \begin{bmatrix} 4^{10} & -2^{10} \\ 4^{10} & 2^{10} \end{bmatrix} \begin{bmatrix} 1 & 1 \\ -1 & 1 \end{bmatrix}$$
+
+Compute each entry:
+- $(A^{10})_{11} = \frac{1}{2} \left( 4^{10}(1) + (-2^{10})(-1) \right) = \frac{4^{10} + 2^{10}}{2} = \frac{1,048,576 + 1,024}{2} = \frac{1,049,600}{2} = \mathbf{524,800}$
+- $(A^{10})_{12} = \frac{1}{2} \left( 4^{10}(1) + (-2^{10})(1) \right) = \frac{4^{10} - 2^{10}}{2} = \frac{1,048,576 - 1,024}{2} = \frac{1,047,552}{2} = \mathbf{523,776}$
+- $(A^{10})_{21} = \frac{1}{2} \left( 4^{10}(1) + (2^{10})(-1) \right) = \frac{4^{10} - 2^{10}}{2} = \mathbf{523,776}$
+- $(A^{10})_{22} = \frac{1}{2} \left( 4^{10}(1) + (2^{10})(1) \right) = \frac{4^{10} + 2^{10}}{2} = \mathbf{524,800}$
+
+$$A^{10} = \begin{bmatrix} 524800 & 523776 \\ 523776 & 524800 \end{bmatrix}$$
+*Insight:* Eigendecomposition replaces 9 chained matrix multiplications with two scalar power operations and a constant-cost basis projection.
 
 ---
 

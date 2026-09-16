@@ -205,6 +205,165 @@ Starting from a standard ResNet-50, ConvNeXt progressively adopts Vision Transfo
 
 ---
 
+### 2.6 Deep Derivation 7.3.1: Asymptotic Gradient Preservation and Spectral Analysis of Residual Networks
+
+In this derivation, we prove why residual networks prevent exponential gradient decay and explosion, establishing the mathematical foundation of the skip-connection identity highway.
+
+#### Step 1: Mathematical Formulation of Plain vs. Residual Architectures
+Let a deep feedforward network consist of $L$ sequential layers with hidden state vectors $\mathbf{x}_l \in \mathbb{R}^{d}$ for $l \in \{0, 1, \dots, L\}$.
+In a **Plain Network**, transitions are governed by pure non-linear composition:
+$$\mathbf{x}_{l+1} = \sigma(\mathbf{W}_l \mathbf{x}_l + \mathbf{b}_l)$$
+where $\mathbf{W}_l \in \mathbb{R}^{d \times d}$ and $\sigma: \mathbb{R} \to \mathbb{R}$ is an element-wise activation function.
+
+In a **Residual Network**, transitions are governed by an affine residual mapping added to the identity:
+$$\mathbf{x}_{l+1} = \mathbf{x}_l + \mathcal{F}_l(\mathbf{x}_l, \mathcal{W}_l)$$
+where $\mathcal{F}_l(\mathbf{x}_l, \mathcal{W}_l) = \mathbf{W}_{l, 2} \, \sigma(\mathbf{W}_{l, 1} \mathbf{x}_l + \mathbf{b}_{l, 1}) + \mathbf{b}_{l, 2}$.
+
+#### Step 2: Exponential Gradient Decay in Plain Networks
+Let $\mathcal{L}: \mathbb{R}^d \to \mathbb{R}$ be a scalar loss computed at layer $L$. In a Plain Network, applying the multivariable chain rule from layer $L$ to layer $l$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \prod_{k=l}^{L-1} \frac{\partial \mathbf{x}_{k+1}}{\partial \mathbf{x}_k} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \prod_{k=l}^{L-1} \left( \mathbf{D}_k \mathbf{W}_k \right)$$
+where $\mathbf{D}_k = \operatorname{diag}(\sigma'(\mathbf{W}_k \mathbf{x}_k + \mathbf{b}_k)) \in \mathbb{R}^{d \times d}$ is the diagonal derivative matrix.
+
+Taking the Euclidean operator norm (spectral norm $\|\cdot\|_2$):
+$$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} \right\|_2 \le \left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \right\|_2 \prod_{k=l}^{L-1} \|\mathbf{D}_k\|_2 \|\mathbf{W}_k\|_2$$
+
+Let $\lambda_{\max} = \sup_k \|\mathbf{D}_k \mathbf{W}_k\|_2$ denote the maximum singular value across layers:
+1. **Vanishing Gradient Regime:** If $\lambda_{\max} < 1 - \epsilon$ for some $\epsilon > 0$:
+   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} \right\|_2 \le \left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \right\|_2 (1 - \epsilon)^{L - l} \xrightarrow{L - l \to \infty} 0$$
+   The gradient vanishes exponentially with depth $L - l$.
+2. **Exploding Gradient Regime:** If $\lambda_{\min} > 1 + \epsilon$:
+   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} \right\|_2 \ge \left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \right\|_2 (1 + \epsilon)^{L - l} \xrightarrow{L - l \to \infty} \infty$$
+
+Unless every matrix product satisfies $\|\mathbf{D}_k \mathbf{W}_k\|_2 \equiv 1$ exactly (a set of measure zero in parameter space), training Plain Networks beyond 20–30 layers fails catastrophically.
+
+#### Step 3: Exact Gradient Formulation of Residual Networks
+By telescoping the residual recursion $\mathbf{x}_{k+1} - \mathbf{x}_k = \mathcal{F}_k(\mathbf{x}_k)$, the state at layer $L$ is:
+$$\mathbf{x}_L = \mathbf{x}_l + \sum_{k=l}^{L-1} \mathcal{F}_k(\mathbf{x}_k, \mathcal{W}_k)$$
+
+Differentiating $\mathcal{L}$ with respect to $\mathbf{x}_l$ using the total derivative:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \frac{\partial \mathbf{x}_L}{\partial \mathbf{x}_l} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \left( \mathbf{I} + \sum_{k=l}^{L-1} \frac{\partial \mathcal{F}_k(\mathbf{x}_k, \mathcal{W}_k)}{\partial \mathbf{x}_l} \right)$$
+
+Define the composite residual Jacobian:
+$$\mathbf{A}_{L, l} \equiv \sum_{k=l}^{L-1} \frac{\partial \mathcal{F}_k(\mathbf{x}_k, \mathcal{W}_k)}{\partial \mathbf{x}_l} \in \mathbb{R}^{d \times d}$$
+
+Then:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} (\mathbf{I} + \mathbf{A}_{L, l}) = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} + \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \mathbf{A}_{L, l}$$
+
+#### Step 4: Spectral Lower Bound on Gradient Norm
+By the reverse triangle inequality for operator norms:
+$$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} \right\|_2 = \left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} (\mathbf{I} + \mathbf{A}_{L, l}) \right\|_2 \ge \left\| \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \right\|_2 \cdot \sigma_{\min}(\mathbf{I} + \mathbf{A}_{L, l})$$
+where $\sigma_{\min}(\mathbf{M})$ is the smallest singular value of matrix $\mathbf{M}$.
+
+By Weyl's perturbation inequality for singular values:
+$$\sigma_{\min}(\mathbf{I} + \mathbf{A}_{L, l}) \ge |1 - \|\mathbf{A}_{L, l}\|_2|$$
+
+**Critical Initial State Analysis:**
+At the start of training, weights are initialized with small variances (or zero-initialized in the final BN of each block, i.e., Fixup/ReZero initialization):
+$$\|\mathbf{A}_{L, l}\|_2 \approx 0 \implies \sigma_{\min}(\mathbf{I} + \mathbf{A}_{L, l}) \approx 1$$
+Consequently:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}_l} \approx \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L} \cdot \mathbf{I} = \frac{\partial \mathcal{L}}{\partial \mathbf{x}_L}$$
+
+The gradient flows backward through 1,000 layers with **zero exponential decay or growth**. Gradient decay can only occur if $\mathbf{A}_{L, l} = -\mathbf{I}$, which requires the residual branch to actively invert the identity mapping—an unstable, non-isolated singular manifold that gradient descent readily avoids. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 7.3.2: Dimensionality Reduction via $1 \times 1$ Convolutions and Asymmetric Kernel Factorization
+
+In this derivation, we analyze the exact parameter and computational complexity reductions introduced by Inception architectures (Szegedy et al., 2015, 2016).
+
+#### Step 1: Algebraic Structure of the $1 \times 1$ Cross-Channel Projection
+Let an input feature tensor be $\mathbf{X} \in \mathbb{R}^{C_{\text{in}} \times H \times W}$. A $1 \times 1$ convolution with $C_{\text{out}}$ filters parameterized by $\mathbf{W} \in \mathbb{R}^{C_{\text{out}} \times C_{\text{in}} \times 1 \times 1}$ and bias $\mathbf{b} \in \mathbb{R}^{C_{\text{out}}}$ performs:
+$$Y_{c, h, w} = \sum_{c'=0}^{C_{\text{in}}-1} W_{c, c', 0, 0} X_{c', h, w} + b_c$$
+
+At every individual spatial coordinate $(h, w)$, this operation is mathematically identical to a dense linear projection:
+$$\mathbf{y}_{h, w} = \mathbf{W} \, \mathbf{x}_{h, w} + \mathbf{b}, \qquad \mathbf{x}_{h, w} \in \mathbb{R}^{C_{\text{in}}}, \, \mathbf{y}_{h, w} \in \mathbb{R}^{C_{\text{out}}}$$
+
+It pools features across channels without changing the spatial geometry ($H \times W$).
+
+#### Step 2: FLOP Reduction in the Inception Bottleneck
+Consider applying a $K \times K$ convolution to produce $C_{\text{out}}$ channels from $C_{\text{in}}$ channels.
+The direct Multiply-Accumulate (MAC) count on an $H \times W$ feature map is:
+$$\text{MAC}_{\text{direct}} = K^2 \cdot C_{\text{in}} \cdot C_{\text{out}} \cdot H \cdot W$$
+
+Now insert a $1 \times 1$ bottleneck convolution that compresses $C_{\text{in}} \to C_{\text{mid}}$ channels (where $C_{\text{mid}} \ll C_{\text{in}}$), followed by the $K \times K$ convolution:
+1. Stage 1 ($1 \times 1$ conv): $\text{MAC}_1 = 1^2 \cdot C_{\text{in}} \cdot C_{\text{mid}} \cdot H \cdot W$
+2. Stage 2 ($K \times K$ conv): $\text{MAC}_2 = K^2 \cdot C_{\text{mid}} \cdot C_{\text{out}} \cdot H \cdot W$
+$$\text{MAC}_{\text{bottleneck}} = (C_{\text{in}} C_{\text{mid}} + K^2 C_{\text{mid}} C_{\text{out}}) \cdot H \cdot W$$
+
+The FLOP ratio between the bottleneck and direct approaches is:
+$$\rho = \frac{\text{MAC}_{\text{bottleneck}}}{\text{MAC}_{\text{direct}}} = \frac{C_{\text{in}} C_{\text{mid}} + K^2 C_{\text{mid}} C_{\text{out}}}{K^2 C_{\text{in}} C_{\text{out}}} = \frac{C_{\text{mid}}}{K^2 C_{\text{out}}} + \frac{C_{\text{mid}}}{C_{\text{in}}}$$
+
+**Numerical Evaluation:** For standard Inception-v1 values ($K = 5, C_{\text{in}} = 192, C_{\text{out}} = 192, C_{\text{mid}} = 32$):
+$$\rho = \frac{32}{25 \times 192} + \frac{32}{192} = \frac{32}{4800} + \frac{1}{6} \approx 0.00667 + 0.16667 \approx 0.1733 \implies \mathbf{82.7\% \text{ reduction in computation!}}$$
+
+#### Step 3: Asymmetric Spatial Factorization ($K \times K \to 1 \times K + K \times 1$)
+In Inception-v2/v3, any 2D symmetric convolution $K \times K$ is factored into a cascade of two 1D asymmetric convolutions: a $1 \times K$ horizontal convolution followed by a $K \times 1$ vertical convolution.
+
+Let the 2D spatial convolution of continuous or discrete kernel $k(x, y)$ be separable:
+$$k(x, y) = g(x) \cdot h(y)$$
+The 2D discrete cross-correlation factors as:
+$$(X \star k)_{i, j} = \sum_{u} \sum_{v} X_{i+u, j+v} \, g_u h_v = \sum_{u} g_u \left( \sum_{v} X_{i+u, j+v} \, h_v \right)$$
+
+Parameter and FLOP Comparison for $C$ channels:
+- Symmetric $K \times K$:
+  $$\text{Params}_{\text{sym}} = K^2 \cdot C^2$$
+- Asymmetric $1 \times K$ followed by $K \times 1$:
+  $$\text{Params}_{\text{asym}} = (1 \times K \times C^2) + (K \times 1 \times C^2) = 2K \cdot C^2$$
+
+The asymptotic savings ratio is:
+$$\frac{\text{Params}_{\text{asym}}}{\text{Params}_{\text{sym}}} = \frac{2K C^2}{K^2 C^2} = \frac{2}{K}$$
+
+For $K = 7$ (as used extensively in Inception-v3):
+$$\text{Ratio} = \frac{2}{7} \approx 0.2857 \implies \mathbf{71.4\% \text{ reduction in parameters and FLOPs}}$$
+The receptive field remains identically $r = 1 + (K - 1) + (K - 1) = 2K - 1$ or $K \times K$ spatially, but introduces an intermediate ReLU non-linearity that boosts model expressivity. $\blacksquare$
+
+---
+
+### 2.8 Deep Derivation 7.3.3: MobileNet Depthwise Separable Convolutions and ConvNeXt Inverted Bottleneck Mechanics
+
+Here we prove the computational scaling laws of depthwise separable convolutions and derive the algebraic properties of inverted bottleneck designs.
+
+#### Step 1: Mathematical Factorization of Standard Convolution
+A standard convolutional layer maps an input tensor $\mathbf{X} \in \mathbb{R}^{C_{\text{in}} \times H \times W}$ to an output tensor $\mathbf{Y} \in \mathbb{R}^{C_{\text{out}} \times H \times W}$ by simultaneously filtering spatial dimensions and combining channel dimensions:
+$$Y_{c_{\text{out}}, h, w} = \sum_{c_{\text{in}}=0}^{C_{\text{in}}-1} \sum_{u=0}^{D_K-1} \sum_{v=0}^{D_K-1} K_{c_{\text{out}}, c_{\text{in}}, u, v} \, X_{c_{\text{in}}, h+u, w+v}$$
+Computational cost (Multiply-Accumulate operations):
+$$\text{Cost}_{\text{standard}} = D_K \cdot D_K \cdot C_{\text{in}} \cdot C_{\text{out}} \cdot H \cdot W$$
+
+#### Step 2: Depthwise Separable Decomposition
+Depthwise separable convolution splits this joint operation into two decoupled stages:
+1. **Depthwise Convolution (Spatial Filtering):** Applies a single convolutional filter per input channel without cross-channel communication:
+   $$\hat{Y}_{c, h, w} = \sum_{u=0}^{D_K-1} \sum_{v=0}^{D_K-1} K^{\text{DW}}_{c, u, v} \, X_{c, h+u, w+v}, \qquad c \in \{0, \dots, C_{\text{in}}-1\}$$
+   Cost: $\text{Cost}_{\text{DW}} = D_K \cdot D_K \cdot C_{\text{in}} \cdot H \cdot W$.
+2. **Pointwise Convolution (Channel Mixing):** A $1 \times 1$ convolution computes linear combinations across channels:
+   $$Y_{c_{\text{out}}, h, w} = \sum_{c_{\text{in}}=0}^{C_{\text{in}}-1} K^{\text{PW}}_{c_{\text{out}}, c_{\text{in}}} \, \hat{Y}_{c_{\text{in}}, h, w}$$
+   Cost: $\text{Cost}_{\text{PW}} = 1 \cdot 1 \cdot C_{\text{in}} \cdot C_{\text{out}} \cdot H \cdot W$.
+
+Summing both stages:
+$$\text{Cost}_{\text{separable}} = \left( D_K^2 \cdot C_{\text{in}} + C_{\text{in}} \cdot C_{\text{out}} \right) \cdot H \cdot W$$
+
+#### Step 3: Theoretical Acceleration Factor
+The ratio of computation between depthwise separable and standard convolution is:
+$$\frac{\text{Cost}_{\text{separable}}}{\text{Cost}_{\text{standard}}} = \frac{(D_K^2 C_{\text{in}} + C_{\text{in}} C_{\text{out}}) H W}{D_K^2 C_{\text{in}} C_{\text{out}} H W} = \frac{1}{C_{\text{out}}} + \frac{1}{D_K^2}$$
+
+In modern vision backbones where $C_{\text{out}} \gg 1$ (e.g., $C_{\text{out}} \ge 64$) and $D_K = 3$:
+$$\frac{1}{C_{\text{out}}} \approx 0 \implies \frac{\text{Cost}_{\text{separable}}}{\text{Cost}_{\text{standard}}} \approx \frac{1}{D_K^2} = \frac{1}{3^2} = \frac{1}{9} \approx 0.111$$
+Depthwise separable convolution delivers an **$8$ to $9\times$ reduction in computation** with negligible degradation in classification accuracy.
+
+#### Step 4: The Inverted Bottleneck and Manifold of Interest
+In classic ResNet bottlenecks, feature channels follow a Wide $\to$ Narrow $\to$ Wide structure:
+$$C \xrightarrow{1 \times 1 \text{ reduce}} \frac{C}{4} \xrightarrow{3 \times 3 \text{ conv}} \frac{C}{4} \xrightarrow{1 \times 1 \text{ expand}} C$$
+
+MobileNet-v2 (Sandler et al., 2018) and ConvNeXt (Liu et al., 2022) reverse this paradigm, adopting an **Inverted Bottleneck**:
+$$C \xrightarrow{\text{DW Conv } 7 \times 7} C \xrightarrow{1 \times 1 \text{ expand}} t C \xrightarrow{\text{GELU}} t C \xrightarrow{1 \times 1 \text{ project}} C$$
+where $t \ge 4$ is the expansion factor.
+
+**Mathematical Justification (Manifold of Interest):**
+Let feature representations reside in a low-dimensional manifold embedded within $\mathbb{R}^C$.
+Applying non-linear activation $\sigma(z) = \max(0, z)$ (ReLU) or $z \cdot \Phi(z)$ (GELU) to a low-dimensional representation $d \le C$ projects all negative coordinates to $0$, collapsing the manifold volume and irreversibly destroying information (the "manifold collapse").
+By projecting features into a high-dimensional expansion space $t C$ ($t = 4$ or $6$), the non-linearity operates with minimal subspace destruction. The final linear projection $t C \to C$ compresses the enriched representation back into the low-dimensional transmission channel without applying an activation function. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### Loss Landscape Smoothing (Li et al., 2018)
@@ -353,6 +512,125 @@ Calculate the parameter count and computational FLOPs for a $7 \times 7$ depthwi
 
 **Conclusion:**
 The $7 \times 7$ depthwise convolution has **$17.6\times$ fewer parameters** and **$17.6\times$ fewer FLOPs** than a standard dense $3 \times 3$ conv, while providing a dramatically larger receptive field ($7 \times 7 = 49$ pixels vs. $3 \times 3 = 9$ pixels)!
+
+---
+
+### Illustration 3: ResNet Bottleneck Block FLOP and Parameter Derivation
+
+**Problem:**
+Consider a ResNet-50 Bottleneck block in Stage 2 operating on feature maps of spatial dimensions $56 \times 56$ with $C_{\text{in}} = 256$, bottleneck width $C_{\text{mid}} = 64$, and output channels $C_{\text{out}} = 256$ (stride $1$, no downsampling).
+1. Compute the exact parameter count and Multiply-Accumulate (MAC) count for each of the three constituent convolutional layers ($1 \times 1 \to 3 \times 3 \to 1 \times 1$).
+2. Compare the total block parameters and MACs against a hypothetical "Plain" block consisting of two standard $3 \times 3$ convolutions with $256$ channels.
+3. Compute the percentage reduction in computation and parameters achieved by the bottleneck design.
+
+**Solution:**
+
+#### Step 1: Bottleneck Layer-by-Layer Breakdown
+- **Layer 1 ($1 \times 1 \text{ Conv, } 256 \to 64$):**
+  - Parameters: $1 \times 1 \times C_{\text{in}} \times C_{\text{mid}} = 1 \times 1 \times 256 \times 64 = \mathbf{16,384}$
+  - MACs: $\text{Params} \times H \times W = 16,384 \times 56 \times 56 = \mathbf{51,380,224}$ ($51.38 \text{ MMACs}$)
+- **Layer 2 ($3 \times 3 \text{ Conv, } 64 \to 64$, padding $1$):**
+  - Parameters: $3 \times 3 \times C_{\text{mid}} \times C_{\text{mid}} = 9 \times 64 \times 64 = \mathbf{36,864}$
+  - MACs: $\text{Params} \times H \times W = 36,864 \times 56 \times 56 = \mathbf{115,605,504}$ ($115.61 \text{ MMACs}$)
+- **Layer 3 ($1 \times 1 \text{ Conv, } 64 \to 256$):**
+  - Parameters: $1 \times 1 \times C_{\text{mid}} \times C_{\text{out}} = 1 \times 1 \times 64 \times 256 = \mathbf{16,384}$
+  - MACs: $\text{Params} \times H \times W = 16,384 \times 56 \times 56 = \mathbf{51,380,224}$ ($51.38 \text{ MMACs}$)
+
+**Total Bottleneck Cost:**
+- Total Parameters: $16,384 + 36,864 + 16,384 = \mathbf{69,632}$
+- Total MACs: $51,380,224 + 115,605,504 + 51,380,224 = \mathbf{218,365,952}$ ($218.37 \text{ MMACs} \approx 436.73 \text{ MFLOPs}$)
+
+#### Step 2: Comparison with Plain Two-Layer $3 \times 3$ Block ($256 \to 256$)
+In a plain block without bottlenecking:
+- Layer 1: $3 \times 3 \times 256 \times 256 = 589,824$ parameters; $\text{MACs} = 589,824 \times 56^2 = 1,849,688,064$ ($1.85 \text{ GMACs}$)
+- Layer 2: $3 \times 3 \times 256 \times 256 = 589,824$ parameters; $\text{MACs} = 589,824 \times 56^2 = 1,849,688,064$ ($1.85 \text{ GMACs}$)
+- Total Plain Parameters: $2 \times 589,824 = \mathbf{1,179,648}$
+- Total Plain MACs: $2 \times 1,849,688,064 = \mathbf{3,699,376,128}$ ($3.70 \text{ GMACs}$)
+
+#### Step 3: Computational and Parameter Savings
+- **Parameter Savings:**
+  $$\frac{1,179,648 - 69,632}{1,179,648} = \frac{1,110,016}{1,179,648} = \mathbf{94.1\% \text{ parameter reduction}}$$
+- **Computational (FLOP) Savings:**
+  $$\frac{3,699,376,128 - 218,365,952}{3,699,376,128} = \frac{3,481,010,176}{3,699,376,128} = \mathbf{94.1\% \text{ FLOP reduction}}$$
+The bottleneck formulation enables nearly a **$17\times$ reduction** in computational load per block while preserving full 256-channel input and output capacity.
+
+---
+
+### Illustration 4: Inception $7 \times 7 \to 1 \times 7 + 7 \times 1$ Asymmetric Factorization
+
+**Problem:**
+In Inception-v3, a $7 \times 7$ convolution operating on $C = 128$ channels at spatial resolution $14 \times 14$ is factored into a sequential cascade of $1 \times 7$ and $7 \times 1$ convolutions.
+1. Compute the parameter count and MACs for the direct $7 \times 7$ convolution.
+2. Compute the parameter count and MACs for the factorized $(1 \times 7) \to (7 \times 1)$ cascade.
+3. Verify that the effective receptive field is identical to $7 \times 7$.
+
+**Solution:**
+
+#### Step 1: Direct $7 \times 7$ Convolution
+- Parameters:
+  $$\text{Params}_{\text{direct}} = 7 \times 7 \times C \times C = 49 \times 128 \times 128 = 49 \times 16,384 = \mathbf{802,816}$$
+- Computational Cost:
+  $$\text{MAC}_{\text{direct}} = 802,816 \times 14 \times 14 = \mathbf{157,351,936} \approx \mathbf{157.35 \text{ MMACs}}$$
+
+#### Step 2: Factorized $(1 \times 7) + (7 \times 1)$ Cascade
+- **Stage 1 ($1 \times 7 \text{ Conv, horizontal, padding }(0, 3)$):**
+  - Parameters: $1 \times 7 \times 128 \times 128 = 7 \times 16,384 = \mathbf{114,688}$
+  - MACs: $114,688 \times 14 \times 14 = \mathbf{22,478,848}$ ($22.48 \text{ MMACs}$)
+- **Stage 2 ($7 \times 1 \text{ Conv, vertical, padding }(3, 0)$):**
+  - Parameters: $7 \times 1 \times 128 \times 128 = 7 \times 16,384 = \mathbf{114,688}$
+  - MACs: $114,688 \times 14 \times 14 = \mathbf{22,478,848}$ ($22.48 \text{ MMACs}$)
+
+**Total Factorized Cost:**
+- Parameters: $114,688 + 114,688 = \mathbf{229,376}$
+- MACs: $22,478,848 + 22,478,848 = \mathbf{44,957,696} \approx \mathbf{44.96 \text{ MMACs}}$
+
+**Exact Savings:**
+$$\text{Reduction} = \frac{802,816 - 229,376}{802,816} = \frac{573,440}{802,816} = 1 - \frac{2}{7} = \frac{5}{7} \approx \mathbf{71.43\% \text{ reduction in compute and memory}}$$
+
+#### Step 3: Receptive Field Verification
+- After $1 \times 7$ horizontal convolution with unit stride: $r_H = 1$, $r_W = 1 + (7 - 1) = 7$.
+- After $7 \times 1$ vertical convolution with unit stride: $r_H = 1 + (7 - 1) = 7$, $r_W = 7 + (1 - 1) = 7$.
+The composite receptive field is exactly $7 \times 7$, matching the unfactored filter while executing $3.5\times$ faster.
+
+---
+
+### Illustration 5: MobileNet-v2 Inverted Residual Block ($t=6$) Arithmetic Trace
+
+**Problem:**
+Let an Inverted Residual Block with expansion factor $t = 6$ process an input $\mathbf{X} \in \mathbb{R}^{64 \times 28 \times 28}$ to produce output $\mathbf{Y} \in \mathbb{R}^{64 \times 28 \times 28}$ ($C_{\text{in}} = 64, C_{\text{out}} = 64, s=1$).
+The block executes:
+1. $1 \times 1 \text{ pointwise expansion } (64 \to 64 \times 6 = 384) + \text{ReLU6}$
+2. $3 \times 3 \text{ depthwise conv } (384 \to 384, \text{groups}=384) + \text{ReLU6}$
+3. $1 \times 1 \text{ pointwise linear projection } (384 \to 64, \text{no non-linearity})$
+4. Element-wise shortcut addition $\mathbf{Y} = \mathbf{X} + \text{residual}$.
+
+Compute:
+1. Parameter count and MAC count for each of the three stages.
+2. The total block FLOP count.
+3. Contrast this against a direct $3 \times 3$ dense convolution with $384$ intermediate channels.
+
+**Solution:**
+
+#### Step 1: Layer-by-Layer Arithmetic
+1. **Pointwise Expansion ($1 \times 1 \text{ Conv, } 64 \to 384$):**
+   - Parameters: $1 \times 1 \times 64 \times 384 = \mathbf{24,576}$
+   - MACs: $24,576 \times 28 \times 28 = \mathbf{19,267,584}$ ($19.27 \text{ MMACs}$)
+2. **Depthwise Convolution ($3 \times 3 \text{ Conv, } 384 \to 384, \text{groups}=384$):**
+   - Parameters: $3 \times 3 \times 384 = \mathbf{3,456}$
+   - MACs: $3,456 \times 28 \times 28 = \mathbf{2,709,504}$ ($2.71 \text{ MMACs}$)
+3. **Linear Pointwise Projection ($1 \times 1 \text{ Conv, } 384 \to 64$):**
+   - Parameters: $1 \times 1 \times 384 \times 64 = \mathbf{24,576}$
+   - MACs: $24,576 \times 28 \times 28 = \mathbf{19,267,584}$ ($19.27 \text{ MMACs}$)
+
+#### Step 2: Total Block Totals
+- Total Parameters: $24,576 + 3,456 + 24,576 = \mathbf{52,608}$
+- Total MACs: $19,267,584 + 2,709,504 + 19,267,584 = \mathbf{41,244,672} \approx \mathbf{41.24 \text{ MMACs}}$ ($82.49 \text{ MFLOPs}$)
+
+#### Step 3: Comparison with Dense 384-Channel Convolution
+If the spatial filtering had been performed with a standard dense $3 \times 3$ convolution on the expanded 384 channels ($384 \to 384$):
+- Parameters: $3 \times 3 \times 384 \times 384 = 1,327,104$ parameters!
+- MACs: $1,327,104 \times 28^2 = 1,040,449,536 \approx \mathbf{1,040.45 \text{ MMACs}}$
+- The depthwise layer consumes only $2.71$ MMACs compared to $1,040.45$ MMACs—an astonishing **$384\times$ reduction** in spatial filtering compute, proving why inverted bottlenecks are the foundation of edge computer vision.
 
 ---
 

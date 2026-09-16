@@ -4,25 +4,26 @@
 [![Pandas](https://img.shields.io/badge/Pandas-2.x%20Tabular%20Analytics-darkgreen.svg)](#domain-ii-pandas-tabular-data--arrow-memory)
 [![PySpark](https://img.shields.io/badge/Apache%20Spark-3.5%2B%20Distributed%20Engine-orange.svg)](#domain-iii-apache-spark-pyspark-distributed-cluster-computing)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x%20Deep%20Learning-red.svg)](#domain-iv-pytorch-deep-learning--tensor-compilation)
+[![Databricks](https://img.shields.io/badge/Databricks-Lakehouse%20%26%20Mosaic%20AI-crimson.svg)](#domain-v-databricks-unified-lakehouse-governance--generative-ai)
 [![Target Level](https://img.shields.io/badge/Engineering%20Level-Staff%20%7C%20Principal%20ML%2FData%20Architect-purple.svg)](#the-6-part-technical-standard)
 
-> A production-grade, authoritative reference manual and systems textbook covering the four foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence: **NumPy**, **Pandas**, **Apache Spark (PySpark)**, and **PyTorch**. 
+> A production-grade, authoritative reference manual and systems textbook covering the five foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence: **NumPy**, **Pandas**, **Apache Spark (PySpark)**, **PyTorch**, and **Databricks**. 
 > 
-> Grounded in canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga*), low-level memory architectures, compiled execution engines, and production pitfalls.
+> Grounded in canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga, Ghodsi*), low-level memory architectures, compiled execution engines, and production pitfalls.
 
 ---
 
 ## 🏛️ Architectural Comparison Matrix
 
-| Architectural Dimension | NumPy (`np.ndarray`) | Pandas (`DataFrame`) | Apache Spark (`DataFrame` / `Dataset`) | PyTorch (`torch.Tensor`) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Primary Domain** | Strided N-D Numerical Computing | Tabular Wrangling & Relational Algebra | Large-Scale Distributed Big Data Processing | Deep Learning, Autograd & Neural Networks |
-| **Foundational Literature** | *Guide to NumPy* (Travis Oliphant) | *Python for Data Analysis* (Wes McKinney) | *Spark: The Definitive Guide* (Chambers & Zaharia) | *Deep Learning with PyTorch* (Stevens et al.) |
-| **Underlying Memory Model** | Contiguous C/Fortran buffer, strides, shape | `BlockManager` (NumPy 2D blocks) / PyArrow | Tungsten off-heap row/column binary memory | 1D contiguous `Storage` pointer + strides |
-| **Execution Paradigm** | Vectorized C loops via ufuncs | Vectorized C / Cython / PyArrow kernels | Lazy DAG evaluation, Whole-Stage CodeGen | Dynamic Tape Autograd DAG, eager or compiled |
-| **Hardware Targets** | Single-node CPU (MKL, OpenBLAS) | Single-node CPU (Arrow, SIMD) | Distributed cluster (JVM executors, off-heap) | Heterogeneous: CPU, NVIDIA CUDA, Apple MPS |
-| **Compiler & Optimization** | Numba / Cython JIT | `pd.eval()`, PyArrow SIMD | Catalyst Query Optimizer & Tungsten Engine | TorchDynamo, AOTAutograd, TorchInductor |
-| **Scale Envelope** | In-Memory (RAM-bound), memmap for disk | In-Memory (RAM-bound, ~1/5x available RAM) | Out-of-Core, Petabyte scale across clusters | GPU VRAM-bound, multi-node scaling via DDP/FSDP |
+| Architectural Dimension | NumPy (`np.ndarray`) | Pandas (`DataFrame`) | Apache Spark (`DataFrame` / `Dataset`) | PyTorch (`torch.Tensor`) | Databricks Lakehouse Platform |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Domain** | Strided N-D Numerical Computing | Tabular Wrangling & Relational Algebra | Large-Scale Distributed Big Data Processing | Deep Learning, Autograd & Neural Networks | Unified Lakehouse, Enterprise ETL, BI & Generative AI |
+| **Foundational Literature** | *Guide to NumPy* (Travis Oliphant) | *Python for Data Analysis* (Wes McKinney) | *Spark: The Definitive Guide* (Chambers & Zaharia) | *Deep Learning with PyTorch* (Stevens et al.) | *The Databricks Lakehouse Platform* (Zaharia & Ghodsi) |
+| **Underlying Memory Model** | Contiguous C/Fortran buffer, strides, shape | `BlockManager` (NumPy 2D blocks) / PyArrow | Tungsten off-heap row/column binary memory | 1D contiguous `Storage` pointer + strides | Native C++ SIMD Vectors (Photon) & Off-Heap Spark |
+| **Execution Paradigm** | Vectorized C loops via ufuncs | Vectorized C / Cython / PyArrow kernels | Lazy DAG evaluation, Whole-Stage CodeGen | Dynamic Tape Autograd DAG, eager or compiled | Photon C++ Vectorized Core & Serverless Spark |
+| **Hardware Targets** | Single-node CPU (MKL, OpenBLAS) | Single-node CPU (Arrow, SIMD) | Distributed cluster (JVM executors, off-heap) | Heterogeneous: CPU, NVIDIA CUDA, Apple MPS | Multi-Cloud Serverless CPU & GPU (AWS, Azure, GCP) |
+| **Compiler & Optimization** | Numba / Cython JIT | `pd.eval()`, PyArrow SIMD | Catalyst Query Optimizer & Tungsten Engine | TorchDynamo, AOTAutograd, TorchInductor | Photon Engine, Liquid Clustering, Predictive I/O |
+| **Scale Envelope** | In-Memory (RAM-bound), memmap for disk | In-Memory (RAM-bound, ~1/5x available RAM) | Out-of-Core, Petabyte scale across clusters | GPU VRAM-bound, multi-node scaling via DDP/FSDP | Exabyte Cloud Scale with Instant Serverless Elasticity |
 
 ---
 
@@ -47,7 +48,8 @@ Projects/Data-and-AI-Frameworks/
 ├── NumPy/                                            # Domain I: Numerical & Strided Computing
 ├── Pandas/                                           # Domain II: Tabular Analytics & Relational Algebra
 ├── PySpark/                                          # Domain III: Distributed Big Data & Cluster Computing
-└── PyTorch/                                          # Domain IV: Deep Learning, Autograd & Compilation
+├── PyTorch/                                          # Domain IV: Deep Learning, Autograd & Compilation
+└── Databricks/                                       # Domain V: Unified Lakehouse, MLOps & GenAI
 ```
 
 ---
@@ -117,3 +119,20 @@ Projects/Data-and-AI-Frameworks/
 * **Chapter 08:** [`08. Distributed Deep Learning (DDP, FSDP & Parallelism).md`](PyTorch/08.%20Distributed%20Deep%20Learning%20%28DDP%2C%20FSDP%20%26%20Parallelism%29.md) — `DistributedDataParallel`, NCCL Ring-AllReduce, Fully Sharded Data Parallel (FSDP), gradient synchronization.
 * **Chapter 09:** [`09. PyTorch Compilation (TorchDynamo, AOTAutograd & Inductor).md`](PyTorch/09.%20PyTorch%20Compilation%20%28TorchDynamo%2C%20AOTAutograd%20%26%20Inductor%29.md) — `torch.compile` internals: TorchDynamo bytecode capture, AOTAutograd graph tracing, TorchInductor Triton codegen.
 * **Chapter 10:** [`10. Model Deployment, Serialization, ONNX & Quantization.md`](PyTorch/10.%20Model%20Deployment%2C%20Serialization%2C%20ONNX%20%26%20Quantization.md) — Clean serialization, TorchScript JIT, ONNX export, dynamic/static quantization, and QAT.
+
+---
+
+### Domain V: Databricks (Unified Lakehouse Governance & Generative AI)
+*Canonical References: Matei Zaharia & Ali Ghodsi (*The Databricks Lakehouse Platform*), Denny Lee et al. (*Delta Lake: The Definitive Guide*)*
+
+* **Overview & Quick Reference:** [`Databricks/README.md`](Databricks/README.md)
+* **Chapter 01:** [`01. Databricks Architecture, Control Plane & Data Plane.md`](Databricks/01.%20Databricks%20Architecture%2C%20Control%20Plane%20%26%20Data%20Plane.md) — Control Plane vs Customer Data Plane, Secure Cluster Connectivity (No Public IPs), Serverless pools, Photon C++ vectorized core.
+* **Chapter 02:** [`02. Unity Catalog & Unified Lakehouse Governance.md`](Databricks/02.%20Unity%20Catalog%20%26%20Unified%20Lakehouse%20Governance.md) — 3-Level Namespace (`catalog.schema.table/volume/model`), Managed vs External Tables, Volumes, Row Filters & Column Masks, Delta Sharing.
+* **Chapter 03:** [`03. Delta Lake on Databricks & Storage Engine Mechanics.md`](Databricks/03.%20Delta%20Lake%20on%20Databricks%20%26%20Storage%20Engine%20Mechanics.md) — Liquid Clustering (Hilbert curves replacing Z-Order), Deletion Vectors (Roaring Bitmaps), UniForm (Iceberg sync), CDF.
+* **Chapter 04:** [`04. Delta Live Tables (DLT) & Declarative Pipeline Orchestration.md`](Databricks/04.%20Delta%20Live%20Tables%20%28DLT%29%20%26%20Declarative%20Pipeline%20Orchestration.md) — Declarative ETL (`@dlt.table`), Streaming Tables vs Materialized Views, Auto Loader (`cloudFiles`), Expectations data quality circuit breakers.
+* **Chapter 05:** [`05. Databricks Workflows, Task Orchestration & Serverless Jobs.md`](Databricks/05.%20Databricks%20Workflows%2C%20Task%20Orchestration%20%26%20Serverless%20Jobs.md) — Multi-task DAG workflows, Serverless Jobs execution, `taskValues` state sharing, Conditional task routing (If/Else, For-Each), Smart Repair.
+* **Chapter 06:** [`06. Databricks SQL & Serverless Photon Warehousing.md`](Databricks/06.%20Databricks%20SQL%20%26%20Serverless%20Photon%20Warehousing.md) — Serverless SQL Warehouses, Photon SIMD memory layout, Query Profile waterfall diagnostics, Disk Cache vs Result Cache, Materialized Views in DBSQL.
+* **Chapter 07:** [`07. MLflow & End-to-End Machine Learning Operations (MLOps).md`](Databricks/07.%20MLflow%20%26%20End-to-End%20Machine%20Learning%20Operations%20%28MLOps%29.md) — MLflow Tracking, Autologging, Model Registry in Unity Catalog, Feature Engineering in UC, Canary deployments, and model governance.
+* **Chapter 08:** [`08. Generative AI, Mosaic AI & Model Serving.md`](Databricks/08.%20Generative%20AI%2C%20Mosaic%20AI%20%26%20Model%20Serving.md) — Mosaic AI Model Serving, Vector Search with Delta sync, Lakehouse RAG architectures, AI SQL Functions (`ai_query()`, `ai_summarize()`, `ai_classify()`).
+* **Chapter 09:** [`09. Lakehouse Security, Networking & Identity Federation.md`](Databricks/09.%20Lakehouse%20Security%2C%20Networking%20%26%20Identity%20Federation.md) — Secure Cluster Connectivity (No Public IPs), Storage Credentials & External Locations, SCIM provisioning, System Tables (`system.access.audit`, `system.billing.usage`).
+* **Chapter 10:** [`10. Enterprise Production Blueprint & CICD with Databricks Asset Bundles (DABs).md`](Databricks/10.%20Enterprise%20Production%20Blueprint%20%26%20CICD%20with%20Databricks%20Asset%20Bundles%20%28DABs%29.md) — Databricks Asset Bundles (`databricks.yml`), Multi-environment CI/CD (Dev/Staging/Prod), Auto Loader $\rightarrow$ DLT $\rightarrow$ MLflow $\rightarrow$ Serverless Job.

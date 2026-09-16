@@ -5,7 +5,7 @@
 [![LeetCode Problems](https://img.shields.io/badge/Coding%20Patterns-357%20Solutions-brightgreen.svg)](#pillar-iii-coding--leetcode-masterclass-357-problems)
 [![Design Patterns](https://img.shields.io/badge/Design%20Patterns-14%20Covered-orange.svg)](#part-1-head-first-design-patterns-14-patterns)
 [![Runnable Labs](https://img.shields.io/badge/Simulation%20Labs-45%20Python%20Engines-brightgreen.svg)](#the-4-pillar-chapter-architecture)
-[![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-40%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch--40-chapters)
+[![Data & AI Frameworks](https://img.shields.io/badge/Data%20%26%20AI%20Frameworks-50%20Chapters-blueviolet.svg)](#-pillar-iv-data--ai-computing-frameworks-numpy-pandas-pyspark-pytorch-databricks--50-chapters)
 [![Streaming & Distributed Engines](https://img.shields.io/badge/Distributed%20Engines-30%20Chapters-crimson.svg)](#-pillar-v-distributed-data--streaming-engines-kafka-flink-airflow--30-chapters)
 [![DDIA Systems](https://img.shields.io/badge/DDIA%20Systems-12%20Chapters-teal.svg)](#-pillar-vi-designing-data-intensive-applications-ddia--12-chapters)
 [![Microservices Architecture](https://img.shields.io/badge/Microservices%20Design-10%20Chapters-darkgreen.svg)](#-pillar-vii-microservices-architecture--design-10-chapters)
@@ -56,7 +56,8 @@ knowledge-base/
 │   │   ├── NumPy/                             # Vectorized N-D Computing & Buffer Protocols
 │   │   ├── Pandas/                            # Tabular Wrangling & Apache Arrow Backends
 │   │   ├── PySpark/                           # Distributed Big Data, Catalyst & Tungsten
-│   │   └── PyTorch/                           # Deep Learning, Dynamic Autograd & Compilation
+│   │   ├── PyTorch/                           # Deep Learning, Dynamic Autograd & Compilation
+│   │   └── Databricks/                        # Unified Lakehouse, MLOps & Generative AI
 │   │
 │   ├── Distributed-Data-and-Streaming-Engines/ # Real-Time Streaming & Orchestration
 │   │   ├── README.md                          # Engine Matrix & Master Architecture
@@ -225,9 +226,9 @@ A production-grade, interview-tested curriculum covering all **14 foundational a
 
 ---
 
-## ⚡ Pillar IV: Data & AI Computing Frameworks (NumPy, Pandas, PySpark, PyTorch — 40 Chapters)
+## ⚡ Pillar IV: Data & AI Computing Frameworks (NumPy, Pandas, PySpark, PyTorch, Databricks — 50 Chapters)
 
-A publication-grade systems textbook covering the four foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence, citing canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga*):
+A publication-grade systems textbook covering the five foundational computing frameworks of modern Machine Learning, Data Engineering, and Artificial Intelligence, citing canonical literature (*Oliphant, McKinney, Chambers, Zaharia, Stevens, Antiga, Ghodsi*):
 
 | Framework | Domain & Hardware Focus | Canonical Book References | Master Curriculum |
 | :--- | :--- | :--- | :---: |
@@ -235,8 +236,9 @@ A publication-grade systems textbook covering the four foundational computing fr
 | **Pandas** | Tabular Data, BlockManager, Arrow Backend, Relational Merges | *Python for Data Analysis* (Wes McKinney) & *Effective Pandas* (Matt Harrison) | [10 Chapters](Projects/Data-and-AI-Frameworks/Pandas/README.md) |
 | **Apache Spark** | Distributed Big Data, Catalyst Query Optimizer, Tungsten CodeGen, Streaming | *Spark: The Definitive Guide* (Matei Zaharia) & *Learning Spark* (Jules Damji) | [10 Chapters](Projects/Data-and-AI-Frameworks/PySpark/README.md) |
 | **PyTorch** | Dynamic Autograd DAG, Mixed Precision (AMP), DDP/FSDP, `torch.compile` | *Deep Learning with PyTorch* (Eli Stevens et al.) & PyTorch Core Papers | [10 Chapters](Projects/Data-and-AI-Frameworks/PyTorch/README.md) |
+| **Databricks** | Unified Lakehouse, Unity Catalog, Photon C++ Core, DLT, Mosaic AI | *The Databricks Lakehouse Platform* (Zaharia & Ghodsi) & *Delta Lake: The Definitive Guide* | [10 Chapters](Projects/Data-and-AI-Frameworks/Databricks/README.md) |
 
-> Complete cross-framework comparison matrix & 40-chapter curriculum: **[Data & AI Frameworks Master Portal](Projects/Data-and-AI-Frameworks/README.md)**
+> Complete cross-framework comparison matrix & 50-chapter curriculum: **[Data & AI Frameworks Master Portal](Projects/Data-and-AI-Frameworks/README.md)**
 
 ---
 

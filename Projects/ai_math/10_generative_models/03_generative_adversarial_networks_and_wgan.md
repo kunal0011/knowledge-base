@@ -190,6 +190,145 @@ Standard default penalty coefficient: $\lambda = 10$.
 
 ---
 
+### 2.9 Rigorous Mathematical Derivations
+
+#### Derivation 10.3.1: Kantorovich-Rubinstein Duality Theorem via Fenchel-Rockafellar Duality
+
+**1. Context and Assumptions:**
+Let $(\mathcal{X}, d)$ be a complete separable metric space (Polish space) equipped with metric $d(\mathbf{x}, \mathbf{y}) = \|\mathbf{x} - \mathbf{y}\|_2$.
+Let $\mathcal{P}_1(\mathcal{X})$ denote the set of probability distributions on $\mathcal{X}$ with finite first moment: $\int_{\mathcal{X}} \|\mathbf{x}\| dP(\mathbf{x}) < \infty$.
+Let $P, Q \in \mathcal{P}_1(\mathcal{X})$.
+Let $\Pi(P, Q)$ be the collection of all joint probability measures $\pi$ on $\mathcal{X} \times \mathcal{X}$ having marginal distributions $P$ and $Q$, satisfying:
+$$\int_{\mathcal{X}} d\pi(\mathbf{x}, \mathbf{y}) = Q(\mathbf{y}), \qquad \int_{\mathcal{X}} d\pi(\mathbf{x}, \mathbf{y}) = P(\mathbf{x})$$
+
+**2. Step 1: Primal Optimal Transport Formulation:**
+The Kantorovich formulation of the optimal transport problem defines the Wasserstein-1 distance as:
+$$W_1(P, Q) \triangleq \inf_{\pi \in \Pi(P, Q)} \int_{\mathcal{X} \times \mathcal{X}} \|\mathbf{x} - \mathbf{y}\|_2 \, d\pi(\mathbf{x}, \mathbf{y})$$
+This is an infinite-dimensional linear programming problem: minimizing a linear functional of $\pi$ subject to linear marginal constraints and non-negativity $\pi \ge 0$.
+
+**3. Step 2: Lagrangian Formulation with Multiplier Potentials:**
+We relax the marginal constraints using Lagrange multiplier functions $\phi, \psi \in C_b(\mathcal{X})$ (bounded continuous real functions):
+$$\mathcal{L}(\pi, \phi, \psi) = \int_{\mathcal{X} \times \mathcal{X}} \|\mathbf{x} - \mathbf{y}\|_2 \, d\pi(\mathbf{x}, \mathbf{y}) + \int_{\mathcal{X}} \phi(\mathbf{x}) \left( dP(\mathbf{x}) - \int_{\mathcal{X}} d\pi(\mathbf{x}, \mathbf{y}) \right) + \int_{\mathcal{X}} \psi(\mathbf{y}) \left( dQ(\mathbf{y}) - \int_{\mathcal{X}} d\pi(\mathbf{x}, \mathbf{y}) \right)$$
+Rearranging terms by grouping measures:
+$$\mathcal{L}(\pi, \phi, \psi) = \int_{\mathcal{X}} \phi(\mathbf{x}) dP(\mathbf{x}) + \int_{\mathcal{X}} \psi(\mathbf{y}) dQ(\mathbf{y}) + \int_{\mathcal{X} \times \mathcal{X}} \left( \|\mathbf{x} - \mathbf{y}\|_2 - \phi(\mathbf{x}) - \psi(\mathbf{y}) \right) d\pi(\mathbf{x}, \mathbf{y})$$
+Taking the infimum over all positive measures $\pi \ge 0$:
+$$\inf_{\pi \ge 0} \int_{\mathcal{X} \times \mathcal{X}} \left( \|\mathbf{x} - \mathbf{y}\|_2 - \phi(\mathbf{x}) - \psi(\mathbf{y}) \right) d\pi(\mathbf{x}, \mathbf{y}) = \begin{cases} 0 & \text{if } \phi(\mathbf{x}) + \psi(\mathbf{y}) \le \|\mathbf{x} - \mathbf{y}\|_2 \quad \forall \mathbf{x}, \mathbf{y} \\ -\infty & \text{otherwise} \end{cases}$$
+By strong linear programming duality (Fenchel-Rockafellar theorem, since the feasible set has non-empty interior):
+$$W_1(P, Q) = \sup_{\substack{\phi, \psi \in C_b(\mathcal{X}) \\ \phi(\mathbf{x}) + \psi(\mathbf{y}) \le \|\mathbf{x} - \mathbf{y}\|_2}} \left( \int_{\mathcal{X}} \phi(\mathbf{x}) dP(\mathbf{x}) + \int_{\mathcal{X}} \psi(\mathbf{y}) dQ(\mathbf{y}) \right)$$
+
+**4. Step 3: $c$-Transform and Reduction to 1-Lipschitz Potentials:**
+For any fixed $\phi(\mathbf{x})$, to maximize the objective with respect to $\psi(\mathbf{y})$ under the constraint $\psi(\mathbf{y}) \le \|\mathbf{x} - \mathbf{y}\|_2 - \phi(\mathbf{x})$, we must set $\psi(\mathbf{y})$ to its point-wise infimum over all $\mathbf{x}$:
+$$\psi(\mathbf{y}) = \inf_{\mathbf{x} \in \mathcal{X}} \left( \|\mathbf{x} - \mathbf{y}\|_2 - \phi(\mathbf{x}) \right) \triangleq -\phi^c(\mathbf{y})$$
+Now substitute $\mathbf{x} = \mathbf{y}$:
+$$\psi(\mathbf{x}) \le \|\mathbf{x} - \mathbf{x}\|_2 - \phi(\mathbf{x}) = -\phi(\mathbf{x}) \implies \psi(\mathbf{x}) + \phi(\mathbf{x}) \le 0$$
+Furthermore, if $\phi$ is optimal, setting $\psi(\mathbf{y}) = -\phi(\mathbf{y})$ yields:
+$$\phi(\mathbf{x}) - \phi(\mathbf{y}) \le \|\mathbf{x} - \mathbf{y}\|_2 \quad \forall \mathbf{x}, \mathbf{y} \in \mathcal{X}$$
+Swapping $\mathbf{x}$ and $\mathbf{y}$:
+$$\phi(\mathbf{y}) - \phi(\mathbf{x}) \le \|\mathbf{y} - \mathbf{x}\|_2 = \|\mathbf{x} - \mathbf{y}\|_2 \implies |\phi(\mathbf{x}) - \phi(\mathbf{y})| \le \|\mathbf{x} - \mathbf{y}\|_2$$
+This is the exact mathematical definition of a **1-Lipschitz function** $\|\phi\|_L \le 1$!
+Renaming $\phi \triangleq D$ (the Critic):
+$$\mathbf{W_1(P, Q) = \sup_{\|D\|_L \le 1} \left( \mathbb{E}_{\mathbf{x} \sim P}[D(\mathbf{x})] - \mathbb{E}_{\mathbf{y} \sim Q}[D(\mathbf{y})] \right)}$$
+
+---
+
+#### Derivation 10.3.2: Unit Gradient Norm Property of the Optimal Critic along Optimal Transport Geodesics
+
+**1. Context and Assumptions:**
+Let $\pi^*$ be an optimal transport plan achieving $W_1(P, Q)$.
+Let $(\mathbf{x}, \mathbf{y}) \in \operatorname{supp}(\pi^*)$, where $\mathbf{x} \sim P$ (real) and $\mathbf{y} \sim Q$ (generated).
+Let $D^*$ be the optimal 1-Lipschitz Critic function achieving the supremum in the Kantorovich-Rubinstein duality.
+Define the line segment (geodesic) connecting $\mathbf{y}$ to $\mathbf{x}$:
+$$\hat{\mathbf{x}}(t) = t \mathbf{x} + (1 - t) \mathbf{y} = \mathbf{y} + t(\mathbf{x} - \mathbf{y}), \quad t \in [0, 1]$$
+
+**2. Step 1: Exact Potential Difference on Support:**
+From the complementary slackness conditions of optimal transport duality:
+$$D^*(\mathbf{x}) - D^*(\mathbf{y}) = \|\mathbf{x} - \mathbf{y}\|_2$$
+That is, the optimal critic achieves the maximal possible difference permitted by 1-Lipschitz continuity along any coupled pair $(\mathbf{x}, \mathbf{y}) \sim \pi^*$.
+
+**3. Step 2: Bounding the Potential along the Interpolation Geodesic:**
+For any intermediate point $\hat{\mathbf{x}}(t)$ with $t \in (0, 1)$:
+1. By the 1-Lipschitz condition between $\hat{\mathbf{x}}(t)$ and $\mathbf{y}$:
+   $$D^*(\hat{\mathbf{x}}(t)) - D^*(\mathbf{y}) \le \|\hat{\mathbf{x}}(t) - \mathbf{y}\|_2 = \|t(\mathbf{x} - \mathbf{y})\|_2 = t \|\mathbf{x} - \mathbf{y}\|_2$$
+2. By the 1-Lipschitz condition between $\mathbf{x}$ and $\hat{\mathbf{x}}(t)$:
+   $$D^*(\mathbf{x}) - D^*(\hat{\mathbf{x}}(t)) \le \|\mathbf{x} - \hat{\mathbf{x}}(t)\|_2 = \|(1 - t)(\mathbf{x} - \mathbf{y})\|_2 = (1 - t) \|\mathbf{x} - \mathbf{y}\|_2$$
+Now sum the two inequalities:
+$$\left( D^*(\hat{\mathbf{x}}(t)) - D^*(\mathbf{y}) \right) + \left( D^*(\mathbf{x}) - D^*(\hat{\mathbf{x}}(t)) \right) \le t \|\mathbf{x} - \mathbf{y}\|_2 + (1 - t) \|\mathbf{x} - \mathbf{y}\|_2 = \|\mathbf{x} - \mathbf{y}\|_2$$
+Notice that the left-hand side telescopes to:
+$$D^*(\mathbf{x}) - D^*(\mathbf{y}) \le \|\mathbf{x} - \mathbf{y}\|_2$$
+However, from Step 1, $D^*(\mathbf{x}) - D^*(\mathbf{y}) = \|\mathbf{x} - \mathbf{y}\|_2$ exactly.
+Because the sum of two upper bounds equals their exact sum, **both individual inequalities must hold with strict equality!**
+$$D^*(\hat{\mathbf{x}}(t)) - D^*(\mathbf{y}) = t \|\mathbf{x} - \mathbf{y}\|_2$$
+$$D^*(\hat{\mathbf{x}}(t)) = D^*(\mathbf{y}) + t \|\mathbf{x} - \mathbf{y}\|_2$$
+The optimal critic $D^*$ is **strictly linear** along the straight line connecting $\mathbf{y}$ to $\mathbf{x}$.
+
+**4. Step 3: Gradient Evaluation:**
+Differentiating $D^*(\hat{\mathbf{x}}(t))$ with respect to $t$ using the multivariable chain rule:
+$$\frac{d}{dt} D^*(\hat{\mathbf{x}}(t)) = \nabla D^*(\hat{\mathbf{x}}(t))^\top \frac{d \hat{\mathbf{x}}(t)}{dt} = \nabla D^*(\hat{\mathbf{x}}(t))^\top (\mathbf{x} - \mathbf{y})$$
+From the explicit linear solution $D^*(\hat{\mathbf{x}}(t)) = D^*(\mathbf{y}) + t \|\mathbf{x} - \mathbf{y}\|_2$:
+$$\frac{d}{dt} D^*(\hat{\mathbf{x}}(t)) = \|\mathbf{x} - \mathbf{y}\|_2$$
+Equating the two expressions:
+$$\nabla D^*(\hat{\mathbf{x}}(t))^\top \frac{\mathbf{x} - \mathbf{y}}{\|\mathbf{x} - \mathbf{y}\|_2} = 1$$
+Let $\mathbf{v} = \frac{\mathbf{x} - \mathbf{y}}{\|\mathbf{x} - \mathbf{y}\|_2}$ be the unit vector pointing from fake to real.
+By Cauchy-Schwarz:
+$$1 = \nabla D^*(\hat{\mathbf{x}}(t))^\top \mathbf{v} \le \|\nabla D^*(\hat{\mathbf{x}}(t))\|_2 \|\mathbf{v}\|_2 = \|\nabla D^*(\hat{\mathbf{x}}(t))\|_2 (1) = \|\nabla D^*(\hat{\mathbf{x}}(t))\|_2$$
+Thus:
+$$\|\nabla D^*(\hat{\mathbf{x}}(t))\|_2 \ge 1$$
+Combined with the global 1-Lipschitz condition $\|\nabla D^*(\hat{\mathbf{x}})\|_2 \le 1$:
+$$\mathbf{\|\nabla D^*(\hat{\mathbf{x}}(t))\|_2 = 1, \qquad \text{and } \nabla D^*(\hat{\mathbf{x}}(t)) = \frac{\mathbf{x} - \mathbf{y}}{\|\mathbf{x} - \mathbf{y}\|_2}}$$
+almost everywhere along the straight line.
+This proves that the optimal gradient norm is **identically 1**, rigorously justifying Gulrajani et al.'s two-sided gradient penalty $(\|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2 - 1)^2$.
+
+---
+
+#### Derivation 10.3.3: Spectral Normalization and Power Iteration for Exact Matrix Lipschitz Bounds
+
+**1. Context and Assumptions:**
+Consider a deep neural network critic $f: \mathbb{R}^D \to \mathbb{R}$ defined as a composition of $L$ layers:
+$$f(\mathbf{x}) = \mathbf{W}_{L+1} \, a_L\left( \mathbf{W}_L \dots a_1\left( \mathbf{W}_1 \mathbf{x} + \mathbf{b}_1 \right) \dots + \mathbf{b}_L \right) + b_{L+1}$$
+where $\mathbf{W}_l$ are weight matrices and $a_l(\cdot)$ are non-linear activation functions (e.g. ReLU, LeakyReLU with negative slope $|\alpha| \le 1$).
+
+**2. Step 1: Layer-Wise Lipschitz Constant Composition:**
+The Lipschitz constant of a composite function $f = g \circ h$ satisfies $\|f\|_L \le \|g\|_L \cdot \|h\|_L$.
+Therefore:
+$$\|f\|_L \le \|\mathbf{W}_{L+1}\|_2 \cdot \prod_{l=1}^L \left( \|a_l\|_L \cdot \|\mathbf{W}_l\|_2 \right)$$
+For standard activations (ReLU, LeakyReLU, ELU, Sigmoid), the maximum derivative $|a'_l(u)| \le 1$, so $\|a_l\|_L = 1$.
+The matrix operator norm $\|\mathbf{W}\|_2$ induced by the Euclidean norm is the **spectral norm** $\sigma_{\max}(\mathbf{W})$ (the largest singular value):
+$$\|\mathbf{W}\|_2 \triangleq \sup_{\mathbf{h} \ne \mathbf{0}} \frac{\|\mathbf{W}\mathbf{h}\|_2}{\|\mathbf{h}\|_2} = \sigma_{\max}(\mathbf{W}) = \sqrt{\lambda_{\max}(\mathbf{W}^\top \mathbf{W})}$$
+Thus:
+$$\|f\|_L \le \prod_{l=1}^{L+1} \sigma_{\max}(\mathbf{W}_l)$$
+To guarantee that the entire network is 1-Lipschitz ($\|f\|_L \le 1$), a sufficient condition is that every individual layer has spectral norm bounded by 1:
+$$\sigma_{\max}(\mathbf{W}_l) \le 1 \quad \forall l \in \{1, \dots, L+1\}$$
+
+**3. Step 2: The Spectral Normalization Operator:**
+Miyato et al. (2018) normalize each weight matrix by its spectral norm:
+$$\mathbf{W}_{\text{SN}} \triangleq \frac{\mathbf{W}}{\sigma_{\max}(\mathbf{W})}$$
+Evaluating the spectral norm of $\mathbf{W}_{\text{SN}}$:
+$$\sigma_{\max}(\mathbf{W}_{\text{SN}}) = \sigma_{\max}\left( \frac{\mathbf{W}}{\sigma_{\max}(\mathbf{W})} \right) = \frac{\sigma_{\max}(\mathbf{W})}{\sigma_{\max}(\mathbf{W})} = 1.0$$
+This guarantees $\|f\|_L \le 1$ unconditionally without adding penalty terms to the loss function!
+
+**4. Step 3: Power Iteration for Fast Singular Value Approximation:**
+Computing a full SVD of $\mathbf{W} \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ requires cubic $\mathcal{O}(d^3)$ operations.
+Instead, Power Iteration maintains persistent unit vectors $\mathbf{u} \in \mathbb{R}^{d_{\text{out}}}$ and $\mathbf{v} \in \mathbb{R}^{d_{\text{in}}}$.
+At each training step, perform one step of power iteration:
+$$\mathbf{v} \leftarrow \frac{\mathbf{W}^\top \mathbf{u}}{\|\mathbf{W}^\top \mathbf{u}\|_2}, \qquad \mathbf{u} \leftarrow \frac{\mathbf{W}\mathbf{v}}{\|\mathbf{W}\mathbf{v}\|_2}$$
+The largest singular value is estimated by:
+$$\sigma(\mathbf{W}) \approx \mathbf{u}^\top \mathbf{W} \mathbf{v}$$
+Because $\mathbf{W}$ changes slowly over gradient steps, a single iteration per training step converges extremely rapidly.
+
+**5. Step 4: Analytical Gradient of Spectrally Normalized Weights:**
+Let $\mathcal{L}$ be the objective loss. By matrix differential calculus:
+$$d\mathbf{W}_{\text{SN}} = d\left( \frac{\mathbf{W}}{\sigma(\mathbf{W})} \right) = \frac{d\mathbf{W}}{\sigma(\mathbf{W})} - \frac{\mathbf{W}}{\sigma(\mathbf{W})^2} d\sigma(\mathbf{W})$$
+From the variational characterization $\sigma(\mathbf{W}) = \mathbf{u}^\top \mathbf{W} \mathbf{v}$:
+$$d\sigma(\mathbf{W}) = \mathbf{u}^\top (d\mathbf{W}) \mathbf{v} = \operatorname{tr}\left( \mathbf{v}\mathbf{u}^\top d\mathbf{W} \right)$$
+Using $d\mathcal{L} = \operatorname{tr}\left( (\nabla_{\mathbf{W}_{\text{SN}}} \mathcal{L})^\top d\mathbf{W}_{\text{SN}} \right)$:
+$$d\mathcal{L} = \frac{1}{\sigma(\mathbf{W})} \operatorname{tr}\left( (\nabla_{\mathbf{W}_{\text{SN}}} \mathcal{L})^\top d\mathbf{W} \right) - \frac{\operatorname{tr}\left( (\nabla_{\mathbf{W}_{\text{SN}}} \mathcal{L})^\top \mathbf{W} \right)}{\sigma(\mathbf{W})^2} \operatorname{tr}\left( \mathbf{v}\mathbf{u}^\top d\mathbf{W} \right)$$
+Recognizing that $\frac{\mathbf{W}}{\sigma(\mathbf{W})} = \mathbf{W}_{\text{SN}}$:
+$$\nabla_{\mathbf{W}} \mathcal{L} = \frac{1}{\sigma(\mathbf{W})} \left[ \nabla_{\mathbf{W}_{\text{SN}}} \mathcal{L} - \left( \nabla_{\mathbf{W}_{\text{SN}}} \mathcal{L} : \mathbf{W}_{\text{SN}} \right) \mathbf{u}\mathbf{v}^\top \right]$$
+where $\mathbf{A} : \mathbf{B} \triangleq \operatorname{tr}(\mathbf{A}^\top \mathbf{B}) = \sum_{i, j} A_{i, j} B_{i, j}$.
+Notice the geometric structure: the second term subtracts the projection of the gradient along $\mathbf{u}\mathbf{v}^\top$, preventing weight explosion while preserving directionality.
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### Critic Vector Field as an Optimal Transport Flow
@@ -371,6 +510,184 @@ Compute $D_{\text{KL}}(p_r \| p_g)$, $D_{\text{JS}}(p_r \| p_g)$, and $W_1(p_r, 
 In WGAN, the Kantorovich-Rubinstein duality holds if and only if $D$ is the supremum over all 1-Lipschitz functions:
 $$\mathcal{L}_G \approx -W_1(p_r, p_g) \iff D \approx D^*$$
 If the Critic is undertrained, $-D(G(\mathbf{z}))$ does not approximate the true Wasserstein distance, and the generator optimizes an erroneous, distorted transport plan. Keeping the Critic near optimality ensures the gradient field $\nabla_x D(x)$ points reliably in the true optimal transport direction.
+
+---
+
+### Illustration 3: Complete Step-by-Step Numerical WGAN-GP Critic and Generator Update in 2D Space
+
+**Problem:**
+Consider a WGAN-GP model operating on a 2D continuous space ($D=2$).
+Observed real sample:
+$$\mathbf{x}_r = \begin{bmatrix} 2.00 \\ 4.00 \end{bmatrix}$$
+Fake sample produced by generator:
+$$\mathbf{x}_f = \begin{bmatrix} 1.00 \\ 1.00 \end{bmatrix}$$
+The Critic network is parameterized by a quadratic function:
+$$D(\mathbf{x}) = \mathbf{w}_c^\top \mathbf{x} + \frac{1}{2} \mathbf{x}^\top \mathbf{A} \mathbf{x}$$
+with parameter values:
+$$\mathbf{w}_c = \begin{bmatrix} 0.50 \\ 0.20 \end{bmatrix}, \qquad \mathbf{A} = \begin{bmatrix} 0.10 & 0.00 \\ 0.00 & 0.10 \end{bmatrix}$$
+Interpolation random draw: $\epsilon = 0.60$.
+Gradient penalty coefficient: $\lambda = 10.0$.
+1. Compute the interpolated point $\hat{\mathbf{x}} = \epsilon \mathbf{x}_r + (1 - \epsilon) \mathbf{x}_f$.
+2. Compute the critic scores $D(\mathbf{x}_r)$ and $D(\mathbf{x}_f)$, and the Wasserstein surrogate loss $\mathcal{L}_{\text{EMD}} = D(\mathbf{x}_f) - D(\mathbf{x}_r)$.
+3. Compute the spatial gradient of the critic $\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})$ at the interpolated point.
+4. Compute the gradient norm $\|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2$ and the exact Gradient Penalty $\text{GP} = \left( \|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2 - 1 \right)^2$.
+5. Compute the total Critic objective loss $\mathcal{L}_{\text{critic}} = \mathcal{L}_{\text{EMD}} + \lambda \cdot \text{GP}$.
+6. Compute the analytical parameter gradient $\frac{\partial \mathcal{L}_{\text{critic}}}{\partial \mathbf{w}_c}$.
+
+**Step-by-Step Solution:**
+
+**1. Interpolated Point $\hat{\mathbf{x}}$:**
+$$\hat{\mathbf{x}} = 0.60 \begin{bmatrix} 2.00 \\ 4.00 \end{bmatrix} + (1 - 0.60) \begin{bmatrix} 1.00 \\ 1.00 \end{bmatrix} = \begin{bmatrix} 1.20 \\ 2.40 \end{bmatrix} + \begin{bmatrix} 0.40 \\ 0.40 \end{bmatrix} = \begin{bmatrix} \mathbf{1.60} \\ \mathbf{2.80} \end{bmatrix}$$
+
+**2. Critic Forward Scores & Wasserstein Loss:**
+- **Real Score $D(\mathbf{x}_r)$:**
+  $$\mathbf{w}_c^\top \mathbf{x}_r = 0.50(2.00) + 0.20(4.00) = 1.00 + 0.80 = 1.8000$$
+  $$\frac{1}{2} \mathbf{x}_r^\top \mathbf{A} \mathbf{x}_r = \frac{1}{2} \left( 0.10(2.00)^2 + 0.10(4.00)^2 \right) = \frac{1}{2} (0.40 + 1.60) = \frac{1}{2}(2.00) = 1.0000$$
+  $$D(\mathbf{x}_r) = 1.8000 + 1.0000 = \mathbf{2.8000}$$
+- **Fake Score $D(\mathbf{x}_f)$:**
+  $$\mathbf{w}_c^\top \mathbf{x}_f = 0.50(1.00) + 0.20(1.00) = 0.7000$$
+  $$\frac{1}{2} \mathbf{x}_f^\top \mathbf{A} \mathbf{x}_f = \frac{1}{2} \left( 0.10(1.00)^2 + 0.10(1.00)^2 \right) = \frac{1}{2} (0.10 + 0.10) = 0.1000$$
+  $$D(\mathbf{x}_f) = 0.7000 + 0.1000 = \mathbf{0.8000}$$
+- **Wasserstein Surrogate Loss:**
+  $$\mathcal{L}_{\text{EMD}} = D(\mathbf{x}_f) - D(\mathbf{x}_r) = 0.8000 - 2.8000 = \mathbf{-2.0000}$$
+
+**3. Spatial Gradient of Critic $\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})$:**
+Differentiating $D(\mathbf{x})$ with respect to spatial coordinate $\mathbf{x}$:
+$$\nabla_{\mathbf{x}} D(\mathbf{x}) = \mathbf{w}_c + \mathbf{A} \mathbf{x}$$
+At $\hat{\mathbf{x}} = [1.60, 2.80]^\top$:
+$$\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}}) = \begin{bmatrix} 0.50 \\ 0.20 \end{bmatrix} + \begin{bmatrix} 0.10 & 0.00 \\ 0.00 & 0.10 \end{bmatrix} \begin{bmatrix} 1.60 \\ 2.80 \end{bmatrix} = \begin{bmatrix} 0.50 + 0.16 \\ 0.20 + 0.28 \end{bmatrix} = \begin{bmatrix} \mathbf{0.6600} \\ \mathbf{0.4800} \end{bmatrix}$$
+
+**4. Gradient Norm and Gradient Penalty:**
+$$\|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2^2 = (0.6600)^2 + (0.4800)^2 = 0.4356 + 0.2304 = 0.666000$$
+$$\|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2 = \sqrt{0.666000} \approx \mathbf{0.816088}$$
+Gradient penalty:
+$$\text{GP} = \left( \|\nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}})\|_2 - 1 \right)^2 = (0.816088 - 1.000000)^2 = (-0.183912)^2 = \mathbf{0.033824}$$
+
+**5. Total Critic Loss:**
+$$\mathcal{L}_{\text{critic}} = \mathcal{L}_{\text{EMD}} + \lambda \cdot \text{GP} = -2.000000 + 10.0 \times 0.033824 = -2.000000 + 0.338236 = \mathbf{-1.661764}$$
+
+**6. Parameter Gradient with Respect to $\mathbf{w}_c$:**
+$$\frac{\partial \mathcal{L}_{\text{critic}}}{\partial \mathbf{w}_c} = \frac{\partial \mathcal{L}_{\text{EMD}}}{\partial \mathbf{w}_c} + \lambda \frac{\partial \text{GP}}{\partial \mathbf{w}_c}$$
+1. EMD derivative:
+   $$\frac{\partial \mathcal{L}_{\text{EMD}}}{\partial \mathbf{w}_c} = \mathbf{x}_f - \mathbf{x}_r = \begin{bmatrix} 1.00 - 2.00 \\ 1.00 - 4.00 \end{bmatrix} = \begin{bmatrix} \mathbf{-1.0000} \\ \mathbf{-3.0000} \end{bmatrix}$$
+2. GP derivative via chain rule:
+   Let $\mathbf{g} = \nabla_{\hat{\mathbf{x}}} D(\hat{\mathbf{x}}) \implies \frac{\partial \mathbf{g}}{\partial \mathbf{w}_c} = \mathbf{I}_2$.
+   $$\frac{\partial \text{GP}}{\partial \mathbf{w}_c} = 2 \left( \|\mathbf{g}\|_2 - 1 \right) \frac{\partial \|\mathbf{g}\|_2}{\partial \mathbf{g}} \frac{\partial \mathbf{g}}{\partial \mathbf{w}_c} = 2 \left( \|\mathbf{g}\|_2 - 1 \right) \frac{\mathbf{g}}{\|\mathbf{g}\|_2} \mathbf{I}$$
+   $$\frac{\partial \text{GP}}{\partial \mathbf{w}_c} = 2(0.816088 - 1.0) \frac{1}{0.816088} \begin{bmatrix} 0.6600 \\ 0.4800 \end{bmatrix} = 2(-0.183912)(1.225358) \begin{bmatrix} 0.6600 \\ 0.4800 \end{bmatrix}$$
+   $$= 2(-0.225358) \begin{bmatrix} 0.6600 \\ 0.4800 \end{bmatrix} = -0.450716 \begin{bmatrix} 0.6600 \\ 0.4800 \end{bmatrix} = \begin{bmatrix} \mathbf{-0.297473} \\ \mathbf{-0.216344} \end{bmatrix}$$
+3. Combining terms with $\lambda = 10.0$:
+   $$\frac{\partial \mathcal{L}_{\text{critic}}}{\partial \mathbf{w}_c} = \begin{bmatrix} -1.000000 \\ -3.000000 \end{bmatrix} + 10.0 \begin{bmatrix} -0.297473 \\ -0.216344 \end{bmatrix} = \begin{bmatrix} -1.000000 - 2.974730 \\ -3.000000 - 2.163440 \end{bmatrix} = \begin{bmatrix} \mathbf{-3.974730} \\ \mathbf{-5.163440} \end{bmatrix}$$
+Under gradient descent, $\mathbf{w}_c$ increases, reinforcing the slope along both coordinates to penalize the gradient norm deficit toward 1!
+
+---
+
+### Illustration 4: Power Iteration for Spectral Normalization Step-by-Step
+
+**Problem:**
+Consider a critic linear layer weight matrix $\mathbf{W} \in \mathbb{R}^{2 \times 2}$:
+$$\mathbf{W} = \begin{bmatrix} 3.00 & 1.00 \\ 2.00 & 4.00 \end{bmatrix}$$
+Initial unit vector guess:
+$$\mathbf{v}^{(0)} = \begin{bmatrix} \frac{1}{\sqrt{2}} \\ \frac{1}{\sqrt{2}} \end{bmatrix} \approx \begin{bmatrix} 0.707107 \\ 0.707107 \end{bmatrix}$$
+1. Execute 2 full steps of Power Iteration to compute left singular vector $\mathbf{u}^{(k)}$, right singular vector $\mathbf{v}^{(k)}$, and spectral norm estimate $\sigma_k$.
+2. Compute the exact analytical eigenvalues of $\mathbf{W}^\top \mathbf{W}$ to determine the true spectral norm $\sigma_{\max}(\mathbf{W}) = \sqrt{\lambda_{\max}}$.
+3. Compute the spectrally normalized weight matrix $\mathbf{W}_{\text{SN}} = \frac{\mathbf{W}}{\sigma_{\max}}$ and verify that its spectral norm is exactly $1.000$.
+
+**Step-by-Step Solution:**
+
+**1. Power Iteration Step 1:**
+- Forward multiplication:
+  $$\mathbf{y}^{(1)} = \mathbf{W} \mathbf{v}^{(0)} = \begin{bmatrix} 3.00 & 1.00 \\ 2.00 & 4.00 \end{bmatrix} \begin{bmatrix} 0.707107 \\ 0.707107 \end{bmatrix} = \begin{bmatrix} 3.0(0.707107) + 1.0(0.707107) \\ 2.0(0.707107) + 4.0(0.707107) \end{bmatrix} = \begin{bmatrix} 2.828427 \\ 4.242641 \end{bmatrix}$$
+- Vector norm:
+  $$\|\mathbf{y}^{(1)}\|_2 = \sqrt{(2.828427)^2 + (4.242641)^2} = \sqrt{8.000000 + 18.000000} = \sqrt{26.000000} \approx \mathbf{5.099020}$$
+- Left singular vector estimate $\mathbf{u}^{(1)}$:
+  $$\mathbf{u}^{(1)} = \frac{\mathbf{y}^{(1)}}{\|\mathbf{y}^{(1)}\|_2} = \begin{bmatrix} \frac{2.828427}{5.099020} \\ \frac{4.242641}{5.099020} \end{bmatrix} = \begin{bmatrix} \mathbf{0.554700} \\ \mathbf{0.832050} \end{bmatrix}$$
+- Backward multiplication:
+  $$\tilde{\mathbf{v}}^{(1)} = \mathbf{W}^\top \mathbf{u}^{(1)} = \begin{bmatrix} 3.00 & 2.00 \\ 1.00 & 4.00 \end{bmatrix} \begin{bmatrix} 0.554700 \\ 0.832050 \end{bmatrix} = \begin{bmatrix} 3(0.554700) + 2(0.832050) \\ 1(0.554700) + 4(0.832050) \end{bmatrix} = \begin{bmatrix} 1.664100 + 1.664100 \\ 0.554700 + 3.328200 \end{bmatrix} = \begin{bmatrix} 3.328200 \\ 3.882900 \end{bmatrix}$$
+- Vector norm:
+  $$\|\tilde{\mathbf{v}}^{(1)}\|_2 = \sqrt{(3.328200)^2 + (3.882900)^2} = \sqrt{11.076915 + 15.076912} = \sqrt{26.153827} \approx \mathbf{5.114081}$$
+- Updated right singular vector estimate $\mathbf{v}^{(1)}$:
+  $$\mathbf{v}^{(1)} = \frac{\tilde{\mathbf{v}}^{(1)}}{\|\tilde{\mathbf{v}}^{(1)}\|_2} = \begin{bmatrix} \frac{3.328200}{5.114081} \\ \frac{3.882900}{5.114081} \end{bmatrix} = \begin{bmatrix} \mathbf{0.650791} \\ \mathbf{0.759257} \end{bmatrix}$$
+- First spectral norm estimate:
+  $$\sigma_1 = (\mathbf{u}^{(1)})^\top \mathbf{W} \mathbf{v}^{(1)} = [0.554700, 0.832050] \begin{bmatrix} 3(0.650791) + 1(0.759257) \\ 2(0.650791) + 4(0.759257) \end{bmatrix} = [0.554700, 0.832050] \begin{bmatrix} 2.711630 \\ 4.338610 \end{bmatrix}$$
+  $$\sigma_1 = 0.554700(2.711630) + 0.832050(4.338610) = 1.504141 + 3.609941 = \mathbf{5.114082}$$
+
+**2. Power Iteration Step 2:**
+- Forward multiplication:
+  $$\mathbf{y}^{(2)} = \mathbf{W} \mathbf{v}^{(1)} = \begin{bmatrix} 2.711630 \\ 4.338610 \end{bmatrix}$$
+  $$\|\mathbf{y}^{(2)}\|_2 = \sqrt{2.711630^2 + 4.338610^2} = \sqrt{7.352937 + 18.823537} = \sqrt{26.176474} \approx \mathbf{5.116295}$$
+  $$\mathbf{u}^{(2)} = \begin{bmatrix} \frac{2.711630}{5.116295} \\ \frac{4.338610}{5.116295} \end{bmatrix} = \begin{bmatrix} \mathbf{0.530000} \\ \mathbf{0.847998} \end{bmatrix}$$
+- Backward multiplication:
+  $$\tilde{\mathbf{v}}^{(2)} = \mathbf{W}^\top \mathbf{u}^{(2)} = \begin{bmatrix} 3.00 & 2.00 \\ 1.00 & 4.00 \end{bmatrix} \begin{bmatrix} 0.530000 \\ 0.847998 \end{bmatrix} = \begin{bmatrix} 1.590000 + 1.695996 \\ 0.530000 + 3.391992 \end{bmatrix} = \begin{bmatrix} 3.285996 \\ 3.921992 \end{bmatrix}$$
+  $$\|\tilde{\mathbf{v}}^{(2)}\|_2 = \sqrt{3.285996^2 + 3.921992^2} = \sqrt{10.797770 + 15.382021} = \sqrt{26.179791} \approx \mathbf{5.116619}$$
+  $$\mathbf{v}^{(2)} = \begin{bmatrix} \frac{3.285996}{5.116619} \\ \frac{3.921992}{5.116619} \end{bmatrix} = \begin{bmatrix} \mathbf{0.642220} \\ \mathbf{0.766520} \end{bmatrix}$$
+- Second spectral norm estimate:
+  $$\sigma_2 \approx \mathbf{5.116619}$$
+
+**3. Exact Analytical Eigenvalue Solution:**
+Compute $\mathbf{W}^\top \mathbf{W}$:
+$$\mathbf{W}^\top \mathbf{W} = \begin{bmatrix} 3.0 & 2.0 \\ 1.0 & 4.0 \end{bmatrix} \begin{bmatrix} 3.0 & 1.0 \\ 2.0 & 4.0 \end{bmatrix} = \begin{bmatrix} 9 + 4 & 3 + 8 \\ 3 + 8 & 1 + 16 \end{bmatrix} = \begin{bmatrix} 13.0 & 11.0 \\ 11.0 & 17.0 \end{bmatrix}$$
+Characteristic equation $\det(\mathbf{W}^\top \mathbf{W} - \lambda \mathbf{I}) = 0$:
+$$(13 - \lambda)(17 - \lambda) - 121 = \lambda^2 - 30 \lambda + 221 - 121 = \lambda^2 - 30 \lambda + 100 = 0$$
+Roots via quadratic formula:
+$$\lambda = \frac{30 \pm \sqrt{900 - 400}}{2} = \frac{30 \pm \sqrt{500}}{2} = \frac{30 \pm 22.360680}{2}$$
+$$\lambda_{\max} = \frac{52.360680}{2} = \mathbf{26.180340}$$
+$$\sigma_{\text{true}}(\mathbf{W}) = \sqrt{\lambda_{\max}} = \sqrt{26.180340} = \mathbf{5.116673}$$
+Power iteration reached $5.116619$ in just 2 iterations, achieving relative accuracy of $0.001\%$.
+
+**4. Spectrally Normalized Weight Matrix:**
+$$\mathbf{W}_{\text{SN}} = \frac{1}{5.116673} \begin{bmatrix} 3.00 & 1.00 \\ 2.00 & 4.00 \end{bmatrix} = \begin{bmatrix} \mathbf{0.586318} & \mathbf{0.195439} \\ \mathbf{0.390879} & \mathbf{0.781758} \end{bmatrix}$$
+Verifying the spectral norm:
+$$\sigma_{\max}(\mathbf{W}_{\text{SN}}) = \frac{\sigma_{\max}(\mathbf{W})}{5.116673} = \frac{5.116673}{5.116673} = \mathbf{1.000000}$$
+The layer's Lipschitz constant is exactly 1.0.
+
+---
+
+### Illustration 5: Mode Collapse Dynamics on a Bimodal Target: Vanilla GAN vs. WGAN-GP
+
+**Problem:**
+Consider a 1D toy distribution with two well-separated modes:
+$$p_{\text{data}}(x) = 0.50 \, \delta(x + 2.0) + 0.50 \, \delta(x - 2.0)$$
+Let the generator output a single deterministic point $\theta \in [-2, 2]$: $p_g(x) = \delta(x - \theta)$.
+Assume the generator is initialized near Mode 1: $\theta = -1.90$.
+1. Analyze the Vanilla GAN non-saturating generator loss $\mathcal{L}_G^{\text{NS}}(\theta) = -\log D^*(G(z))$. Show why the gradient $\frac{d \mathcal{L}_G^{\text{NS}}}{d\theta}$ completely ignores the right mode at $+2.0$ (Mode Collapse trap).
+2. Compute the exact Wasserstein-1 distance $W_1(p_{\text{data}}, p_g)$ as a function of $\theta$.
+3. Evaluate the WGAN generator loss and gradient at $\theta = -1.90$ and explain how WGAN prevents mode collapse.
+
+**Step-by-Step Solution:**
+
+**1. Vanilla GAN Landscape & Mode Collapse Trap:**
+The optimal discriminator is:
+$$D^*(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)}$$
+At the generator's position $x = \theta$:
+$$p_g(\theta) = 1, \quad p_{\text{data}}(\theta) = \begin{cases} 0.50 & \text{if } \theta \in \{-2.0, +2.0\} \\ 0 & \text{if } \theta \notin \{-2.0, +2.0\} \end{cases}$$
+When smoothed by infinitesimal Gaussian bandwidth $\sigma \to 0$:
+$$D^*(\theta) \approx \frac{0.5 e^{-(\theta + 2)^2 / (2\sigma^2)} + 0.5 e^{-(\theta - 2)^2 / (2\sigma^2)}}{0.5 e^{-(\theta + 2)^2 / (2\sigma^2)} + 0.5 e^{-(\theta - 2)^2 / (2\sigma^2)} + 1.0}$$
+At $\theta = -1.90$:
+- The distance to Mode 1 is $|\theta - (-2.0)| = 0.10$.
+- The distance to Mode 2 is $|\theta - (+2.0)| = 3.90$.
+The likelihood ratio between Mode 2 and Mode 1 is:
+$$\frac{e^{-(3.90)^2 / (2\sigma^2)}}{e^{-(0.10)^2 / (2\sigma^2)}} = e^{-(15.21 - 0.01)/(2\sigma^2)} = e^{-7.6 / \sigma^2} \approx 10^{-330}$$
+The gradient of non-saturating loss is dominated entirely by Mode 1:
+$$\frac{d \mathcal{L}_G^{\text{NS}}}{d\theta} \approx \frac{d}{d\theta} \left[ \frac{(\theta + 2.0)^2}{2\sigma^2} \right] = \frac{\theta + 2.0}{\sigma^2} = \frac{-1.90 + 2.0}{\sigma^2} = \frac{+0.10}{\sigma^2} > 0$$
+Gradient descent pulls $\theta$ directly into Mode 1 ($\theta \to -2.0$).
+Once $\theta = -2.0$, $D^*(-2.0) = \frac{0.5}{0.5 + 1.0} = \frac{1}{3}$.
+The gradient with respect to Mode 2 ($x = +2.0$) is mathematically zero:
+$$\left. \frac{\partial \mathcal{L}_G^{\text{NS}}}{\partial \theta} \right|_{\text{due to Mode 2}} \approx 0.0000000000000000$$
+The generator is trapped permanently in Mode 1. It has zero knowledge that Mode 2 even exists!
+
+**2. Wasserstein-1 Distance as a Function of $\theta$:**
+By definition of optimal transport on $\mathbb{R}$:
+$$W_1(p_{\text{data}}, \delta_\theta) = \mathbb{E}_{x \sim p_{\text{data}}} [|x - \theta|] = 0.50 |-2.0 - \theta| + 0.50 |+2.0 - \theta|$$
+For any $\theta \in [-2.0, +2.0]$:
+$$|-2.0 - \theta| = \theta + 2.0, \qquad |+2.0 - \theta| = 2.0 - \theta$$
+$$W_1(p_{\text{data}}, \delta_\theta) = 0.50(\theta + 2.0) + 0.50(2.0 - \theta) = 0.50\theta + 1.00 + 1.00 - 0.50\theta = \mathbf{2.000000}$$
+Notice that across the entire interval $\theta \in [-2.0, +2.0]$, $W_1$ is constant ($2.0$).
+If the generator uses a latent noise distribution $\mathbf{z} \sim \mathcal{U}[-1, 1]$ with $G_{\boldsymbol{\theta}}(z) = \mu + s z$:
+- Mode collapse occurs if $s = 0$ (single point $\mu$).
+- The Wasserstein distance for spread $s$ is:
+  $$W_1(s) = \int_{-1}^1 \left( 0.5 |-2 - (\mu + sz)| + 0.5 |2 - (\mu + sz)| \right) \frac{1}{2} dz$$
+As $s \to 2.0$ (spanning the entire distance between $-2$ and $+2$), $W_1(s)$ drops strictly from $2.0 \to 1.0$!
+The WGAN objective provides a constant, non-saturating force pushing the generator to expand its scale parameter $s$ to encompass both modes, providing the algebraic foundation for mode recovery.
 
 ---
 

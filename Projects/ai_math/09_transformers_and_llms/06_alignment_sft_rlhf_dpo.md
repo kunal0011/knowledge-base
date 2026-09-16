@@ -148,6 +148,104 @@ where the implicit reward is $\hat{r}_{\boldsymbol{\theta}}(\mathbf{x}, \mathbf{
 
 ---
 
+### 2.6 Deep Derivation 9.6.1: Full Analytical Derivation of PPO Clipped Surrogate and GAE for Language Models
+
+#### Context and Setup
+In RLHF, an LLM generates a trajectory of tokens $\mathbf{y} = (y_1, \dots, y_T)$ given prompt $\mathbf{x}$.
+A scalar reward model assigns terminal score $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y})$ upon generating the final end-of-sequence token.
+
+#### Token-Level MDP Formulation:
+1. **State:** $s_t = (\mathbf{x}, y_{<t})$ (the prompt concatenated with all tokens generated so far).
+2. **Action:** $a_t = y_t \in \mathcal{V}$ (the selected token from vocabulary $\mathcal{V}$).
+3. **Transition:** Deterministic string concatenation $s_{t+1} = (s_t, a_t)$.
+4. **Token Reward:**
+   $$R_t = \begin{cases} -\beta \left( \log \pi_{\boldsymbol{\theta}}(y_t \mid s_t) - \log \pi_{\text{ref}}(y_t \mid s_t) \right) & \text{for } t < T \\ r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) - \beta \left( \log \pi_{\boldsymbol{\theta}}(y_T \mid s_T) - \log \pi_{\text{ref}}(y_T \mid s_T) \right) & \text{for } t = T \end{cases}$$
+
+#### Generalized Advantage Estimation (GAE):
+A learned Value Network (Critic) $V_{\boldsymbol{\phi}}(s_t)$ predicts the expected cumulative discounted future reward.
+The temporal difference (TD) residual at step $t$ is:
+$$\delta_t^V = R_t + \gamma V_{\boldsymbol{\phi}}(s_{t+1}) - V_{\boldsymbol{\phi}}(s_t)$$
+The $\text{GAE}(\gamma, \lambda)$ advantage function is defined as the exponentially weighted sum of future TD residuals:
+$$\hat{A}_t^{\text{GAE}} = \sum_{l=0}^{T - t} (\gamma \lambda)^l \delta_{t+l}^V$$
+- In language modeling, typically $\gamma = 1.0$ and $\lambda \in [0.95, 1.0]$.
+- Expanding recursively backwards from the final token $T$:
+  $$\hat{A}_T = \delta_T^V = R_T - V_{\boldsymbol{\phi}}(s_T)$$
+  $$\hat{A}_t = \delta_t^V + \gamma \lambda \hat{A}_{t+1} \quad (\forall t = T-1, \dots, 1)$$
+
+#### The PPO Clipped Surrogate Objective:
+To prevent destructively large policy updates, PPO defines the probability ratio:
+$$r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(y_t \mid s_t)}{\pi_{\text{old}}(y_t \mid s_t)}$$
+and optimizes the pessimistic clipped surrogate loss:
+$$\mathcal{L}_t^{\text{CLIP}}(\boldsymbol{\theta}) = \min\left( r_t(\boldsymbol{\theta}) \hat{A}_t, \, \operatorname{clip}(r_t(\boldsymbol{\theta}), 1-\epsilon, 1+\epsilon) \hat{A}_t \right)$$
+- If $\hat{A}_t > 0$ (action was better than expected), $r_t$ is pushed upward, but clipped at $1 + \epsilon$ to prevent over-optimizing lucky samples.
+- If $\hat{A}_t < 0$ (action was worse than expected), $r_t$ is pushed downward, but clipped at $1 - \epsilon$. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 9.6.2: Variational Derivation of DPO via Convex Duality
+
+#### The Primal Constrained Problem
+Consider the general KL-regularized contextual bandit objective for prompt $\mathbf{x}$:
+$$\max_{\pi} \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) r(\mathbf{x}, \mathbf{y}) - \beta \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) \log \frac{\pi(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} \quad \text{s.t.} \quad \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) = 1$$
+
+#### Theorem: Global Optimum and Equivalence to Bradley-Terry
+The unconstrained variational optimum is uniquely achieved by the Gibbs distribution:
+$$\pi^*(\mathbf{y} \mid \mathbf{x}) = \frac{1}{Z(\mathbf{x})} \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \exp\left( \frac{1}{\beta} r(\mathbf{x}, \mathbf{y}) \right)$$
+where $Z(\mathbf{x}) = \sum_{\mathbf{y}} \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \exp\left( \frac{1}{\beta} r(\mathbf{x}, \mathbf{y}) \right)$.
+
+#### Proof via Fenchel Duality:
+1. **Lagrangian Formulation:**
+   $$\mathcal{L}(\pi, \lambda) = \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) r(\mathbf{x}, \mathbf{y}) - \beta \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) \log \frac{\pi(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} + \lambda \left( 1 - \sum_{\mathbf{y}} \pi(\mathbf{y} \mid \mathbf{x}) \right)$$
+
+2. **First-Order Optimality Condition:**
+   Taking the functional derivative w.r.t. $\pi(\mathbf{y} \mid \mathbf{x})$:
+   $$\frac{\partial \mathcal{L}}{\partial \pi(\mathbf{y} \mid \mathbf{x})} = r(\mathbf{x}, \mathbf{y}) - \beta \left( \log \frac{\pi(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} + 1 \right) - \lambda = 0$$
+   Rearranging for the log-ratio:
+   $$\log \frac{\pi(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} = \frac{r(\mathbf{x}, \mathbf{y}) - \lambda}{\beta} - 1$$
+   Exponentiating both sides:
+   $$\pi^*(\mathbf{y} \mid \mathbf{x}) = \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \exp\left( \frac{r(\mathbf{x}, \mathbf{y})}{\beta} \right) \cdot \exp\left( -\frac{\lambda}{\beta} - 1 \right)$$
+
+3. **Enforcing the Probability Simplex Sum:**
+   Summing over all $\mathbf{y} \in \mathcal{Y}$:
+   $$\sum_{\mathbf{y}} \pi^*(\mathbf{y} \mid \mathbf{x}) = \exp\left( -\frac{\lambda}{\beta} - 1 \right) \sum_{\mathbf{y}} \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \exp\left( \frac{r(\mathbf{x}, \mathbf{y})}{\beta} \right) = 1$$
+   Therefore:
+   $$\exp\left( -\frac{\lambda}{\beta} - 1 \right) = \frac{1}{Z(\mathbf{x})}$$
+   which proves the Gibbs form.
+
+4. **Cancellation of $Z(\mathbf{x})$ in the Bradley-Terry Model:**
+   The Bradley-Terry preference probability is:
+   $$P(y_w \succ y_l \mid \mathbf{x}) = \sigma(r(\mathbf{x}, y_w) - r(\mathbf{x}, y_l))$$
+   Substituting $r(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi^*(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} + \beta \log Z(\mathbf{x})$:
+   $$r(\mathbf{x}, y_w) - r(\mathbf{x}, y_l) = \left( \beta \log \frac{\pi^*(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} + \beta \log Z(\mathbf{x}) \right) - \left( \beta \log \frac{\pi^*(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})} + \beta \log Z(\mathbf{x}) \right)$$
+   $$= \beta \log \frac{\pi^*(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \beta \log \frac{\pi^*(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})}$$
+   The normalization constant $Z(\mathbf{x})$ cancels unconditionally. Parameterizing $\pi^*$ directly with policy $\pi_{\boldsymbol{\theta}}$ bypasses RL entirely. $\blacksquare$
+
+---
+
+### 2.8 Deep Derivation 9.6.3: Beyond DPO: Identity Preference Optimization (IPO) and Kahneman-Tversky Optimization (KTO)
+
+#### 1. The DPO Overfitting Dilemma & IPO (Azar et al., 2023)
+In DPO, if the dataset contains deterministic pairs ($P(y_w \succ y_l) = 1$), the cross-entropy loss drives the log-ratio difference $\beta (\log \pi(y_w) - \log \pi(y_l)) \to +\infty$.
+This causes the policy to collapse: $\pi_{\boldsymbol{\theta}}(y_l) \to 0$ and likelihood of $y_w$ drifts into degenerate low-entropy modes.
+
+**Identity Preference Optimization (IPO):**
+Azar et al. bypass the Bradley-Terry non-linear link entirely, minimizing a regularized quadratic loss on the implicit reward margin:
+$$\mathcal{L}_{\text{IPO}}(\boldsymbol{\theta}) = \mathbb{E}_{(\mathbf{x}, y_w, y_l)} \left[ \left( \log \frac{\pi_{\boldsymbol{\theta}}(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \log \frac{\pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})} - \frac{\tau}{2} \right)^2 \right]$$
+where $\tau$ target controls the margin gap. IPO guarantees that the implicit reward gap never grows unbounded, preventing over-optimization.
+
+#### 2. Kahneman-Tversky Optimization (KTO) (Ethayarajh et al., 2024)
+DPO requires **paired preferences** $(x, y_w, y_l)$. In real-world products, user feedback is overwhelmingly **unpaired binary feedback** (e.g., thumbs-up or thumbs-down on single outputs).
+
+KTO builds on Daniel Kahneman and Amos Tversky's **Prospect Theory**:
+- Humans evaluate outcomes relative to a reference point with **loss aversion** (losses hurt more than equal gains feel good).
+- Let $z(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi_{\boldsymbol{\theta}}(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})}$ be the implicit reward, and $z_{\text{ref}} = \mathbb{E}_{\mathbf{x}, \mathbf{y}}[z(\mathbf{x}, \mathbf{y})]$ be the reference anchor.
+- The KTO loss is:
+  $$\mathcal{L}_{\text{KTO}}(\boldsymbol{\theta}) = \mathbb{E}_{\mathbf{x}, \mathbf{y}} \left[ w(\mathbf{y}) \cdot \sigma\left( \lambda_{\mathbf{y}} \left( z(\mathbf{x}, \mathbf{y}) - z_{\text{ref}} \right) \right) \right]$$
+  where $\lambda_{y} = 1$ for desirable outputs ($y \in \mathcal{Y}_{\text{desirable}}$) and $\lambda_y = -1$ with higher penalty weight $\lambda_{\text{loss}} > 1$ for rejected outputs.
+KTO matches or exceeds DPO performance while learning directly from cheap, natural thumbs-up/down signals without requiring artificial pairwise contrast. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ```
@@ -297,6 +395,189 @@ In causal autoregressive modeling:
   $$\text{Input:  } [101, 2054, 2003, 1037, 3899]$$
   $$\text{Target: } [-100, -100, 1037, 3899, 102]$$
 Only the predictions for tokens `1037`, `3899`, and `102` contribute to the loss and receive non-zero gradients.
+
+---
+
+### Illustration 3: Complete Hand Trace of Token-Level PPO with GAE Advantage and KL Penalty
+
+**Problem:**
+An RLHF policy generates a 3-token trajectory $\mathbf{y} = (y_1, y_2, y_3)$ given prompt $\mathbf{x}$.
+A trained reward model evaluates the complete completion, assigning scalar score $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) = 2.50$.
+Let the per-token generation probabilities be:
+- Step 1: $\log \pi_{\boldsymbol{\theta}}(y_1) = -1.00, \quad \log \pi_{\text{ref}}(y_1) = -1.50$
+- Step 2: $\log \pi_{\boldsymbol{\theta}}(y_2) = -0.80, \quad \log \pi_{\text{ref}}(y_2) = -0.80$
+- Step 3: $\log \pi_{\boldsymbol{\theta}}(y_3) = -1.20, \quad \log \pi_{\text{ref}}(y_3) = -0.60$
+
+Let KL coefficient $\beta = 0.20$, discount $\gamma = 1.00$, and GAE parameter $\lambda = 0.95$.
+The Value network (Critic) estimates state values:
+$$V(s_1) = 2.00, \quad V(s_2) = 2.20, \quad V(s_3) = 2.40, \quad V(s_4) = 0.00 \text{ (terminal)}$$
+1. Calculate the token-level composite rewards $R_t$.
+2. Calculate the temporal difference residuals $\delta_t^V$.
+3. Compute the GAE advantage estimates $\hat{A}_t^{\text{GAE}}$ recursively for all 3 tokens.
+4. For step 2, suppose an updated policy produces ratio $r_2 = 1.30$. Evaluate the PPO clipped surrogate objective $\mathcal{L}_2^{\text{CLIP}}$ under clipping parameter $\epsilon = 0.20$.
+
+**Solution:**
+
+#### Step 1: Token-Level Composite Rewards $R_t$
+The composite reward penalizes policy drift at each token:
+$$R_t = -\beta \left( \log \pi_{\boldsymbol{\theta}}(y_t) - \log \pi_{\text{ref}}(y_t) \right) \quad (\text{for } t < 3)$$
+$$R_3 = r_{\boldsymbol{\psi}} - \beta \left( \log \pi_{\boldsymbol{\theta}}(y_3) - \log \pi_{\text{ref}}(y_3) \right)$$
+
+- **Token 1:**
+  $$R_1 = -0.20 \times (-1.00 - (-1.50)) = -0.20 \times (+0.50) = \mathbf{-0.1000}$$
+- **Token 2:**
+  $$R_2 = -0.20 \times (-0.80 - (-0.80)) = -0.20 \times 0.00 = \mathbf{0.0000}$$
+- **Token 3:**
+  $$R_3 = 2.50 - 0.20 \times (-1.20 - (-0.60)) = 2.50 - 0.20 \times (-0.60) = 2.50 + 0.120 = \mathbf{2.6200}$$
+
+---
+
+#### Step 2: Temporal Difference Residuals $\delta_t^V$
+$$\delta_t^V = R_t + \gamma V(s_{t+1}) - V(s_t)$$
+- **Token 1:**
+  $$\delta_1^V = -0.1000 + (1.00)(2.20) - 2.00 = -0.1000 + 0.20 = \mathbf{+0.1000}$$
+- **Token 2:**
+  $$\delta_2^V = 0.0000 + (1.00)(2.40) - 2.20 = \mathbf{+0.2000}$$
+- **Token 3:**
+  $$\delta_3^V = 2.6200 + (1.00)(0.00) - 2.40 = \mathbf{+0.2200}$$
+
+---
+
+#### Step 3: Backward Recursive Generalized Advantage Estimation ($\hat{A}_t$)
+Using $\hat{A}_t = \delta_t^V + \gamma \lambda \hat{A}_{t+1}$ with $\gamma \lambda = (1.00)(0.95) = 0.95$:
+
+- **Token 3 (Base Case):**
+  $$\hat{A}_3 = \delta_3^V = \mathbf{+0.220000}$$
+- **Token 2:**
+  $$\hat{A}_2 = \delta_2^V + 0.95 \hat{A}_3 = 0.2000 + 0.95(0.220000) = 0.2000 + 0.209000 = \mathbf{+0.409000}$$
+- **Token 1:**
+  $$\hat{A}_1 = \delta_1^V + 0.95 \hat{A}_2 = 0.1000 + 0.95(0.409000) = 0.1000 + 0.388550 = \mathbf{+0.488550}$$
+
+Each generated token receives a positive credit assignment indicating it performed better than the Critic expected.
+
+---
+
+#### Step 4: PPO Clipped Surrogate Evaluation at Step 2
+Given ratio $r_2 = 1.30$, advantage $\hat{A}_2 = 0.4090$, and clipping parameter $\epsilon = 0.20$:
+- Clipping bounds: $[1 - \epsilon, \, 1 + \epsilon] = [0.80, \, 1.20]$.
+- Unclipped objective:
+  $$r_2 \hat{A}_2 = 1.30 \times 0.4090 = \mathbf{0.531700}$$
+- Clipped objective:
+  $$\operatorname{clip}(r_2, 0.80, 1.20) \hat{A}_2 = 1.20 \times 0.4090 = \mathbf{0.490800}$$
+- PPO Pessimistic Objective:
+  $$\mathcal{L}_2^{\text{CLIP}} = \min(0.531700, \, 0.490800) = \mathbf{0.490800}$$
+The clipping mechanism activates, successfully dampening the gradient and preventing an overly aggressive policy update.
+
+---
+
+### Illustration 4: Complete DPO Forward and Parameter Update on a 2-Step Vocabulary
+
+**Problem:**
+A simple decision policy evaluates two candidate tokens: winner $y_w$ and loser $y_l$.
+The current model parameters are the unnormalized logits $\mathbf{z} = [z_w, z_l]^T = [0.0, 1.0]^T$.
+The frozen reference model has uniform logits $\mathbf{z}_{\text{ref}} = [0.5, 0.5]^T$.
+KL scale is $\beta = 1.0$, and learning rate is $\eta = 1.0$.
+1. Compute the probabilities under policy $\pi_{\boldsymbol{\theta}}$ and reference $\pi_{\text{ref}}$.
+2. Compute the implicit rewards $\hat{r}(y_w), \hat{r}(y_l)$ and reward margin $\Delta r$.
+3. Compute the DPO loss $\mathcal{L}_{\text{DPO}}$.
+4. Evaluate the analytical parameter gradient $\nabla_{\mathbf{z}} \mathcal{L}_{\text{DPO}}$ and apply one gradient descent step $\mathbf{z} \leftarrow \mathbf{z} - \eta \nabla \mathcal{L}$. Verify that the preference inverts.
+
+**Solution:**
+
+#### Step 1: Probability Distributions
+1. **Policy $\pi_{\boldsymbol{\theta}}$ ($\mathbf{z} = [0.0, 1.0]$):**
+   $$\exp(0.0) = 1.000000, \quad \exp(1.0) = 2.718282 \implies \text{Sum} = 3.718282$$
+   $$\pi(y_w) = \frac{1.000000}{3.718282} \approx \mathbf{0.268941} \implies \log \pi(y_w) = \ln(0.268941) = \mathbf{-1.313262}$$
+   $$\pi(y_l) = \frac{2.718282}{3.718282} \approx \mathbf{0.731059} \implies \log \pi(y_l) = \ln(0.731059) = \mathbf{-0.313262}$$
+
+2. **Reference Model $\pi_{\text{ref}}$ ($\mathbf{z}_{\text{ref}} = [0.5, 0.5]$):**
+   $$\pi_{\text{ref}}(y_w) = 0.500000 \implies \log \pi_{\text{ref}}(y_w) = \ln(0.5) = \mathbf{-0.693147}$$
+   $$\pi_{\text{ref}}(y_l) = 0.500000 \implies \log \pi_{\text{ref}}(y_l) = \ln(0.5) = \mathbf{-0.693147}$$
+
+---
+
+#### Step 2: Implicit Rewards and Margin ($\beta = 1.0$)
+$$\hat{r}(y) = \beta \left( \log \pi(y) - \log \pi_{\text{ref}}(y) \right)$$
+$$\hat{r}(y_w) = 1.0 \times (-1.313262 - (-0.693147)) = \mathbf{-0.620115}$$
+$$\hat{r}(y_l) = 1.0 \times (-0.313262 - (-0.693147)) = \mathbf{+0.379885}$$
+$$\Delta r = \hat{r}(y_w) - \hat{r}(y_l) = -0.620115 - 0.379885 = \mathbf{-1.000000}$$
+
+---
+
+#### Step 3: DPO Loss
+$$\sigma(\Delta r) = \sigma(-1.000000) = \frac{1}{1 + e^{1.0}} = \frac{1}{1 + 2.718282} = \frac{1}{3.718282} \approx \mathbf{0.268941}$$
+$$\mathcal{L}_{\text{DPO}} = -\log(\sigma(\Delta r)) = -\ln(0.268941) = \mathbf{1.313262}$$
+
+---
+
+#### Step 4: Gradient and Parameter Update
+The gradient scaling weight is:
+$$w_{\text{grad}} = \sigma(-\Delta r) = \sigma(+1.000000) = 1 - 0.268941 = \mathbf{0.731059}$$
+
+Evaluating softmax derivatives w.r.t. logits $\mathbf{z}$:
+$$\nabla_{\mathbf{z}} \log \pi(y_w) = \mathbf{e}_w - \boldsymbol{\pi} = \begin{bmatrix} 1.0 - 0.268941 \\ 0.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} +0.731059 \\ -0.731059 \end{bmatrix}$$
+$$\nabla_{\mathbf{z}} \log \pi(y_l) = \mathbf{e}_l - \boldsymbol{\pi} = \begin{bmatrix} 0.0 - 0.268941 \\ 1.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} -0.268941 \\ +0.268941 \end{bmatrix}$$
+$$\nabla_{\mathbf{z}} \log \pi(y_w) - \nabla_{\mathbf{z}} \log \pi(y_l) = \begin{bmatrix} 0.731059 - (-0.268941) \\ -0.731059 - 0.268941 \end{bmatrix} = \begin{bmatrix} +1.000000 \\ -1.000000 \end{bmatrix}$$
+
+Multiplying by $-w_{\text{grad}}$:
+$$\nabla_{\mathbf{z}} \mathcal{L}_{\text{DPO}} = -0.731059 \begin{bmatrix} +1.000000 \\ -1.000000 \end{bmatrix} = \begin{bmatrix} \mathbf{-0.731059} \\ \mathbf{+0.731059} \end{bmatrix}$$
+
+Applying gradient descent step $\mathbf{z} \leftarrow \mathbf{z} - \eta \nabla_{\mathbf{z}} \mathcal{L}$:
+$$z_w \leftarrow 0.0 - (1.0)(-0.731059) = \mathbf{+0.731059}$$
+$$z_l \leftarrow 1.0 - (1.0)(+0.731059) = \mathbf{+0.268941}$$
+
+**Conclusion:**
+In a single step, the logits have flipped from $z_l > z_w$ ($1.0 > 0.0$) to $z_w > z_l$ ($0.731 > 0.269$). The winner probability surged from $26.9\% \to 61.4\%$, demonstrating the direct and stable corrective power of DPO.
+
+---
+
+### Illustration 5: Bradley-Terry Reward Model Ranking and Margin Hand Trace across 3 Completions
+
+**Problem:**
+A reward model evaluates three candidate completions $y_1, y_2, y_3$ for a user prompt, outputting scalar scores:
+$$r_1 = 2.40, \quad r_2 = 1.80, \quad r_3 = 0.60$$
+The human preference ordering is $y_1 \succ y_2 \succ y_3$.
+1. Compute the pairwise Bradley-Terry preference probabilities $P(y_i \succ y_j) = \sigma(r_i - r_j)$ for all pairs $(1, 2), (2, 3), (1, 3)$.
+2. Compute the individual cross-entropy losses and total pairwise ranking loss $\mathcal{L}_{\text{total}}$.
+3. Compute the reward gradients $\frac{\partial \mathcal{L}}{\partial r_i}$ and verify the zero-sum invariance $\sum_{i=1}^3 \frac{\partial \mathcal{L}}{\partial r_i} = 0$.
+
+**Solution:**
+
+#### Step 1: Pairwise Bradley-Terry Probabilities
+- **Pair $(1, 2)$:** $\Delta r_{12} = r_1 - r_2 = 2.40 - 1.80 = 0.60$.
+  $$P(y_1 \succ y_2) = \sigma(0.60) = \frac{1}{1 + e^{-0.60}} = \frac{1}{1 + 0.548812} = \frac{1}{1.548812} \approx \mathbf{0.645656}$$
+- **Pair $(2, 3)$:** $\Delta r_{23} = r_2 - r_3 = 1.80 - 0.60 = 1.20$.
+  $$P(y_2 \succ y_3) = \sigma(1.20) = \frac{1}{1 + e^{-1.20}} = \frac{1}{1 + 0.301194} = \frac{1}{1.301194} \approx \mathbf{0.768525}$$
+- **Pair $(1, 3)$:** $\Delta r_{13} = r_1 - r_3 = 2.40 - 0.60 = 1.80$.
+  $$P(y_1 \succ y_3) = \sigma(1.80) = \frac{1}{1 + e^{-1.80}} = \frac{1}{1 + 0.165299} = \frac{1}{1.165299} \approx \mathbf{0.858149}$$
+
+---
+
+#### Step 2: Loss Computation
+$$\mathcal{L}_{ij} = -\ln P(y_i \succ y_j)$$
+$$\mathcal{L}_{12} = -\ln(0.645656) \approx \mathbf{0.437488}$$
+$$\mathcal{L}_{23} = -\ln(0.768525) \approx \mathbf{0.263283}$$
+$$\mathcal{L}_{13} = -\ln(0.858149) \approx \mathbf{0.152973}$$
+$$\mathcal{L}_{\text{total}} = 0.437488 + 0.263283 + 0.152973 = \mathbf{0.853744}$$
+
+---
+
+#### Step 3: Reward Gradients and Zero-Sum Check
+For each pair $(w, l)$:
+$$\frac{\partial \mathcal{L}_{wl}}{\partial r_w} = -(1 - \sigma(r_w - r_l)), \quad \frac{\partial \mathcal{L}_{wl}}{\partial r_l} = +(1 - \sigma(r_w - r_l))$$
+
+- **For $r_1$ (Winner in $(1, 2)$ and $(1, 3)$):**
+  $$\frac{\partial \mathcal{L}}{\partial r_1} = -(1 - 0.645656) - (1 - 0.858149) = -0.354344 - 0.141851 = \mathbf{-0.496195}$$
+
+- **For $r_2$ (Loser in $(1, 2)$, Winner in $(2, 3)$):**
+  $$\frac{\partial \mathcal{L}}{\partial r_2} = +(1 - 0.645656) - (1 - 0.768525) = +0.354344 - 0.231475 = \mathbf{+0.122869}$$
+
+- **For $r_3$ (Loser in $(2, 3)$ and $(1, 3)$):**
+  $$\frac{\partial \mathcal{L}}{\partial r_3} = +(1 - 0.768525) + (1 - 0.858149) = +0.231475 + 0.141851 = \mathbf{+0.373326}$$
+
+- **Zero-Sum Verification:**
+  $$\sum_{i=1}^3 \frac{\partial \mathcal{L}}{\partial r_i} = -0.496195 + 0.122869 + 0.373326 = \mathbf{0.000000}$$
+  The gradient sums to exactly zero, reflecting that the Bradley-Terry preference model depends exclusively on relative scalar differences, not absolute reward values.
 
 ---
 

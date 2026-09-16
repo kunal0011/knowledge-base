@@ -216,6 +216,120 @@ Given upstream loss gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{O}} \
 
 ---
 
+### 2.6 Deep Derivation 9.1.1: Exact Matrix Differential Calculus of MHA and Adjoint Projections
+
+#### Context and Setup
+In a complete Multi-Head Attention layer, the input tensor $\mathbf{X} \in \mathbb{R}^{T \times d_{\text{model}}}$ is projected into $h$ heads, passed through attention, concatenated, and projected through $\mathbf{W}^O$.
+To compute parameter updates for gradient descent, we must trace the total differential $d\mathcal{L}$ backwards through the entire computational graph using the Frobenius inner product $\langle \mathbf{A}, \mathbf{B} \rangle = \operatorname{tr}(\mathbf{A}^T \mathbf{B})$.
+
+#### Theorem: Analytical Gradients of MHA Projection Weights
+Let the forward pass be:
+$$\mathbf{H} = [\mathbf{O}_1, \dots, \mathbf{O}_h] \in \mathbb{R}^{T \times h d_v}, \quad \mathbf{Y} = \mathbf{H} \mathbf{W}^O \in \mathbb{R}^{T \times d_{\text{model}}}$$
+where for each head $i \in \{1, \dots, h\}$:
+$$\mathbf{Q}_i = \mathbf{X} \mathbf{W}_i^Q, \quad \mathbf{K}_i = \mathbf{X} \mathbf{W}_i^K, \quad \mathbf{V}_i = \mathbf{X} \mathbf{W}_i^V$$
+$$\mathbf{S}_i = \frac{1}{\sqrt{d_k}} \mathbf{Q}_i \mathbf{K}_i^T, \quad \mathbf{A}_i = \operatorname{softmax}(\mathbf{S}_i), \quad \mathbf{O}_i = \mathbf{A}_i \mathbf{V}_i$$
+
+Given upstream gradient $\boldsymbol{\Delta}^Y = \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} \in \mathbb{R}^{T \times d_{\text{model}}}$:
+
+1. **Output Projection Matrix Gradient:**
+   The differential of $\mathbf{Y}$ with respect to $\mathbf{W}^O$ is $d\mathbf{Y} = \mathbf{H} \, d\mathbf{W}^O$.
+   The variation of loss is:
+   $$d\mathcal{L} = \operatorname{tr}\left( (\boldsymbol{\Delta}^Y)^T d\mathbf{Y} \right) = \operatorname{tr}\left( (\boldsymbol{\Delta}^Y)^T \mathbf{H} \, d\mathbf{W}^O \right) = \operatorname{tr}\left( (\mathbf{H}^T \boldsymbol{\Delta}^Y)^T d\mathbf{W}^O \right)$$
+   Therefore:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \boldsymbol{\Delta}^Y \in \mathbb{R}^{h d_v \times d_{\text{model}}}$$
+
+2. **Upstream Gradient Partitioning Across Heads:**
+   The sensitivity w.r.t. the concatenated representation $\mathbf{H}$ is:
+   $$\boldsymbol{\Delta}^H = \frac{\partial \mathcal{L}}{\partial \mathbf{H}} = \boldsymbol{\Delta}^Y (\mathbf{W}^O)^T \in \mathbb{R}^{T \times h d_v}$$
+   Partitioning $\boldsymbol{\Delta}^H$ into $h$ block columns of width $d_v$:
+   $$\boldsymbol{\Delta}^H = [\boldsymbol{\Delta}^{O_1}, \boldsymbol{\Delta}^{O_2}, \dots, \boldsymbol{\Delta}^{O_h}], \quad \text{where } \boldsymbol{\Delta}^{O_i} \in \mathbb{R}^{T \times d_v}$$
+
+3. **Adjoints for Projection Matrices $\mathbf{W}_i^Q, \mathbf{W}_i^K, \mathbf{W}_i^V$:**
+   Applying the chain rule through the linear maps $\mathbf{Q}_i = \mathbf{X} \mathbf{W}_i^Q$, $\mathbf{K}_i = \mathbf{X} \mathbf{W}_i^K$, $\mathbf{V}_i = \mathbf{X} \mathbf{W}_i^V$:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_i^Q} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{Q}_i} \in \mathbb{R}^{d_{\text{model}} \times d_k}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_i^K} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{K}_i} \in \mathbb{R}^{d_{\text{model}} \times d_k}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_i^V} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{V}_i} \in \mathbb{R}^{d_{\text{model}} \times d_v}$$
+
+4. **Total Upstream Adjoint Injected into Input $\mathbf{X}$:**
+   The input $\mathbf{X}$ appears in all $3h$ projection paths. Summing across all heads:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \sum_{i=1}^h \left( \frac{\partial \mathcal{L}}{\partial \mathbf{Q}_i} (\mathbf{W}_i^Q)^T + \frac{\partial \mathcal{L}}{\partial \mathbf{K}_i} (\mathbf{W}_i^K)^T + \frac{\partial \mathcal{L}}{\partial \mathbf{V}_i} (\mathbf{W}_i^V)^T \right) \in \mathbb{R}^{T \times d_{\text{model}}}$$
+   This gives the exact analytical gradient required to backpropagate into preceding Transformer layers and embeddings. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 9.1.2: Attention as Nadaraya-Watson Non-Parametric Kernel Regression
+
+#### Classical Statistical Motivation
+In non-parametric statistics, given paired training data $\{(\mathbf{x}_j, y_j)\}_{j=1}^N$, the **Nadaraya-Watson kernel regression estimator** models the conditional expectation of response $y$ given query $\mathbf{x}$ as:
+$$\hat{m}(\mathbf{x}) = \mathbb{E}[y \mid \mathbf{x}] = \sum_{j=1}^N w_j(\mathbf{x}) y_j, \quad \text{where } w_j(\mathbf{x}) = \frac{\mathcal{K}(\mathbf{x}, \mathbf{x}_j)}{\sum_{l=1}^N \mathcal{K}(\mathbf{x}, \mathbf{x}_l)}$$
+and $\mathcal{K}(\cdot, \cdot)$ is a non-negative symmetric smoothing kernel.
+
+#### Theorem: Equivalence of Scaled Dot-Product Attention to Gaussian Kernel Regression
+Let queries and keys be normalized onto a sphere of radius $\sqrt{d_k}$: $\|\mathbf{q}_i\|_2^2 = \|\mathbf{k}_j\|_2^2 = d_k$.
+Then scaled dot-product attention computes the exact Nadaraya-Watson kernel regression estimator under a Gaussian RBF kernel.
+
+#### Proof:
+1. **Squared Euclidean Distance Decomposition:**
+   The squared Euclidean distance between query $\mathbf{q}_i$ and key $\mathbf{k}_j$ is:
+   $$\|\mathbf{q}_i - \mathbf{k}_j\|_2^2 = \|\mathbf{q}_i\|_2^2 + \|\mathbf{k}_j\|_2^2 - 2 \mathbf{q}_i^T \mathbf{k}_j = 2 d_k - 2 \mathbf{q}_i^T \mathbf{k}_j$$
+   Rearranging for the inner product:
+   $$\mathbf{q}_i^T \mathbf{k}_j = d_k - \frac{1}{2} \|\mathbf{q}_i - \mathbf{k}_j\|_2^2$$
+
+2. **Substitution into Softmax Scaled Attention:**
+   Dividing by the scaling parameter $\sqrt{d_k}$:
+   $$\frac{\mathbf{q}_i^T \mathbf{k}_j}{\sqrt{d_k}} = \sqrt{d_k} - \frac{\|\mathbf{q}_i - \mathbf{k}_j\|_2^2}{2 \sqrt{d_k}}$$
+   Exponentiating to evaluate attention weights:
+   $$\exp\left( \frac{\mathbf{q}_i^T \mathbf{k}_j}{\sqrt{d_k}} \right) = \exp\left( \sqrt{d_k} \right) \cdot \exp\left( -\frac{\|\mathbf{q}_i - \mathbf{k}_j\|_2^2}{2 \sqrt{d_k}} \right)$$
+
+3. **Softmax Normalization:**
+   In the softmax denominator, the constant factor $\exp(\sqrt{d_k})$ cancels out:
+   $$A_{i, j} = \frac{\exp\left( \frac{\mathbf{q}_i^T \mathbf{k}_j}{\sqrt{d_k}} \right)}{\sum_l \exp\left( \frac{\mathbf{q}_i^T \mathbf{k}_l}{\sqrt{d_k}} \right)} = \frac{\exp\left( -\frac{\|\mathbf{q}_i - \mathbf{k}_j\|_2^2}{2 \sqrt{d_k}} \right)}{\sum_l \exp\left( -\frac{\|\mathbf{q}_i - \mathbf{k}_l\|_2^2}{2 \sqrt{d_k}} \right)} = \frac{\mathcal{K}_{\sigma^2}(\mathbf{q}_i, \mathbf{k}_j)}{\sum_l \mathcal{K}_{\sigma^2}(\mathbf{q}_i, \mathbf{k}_l)}$$
+   where $\mathcal{K}_{\sigma^2}(\mathbf{u}, \mathbf{v}) = \exp\left(-\frac{\|\mathbf{u} - \mathbf{v}\|^2}{2 \sigma^2}\right)$ is the standard Gaussian radial basis function (RBF) kernel with bandwidth:
+   $$\sigma^2 = \sqrt{d_k}$$
+
+4. **Output Expectation:**
+   The output vector for token $i$ is:
+   $$\mathbf{o}_i = \sum_{j=1}^T A_{i, j} \mathbf{v}_j = \sum_{j=1}^T \left( \frac{\mathcal{K}(\mathbf{q}_i, \mathbf{k}_j)}{\sum_l \mathcal{K}(\mathbf{q}_i, \mathbf{k}_l)} \right) \mathbf{v}_j = \hat{\mathbb{E}}[\mathbf{v} \mid \mathbf{q}_i]$$
+   Self-attention is fundamentally a **data-dependent, non-parametric kernel density smoother** where the bandwidth $\sigma = d_k^{1/4}$ is controlled directly by the head dimension! $\blacksquare$
+
+---
+
+### 2.8 Deep Derivation 9.1.3: Softmax Rank Collapse and Lipschitz Contraction in Deep Pure Transformers
+
+#### The Problem: Representation Oversmoothing
+Why cannot a Transformer consist exclusively of repeated self-attention layers without residual connections and LayerNorm?
+Dong, Cordonnier, and Ma (ICML 2021) proved that pure self-attention without skip connections suffers from **exponential rank collapse** (also known as the token uniformity or oversmoothing curse).
+
+#### Theorem: Exponential Convergence to a Rank-1 Subspace
+Let $\mathbf{X}^{(\ell)} \in \mathbb{R}^{T \times d}$ denote token representations at depth $\ell$.
+Consider a deep architecture without residual connections:
+$$\mathbf{X}^{(\ell+1)} = \operatorname{softmax}\left( \frac{\mathbf{X}^{(\ell)} \mathbf{W}_Q (\mathbf{X}^{(\ell)} \mathbf{W}_K)^T}{\sqrt{d}} \right) \mathbf{X}^{(\ell)} \mathbf{W}_V$$
+Under mild regularity conditions on the weights ($\|\mathbf{W}_V\|_2 \le 1$), there exists a constant $\gamma \in (0, 1)$ such that:
+$$\operatorname{dist}\left( \mathbf{X}^{(\ell)}, \mathcal{M}_{\text{rank-1}} \right) \le \mathcal{O}(\gamma^\ell)$$
+where $\mathcal{M}_{\text{rank-1}} = \{ \mathbf{1}_T \mathbf{v}^T : \mathbf{v} \in \mathbb{R}^d \}$ is the manifold of rank-1 matrices where all tokens have become identical.
+
+#### Proof Sketch:
+1. **Row-Stochastic Contraction:**
+   The attention matrix $\mathbf{A}^{(\ell)}$ is row-stochastic: $\mathbf{A}^{(\ell)} \mathbf{1}_T = \mathbf{1}_T$ and $A_{i, j}^{(\ell)} > 0$.
+   By the Dobrushin ergodic theorem for Markov operators, any row-stochastic matrix acts as a strict contraction on the subspace orthogonal to $\mathbf{1}_T$:
+   $$\lambda_2(\mathbf{A}^{(\ell)}) \le 1 - \min_{j} \sum_{i} \min(A_{i, j}, A_{k, j}) \le 1 - 2 \epsilon < 1$$
+   where $\epsilon = \min_{i, j} A_{i, j} > 0$ is guaranteed strictly positive by the strict positivity of the softmax function.
+
+2. **Norm Contraction on Difference Vectors:**
+   For any two token representations $\mathbf{x}_p^{(\ell)}, \mathbf{x}_q^{(\ell)}$:
+   $$\|\mathbf{x}_p^{(\ell+1)} - \mathbf{x}_q^{(\ell+1)}\|_2 = \left\| \sum_{j=1}^T (A_{p, j}^{(\ell)} - A_{q, j}^{(\ell)}) \mathbf{x}_j^{(\ell)} \mathbf{W}_V \right\|_2$$
+   Applying total variation bound and Cauchy-Schwarz:
+   $$\|\mathbf{x}_p^{(\ell+1)} - \mathbf{x}_q^{(\ell+1)}\|_2 \le (1 - 2\epsilon) \|\mathbf{W}_V\|_2 \max_{i, j} \|\mathbf{x}_i^{(\ell)} - \mathbf{x}_j^{(\ell)}\|_2$$
+   If $\|\mathbf{W}_V\|_2 \le 1$, then with each layer $\ell$:
+   $$\max_{i, j} \|\mathbf{x}_i^{(\ell)} - \mathbf{x}_j^{(\ell)}\|_2 \le (1 - 2\epsilon)^\ell \max_{i, j} \|\mathbf{x}_i^{(0)} - \mathbf{x}_j^{(0)}\|_2 \xrightarrow{\ell \to \infty} 0$$
+
+3. **The Essential Role of Residual Connections and MLP:**
+   By adding the identity bypass $\mathbf{X}^{(\ell+1)} = \mathbf{X}^{(\ell)} + \text{MHA}(\mathbf{X}^{(\ell)})$:
+   $$\mathbf{x}_p^{(\ell+1)} - \mathbf{x}_q^{(\ell+1)} = (\mathbf{x}_p^{(\ell)} - \mathbf{x}_q^{(\ell)}) + (\mathbf{o}_p^{(\ell)} - \mathbf{o}_q^{(\ell)})$$
+   The identity operator injects a non-decaying spectral component $\lambda = 1$ that cancels the strict contraction, preventing rank collapse. Together with non-linear feedforward blocks (MLPs) and Layer Normalization, the Transformer maintains full-rank expressive token diversity across hundreds of layers. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### The Low-Rank Bottleneck of Attention (Bhojanapalli et al., 2020)
@@ -412,6 +526,271 @@ Notice the two terms:
 - The second term $4 B T^2 d_{\text{model}}$ scales **quadratically with sequence length $T^2$**.
 When $T \ll d_{\text{model}}$ (e.g., $T = 512, d = 4,096$), linear projection dominates ($88\%$).
 When $T \gg d_{\text{model}}$ (e.g., $T = 32,768$), the quadratic attention term dominates ($80\%$).
+
+---
+
+### Illustration 3: Complete Hand Trace of Backward Pass through Scaled Dot-Product Attention
+
+**Problem:**
+Consider the Head 1 attention module evaluated in Section 5 with head dimension $d_k = 2$ and scaling factor $\frac{1}{\sqrt{d_k}} = \frac{1}{\sqrt{2}} \approx 0.707107$.
+From the forward pass:
+$$\mathbf{Q}_1 = \begin{bmatrix} 2.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}, \quad \mathbf{K}_1 = \begin{bmatrix} 1.0 & 2.0 \\ 1.0 & 0.0 \end{bmatrix}, \quad \mathbf{V}_1 = \begin{bmatrix} 3.0 & 0.0 \\ 0.0 & 3.0 \end{bmatrix}$$
+$$\mathbf{A}_1 = \begin{bmatrix} 0.500000 & 0.500000 \\ 0.944192 & 0.055808 \end{bmatrix}, \quad \mathbf{O}_1 = \begin{bmatrix} 1.500000 & 1.500000 \\ 2.832576 & 0.167424 \end{bmatrix}$$
+Given the upstream loss sensitivity:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}$$
+and input embeddings $\mathbf{X} = \begin{bmatrix} 1 & 0 & 1 & 0 \\ 0 & 1 & 0 & 1 \end{bmatrix} \in \mathbb{R}^{2 \times 4}$.
+Trace backwards step-by-step to calculate:
+1. Adjoints $\frac{\partial \mathcal{L}}{\partial \mathbf{V}_1}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{A}_1}$.
+2. Softmax Jacobian backpropagation to compute $\frac{\partial \mathcal{L}}{\partial \mathbf{S}_1}$.
+3. Query and Key adjoints $\frac{\partial \mathcal{L}}{\partial \mathbf{Q}_1}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{K}_1}$.
+4. Parameter projection gradients $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^Q}, \frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^K}, \frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^V} \in \mathbb{R}^{4 \times 2}$.
+
+**Solution:**
+
+#### Step 1: Adjoints for Values and Attention Weights
+
+1. **Gradient w.r.t. Values $\mathbf{V}_1$:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{V}_1} = \mathbf{A}_1^T \frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} = \begin{bmatrix} 0.500000 & 0.944192 \\ 0.500000 & 0.055808 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.500000} & \mathbf{0.944192} \\ \mathbf{0.500000} & \mathbf{0.055808} \end{bmatrix}$$
+
+2. **Gradient w.r.t. Attention Matrix $\mathbf{A}_1$:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{A}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} \mathbf{V}_1^T = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 3.0 & 0.0 \\ 0.0 & 3.0 \end{bmatrix} = \begin{bmatrix} \mathbf{3.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{3.0} \end{bmatrix}$$
+
+---
+
+#### Step 2: Backpropagation Through the Softmax Jacobian to Scaled Scores $\mathbf{S}_1$
+
+Applying $\frac{\partial \mathcal{L}}{\partial S_{i, j}} = A_{i, j} \left( \frac{\partial \mathcal{L}}{\partial A_{i, j}} - \sum_k A_{i, k} \frac{\partial \mathcal{L}}{\partial A_{i, k}} \right)$:
+
+- **Row 1:**
+  $$\sum_{k=1}^2 A_{1, k} \frac{\partial \mathcal{L}}{\partial A_{1, k}} = (0.500000)(3.0) + (0.500000)(0.0) = 1.500000$$
+  $$\frac{\partial \mathcal{L}}{\partial S_{1, 1}} = 0.500000 \times (3.0 - 1.500000) = 0.500000 \times 1.500000 = \mathbf{+0.750000}$$
+  $$\frac{\partial \mathcal{L}}{\partial S_{1, 2}} = 0.500000 \times (0.0 - 1.500000) = 0.500000 \times (-1.500000) = \mathbf{-0.750000}$$
+  *(Check: $0.750000 - 0.750000 = 0$)*.
+
+- **Row 2:**
+  $$\sum_{k=1}^2 A_{2, k} \frac{\partial \mathcal{L}}{\partial A_{2, k}} = (0.944192)(0.0) + (0.055808)(3.0) = 0.167424$$
+  $$\frac{\partial \mathcal{L}}{\partial S_{2, 1}} = 0.944192 \times (0.0 - 0.167424) = \mathbf{-0.158080}$$
+  $$\frac{\partial \mathcal{L}}{\partial S_{2, 2}} = 0.055808 \times (3.0 - 0.167424) = 0.055808 \times 2.832576 = \mathbf{+0.158080}$$
+  *(Check: $-0.158080 + 0.158080 = 0$)*.
+
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{S}_1} = \begin{bmatrix} 0.750000 & -0.750000 \\ -0.158080 & 0.158080 \end{bmatrix}$$
+
+---
+
+#### Step 3: Query and Key Adjoints
+
+1. **Gradient w.r.t. Queries $\mathbf{Q}_1$:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{Q}_1} = \frac{1}{\sqrt{2}} \left( \frac{\partial \mathcal{L}}{\partial \mathbf{S}_1} \right) \mathbf{K}_1$$
+   $$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{S}_1} \right) \mathbf{K}_1 = \begin{bmatrix} 0.750000 & -0.750000 \\ -0.158080 & 0.158080 \end{bmatrix} \begin{bmatrix} 1.0 & 2.0 \\ 1.0 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.000000 & 1.500000 \\ 0.000000 & -0.316160 \end{bmatrix}$$
+   Multiplying by $\frac{1}{\sqrt{2}} \approx 0.707107$:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{Q}_1} = \begin{bmatrix} 0.000000 & 1.500000 \times 0.707107 \\ 0.000000 & -0.316160 \times 0.707107 \end{bmatrix} = \begin{bmatrix} \mathbf{0.000000} & \mathbf{1.060660} \\ \mathbf{0.000000} & \mathbf{-0.223559} \end{bmatrix}$$
+
+2. **Gradient w.r.t. Keys $\mathbf{K}_1$:**
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}_1} = \frac{1}{\sqrt{2}} \left( \frac{\partial \mathcal{L}}{\partial \mathbf{S}_1} \right)^T \mathbf{Q}_1$$
+   $$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{S}_1} \right)^T \mathbf{Q}_1 = \begin{bmatrix} 0.750000 & -0.158080 \\ -0.750000 & 0.158080 \end{bmatrix} \begin{bmatrix} 2.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix} = \begin{bmatrix} 1.500000 & -0.316160 \\ -1.500000 & 0.316160 \end{bmatrix}$$
+   Multiplying by $0.707107$:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}_1} = \begin{bmatrix} \mathbf{1.060660} & \mathbf{-0.223559} \\ \mathbf{-1.060660} & \mathbf{0.223559} \end{bmatrix}$$
+
+---
+
+#### Step 4: Parameter Projections Gradients
+
+Using $\mathbf{X}^T = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 0 \\ 0 & 1 \end{bmatrix} \in \mathbb{R}^{4 \times 2}$:
+
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^Q} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{Q}_1} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 0.000000 & 1.060660 \\ 0.000000 & -0.223559 \end{bmatrix} = \begin{bmatrix} \mathbf{0.000000} & \mathbf{1.060660} \\ \mathbf{0.000000} & \mathbf{-0.223559} \\ \mathbf{0.000000} & \mathbf{1.060660} \\ \mathbf{0.000000} & \mathbf{-0.223559} \end{bmatrix}$$
+
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^K} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{K}_1} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1.060660 & -0.223559 \\ -1.060660 & 0.223559 \end{bmatrix} = \begin{bmatrix} \mathbf{1.060660} & \mathbf{-0.223559} \\ \mathbf{-1.060660} & \mathbf{0.223559} \\ \mathbf{1.060660} & \mathbf{-0.223559} \\ \mathbf{-1.060660} & \mathbf{0.223559} \end{bmatrix}$$
+
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_1^V} = \mathbf{X}^T \frac{\partial \mathcal{L}}{\partial \mathbf{V}_1} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 0.500000 & 0.944192 \\ 0.500000 & 0.055808 \end{bmatrix} = \begin{bmatrix} \mathbf{0.500000} & \mathbf{0.944192} \\ \mathbf{0.500000} & \mathbf{0.055808} \\ \mathbf{0.500000} & \mathbf{0.944192} \\ \mathbf{0.500000} & \mathbf{0.055808} \end{bmatrix}$$
+
+---
+
+### Illustration 4: Causal Masking and Autoregressive Attention Hand Trace
+
+**Problem:**
+An autoregressive decoder operates on a sequence of $T = 3$ tokens with $d_k = 2$.
+The projected Query, Key, and Value matrices are:
+$$\mathbf{Q} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \\ 1.0 & 1.0 \end{bmatrix}, \quad \mathbf{K} = \begin{bmatrix} 1.0 & 1.0 \\ 2.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad \mathbf{V} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \\ 1.0 & 1.0 \end{bmatrix}$$
+1. Calculate raw dot-product matrix $\mathbf{Q} \mathbf{K}^T$ and scaled score matrix $\mathbf{S} = \frac{\mathbf{Q} \mathbf{K}^T}{\sqrt{2}}$.
+2. Add causal autoregressive mask $\mathbf{M}$ where $M_{i, j} = -\infty$ for $j > i$.
+3. Compute the causal attention probability matrix $\mathbf{A}_{\text{causal}} = \operatorname{softmax}(\mathbf{S} + \mathbf{M})$ and context output $\mathbf{O} = \mathbf{A}_{\text{causal}} \mathbf{V}$.
+
+**Solution:**
+
+#### Step 1: Scaled Score Computation
+
+1. **Unscaled Inner Products $\mathbf{Q} \mathbf{K}^T$:**
+   $$\mathbf{K}^T = \begin{bmatrix} 1.0 & 2.0 & 0.0 \\ 1.0 & 0.0 & 1.0 \end{bmatrix}$$
+   $$\mathbf{Q} \mathbf{K}^T = \begin{bmatrix}
+   (1)(1) + (0)(1) & (1)(2) + (0)(0) & (1)(0) + (0)(1) \\
+   (0)(1) + (2)(1) & (0)(2) + (2)(0) & (0)(0) + (2)(1) \\
+   (1)(1) + (1)(1) & (1)(2) + (1)(0) & (1)(0) + (1)(1)
+   \end{bmatrix} = \begin{bmatrix} 1.0 & 2.0 & 0.0 \\ 2.0 & 0.0 & 2.0 \\ 2.0 & 2.0 & 1.0 \end{bmatrix}$$
+
+2. **Scaling by $\frac{1}{\sqrt{2}} \approx 0.707107$:**
+   $$\mathbf{S} = \begin{bmatrix}
+   1.0 \times 0.707107 & 2.0 \times 0.707107 & 0.0 \times 0.707107 \\
+   2.0 \times 0.707107 & 0.0 \times 0.707107 & 2.0 \times 0.707107 \\
+   2.0 \times 0.707107 & 2.0 \times 0.707107 & 1.0 \times 0.707107
+   \end{bmatrix} = \begin{bmatrix}
+   0.707107 & 1.414214 & 0.000000 \\
+   1.414214 & 0.000000 & 1.414214 \\
+   1.414214 & 1.414214 & 0.707107
+   \end{bmatrix}$$
+
+---
+
+#### Step 2: Causal Masking
+
+Setting upper-triangular entries ($j > i$) to $-\infty$:
+$$\mathbf{S} + \mathbf{M} = \begin{bmatrix}
+0.707107 & -\infty & -\infty \\
+1.414214 & 0.000000 & -\infty \\
+1.414214 & 1.414214 & 0.707107
+\end{bmatrix}$$
+
+---
+
+#### Step 3: Row-by-Row Softmax Normalization
+
+- **Row 1 ($i = 1$):**
+  Only position $j=1$ is visible. $\exp(-\infty) = 0$.
+  $$\mathbf{A}_{1, :} = [\mathbf{1.000000}, \mathbf{0.000000}, \mathbf{0.000000}]$$
+
+- **Row 2 ($i = 2$):**
+  Tokens 1 and 2 are visible:
+  $$\exp(1.414214) = 4.113250, \quad \exp(0.000000) = 1.000000, \quad \exp(-\infty) = 0$$
+  $$\text{Denominator} = 4.113250 + 1.000000 = 5.113250$$
+  $$A_{2, 1} = \frac{4.113250}{5.113250} = \mathbf{0.804430}, \quad A_{2, 2} = \frac{1.000000}{5.113250} = \mathbf{0.195570}, \quad A_{2, 3} = \mathbf{0.000000}$$
+
+- **Row 3 ($i = 3$):**
+  All three tokens are visible:
+  $$\exp(1.414214) = 4.113250, \quad \exp(1.414214) = 4.113250, \quad \exp(0.707107) = 2.028115$$
+  $$\text{Denominator} = 4.113250 + 4.113250 + 2.028115 = 10.254615$$
+  $$A_{3, 1} = \frac{4.113250}{10.254615} = \mathbf{0.401112}$$
+  $$A_{3, 2} = \frac{4.113250}{10.254615} = \mathbf{0.401112}$$
+  $$A_{3, 3} = \frac{2.028115}{10.254615} = \mathbf{0.197776}$$
+
+$$\mathbf{A}_{\text{causal}} = \begin{bmatrix}
+1.000000 & 0.000000 & 0.000000 \\
+0.804430 & 0.195570 & 0.000000 \\
+0.401112 & 0.401112 & 0.197776
+\end{bmatrix}$$
+
+---
+
+#### Step 4: Causal Output Generation ($\mathbf{O} = \mathbf{A}_{\text{causal}} \mathbf{V}$)
+
+$$\mathbf{O} = \begin{bmatrix}
+1.000000 & 0.000000 & 0.000000 \\
+0.804430 & 0.195570 & 0.000000 \\
+0.401112 & 0.401112 & 0.197776
+\end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \\ 1.0 & 1.0 \end{bmatrix}$$
+
+- **Token 1:**
+  $$\mathbf{o}_1 = 1.0 [1.0, 0.0] = [\mathbf{1.000000}, \mathbf{0.000000}]$$
+- **Token 2:**
+  $$\mathbf{o}_2 = 0.804430 [1.0, 0.0] + 0.195570 [0.0, 2.0] = [\mathbf{0.804430}, \mathbf{0.391140}]$$
+- **Token 3:**
+  $$\mathbf{o}_3 = 0.401112 [1.0, 0.0] + 0.401112 [0.0, 2.0] + 0.197776 [1.0, 1.0]$$
+  $$o_{3, 1} = 0.401112 + 0.197776 = \mathbf{0.598888}$$
+  $$o_{3, 2} = (0.401112)(2.0) + 0.197776 = 0.802224 + 0.197776 = \mathbf{1.000000}$$
+
+$$\mathbf{O} = \begin{bmatrix}
+1.000000 & 0.000000 \\
+0.804430 & 0.391140 \\
+0.598888 & 1.000000
+\end{bmatrix}$$
+
+Notice the fundamental property: $\mathbf{o}_1$ depends exclusively on token 1, $\mathbf{o}_2$ on tokens 1-2, and $\mathbf{o}_3$ on tokens 1-3.
+
+---
+
+### Illustration 5: Multi-Head Concatenation, Output Projection, and Adjoint Splitting
+
+**Problem:**
+In a 2-head attention model with $d_{\text{model}} = 4$ and $h = 2$ ($d_v = 2$), the head outputs for $T = 2$ tokens are:
+$$\mathbf{O}_1 = \begin{bmatrix} 1.500000 & 1.500000 \\ 2.832576 & 0.167424 \end{bmatrix}, \quad \mathbf{O}_2 = \begin{bmatrix} 0.500000 & 2.000000 \\ 1.000000 & 1.000000 \end{bmatrix}$$
+The output projection weight matrix is:
+$$\mathbf{W}^O = \begin{bmatrix}
+0.5 & 0.0 & 0.5 & 0.0 \\
+0.0 & 0.5 & 0.0 & 0.5 \\
+0.5 & 0.0 & -0.5 & 0.0 \\
+0.0 & 0.5 & 0.0 & -0.5
+\end{bmatrix} \in \mathbb{R}^{4 \times 4}$$
+1. Form concatenated matrix $\mathbf{H} = [\mathbf{O}_1, \mathbf{O}_2] \in \mathbb{R}^{2 \times 4}$ and evaluate layer output $\mathbf{Y} = \mathbf{H} \mathbf{W}^O$.
+2. Given upstream loss gradient $\boldsymbol{\Delta}^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix} \in \mathbb{R}^{2 \times 4}$, compute projection weight gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O}$ and partition the backpropagated sensitivity $\boldsymbol{\Delta}^H$ into individual head error matrices $\boldsymbol{\Delta}^{O_1}$ and $\boldsymbol{\Delta}^{O_2}$.
+
+**Solution:**
+
+#### Step 1: Forward Pass
+
+1. **Concatenation:**
+   $$\mathbf{H} = [\mathbf{O}_1, \mathbf{O}_2] = \begin{bmatrix}
+   1.500000 & 1.500000 & 0.500000 & 2.000000 \\
+   2.832576 & 0.167424 & 1.000000 & 1.000000
+   \end{bmatrix}$$
+
+2. **Output Projection $\mathbf{Y} = \mathbf{H} \mathbf{W}^O$:**
+   - **Row 1:**
+     $$Y_{1, 1} = (1.5)(0.5) + (0.5)(0.5) = 0.75 + 0.25 = \mathbf{1.000000}$$
+     $$Y_{1, 2} = (1.5)(0.5) + (2.0)(0.5) = 0.75 + 1.00 = \mathbf{1.750000}$$
+     $$Y_{1, 3} = (1.5)(0.5) + (0.5)(-0.5) = 0.75 - 0.25 = \mathbf{0.500000}$$
+     $$Y_{1, 4} = (1.5)(0.5) + (2.0)(-0.5) = 0.75 - 1.00 = \mathbf{-0.250000}$$
+
+   - **Row 2:**
+     $$Y_{2, 1} = (2.832576)(0.5) + (1.0)(0.5) = 1.416288 + 0.5 = \mathbf{1.916288}$$
+     $$Y_{2, 2} = (0.167424)(0.5) + (1.0)(0.5) = 0.083712 + 0.5 = \mathbf{0.583712}$$
+     $$Y_{2, 3} = (2.832576)(0.5) + (1.0)(-0.5) = 1.416288 - 0.5 = \mathbf{0.916288}$$
+     $$Y_{2, 4} = (0.167424)(0.5) + (1.0)(-0.5) = 0.083712 - 0.5 = \mathbf{-0.416288}$$
+
+   $$\mathbf{Y} = \begin{bmatrix}
+   1.000000 & 1.750000 & 0.500000 & -0.250000 \\
+   1.916288 & 0.583712 & 0.916288 & -0.416288
+   \end{bmatrix}$$
+
+---
+
+#### Step 2: Backward Sensitivity and Adjoint Splitting
+
+1. **Projection Weight Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \boldsymbol{\Delta}^Y$:**
+   $$\mathbf{H}^T = \begin{bmatrix}
+   1.500000 & 2.832576 \\
+   1.500000 & 0.167424 \\
+   0.500000 & 1.000000 \\
+   2.000000 & 1.000000
+   \end{bmatrix}$$
+   Multiplying by $\boldsymbol{\Delta}^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix}$:
+   - Column 1: $\mathbf{H}^T [1.0, 0.0]^T = [1.500000, 1.500000, 0.500000, 2.000000]^T$
+   - Column 2: $\mathbf{H}^T [0.0, 2.0]^T = [5.665152, 0.334848, 2.000000, 2.000000]^T$
+   - Column 3: $\mathbf{H}^T [1.0, 0.0]^T = [1.500000, 1.500000, 0.500000, 2.000000]^T$
+   - Column 4: $\mathbf{H}^T [0.0, 2.0]^T = [5.665152, 0.334848, 2.000000, 2.000000]^T$
+
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \begin{bmatrix}
+   \mathbf{1.500000} & \mathbf{5.665152} & \mathbf{1.500000} & \mathbf{5.665152} \\
+   \mathbf{1.500000} & \mathbf{0.334848} & \mathbf{1.500000} & \mathbf{0.334848} \\
+   \mathbf{0.500000} & \mathbf{2.000000} & \mathbf{0.500000} & \mathbf{2.000000} \\
+   \mathbf{2.000000} & \mathbf{2.000000} & \mathbf{2.000000} & \mathbf{2.000000}
+   \end{bmatrix}$$
+
+2. **Full Concatenated Sensitivity $\boldsymbol{\Delta}^H = \boldsymbol{\Delta}^Y (\mathbf{W}^O)^T$:**
+   $$(\mathbf{W}^O)^T = \begin{bmatrix}
+   0.5 & 0.0 & 0.5 & 0.0 \\
+   0.0 & 0.5 & 0.0 & 0.5 \\
+   0.5 & 0.0 & -0.5 & 0.0 \\
+   0.0 & 0.5 & 0.0 & -0.5
+   \end{bmatrix}$$
+   - Row 1: $[1.0, 0.0, 1.0, 0.0] (\mathbf{W}^O)^T = [0.5 + 0.5, 0.0, 0.5 - 0.5, 0.0] = [\mathbf{1.0}, \mathbf{0.0}, \mathbf{0.0}, \mathbf{0.0}]$
+   - Row 2: $[0.0, 2.0, 0.0, 2.0] (\mathbf{W}^O)^T = [0.0, 1.0 + 1.0, 0.0, 1.0 - 1.0] = [\mathbf{0.0}, \mathbf{2.0}, \mathbf{0.0}, \mathbf{0.0}]$
+
+   $$\boldsymbol{\Delta}^H = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 0.0 \end{bmatrix}$$
+
+3. **Partitioning into Head Sensitivities:**
+   Extracting the first 2 columns for Head 1 and the last 2 columns for Head 2:
+   $$\boldsymbol{\Delta}^{O_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} = \begin{bmatrix} \mathbf{1.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{2.0} \end{bmatrix}$$
+   $$\boldsymbol{\Delta}^{O_2} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_2} = \begin{bmatrix} \mathbf{0.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{0.0} \end{bmatrix}$$
+
+The upstream gradient distributes cleanly across heads according to the orthogonal structure of the output projection matrix.
 
 ---
 

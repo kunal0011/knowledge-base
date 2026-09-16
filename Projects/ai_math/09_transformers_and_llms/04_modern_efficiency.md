@@ -150,6 +150,110 @@ The product $f_i P_i$ is minimized when distributions are uniform ($f_i = 1/E, P
 
 ---
 
+### 2.5 Deep Derivation 9.4.1: Mathematical Proof of FlashAttention Tiled Online Softmax Invariance
+
+#### Context and Setup
+Standard scaled dot-product attention computes:
+$$\mathbf{O} = \operatorname{softmax}\left( \frac{\mathbf{Q} \mathbf{K}^T}{\sqrt{d}} \right) \mathbf{V} \in \mathbb{R}^{T \times d}$$
+Let an arbitrary row of attention logits be $\mathbf{s} \in \mathbb{R}^N$ and corresponding values $\mathbf{V} \in \mathbb{R}^{N \times d}$.
+Partition the sequence into $B$ consecutive blocks:
+$$\mathbf{s} = [\mathbf{s}^{(1)}, \mathbf{s}^{(2)}, \dots, \mathbf{s}^{(B)}], \quad \mathbf{V} = [\mathbf{V}^{(1)}; \mathbf{V}^{(2)}; \dots; \mathbf{V}^{(B)}]$$
+where each block has length $K = N / B$.
+
+#### Theorem: Exact Tiled Online Softmax Accumulation
+For any block $b \in \{1, \dots, B\}$, define the local statistics:
+$$m^{(b)} = \max_{j} s_j^{(b)}, \quad l^{(b)} = \sum_{j=1}^K \exp\left(s_j^{(b)} - m^{(b)}\right), \quad \mathbf{O}^{(b)} = \frac{1}{l^{(b)}} \sum_{j=1}^K \exp\left(s_j^{(b)} - m^{(b)}\right) \mathbf{v}_j^{(b)}$$
+Let $(m_k, l_k, \mathbf{O}_k)$ be the running state after processing the first $k$ blocks ($k \ge 1$), initialized at $k=1$ with $(m^{(1)}, l^{(1)}, \mathbf{O}^{(1)})$.
+Then updating with block $k+1$ via the recurrence:
+$$m_{k+1} = \max\left(m_k, \, m^{(k+1)}\right)$$
+$$l_{k+1} = e^{m_k - m_{k+1}} l_k + e^{m^{(k+1)} - m_{k+1}} l^{(k+1)}$$
+$$\mathbf{O}_{k+1} = \frac{e^{m_k - m_{k+1}} l_k}{l_{k+1}} \mathbf{O}_k + \frac{e^{m^{(k+1)} - m_{k+1}} l^{(k+1)}}{l_{k+1}} \mathbf{O}^{(k+1)}$$
+yields at the final block $B$ the exact global softmax output:
+$$\mathbf{O}_B \equiv \frac{\sum_{j=1}^N e^{s_j - m_B} \mathbf{v}_j}{\sum_{j=1}^N e^{s_j - m_B}} = \operatorname{softmax}(\mathbf{s}) \mathbf{V}$$
+
+#### Proof:
+1. **Base Case ($k=1$):**
+   By definition, $\mathbf{O}_1 = \frac{\sum_{j=1}^K e^{s_j - m_1} \mathbf{v}_j}{\sum_{j=1}^K e^{s_j - m_1}}$, which is exact for the first block.
+
+2. **Inductive Step:**
+   Assume that for step $k$, the running state represents the exact normalized attention over all tokens in blocks $1$ through $k$:
+   $$l_k = \sum_{j=1}^{k K} e^{s_j - m_k}, \quad \mathbf{O}_k = \frac{1}{l_k} \sum_{j=1}^{k K} e^{s_j - m_k} \mathbf{v}_j$$
+   Consider step $k+1$:
+   $$m_{k+1} = \max(m_k, m^{(k+1)}) = \max_{j \in \{1, \dots, (k+1)K\}} s_j$$
+   Substitute the induction hypothesis into the running sum $l_{k+1}$:
+   $$l_{k+1} = e^{m_k - m_{k+1}} \left( \sum_{j=1}^{k K} e^{s_j - m_k} \right) + e^{m^{(k+1)} - m_{k+1}} \left( \sum_{j=k K + 1}^{(k+1) K} e^{s_j - m^{(k+1)}} \right)$$
+   Distributing the exponential scale factors:
+   $$l_{k+1} = \sum_{j=1}^{k K} e^{s_j - m_{k+1}} + \sum_{j=k K + 1}^{(k+1) K} e^{s_j - m_{k+1}} = \sum_{j=1}^{(k+1) K} e^{s_j - m_{k+1}}$$
+   which matches the exact definition of the global softmax denominator over $(k+1)$ blocks.
+
+3. **Inductive Step for Output Vector $\mathbf{O}_{k+1}$:**
+   Substitute $\mathbf{O}_k$ and $\mathbf{O}^{(k+1)}$:
+   $$\mathbf{O}_{k+1} = \frac{1}{l_{k+1}} \left[ e^{m_k - m_{k+1}} l_k \left( \frac{1}{l_k} \sum_{j=1}^{k K} e^{s_j - m_k} \mathbf{v}_j \right) + e^{m^{(k+1)} - m_{k+1}} l^{(k+1)} \left( \frac{1}{l^{(k+1)}} \sum_{j=k K + 1}^{(k+1) K} e^{s_j - m^{(k+1)}} \mathbf{v}_j \right) \right]$$
+   Canceling $l_k$ and $l^{(k+1)}$:
+   $$\mathbf{O}_{k+1} = \frac{1}{l_{k+1}} \left[ \sum_{j=1}^{k K} e^{s_j - m_{k+1}} \mathbf{v}_j + \sum_{j=k K + 1}^{(k+1) K} e^{s_j - m_{k+1}} \mathbf{v}_j \right] = \frac{\sum_{j=1}^{(k+1) K} e^{s_j - m_{k+1}} \mathbf{v}_j}{\sum_{j=1}^{(k+1) K} e^{s_j - m_{k+1}}}$$
+   By mathematical induction, at block $B$, $\mathbf{O}_B$ is algebraically identical to standard global softmax attention. FlashAttention performs zero numerical approximation. $\blacksquare$
+
+---
+
+### 2.6 Deep Derivation 9.4.2: FlashAttention Backward Pass with SRAM Recomputation
+
+#### The Memory Bottleneck of Standard Attention Backprop
+Standard backpropagation through attention requires the forward attention matrix $\mathbf{A} \in \mathbb{R}^{T \times T}$ to compute:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{V}} = \mathbf{A}^T \frac{\partial \mathcal{L}}{\partial \mathbf{O}}, \quad \frac{\partial \mathcal{L}}{\partial \mathbf{S}} = \mathbf{A} \odot \left( \frac{\partial \mathcal{L}}{\partial \mathbf{A}} - \left[(\dots)\right] \right)$$
+Storing $\mathbf{A}$ across $L$ layers and $H$ heads consumes $\mathcal{O}(L \cdot H \cdot T^2)$ bytes in HBM, causing out-of-memory crashes for $T > 4,096$.
+
+#### Theorem: Recomputation from Logsumexp in SRAM
+FlashAttention avoids storing $\mathbf{A}$ by saving only the **softmax log-partition vector** $\mathbf{L} \in \mathbb{R}^T$:
+$$L_i = m_i + \log l_i = \log \left( \sum_{j=1}^T \exp(S_{i, j}) \right)$$
+which requires only $\mathcal{O}(T)$ memory in HBM!
+
+#### Proof of Backward Recomputation:
+1. **On-the-Fly Recomputation of Attention Weights:**
+   During the backward pass, for each block of queries $\mathbf{Q}_i$ and keys $\mathbf{K}_j$, the scores are recomputed in on-chip SRAM:
+   $$\mathbf{S}_{i, j} = \frac{\mathbf{Q}_i \mathbf{K}_j^T}{\sqrt{d}}$$
+   The attention weights are recovered instantly using the saved vector $\mathbf{L}_i$:
+   $$A_{i, j} = \exp\left( S_{i, j} - L_i \right)$$
+
+2. **Backward Adjoint Derivation:**
+   Let $\mathbf{D}_i = \sum_{k=1}^d \left( \frac{\partial \mathcal{L}}{\partial O_{i, k}} \right) O_{i, k} = \left(\frac{\partial \mathcal{L}}{\partial \mathbf{o}_i}\right)^T \mathbf{o}_i \in \mathbb{R}$.
+   Then the score derivative simplifies to:
+   $$\frac{\partial \mathcal{L}}{\partial S_{i, j}} = A_{i, j} \left( \left(\frac{\partial \mathcal{L}}{\partial \mathbf{o}_i}\right)^T \mathbf{v}_j - D_i \right)$$
+   This form computes the backward gradient in SRAM without reading or writing any $T \times T$ intermediate matrix to HBM.
+   The total HBM memory reads/writes drop from $\mathcal{O}(T^2)$ to $\mathcal{O}(T)$, achieving a $2\times - 4\times$ end-to-end wall-clock speedup. $\blacksquare$
+
+---
+
+### 2.7 Deep Derivation 9.4.3: DeepSeek Multi-Head Latent Attention (MLA) Mathematics
+
+#### The Core Objective
+Standard MHA caches Key and Value heads of dimension $H \cdot d_h$ per token.
+DeepSeek-V2 / V3 introduced **Multi-Head Latent Attention (MLA)**, which compresses Keys and Values into a single shared low-rank latent vector:
+$$\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}, \quad \text{where } d_c \ll H \cdot d_h$$
+
+#### Mathematical Formulation:
+1. **Low-Rank KV Down-Projection:**
+   Given token representation $\mathbf{h}_t \in \mathbb{R}^d$:
+   $$\mathbf{c}_t^{KV} = \mathbf{h}_t \mathbf{W}_{DKV} \in \mathbb{R}^{d_c} \quad (\mathbf{W}_{DKV} \in \mathbb{R}^{d \times d_c})$$
+   Only $\mathbf{c}_t^{KV}$ is saved in the KV-cache!
+
+2. **Decoupled RoPE Key:**
+   To apply RoPE without breaking low-rank matrix absorption, a separate low-dimensional positional key is projected:
+   $$\mathbf{k}_t^R = \operatorname{RoPE}\left( \mathbf{h}_t \mathbf{W}_{KR} \right) \in \mathbb{R}^{d_R}$$
+   The cached state per token is just $[\mathbf{c}_t^{KV}, \, \mathbf{k}_t^R]$.
+
+3. **Key and Value Up-Projections:**
+   When needed, the $H$ heads are uncompressed:
+   $$\mathbf{K}_{t, i}^C = \mathbf{c}_t^{KV} \mathbf{W}_{UK, i} \in \mathbb{R}^{d_h}, \quad \mathbf{V}_{t, i} = \mathbf{c}_t^{KV} \mathbf{W}_{UV, i} \in \mathbb{R}^{d_h}$$
+   $$\mathbf{K}_{t, i} = \left[ \mathbf{K}_{t, i}^C; \, \mathbf{k}_t^R \right] \in \mathbb{R}^{d_h + d_R}$$
+
+4. **The Matrix Absorption Theorem (Zero-Decompression Inference):**
+   In generation, we do not need to materialize $\mathbf{K}_{t, i}^C$!
+   $$\mathbf{q}_i^T \mathbf{K}_{t, i}^C = \mathbf{q}_i^T \left( \mathbf{c}_t^{KV} \mathbf{W}_{UK, i} \right) = \left( \mathbf{q}_i^T \mathbf{W}_{UK, i}^T \right) \mathbf{c}_t^{KV} = \tilde{\mathbf{q}}_i^T \mathbf{c}_t^{KV}$$
+   By absorbing $\mathbf{W}_{UK, i}$ directly into the Query projection $\tilde{\mathbf{q}}_i = \mathbf{W}_{UK, i} \mathbf{q}_i$, the Query attends directly to the compressed latent vector $\mathbf{c}_t^{KV}$.
+   The KV-cache footprint drops from $2 \times H \times d_h \times 2$ bytes to $(d_c + d_R) \times 2$ bytes, achieving a **$93\%$ KV-cache memory reduction** compared to MHA while retaining the full representational capacity of 128 attention heads! $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### The Roofline Model for LLM Inference
@@ -299,6 +403,209 @@ Compute the Top-2 expert indices and their normalized gating probabilities $G(\m
 3. **Combined Output:**
    $$\mathbf{y} = 0.5 \cdot \text{Expert}_1(\mathbf{x}) + 0.5 \cdot \text{Expert}_3(\mathbf{x})$$
    Experts 0 and 2 are never evaluated, saving $50\%$ of FFN FLOPs.
+
+---
+
+### Illustration 3: Hand Trace of 2-Block Online Softmax and Value Accumulation (FlashAttention Primitive)
+
+**Problem:**
+A query token $\mathbf{q} = [1.0, 1.0]^T \in \mathbb{R}^2$ attends to $N = 4$ keys and values with head dimension $d_k = 2$ ($\frac{1}{\sqrt{2}} \approx 0.707107$).
+The memory is partitioned into two on-chip blocks ($B_c = 2$):
+- **Block 1 ($j \in \{1, 2\}$):**
+  $$\mathbf{k}_1 = \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix}, \, \mathbf{k}_2 = \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix}, \quad \mathbf{v}_1 = \begin{bmatrix} 2.0 \\ 0.0 \end{bmatrix}, \, \mathbf{v}_2 = \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix}$$
+- **Block 2 ($j \in \{3, 4\}$):**
+  $$\mathbf{k}_3 = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}, \, \mathbf{k}_4 = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}, \quad \mathbf{v}_3 = \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix}, \, \mathbf{v}_4 = \begin{bmatrix} 3.0 \\ 0.0 \end{bmatrix}$$
+1. Calculate local Block 1 statistics: max $m^{(1)}$, sum $l^{(1)}$, and output vector $\mathbf{o}^{(1)}$.
+2. Calculate local Block 2 statistics: max $m^{(2)}$, sum $l^{(2)}$, and output vector $\mathbf{o}^{(2)}$.
+3. Execute the FlashAttention online recurrence to merge Block 1 and Block 2 into running global state $(m^{\text{new}}, l^{\text{new}}, \mathbf{o}^{\text{new}})$.
+4. Verify that $\mathbf{o}^{\text{new}}$ exactly matches standard full-sequence attention without approximation.
+
+**Solution:**
+
+#### Step 1: Block 1 Execution (Local SRAM)
+
+1. **Dot-Product Scores:**
+   $$S_1 = \frac{\mathbf{q}^T \mathbf{k}_1}{\sqrt{2}} = \frac{(1)(1) + (1)(0)}{\sqrt{2}} = \frac{1.0}{\sqrt{2}} \approx \mathbf{0.707107}$$
+   $$S_2 = \frac{\mathbf{q}^T \mathbf{k}_2}{\sqrt{2}} = \frac{(1)(0) + (1)(2)}{\sqrt{2}} = \frac{2.0}{\sqrt{2}} \approx \mathbf{1.414214}$$
+
+2. **Block 1 Statistics:**
+   $$m^{(1)} = \max(0.707107, 1.414214) = \mathbf{1.414214}$$
+   $$P_1^{(1)} = \exp(0.707107 - 1.414214) = \exp(-0.707107) \approx 0.493069$$
+   $$P_2^{(1)} = \exp(1.414214 - 1.414214) = \exp(0.0) = 1.000000$$
+   $$l^{(1)} = 0.493069 + 1.000000 = \mathbf{1.493069}$$
+
+3. **Block 1 Partial Output:**
+   $$\mathbf{o}^{(1)} = \frac{0.493069 \begin{bmatrix} 2.0 \\ 0.0 \end{bmatrix} + 1.000000 \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix}}{1.493069} = \frac{\begin{bmatrix} 0.986138 \\ 2.000000 \end{bmatrix}}{1.493069} = \begin{bmatrix} \mathbf{0.660477} \\ \mathbf{1.339523} \end{bmatrix}$$
+
+---
+
+#### Step 2: Block 2 Execution (Local SRAM)
+
+1. **Dot-Product Scores:**
+   $$S_3 = \frac{\mathbf{q}^T \mathbf{k}_3}{\sqrt{2}} = \frac{(1)(2) + (1)(1)}{\sqrt{2}} = \frac{3.0}{\sqrt{2}} \approx \mathbf{2.121320}$$
+   $$S_4 = \frac{\mathbf{q}^T \mathbf{k}_4}{\sqrt{2}} = \frac{(1)(1) + (1)(2)}{\sqrt{2}} = \frac{3.0}{\sqrt{2}} \approx \mathbf{2.121320}$$
+
+2. **Block 2 Statistics:**
+   $$m^{(2)} = \max(2.121320, 2.121320) = \mathbf{2.121320}$$
+   $$P_3^{(2)} = \exp(2.121320 - 2.121320) = 1.000000$$
+   $$P_4^{(2)} = \exp(2.121320 - 2.121320) = 1.000000$$
+   $$l^{(2)} = 1.000000 + 1.000000 = \mathbf{2.000000}$$
+
+3. **Block 2 Partial Output:**
+   $$\mathbf{o}^{(2)} = \frac{1.0 \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} + 1.0 \begin{bmatrix} 3.0 \\ 0.0 \end{bmatrix}}{2.000000} = \begin{bmatrix} \mathbf{2.000000} \\ \mathbf{0.500000} \end{bmatrix}$$
+
+---
+
+#### Step 3: FlashAttention Online Merge Recurrence
+
+1. **Updated Global Maximum:**
+   $$m^{\text{new}} = \max(m^{(1)}, m^{(2)}) = \max(1.414214, 2.121320) = \mathbf{2.121320}$$
+
+2. **Rescaling Factors:**
+   $$\alpha_1 = \exp(m^{(1)} - m^{\text{new}}) = \exp(1.414214 - 2.121320) = \exp(-0.707106) \approx \mathbf{0.493069}$$
+   $$\alpha_2 = \exp(m^{(2)} - m^{\text{new}}) = \exp(0.0) = \mathbf{1.000000}$$
+
+3. **Accumulated Global Denominator:**
+   $$l^{\text{new}} = \alpha_1 l^{(1)} + \alpha_2 l^{(2)} = (0.493069)(1.493069) + (1.0)(2.0) = 0.736187 + 2.0 = \mathbf{2.736187}$$
+
+4. **Rescaled and Merged Output Vector:**
+   $$\mathbf{o}^{\text{new}} = \frac{\alpha_1 l^{(1)}}{l^{\text{new}}} \mathbf{o}^{(1)} + \frac{\alpha_2 l^{(2)}}{l^{\text{new}}} \mathbf{o}^{(2)} = \frac{0.736187}{2.736187} \begin{bmatrix} 0.660477 \\ 1.339523 \end{bmatrix} + \frac{2.000000}{2.736187} \begin{bmatrix} 2.000000 \\ 0.500000 \end{bmatrix}$$
+   $$= (0.269056) \begin{bmatrix} 0.660477 \\ 1.339523 \end{bmatrix} + (0.730944) \begin{bmatrix} 2.000000 \\ 0.500000 \end{bmatrix}$$
+   $$= \begin{bmatrix} 0.177705 \\ 0.360407 \end{bmatrix} + \begin{bmatrix} 1.461888 \\ 0.365472 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.639593 \\ 0.725879 \end{bmatrix}}$$
+
+---
+
+#### Step 4: Verification Against Standard Full Softmax
+
+Evaluating all 4 tokens simultaneously with global max $m = 2.121320$:
+$$\exp(\mathbf{S} - m) = [\exp(-1.414213), \, \exp(-0.707106), \, \exp(0), \, \exp(0)] = [0.243117, \, 0.493069, \, 1.0, \, 1.0]$$
+$$\text{Sum} = 0.243117 + 0.493069 + 1.0 + 1.0 = \mathbf{2.736186}$$
+Attention weights:
+$$A_1 = \frac{0.243117}{2.736186} \approx 0.088852, \quad A_2 = \frac{0.493069}{2.736186} \approx 0.180203$$
+$$A_3 = \frac{1.0}{2.736186} \approx 0.365472, \quad A_4 = \frac{1.0}{2.736186} \approx 0.365472$$
+Standard attention output:
+$$\mathbf{o} = 0.088852 \begin{bmatrix} 2 \\ 0 \end{bmatrix} + 0.180203 \begin{bmatrix} 0 \\ 2 \end{bmatrix} + 0.365472 \begin{bmatrix} 1 \\ 1 \end{bmatrix} + 0.365472 \begin{bmatrix} 3 \\ 0 \end{bmatrix}$$
+$$o_1 = 0.177704 + 0.0 + 0.365472 + 1.096416 = \mathbf{1.639592}$$
+$$o_2 = 0.0 + 0.360406 + 0.365472 + 0.0 = \mathbf{0.725878}$$
+The tiled online result matches the global full-matrix result to machine precision ($< 10^{-6}$), proving that FlashAttention introduces **zero approximation error**.
+
+---
+
+### Illustration 4: Sparse MoE Backward Pass and Router Gradient Step-by-Step
+
+**Problem:**
+A token representation $\mathbf{x} = [1.0, 2.0]^T \in \mathbb{R}^2$ is routed to $E = 3$ experts using router weight matrix:
+$$\mathbf{W}_g = \begin{bmatrix} 1.0 & 0.0 & -1.0 \\ 0.0 & 1.0 & 1.0 \end{bmatrix} \in \mathbb{R}^{2 \times 3}$$
+1. Evaluate raw routing logits $\mathbf{h} = \mathbf{x}^T \mathbf{W}_g$ and identify the Top-2 active experts.
+2. Compute normalized gating weights $G_i$ over the Top-2 set.
+3. The selected experts produce outputs $\mathbf{e}_0 = [1.0, 0.0]^T, \mathbf{e}_1 = [0.0, 2.0]^T$. The layer output is $\mathbf{y} = G_0 \mathbf{e}_0 + G_1 \mathbf{e}_1$.
+4. Given upstream loss sensitivity $\boldsymbol{\delta}_y = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} = [1.0, 1.0]^T$, backpropagate through the gating network to compute parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_g} \in \mathbb{R}^{2 \times 3}$.
+
+**Solution:**
+
+#### Step 1: Forward Routing Pass
+
+1. **Routing Logits $\mathbf{h} = \mathbf{x}^T \mathbf{W}_g$:**
+   $$\mathbf{h}^T = [1.0, 2.0] \begin{bmatrix} 1.0 & 0.0 & -1.0 \\ 0.0 & 1.0 & 1.0 \end{bmatrix}$$
+   $$h_0 = (1.0)(1.0) + (2.0)(0.0) = \mathbf{1.0}$$
+   $$h_1 = (1.0)(0.0) + (2.0)(1.0) = \mathbf{2.0}$$
+   $$h_2 = (1.0)(-1.0) + (2.0)(1.0) = -1.0 + 2.0 = \mathbf{1.0}$$
+   $$\mathbf{h} = [1.0, \, 2.0, \, 1.0]$$
+
+2. **Top-2 Selection:**
+   The highest logit is Expert 1 ($2.0$). Between Expert 0 ($1.0$) and Expert 2 ($1.0$), the tie-breaker selects Expert 0.
+   Active set $\mathcal{T} = \{0, 1\}$. Expert 2 is masked to $0$.
+
+3. **Gating Softmax Probabilities:**
+   $$\exp(h_0) = \exp(1.0) \approx 2.718282, \quad \exp(h_1) = \exp(2.0) \approx 7.389056$$
+   $$\text{Sum} = 2.718282 + 7.389056 = 10.107338$$
+   $$G_0 = \frac{2.718282}{10.107338} = \mathbf{0.268941}$$
+   $$G_1 = \frac{7.389056}{10.107338} = \mathbf{0.731059}$$
+   $$G_2 = \mathbf{0.000000}$$
+
+4. **Layer Output:**
+   $$\mathbf{y} = 0.268941 \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} + 0.731059 \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.268941} \\ \mathbf{1.462118} \end{bmatrix}$$
+
+---
+
+#### Step 2: Backward Pass Through Gating Mechanism
+
+1. **Gradient w.r.t. Gating Weights $G_i$:**
+   $$\frac{\partial \mathcal{L}}{\partial G_0} = \boldsymbol{\delta}_y^T \mathbf{e}_0 = [1.0, 1.0] \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} = \mathbf{1.000000}$$
+   $$\frac{\partial \mathcal{L}}{\partial G_1} = \boldsymbol{\delta}_y^T \mathbf{e}_1 = [1.0, 1.0] \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix} = \mathbf{2.000000}$$
+
+2. **Backpropagation Through Softmax to Active Logits $h_i$:**
+   Weighted mean:
+   $$\bar{g} = G_0 \frac{\partial \mathcal{L}}{\partial G_0} + G_1 \frac{\partial \mathcal{L}}{\partial G_1} = (0.268941)(1.0) + (0.731059)(2.0) = 0.268941 + 1.462118 = \mathbf{1.731059}$$
+   Applying $\frac{\partial \mathcal{L}}{\partial h_i} = G_i \left( \frac{\partial \mathcal{L}}{\partial G_i} - \bar{g} \right)$:
+   $$\frac{\partial \mathcal{L}}{\partial h_0} = 0.268941 \times (1.000000 - 1.731059) = 0.268941 \times (-0.731059) = \mathbf{-0.196612}$$
+   $$\frac{\partial \mathcal{L}}{\partial h_1} = 0.731059 \times (2.000000 - 1.731059) = 0.731059 \times (+0.268941) = \mathbf{+0.196612}$$
+   For the inactive expert:
+   $$\frac{\partial \mathcal{L}}{\partial h_2} = \mathbf{0.000000}$$
+   *(Check: $-0.196612 + 0.196612 + 0 = 0$)*.
+
+3. **Gradient w.r.t. Router Weight Matrix $\mathbf{W}_g$:**
+   Since $\mathbf{h} = \mathbf{W}_g^T \mathbf{x}$:
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_g} = \mathbf{x} \left( \frac{\partial \mathcal{L}}{\partial \mathbf{h}} \right)^T = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} \begin{bmatrix} -0.196612 & 0.196612 & 0.000000 \end{bmatrix}$$
+   $$= \begin{bmatrix}
+   \mathbf{-0.196612} & \mathbf{+0.196612} & \mathbf{0.000000} \\
+   \mathbf{-0.393224} & \mathbf{+0.393224} & \mathbf{0.000000}
+   \end{bmatrix}$$
+
+Notice that unselected Expert 2 receives exactly zero gradient, demonstrating how MoE routing preserves sparsity throughout the entire backward pass.
+
+---
+
+### Illustration 5: DeepSeek Multi-Head Latent Attention (MLA) vs. GQA Memory Compression
+
+**Problem:**
+An LLM architecture has $L = 60$ layers, model dimension $d_{\text{model}} = 4,096$, $H = 32$ attention heads, and head dimension $d_h = 128$.
+Compare three attention variants under FP16 ($2$ bytes/scalar):
+1. **Multi-Head Attention (MHA):** $H_{KV} = 32$.
+2. **Grouped-Query Attention (GQA):** $H_{KV} = 4$ ($8\times$ grouped).
+3. **DeepSeek Multi-Head Latent Attention (MLA):** Compresses Keys and Values to latent dimension $d_c = 512$, plus decoupled RoPE key $d_R = 64$.
+
+Calculate:
+1. The KV-cache bytes stored per token per layer, and across the full 60-layer model.
+2. Total KV-cache RAM consumed by a concurrent batch of $B = 8$ users at context length $T = 32,768$.
+
+**Solution:**
+
+#### Step 1: KV-Cache Bytes per Token per Layer
+
+1. **Multi-Head Attention (MHA):**
+   $$\text{Bytes}_{\text{layer}} = 2 \times H_{KV} \times d_h \times 2 = 2 \times 32 \times 128 \times 2 = \mathbf{16,384 \text{ bytes (16 KB)}}$$
+   Full model ($60$ layers):
+   $$\text{Bytes}_{\text{total}} = 60 \times 16,384 = \mathbf{983,040 \text{ bytes (960 KB per token)}}$$
+
+2. **Grouped-Query Attention (GQA, $H_{KV} = 4$):**
+   $$\text{Bytes}_{\text{layer}} = 2 \times 4 \times 128 \times 2 = \mathbf{2,048 \text{ bytes (2 KB)}}$$
+   Full model ($60$ layers):
+   $$\text{Bytes}_{\text{total}} = 60 \times 2,048 = \mathbf{122,880 \text{ bytes (120 KB per token)}}$$
+   *(Savings: $8\times$ smaller than MHA)*.
+
+3. **DeepSeek MLA:**
+   Stores only the low-rank latent vector $\mathbf{c}_t^{KV} \in \mathbb{R}^{512}$ and the decoupled RoPE key $\mathbf{k}_t^R \in \mathbb{R}^{64}$:
+   $$\text{Scalars per Layer} = d_c + d_R = 512 + 64 = 576 \text{ elements}$$
+   $$\text{Bytes}_{\text{layer}} = 576 \times 2 = \mathbf{1,152 \text{ bytes (1.125 KB)}}$$
+   Full model ($60$ layers):
+   $$\text{Bytes}_{\text{total}} = 60 \times 1,152 = \mathbf{69,120 \text{ bytes (67.5 KB per token)}}$$
+   *(Savings: $\mathbf{14.22\times \text{ smaller than MHA}}$, and $\mathbf{1.78\times \text{ smaller than GQA}}$!)*.
+
+---
+
+#### Step 2: Total Memory for Batch $B = 8$ at $T = 32,768$
+
+Total tokens in cache: $N_{\text{tokens}} = B \times T = 8 \times 32,768 = 262,144 \text{ tokens}$.
+
+| Architecture | Bytes / Token (60 Layers) | Total Cache Footprint ($B=8, T=32k$) | Memory Reduction Factor |
+| :--- | :--- | :--- | :--- |
+| **Standard MHA** | $960 \text{ KB}$ | $262,144 \times 983,040 \text{ B} \approx \mathbf{257.70 \text{ GB}}$ | $1.0\times$ (Requires 4x 80GB GPUs just for cache!) |
+| **GQA ($H_{KV}=4$)** | $120 \text{ KB}$ | $262,144 \times 122,880 \text{ B} \approx \mathbf{32.21 \text{ GB}}$ | $8.0\times$ (Fits in a single 48GB/80GB GPU) |
+| **DeepSeek MLA** | **$67.5 \text{ KB}$** | $262,144 \times 69,120 \text{ B} \approx \mathbf{18.12 \text{ GB}}$ | **$14.22\times$** (Leaves over 60 GB free for weights & batching!) |
+
+**Conclusion:**
+DeepSeek's MLA drastically outperforms GQA in memory efficiency by compressing across head channels via low-rank projection, while using the matrix absorption identity ($\tilde{\mathbf{q}} = \mathbf{W}_{UK} \mathbf{q}$) to avoid ever decompressing Keys during inference.
 
 ---
 

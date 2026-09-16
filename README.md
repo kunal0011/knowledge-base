@@ -10,6 +10,7 @@
 [![DDIA Systems](https://img.shields.io/badge/DDIA%20Systems-12%20Chapters-teal.svg)](#-pillar-vi-designing-data-intensive-applications-ddia--12-chapters)
 [![Microservices Architecture](https://img.shields.io/badge/Microservices%20Design-10%20Chapters-darkgreen.svg)](#-pillar-vii-microservices-architecture--design-10-chapters)
 [![Cloud Data Lake](https://img.shields.io/badge/Cloud%20Data%20Lake-10%20Chapters-indigo.svg)](#-pillar-viii-cloud-data-lake--lakehouse-architecture-10-chapters)
+[![AI Math Foundations](https://img.shields.io/badge/AI%20Math%20Foundations-111%20Chapters-gold.svg)](#-pillar-ix-mathematical-foundations-of-ai--deep-learning-111-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -311,6 +312,30 @@ A publication-grade systems textbook covering modern open table formats, storage
 | **10** | **Multi-Cloud Production Blueprint** | End-to-end multi-cloud pipeline: CDC Stream -> Bronze S3 -> Quality Gateway -> Silver Iceberg -> Gold Mart -> Trino | [Chapter 10](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/10.%20Multi-Cloud%20Blueprints%20&%20Production%20Implementation.md) |
 
 > Complete comparative storage matrix & open lakehouse stack: **[Cloud Data Lake & Lakehouse Master Portal](Projects/Designing-Cloud-Data-Lake-and-Lakehouse/README.md)**
+
+---
+
+## 🧮 Pillar IX: Mathematical Foundations of AI & Deep Learning (111 Chapters)
+
+A rigorous university-level reference course on the mathematics underpinning Machine Learning, Deep Neural Networks, Transformers, Generative Models, and Frontier Reasoning systems. Features first-principles formula derivations, geometric interpretations, and step-by-step solved numerical problem typologies across all topics.
+
+| Module | Core Mathematical Focus | Foundational Theorems & Derivations | Master Handbook |
+| :---: | :--- | :--- | :---: |
+| **01** | **Linear Algebra for Machine Learning** | Normal Equations $(X^T X)\hat{w} = X^T y$, Orthogonal Projection Matrix $P = X(X^T X)^{-1}X^T$, SVD $U \Sigma V^T$ via $A^T A$ Spectral Theorem, 4 Fundamental Subspaces ($C(A^T) \perp N(A)$) | [Module 01](Projects/ai_math/01_linear_algebra) |
+| **02** | **Multivariable & Matrix Calculus** | Multivariate Taylor Series via 1D line parameterization, Matrix Gradients ($\nabla_W \|X W - Y\|_F^2 = 2 X^T (X W - Y)$), Dense Layer Backprop ($X^T \delta, \delta W^T, \mathbf{1}^T \delta$), Softmax Jacobian | [Module 02](Projects/ai_math/02_multivariable_calculus) |
+| **03** | **Probability Theory & Information Theory** | Bayes' Theorem & Total Probability, Gibbs' Inequality ($D_{\text{KL}}(P \parallel Q) \ge 0$) via Jensen's inequality, Cross-Entropy decomposition $H(P, Q) = H(P) + D_{\text{KL}}$, Bivariate Gaussian Conditioning | [Module 03](Projects/ai_math/03_probability_theory) |
+| **04** | **Mathematical Statistics & Estimation** | Bessel's Correction proof ($\mathbb{E}[S^2] = \sigma^2$), Gaussian MLE $\to$ OLS, Gaussian MAP $\to L_2$ Ridge, Laplace MAP $\to L_1$ Lasso, Bias-Variance Decomposition ($\text{Bias}^2 + \text{Var} + \sigma^2$) | [Module 04](Projects/ai_math/04_mathematical_statistics) |
+| **05** | **Optimization & Convex Analysis** | KKT Stationarity & Complementary Slackness, Polyak Momentum optimal $\beta$, Adam Bias Correction ($m_t / (1 - \beta_1^t)$), Natural Gradient $\Delta \theta = -F^{-1} \nabla \mathcal{L}$ via Fisher Information | [Module 05](Projects/ai_math/05_optimization) |
+| **06** | **Deep Learning Foundations** | Perceptron Convergence Theorem, Softmax Cross-Entropy combined gradient ($\nabla_z \mathcal{L} = p - y$), Xavier/He Variance Scaling, LayerNorm & RMSNorm forward/backward calculus | [Module 06](Projects/ai_math/06_deep_learning_foundations) |
+| **07** | **Convolutional Neural Networks** | 2D Spatial Convolution forward & transposed gradient, Max-pooling argmax routing & overlapping window accumulation, cuDNN im2col/col2im GEMM | [Module 07](Projects/ai_math/07_convolutional_networks) |
+| **08** | **Recurrent Networks & Sequences** | Backpropagation Through Time (BPTT), Spectral radius $\rho(W_{hh})$ vanishing/exploding gradients, LSTM additive cell state flow $C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$ | [Module 08](Projects/ai_math/08_recurrent_networks) |
+| **09** | **Transformers & Alignment** | Scaled Dot-Product Attention gradients, Rotary Position Embeddings (RoPE), FlashAttention-2 online softmax tiling, Chinchilla scaling laws, DPO closed-form policy optimization | [Module 09](Projects/ai_math/09_transformers_and_llms) |
+| **10** | **Generative Modeling** | Evidence Lower Bound (ELBO) variational derivation, Reparameterization Trick, Wasserstein GAN Kantorovich-Rubinstein duality, DDPM reverse diffusion Gaussian score matching | [Module 10](Projects/ai_math/10_generative_models) |
+| **11** | **Reinforcement Learning** | Bellman Expectation & Optimality equations, Policy Gradient Theorem, Generalized Advantage Estimation (GAE), PPO clipped surrogate objective, DeepSeek-R1 GRPO group baselines | [Module 11](Projects/ai_math/11_reinforcement_learning) |
+| **12** | **Modern LLM Architectures** | Byte-Level BPE tokenization, SwiGLU activation mechanics, Grouped-Query Attention (GQA) KV-cache scaling, LoRA low-rank $W_0 + BA$, Mixture of Experts (MoE) routing | [Module 12](Projects/ai_math/12_modern_llm_architectures) |
+| **13** | **Frontier Reasoning & Inference Compute** | Test-time compute scaling laws (Best-of-N, Beam Search, MCTS), Process Reward Model (PRM) value verification, Pure RL reasoning emergence (DeepSeek-R1-Zero), Lean 4 formalization | [Module 13](Projects/ai_math/13_reasoning_and_test_time_compute) |
+
+> Complete formula derivations, visual arithmetic grids & solved numerical problems: **[AI Mathematical Foundations Master Handbook](Projects/ai_math/README.md)**
 
 ---
 

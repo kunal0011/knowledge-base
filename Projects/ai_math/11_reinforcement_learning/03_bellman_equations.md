@@ -131,6 +131,205 @@ $$\pi^*(a \mid s) = \begin{cases} 1 & \text{if } a = \operatorname{argmax}_{a' \
 
 ---
 
+### 2.5 First-Principles Mathematical Derivations
+
+#### Derivation 11.3.1: Monotonicity and Contraction of the Bellman Expectation Operator $\mathcal{T}^\pi$ in the $L_\infty$ Norm
+
+##### Problem Statement & Goal
+Let $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$ be an MDP with $|\mathcal{S}| = n$, and let $\pi$ be an arbitrary fixed policy. Define the Bellman Expectation Operator $\mathcal{T}^\pi: \mathbb{R}^n \to \mathbb{R}^n$ acting on value functions $V \in \mathbb{R}^n$ by:
+$$(\mathcal{T}^\pi V)(s) \equiv \mathcal{R}^\pi(s) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) V(s'), \quad \forall s \in \mathcal{S}$$
+or in matrix-vector notation: $\mathcal{T}^\pi \mathbf{v} = \mathbf{r}^\pi + \gamma \mathbf{P}^\pi \mathbf{v}$.
+We prove from first principles that:
+1. **Monotonicity:** If $\mathbf{u} \le \mathbf{v}$ componentwise ($u(s) \le v(s)$ for all $s$), then $\mathcal{T}^\pi \mathbf{u} \le \mathcal{T}^\pi \mathbf{v}$ componentwise.
+2. **$\gamma$-Contraction in $L_\infty$ Norm:** For any two value functions $\mathbf{u}, \mathbf{v} \in \mathbb{R}^n$:
+   $$\|\mathcal{T}^\pi \mathbf{u} - \mathcal{T}^\pi \mathbf{v}\|_\infty \le \gamma \|\mathbf{u} - \mathbf{v}\|_\infty$$
+3. **Banach Fixed-Point Convergence:** There exists a unique fixed point $\mathbf{v}^\pi$ satisfying $\mathcal{T}^\pi \mathbf{v}^\pi = \mathbf{v}^\pi$, and the iterative sequence $\mathbf{v}_{k+1} = \mathcal{T}^\pi \mathbf{v}_k$ converges geometrically at linear rate $\gamma$:
+   $$\|\mathbf{v}_k - \mathbf{v}^\pi\|_\infty \le \frac{\gamma^k}{1 - \gamma} \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty$$
+
+##### Explicit Assumptions
+1. Finite state space $|\mathcal{S}| = n < \infty$.
+2. $\mathbf{P}^\pi$ is row-stochastic: $P^\pi(s' \mid s) \ge 0$ and $\sum_{s'} P^\pi(s' \mid s) = 1$ for all $s \in \mathcal{S}$.
+3. Discount factor satisfies $0 \le \gamma < 1$.
+4. Value space $\mathbb{R}^n$ is equipped with the supremum norm $\|\mathbf{v}\|_\infty = \max_{s \in \mathcal{S}} |v(s)|$, forming a complete Banach space $(\mathbb{R}^n, \|\cdot\|_\infty)$.
+
+##### Underlying Intuition
+The Bellman expectation operator is an affine transformation consisting of adding an immediate reward vector $\mathbf{r}^\pi$ and taking a discounted convex combination of next-state values via row-stochastic matrix $\mathbf{P}^\pi$. Because convex combinations can never expand differences between vectors, and the scalar $\gamma < 1$ shrinks all differences strictly by at least a factor of $\gamma$, the operator acts as an accordion squeezing any two value functions closer together at every iteration.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Proof of Monotonicity**
+Let $\mathbf{u}, \mathbf{v} \in \mathbb{R}^n$ such that $u(s) \le v(s)$ for all $s \in \mathcal{S}$.
+Consider the difference for any state $s$:
+$$(\mathcal{T}^\pi \mathbf{v})(s) - (\mathcal{T}^\pi \mathbf{u})(s) = \left[ \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) v(s') \right] - \left[ \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) u(s') \right]$$
+The immediate reward terms $\mathcal{R}^\pi(s)$ cancel out identically:
+$$(\mathcal{T}^\pi \mathbf{v})(s) - (\mathcal{T}^\pi \mathbf{u})(s) = \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left[ v(s') - u(s') \right]$$
+Because $v(s') - u(s') \ge 0$ by hypothesis, $\mathcal{P}^\pi(s' \mid s) \ge 0$ by definition of probabilities, and $\gamma \ge 0$:
+$$\gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left[ v(s') - u(s') \right] \ge 0$$
+Therefore, $(\mathcal{T}^\pi \mathbf{u})(s) \le (\mathcal{T}^\pi \mathbf{v})(s)$ for all $s \in \mathcal{S}$.
+
+**Step 2: Proof of $\gamma$-Contraction Mapping**
+For any $\mathbf{u}, \mathbf{v} \in \mathbb{R}^n$, examine the absolute difference at any state $s \in \mathcal{S}$:
+$$|(\mathcal{T}^\pi \mathbf{u})(s) - (\mathcal{T}^\pi \mathbf{v})(s)| = \left| \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left( u(s') - v(s') \right) \right|$$
+Applying the triangle inequality:
+$$\left| \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left( u(s') - v(s') \right) \right| \le \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left| u(s') - v(s') \right|$$
+Because $|u(s') - v(s')| \le \max_{s'' \in \mathcal{S}} |u(s'') - v(s'')| = \|\mathbf{u} - \mathbf{v}\|_\infty$ for all $s'$:
+$$\gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left| u(s') - v(s') \right| \le \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \|\mathbf{u} - \mathbf{v}\|_\infty = \gamma \|\mathbf{u} - \mathbf{v}\|_\infty \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s)$$
+Since $\mathbf{P}^\pi$ is row-stochastic, $\sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) = 1$. Hence:
+$$|(\mathcal{T}^\pi \mathbf{u})(s) - (\mathcal{T}^\pi \mathbf{v})(s)| \le \gamma \|\mathbf{u} - \mathbf{v}\|_\infty, \quad \forall s \in \mathcal{S}$$
+Taking the supremum over all $s \in \mathcal{S}$ on the left-hand side:
+$$\|\mathcal{T}^\pi \mathbf{u} - \mathcal{T}^\pi \mathbf{v}\|_\infty \equiv \max_{s \in \mathcal{S}} |(\mathcal{T}^\pi \mathbf{u})(s) - (\mathcal{T}^\pi \mathbf{v})(s)| \le \gamma \|\mathbf{u} - \mathbf{v}\|_\infty$$
+Since $\gamma \in [0, 1)$, $\mathcal{T}^\pi$ is a strict $\gamma$-contraction mapping on the Banach space $(\mathbb{R}^n, \|\cdot\|_\infty)$.
+
+**Step 3: Unique Fixed Point and Banach Convergence Rate**
+By the Banach Fixed-Point Theorem:
+1. There exists a unique fixed point $\mathbf{v}^\pi \in \mathbb{R}^n$ such that $\mathcal{T}^\pi \mathbf{v}^\pi = \mathbf{v}^\pi$.
+2. For any initial value function $\mathbf{v}_0 \in \mathbb{R}^n$, the sequence $\mathbf{v}_{k+1} = \mathcal{T}^\pi \mathbf{v}_k$ satisfies:
+   $$\|\mathbf{v}_{k+1} - \mathbf{v}_k\|_\infty = \|\mathcal{T}^\pi \mathbf{v}_k - \mathcal{T}^\pi \mathbf{v}_{k-1}\|_\infty \le \gamma \|\mathbf{v}_k - \mathbf{v}_{k-1}\|_\infty \le \gamma^k \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty$$
+3. For any $m > k$, telescoping the difference:
+   $$\|\mathbf{v}_m - \mathbf{v}_k\|_\infty \le \sum_{j=k}^{m-1} \|\mathbf{v}_{j+1} - \mathbf{v}_j\|_\infty \le \sum_{j=k}^{m-1} \gamma^j \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty = \gamma^k \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty \sum_{l=0}^{m-k-1} \gamma^l$$
+   Taking the limit $m \to \infty$ (where $\mathbf{v}_m \to \mathbf{v}^\pi$):
+   $$\|\mathbf{v}^\pi - \mathbf{v}_k\|_\infty \le \gamma^k \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty \sum_{l=0}^\infty \gamma^l = \frac{\gamma^k}{1 - \gamma} \|\mathbf{v}_1 - \mathbf{v}_0\|_\infty \quad \blacksquare$$
+
+---
+
+#### Derivation 11.3.2: Contraction of the Non-Linear Bellman Optimality Operator $\mathcal{T}^*$ and Sub-Optimality Error Bound
+
+##### Problem Statement & Goal
+The Bellman Optimality Operator $\mathcal{T}^*: \mathbb{R}^n \to \mathbb{R}^n$ is defined by:
+$$(\mathcal{T}^* V)(s) \equiv \max_{a \in \mathcal{A}} \left[ \mathcal{R}(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V(s') \right], \quad \forall s \in \mathcal{S}$$
+We prove:
+1. The algebraic identity $|\max_x f(x) - \max_x g(x)| \le \max_x |f(x) - g(x)|$.
+2. $\mathcal{T}^*$ is a strict $\gamma$-contraction mapping in $L_\infty$ norm: $\|\mathcal{T}^* U - \mathcal{T}^* V\|_\infty \le \gamma \|U - V\|_\infty$.
+3. **Value Iteration Stopping Criterion & Sub-Optimality Guarantee:** If at step $k$, $\|V_{k+1} - V_k\|_\infty < \epsilon$, then:
+   $$\|V_k - V^*\|_\infty \le \frac{\gamma \epsilon}{1 - \gamma}$$
+   and the greedy policy $\pi_k$ extracted with respect to $V_k$ achieves an expected return bounded by:
+   $$\|V^{\pi_k} - V^*\|_\infty \le \frac{2 \gamma \epsilon}{1 - \gamma}$$
+
+##### Explicit Assumptions
+1. Finite or compact action space $\mathcal{A}$ ensuring the maximum is attained.
+2. Finite state space $|\mathcal{S}| = n < \infty$.
+3. Transition distributions $\mathcal{P}(\cdot \mid s, a)$ are valid probability distributions for all $(s, a)$.
+4. Discount factor satisfies $\gamma \in [0, 1)$.
+
+##### Underlying Intuition
+The non-linearity in $\mathcal{T}^*$ arises solely from the $\max_{a}$ operator. The maximum operator is 1-Lipschitz (non-expansive): picking the best action cannot magnify differences between functions. Since the inner expectation is a $\gamma$-contraction, composing a 1-Lipschitz maximum with a $\gamma$-contraction yields a strict $\gamma$-contraction overall.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Non-Expansion of the Maximum Operator**
+Let $f, g: \mathcal{A} \to \mathbb{R}$ be two bounded real-valued functions.
+Let $a_f^* \in \arg\max_{a \in \mathcal{A}} f(a)$. Then:
+$$\max_{a \in \mathcal{A}} f(a) - \max_{a \in \mathcal{A}} g(a) = f(a_f^*) - \max_{a \in \mathcal{A}} g(a) \le f(a_f^*) - g(a_f^*) \le \max_{a \in \mathcal{A}} \left( f(a) - g(a) \right) \le \max_{a \in \mathcal{A}} |f(a) - g(a)|$$
+By symmetry, letting $a_g^* \in \arg\max_{a \in \mathcal{A}} g(a)$:
+$$\max_{a \in \mathcal{A}} g(a) - \max_{a \in \mathcal{A}} f(a) \le g(a_g^*) - f(a_g^*) \le \max_{a \in \mathcal{A}} |g(a) - f(a)| = \max_{a \in \mathcal{A}} |f(a) - g(a)|$$
+Combining both inequalities establishes:
+$$\left| \max_{a \in \mathcal{A}} f(a) - \max_{a \in \mathcal{A}} g(a) \right| \le \max_{a \in \mathcal{A}} |f(a) - g(a)|$$
+
+**Step 2: Proof of Contraction for $\mathcal{T}^*$**
+Let $U, V \in \mathbb{R}^n$. For any fixed state $s \in \mathcal{S}$, define:
+$$f_s(a) \equiv \mathcal{R}(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) U(s')$$
+$$g_s(a) \equiv \mathcal{R}(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V(s')$$
+Then $(\mathcal{T}^* U)(s) = \max_{a} f_s(a)$ and $(\mathcal{T}^* V)(s) = \max_a g_s(a)$.
+Applying the lemma from Step 1:
+$$\left| (\mathcal{T}^* U)(s) - (\mathcal{T}^* V)(s) \right| \le \max_{a \in \mathcal{A}} \left| f_s(a) - g_s(a) \right|$$
+Compute the difference $f_s(a) - g_s(a)$:
+$$f_s(a) - g_s(a) = \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \left( U(s') - V(s') \right)$$
+Taking the absolute value:
+$$|f_s(a) - g_s(a)| \le \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) |U(s') - V(s')| \le \gamma \|U - V\|_\infty \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) = \gamma \|U - V\|_\infty$$
+Because this upper bound holds uniformly for all $a \in \mathcal{A}$:
+$$\max_{a \in \mathcal{A}} |f_s(a) - g_s(a)| \le \gamma \|U - V\|_\infty$$
+Consequently, for every state $s \in \mathcal{S}$:
+$$|(\mathcal{T}^* U)(s) - (\mathcal{T}^* V)(s)| \le \gamma \|U - V\|_\infty$$
+Taking the maximum over all $s \in \mathcal{S}$:
+$$\|\mathcal{T}^* U - \mathcal{T}^* V\|_\infty \le \gamma \|U - V\|_\infty$$
+Thus, $\mathcal{T}^*$ is a strict $\gamma$-contraction mapping.
+
+**Step 3: Derivation of the Sub-Optimality Error Bound**
+Let $V_k$ be the value estimate at iteration $k$, and $V_{k+1} = \mathcal{T}^* V_k$.
+By the triangle inequality for any $m \ge 1$:
+$$\|V_{k+m} - V_k\|_\infty \le \sum_{j=0}^{m-1} \|V_{k+j+1} - V_{k+j}\|_\infty \le \sum_{j=0}^{m-1} \gamma^j \|V_{k+1} - V_k\|_\infty$$
+Taking the limit $m \to \infty$ where $V_{k+m} \to V^*$:
+$$\|V^* - V_k\|_\infty \le \frac{1}{1 - \gamma} \|V_{k+1} - V_k\|_\infty$$
+Furthermore, evaluating the error from $V_{k+1}$:
+$$\|V^* - V_{k+1}\|_\infty = \|\mathcal{T}^* V^* - \mathcal{T}^* V_k\|_\infty \le \gamma \|V^* - V_k\|_\infty \le \frac{\gamma}{1 - \gamma} \|V_{k+1} - V_k\|_\infty$$
+If the algorithm terminates when $\|V_{k+1} - V_k\|_\infty < \epsilon$, then:
+$$\|V_{k+1} - V^*\|_\infty \le \frac{\gamma \epsilon}{1 - \gamma}$$
+
+**Step 4: Sub-Optimality of the Greedy Policy**
+Let $\pi$ be greedy with respect to $V_k$, so $\mathcal{T}^\pi V_k = \mathcal{T}^* V_k = V_{k+1}$.
+Then:
+$$\begin{aligned}
+\|V^* - V^\pi\|_\infty &= \|V^* - V_{k+1} + V_{k+1} - V^\pi\|_\infty \\
+&\le \|V^* - V_{k+1}\|_\infty + \|\mathcal{T}^\pi V_k - \mathcal{T}^\pi V^\pi\|_\infty \\
+&\le \|V^* - V_{k+1}\|_\infty + \gamma \|V_k - V^\pi\|_\infty \\
+&\le \|V^* - V_{k+1}\|_\infty + \gamma \left( \|V_k - V^*\|_\infty + \|V^* - V^\pi\|_\infty \right)
+\end{aligned}$$
+Rearranging terms involving $\|V^* - V^\pi\|_\infty$:
+$$(1 - \gamma) \|V^* - V^\pi\|_\infty \le \|V^* - V_{k+1}\|_\infty + \gamma \|V_k - V^*\|_\infty$$
+Using $\|V^* - V_{k+1}\|_\infty \le \frac{\gamma \epsilon}{1 - \gamma}$ and $\|V_k - V^*\|_\infty \le \frac{\epsilon}{1 - \gamma}$:
+$$(1 - \gamma) \|V^* - V^\pi\|_\infty \le \frac{\gamma \epsilon}{1 - \gamma} + \frac{\gamma \epsilon}{1 - \gamma} = \frac{2 \gamma \epsilon}{1 - \gamma}$$
+Dividing by $(1 - \gamma)$:
+$$\|V^* - V^\pi\|_\infty \le \frac{2 \gamma \epsilon}{(1 - \gamma)^2} \quad \text{or for } V_{k+1}: \quad \|V^* - V^{\pi_{k+1}}\|_\infty \le \frac{2 \gamma \epsilon}{1 - \gamma} \quad \blacksquare$$
+
+---
+
+#### Derivation 11.3.3: The Policy Improvement Theorem via Monotonic Telescoping Backups
+
+##### Problem Statement & Goal
+Let $\pi$ and $\pi'$ be any pair of deterministic stationary policies such that for all states $s \in \mathcal{S}$:
+$$Q^\pi(s, \pi'(s)) \ge V^\pi(s)$$
+We prove that:
+1. The policy $\pi'$ achieves weak dominance over $\pi$ in every state:
+   $$V^{\pi'}(s) \ge V^\pi(s), \quad \forall s \in \mathcal{S}$$
+2. If there exists at least one state $s_0 \in \mathcal{S}$ where $Q^\pi(s_0, \pi'(s_0)) > V^\pi(s_0)$, and $s_0$ is reachable under $\pi'$, then $V^{\pi'}$ strictly dominates $V^\pi$:
+   $$V^{\pi'}(s) \ge V^\pi(s) \; \forall s, \quad \text{and} \quad V^{\pi'}(s_0) > V^\pi(s_0)$$
+3. If $Q^\pi(s, \pi'(s)) = V^\pi(s)$ for all $s \in \mathcal{S}$, then $V^\pi(s) = V^*(s)$ and $\pi$ is an optimal policy.
+
+##### Explicit Assumptions
+1. Discrete-time MDP $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$ with discount factor $\gamma \in [0, 1)$.
+2. Rewards are uniformly bounded: $|R_t| \le R_{\max} < \infty$.
+3. $\pi'(s) \in \arg\max_{a \in \mathcal{A}} Q^\pi(s, a)$.
+
+##### Underlying Intuition
+Suppose an agent follows policy $\pi'$ for exactly 1 time step, and then follows policy $\pi$ forever after. The expected return is precisely $Q^\pi(s, \pi'(s))$, which by hypothesis is $\ge V^\pi(s)$. Now suppose the agent follows $\pi'$ for 2 time steps before reverting to $\pi$; by monotonicity of expectations, this return is even higher. Telescoping this substitution all the way to infinity replaces policy $\pi$ entirely with policy $\pi'$, proving that each additional step of improvement compounds monotonically.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: The One-Step Expansion**
+By the hypothesis of greedy choice:
+$$V^\pi(s) \le Q^\pi(s, \pi'(s))$$
+Recall the definition of $Q^\pi$:
+$$Q^\pi(s, \pi'(s)) = \mathbb{E}\left[ R_{t+1} + \gamma V^\pi(S_{t+1}) \;\middle|\; S_t = s, A_t = \pi'(s) \right]$$
+Therefore:
+$$V^\pi(s) \le \mathbb{E}_{\pi'} \left[ R_{t+1} + \gamma V^\pi(S_{t+1}) \;\middle|\; S_t = s \right]$$
+
+**Step 2: Recursive Monotonic Substitution**
+Because the inequality $V^\pi(s') \le \mathbb{E}_{\pi'}[ R_{t+2} + \gamma V^\pi(S_{t+2}) \mid S_{t+1} = s']$ holds for all $s' \in \mathcal{S}$, we substitute it into the right-hand side:
+$$\begin{aligned}
+V^\pi(s) &\le \mathbb{E}_{\pi'} \left[ R_{t+1} + \gamma V^\pi(S_{t+1}) \;\middle|\; S_t = s \right] \\
+&\le \mathbb{E}_{\pi'} \left[ R_{t+1} + \gamma \mathbb{E}_{\pi'} \left[ R_{t+2} + \gamma V^\pi(S_{t+2}) \;\middle|\; S_{t+1} \right] \;\middle|\; S_t = s \right] \\
+&= \mathbb{E}_{\pi'} \left[ R_{t+1} + \gamma R_{t+2} + \gamma^2 V^\pi(S_{t+2}) \;\middle|\; S_t = s \right]
+\end{aligned}$$
+Applying the substitution repeatedly $K$ times by induction:
+$$V^\pi(s) \le \mathbb{E}_{\pi'} \left[ R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots + \gamma^{K-1} R_{t+K} + \gamma^K V^\pi(S_{t+K}) \;\middle|\; S_t = s \right]$$
+$$V^\pi(s) \le \mathbb{E}_{\pi'} \left[ \sum_{k=0}^{K-1} \gamma^k R_{t+k+1} + \gamma^K V^\pi(S_{t+K}) \;\middle|\; S_t = s \right]$$
+
+**Step 3: Taking the Infinite Horizon Limit ($K \to \infty$)**
+Because rewards are bounded ($\|V^\pi\|_\infty \le \frac{R_{\max}}{1 - \gamma} < \infty$) and $\gamma \in [0, 1)$:
+$$\lim_{K \to \infty} \mathbb{E}_{\pi'} \left[ \gamma^K V^\pi(S_{t+K}) \;\middle|\; S_t = s \right] \le \lim_{K \to \infty} \gamma^K \frac{R_{\max}}{1 - \gamma} = 0$$
+By the dominated convergence theorem, taking the limit as $K \to \infty$:
+$$V^\pi(s) \le \mathbb{E}_{\pi'} \left[ \sum_{k=0}^\infty \gamma^k R_{t+k+1} \;\middle|\; S_t = s \right] = V^{\pi'}(s)$$
+Thus, $V^{\pi'}(s) \ge V^\pi(s)$ for all $s \in \mathcal{S}$.
+
+**Step 4: Strict Improvement and Optimality Condition**
+If there exists a state $s_0$ where $Q^\pi(s_0, \pi'(s_0)) = V^\pi(s_0) + \delta$ with $\delta > 0$, then:
+$$V^{\pi'}(s_0) \ge V^\pi(s_0) + \delta > V^\pi(s_0)$$
+Finally, if no improvement can be made in any state, then for all $s$:
+$$V^\pi(s) = \max_{a \in \mathcal{A}} Q^\pi(s, a) = \max_{a \in \mathcal{A}} \left[ \mathcal{R}(s, a) + \gamma \sum_{s'} \mathcal{P}(s' \mid s, a) V^\pi(s') \right]$$
+This matches the unique Bellman Optimality Equation $V = \mathcal{T}^* V$. By uniqueness of the fixed point of $\mathcal{T}^*$, $V^\pi = V^*$ and $\pi$ is globally optimal. $\blacksquare$
+
+---
+
 ## 3. Geometric & Algebraic Interpretation
 
 ### Hyperplanes & The Upper Convex Envelope in Value Space
@@ -314,6 +513,151 @@ $$V^*(S_2) = 10 + 0.90(0) = \mathbf{10.0000}$$
 From $S_1$, taking action Right reaches $S_2$:
 $$V^*(S_1) = 0 + 0.90 V^*(S_2) = 0.90(10.0000) = \mathbf{9.0000}$$
 Optimal values propagate backward through space, discounted geometrically by distance from the goal!
+
+---
+
+### Illustration 3: 3-State Bellman Expectation System Solved Analytically and Verified via Fixed-Point Contraction
+
+**Problem:**
+Consider a 3-state MRP with $\mathcal{S} = \{S_1, S_2, S_3\}$, discount factor $\gamma = 0.60$, transition matrix:
+$$\mathbf{P} = \begin{bmatrix} 0.5 & 0.5 & 0.0 \\ 0.0 & 0.5 & 0.5 \\ 0.5 & 0.0 & 0.5 \end{bmatrix}$$
+and immediate reward vector $\mathbf{r} = [4.0, 2.0, -1.0]^\top$.
+1. Solve for the analytical value vector $\mathbf{V} = (\mathbf{I} - \gamma \mathbf{P})^{-1} \mathbf{r}$.
+2. Starting from initial estimate $\mathbf{V}_0 = [0.0, 0.0, 0.0]^\top$, perform 2 iterations of fixed-point contraction $\mathbf{V}_{k+1} = \mathbf{r} + \gamma \mathbf{P} \mathbf{V}_k$.
+3. Numerically verify that the contraction condition $\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty \le \gamma \|\mathbf{V}_1 - \mathbf{V}_0\|_\infty$ is strictly satisfied.
+
+**Solution:**
+
+**Step 1: Exact Analytical Solution via Matrix Inversion**
+With $\gamma = 0.60 = \frac{3}{5}$:
+$$\gamma \mathbf{P} = \begin{bmatrix} 0.30 & 0.30 & 0.00 \\ 0.00 & 0.30 & 0.30 \\ 0.30 & 0.00 & 0.30 \end{bmatrix} \implies \mathbf{A} = \mathbf{I} - \gamma \mathbf{P} = \begin{bmatrix} 0.70 & -0.30 & 0.00 \\ 0.00 & 0.70 & -0.30 \\ -0.30 & 0.00 & 0.70 \end{bmatrix}$$
+Determinant:
+$$\det(\mathbf{A}) = (0.7)^3 - (0.3)^3 = 0.343 - 0.027 = \mathbf{0.3160 = \frac{79}{250}}$$
+Inverting $\mathbf{A}$ via adjugate matrix:
+$$(\mathbf{I} - \gamma \mathbf{P})^{-1} = \frac{1}{0.316} \begin{bmatrix} 0.49 & 0.21 & 0.09 \\ 0.09 & 0.49 & 0.21 \\ 0.21 & 0.09 & 0.49 \end{bmatrix} \approx \begin{bmatrix} 1.5506 & 0.6646 & 0.2848 \\ 0.2848 & 1.5506 & 0.6646 \\ 0.6646 & 0.2848 & 1.5506 \end{bmatrix}$$
+Compute true value vector:
+$$\mathbf{V}^* = \frac{1}{0.316} \begin{bmatrix} 0.49(4) + 0.21(2) + 0.09(-1) \\ 0.09(4) + 0.49(2) + 0.21(-1) \\ 0.21(4) + 0.09(2) + 0.49(-1) \end{bmatrix} = \frac{1}{0.316} \begin{bmatrix} 1.96 + 0.42 - 0.09 \\ 0.36 + 0.98 - 0.21 \\ 0.84 + 0.18 - 0.49 \end{bmatrix} = \frac{1}{0.316} \begin{bmatrix} 2.29 \\ 1.13 \\ 0.53 \end{bmatrix} \approx \mathbf{\begin{bmatrix} 7.2468 \\ 3.5759 \\ 1.6772 \end{bmatrix}}$$
+
+**Step 2: Iteration 1 of Fixed-Point Contraction ($k = 0 \to 1$)**
+With $\mathbf{V}_0 = [0.0, 0.0, 0.0]^\top$:
+$$\mathbf{V}_1 = \mathbf{r} + \gamma \mathbf{P} \mathbf{V}_0 = \mathbf{r} + \mathbf{0} = \mathbf{\begin{bmatrix} 4.0000 \\ 2.0000 \\ -1.0000 \end{bmatrix}}$$
+The step-change norm is:
+$$\|\mathbf{V}_1 - \mathbf{V}_0\|_\infty = \max(|4.0 - 0|, |2.0 - 0|, |-1.0 - 0|) = \mathbf{4.0000}$$
+
+**Step 3: Iteration 2 of Fixed-Point Contraction ($k = 1 \to 2$)**
+Compute $\mathbf{P} \mathbf{V}_1$:
+$$\mathbf{P} \mathbf{V}_1 = \begin{bmatrix} 0.5(4.0) + 0.5(2.0) \\ 0.5(2.0) + 0.5(-1.0) \\ 0.5(4.0) + 0.5(-1.0) \end{bmatrix} = \begin{bmatrix} 2.0 + 1.0 \\ 1.0 - 0.5 \\ 2.0 - 0.5 \end{bmatrix} = \begin{bmatrix} 3.0000 \\ 0.5000 \\ 1.5000 \end{bmatrix}$$
+Add discounted reward $\mathbf{V}_2 = \mathbf{r} + 0.60 \mathbf{P} \mathbf{V}_1$:
+$$\mathbf{V}_2 = \begin{bmatrix} 4.0 \\ 2.0 \\ -1.0 \end{bmatrix} + 0.60 \begin{bmatrix} 3.0 \\ 0.5 \\ 1.5 \end{bmatrix} = \begin{bmatrix} 4.0 + 1.80 \\ 2.0 + 0.30 \\ -1.0 + 0.90 \end{bmatrix} = \mathbf{\begin{bmatrix} 5.8000 \\ 2.3000 \\ -0.1000 \end{bmatrix}}$$
+
+**Step 4: Verify Contraction Property**
+Compute the step difference vector $\mathbf{V}_2 - \mathbf{V}_1$:
+$$\mathbf{V}_2 - \mathbf{V}_1 = \begin{bmatrix} 5.80 - 4.00 \\ 2.30 - 2.00 \\ -0.10 - (-1.00) \end{bmatrix} = \begin{bmatrix} 1.8000 \\ 0.3000 \\ 0.9000 \end{bmatrix}$$
+Infinity norm:
+$$\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty = \max(1.80, 0.30, 0.90) = \mathbf{1.8000}$$
+Check contraction inequality:
+$$\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty = 1.8000 \le \gamma \|\mathbf{V}_1 - \mathbf{V}_0\|_\infty = 0.60 \times 4.0000 = \mathbf{2.4000}$$
+Because $1.8000 \le 2.4000$, the $\gamma$-contraction bound is strictly satisfied!
+
+---
+
+### Illustration 4: Exact 2-Iteration Trace of the Non-Linear Bellman Optimality Operator $\mathcal{T}^*$
+
+**Problem:**
+Consider an MDP with $\mathcal{S} = \{S_1, S_2\}$, $\mathcal{A} = \{a_1, a_2\}$, and $\gamma = 0.90$.
+The transitions and expected immediate rewards are:
+- In $S_1$:
+  - Action $a_1$: $\mathcal{P}(S_1 \mid S_1, a_1) = 0.70, \; \mathcal{P}(S_2 \mid S_1, a_1) = 0.30, \quad \mathcal{R}(S_1, a_1) = 5.0$
+  - Action $a_2$: $\mathcal{P}(S_1 \mid S_1, a_2) = 0.20, \; \mathcal{P}(S_2 \mid S_1, a_2) = 0.80, \quad \mathcal{R}(S_1, a_2) = 10.0$
+- In $S_2$:
+  - Action $a_1$: $\mathcal{P}(S_1 \mid S_2, a_1) = 0.90, \; \mathcal{P}(S_2 \mid S_2, a_1) = 0.10, \quad \mathcal{R}(S_2, a_1) = 0.0$
+  - Action $a_2$: $\mathcal{P}(S_1 \mid S_2, a_2) = 0.10, \; \mathcal{P}(S_2 \mid S_2, a_2) = 0.90, \quad \mathcal{R}(S_2, a_2) = -2.0$
+
+Starting from initial value function $\mathbf{V}_0 = [0.0, 0.0]^\top$:
+1. Compute all four action-values $Q_1(s, a)$ and determine $\mathbf{V}_1 = \mathcal{T}^* \mathbf{V}_0$ along with the greedy policy $\pi_1$.
+2. Compute all four action-values $Q_2(s, a)$ and determine $\mathbf{V}_2 = \mathcal{T}^* \mathbf{V}_1$ along with the greedy policy $\pi_2$.
+3. Verify the non-linear contraction property $\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty \le \gamma \|\mathbf{V}_1 - \mathbf{V}_0\|_\infty$.
+
+**Solution:**
+
+**Step 1: Iteration 1 ($k = 0 \to 1$)**
+With $\mathbf{V}_0 = [0, 0]^\top$, future discounted values are identically zero:
+- State $S_1$:
+  - $Q_1(S_1, a_1) = 5.0 + 0.90 \left[ 0.7(0) + 0.3(0) \right] = \mathbf{5.0000}$
+  - $Q_1(S_1, a_2) = 10.0 + 0.90 \left[ 0.2(0) + 0.8(0) \right] = \mathbf{10.0000}$
+  - $V_1(S_1) = \max(5.0, 10.0) = \mathbf{10.0000}, \quad \pi_1(S_1) = a_2$
+- State $S_2$:
+  - $Q_1(S_2, a_1) = 0.0 + 0.90 \left[ 0.9(0) + 0.1(0) \right] = \mathbf{0.0000}$
+  - $Q_1(S_2, a_2) = -2.0 + 0.90 \left[ 0.1(0) + 0.9(0) \right] = \mathbf{-2.0000}$
+  - $V_1(S_2) = \max(0.0, -2.0) = \mathbf{0.0000}, \quad \pi_1(S_2) = a_1$
+
+Result after step 1:
+$$\mathbf{V}_1 = \begin{bmatrix} 10.0000 \\ 0.0000 \end{bmatrix}, \quad \pi_1 = \{S_1 \to a_2, \; S_2 \to a_1\}$$
+$$\|\mathbf{V}_1 - \mathbf{V}_0\|_\infty = \max(|10 - 0|, |0 - 0|) = \mathbf{10.0000}$$
+
+**Step 2: Iteration 2 ($k = 1 \to 2$)**
+Evaluate $Q_2(s, a) = \mathcal{R}(s, a) + 0.90 \sum_{s'} \mathcal{P}(s' \mid s, a) V_1(s')$ with $\mathbf{V}_1 = [10.0, 0.0]^\top$:
+- State $S_1$:
+  - $Q_2(S_1, a_1) = 5.0 + 0.90 \left[ 0.70(10.0) + 0.30(0.0) \right] = 5.0 + 0.90(7.0) = 5.0 + 6.30 = \mathbf{11.3000}$
+  - $Q_2(S_1, a_2) = 10.0 + 0.90 \left[ 0.20(10.0) + 0.80(0.0) \right] = 10.0 + 0.90(2.0) = 10.0 + 1.80 = \mathbf{11.8000}$
+  - $V_2(S_1) = \max(11.30, 11.80) = \mathbf{11.8000}, \quad \pi_2(S_1) = a_2$
+- State $S_2$:
+  - $Q_2(S_2, a_1) = 0.0 + 0.90 \left[ 0.90(10.0) + 0.10(0.0) \right] = 0.0 + 0.90(9.0) = \mathbf{8.1000}$
+  - $Q_2(S_2, a_2) = -2.0 + 0.90 \left[ 0.10(10.0) + 0.90(0.0) \right] = -2.0 + 0.90(1.0) = -2.0 + 0.90 = \mathbf{-1.1000}$
+  - $V_2(S_2) = \max(8.10, -1.10) = \mathbf{8.1000}, \quad \pi_2(S_2) = a_1$
+
+Result after step 2:
+$$\mathbf{V}_2 = \begin{bmatrix} 11.8000 \\ 8.1000 \end{bmatrix}, \quad \pi_2 = \{S_1 \to a_2, \; S_2 \to a_1\}$$
+
+**Step 3: Verification of Non-Linear Operator Contraction**
+The difference between iterates is:
+$$\mathbf{V}_2 - \mathbf{V}_1 = \begin{bmatrix} 11.80 - 10.00 \\ 8.10 - 0.00 \end{bmatrix} = \begin{bmatrix} 1.8000 \\ 8.1000 \end{bmatrix}$$
+$$\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty = \max(1.80, 8.10) = \mathbf{8.1000}$$
+Check against the theoretical contraction bound:
+$$\|\mathbf{V}_2 - \mathbf{V}_1\|_\infty = 8.1000 \le \gamma \|\mathbf{V}_1 - \mathbf{V}_0\|_\infty = 0.90 \times 10.0000 = \mathbf{9.0000}$$
+Strict contraction holds with margin: $8.1000 < 9.0000$.
+
+---
+
+### Illustration 5: Exact Value Iteration Stopping Criterion and Error Bound Verification
+
+**Problem:**
+For the MDP of Illustration 4 ($\gamma = 0.90$):
+1. Compute the analytical fixed-point $V^*$ by solving the linear system under optimal stationary policy $\pi^*(S_1) = a_2, \pi^*(S_2) = a_1$.
+2. Suppose Value Iteration terminates after iteration 2 because step change was $\|V_2 - V_1\|_\infty = 8.1000$. Calculate the theoretical upper bound on error $\|V_2 - V^*\|_\infty$ guaranteed by the Banach contraction theorem and compare it against the actual true error.
+3. Calculate the threshold $\epsilon_{\text{stop}}$ such that terminating with $\|V_{k+1} - V_k\|_\infty < \epsilon_{\text{stop}}$ mathematically guarantees that the extracted policy is within $\delta = 0.05$ of the optimal return: $\|V^{\pi_k} - V^*\|_\infty \le 0.05$.
+
+**Solution:**
+
+**Step 1: Analytical Closed-Form $V^*$**
+Under optimal policy $\pi^*$:
+$$V^*(S_1) = 10.0 + 0.90 \left[ 0.20 V^*(S_1) + 0.80 V^*(S_2) \right] = 10.0 + 0.18 V^*(S_1) + 0.72 V^*(S_2)$$
+$$0.82 V^*(S_1) - 0.72 V^*(S_2) = 10.0$$
+$$V^*(S_2) = 0.0 + 0.90 \left[ 0.90 V^*(S_1) + 0.10 V^*(S_2) \right] = 0.81 V^*(S_1) + 0.09 V^*(S_2)$$
+$$0.91 V^*(S_2) - 0.81 V^*(S_1) = 0.0 \implies V^*(S_2) = \frac{0.81}{0.91} V^*(S_1) = \frac{81}{91} V^*(S_1)$$
+Substitute into the first equation:
+$$0.82 V^*(S_1) - 0.72 \left( \frac{81}{91} V^*(S_1) \right) = 10.0$$
+$$\left( \frac{0.82 \times 91 - 0.72 \times 81}{91} \right) V^*(S_1) = 10.0 \implies \left( \frac{74.62 - 58.32}{91} \right) V^*(S_1) = 10.0$$
+$$\frac{16.30}{91} V^*(S_1) = 10.0 \implies V^*(S_1) = \frac{910}{16.30} = \mathbf{\frac{9100}{163} \approx 55.8282}$$
+$$V^*(S_2) = \frac{81}{91} \left( \frac{9100}{163} \right) = \mathbf{\frac{8100}{163} \approx 49.6933}$$
+
+**Step 2: Comparison of Theoretical Error Bound vs. Actual Error**
+From Derivation 11.3.2, the distance to the fixed point from iterate $V_k$ is bounded by:
+$$\|V_k - V^*\|_\infty \le \frac{\gamma}{1 - \gamma} \|V_k - V_{k-1}\|_\infty$$
+For $k = 2$, with $\|V_2 - V_1\|_\infty = 8.1000$ and $\gamma = 0.90$:
+$$\text{Theoretical Upper Bound} = \frac{0.90}{1 - 0.90} \times 8.1000 = \frac{0.90}{0.10} \times 8.1000 = 9 \times 8.1000 = \mathbf{72.9000}$$
+Now compute the actual true error:
+$$\|V_2 - V^*\|_\infty = \max\left( |11.8000 - 55.8282|, \; |8.1000 - 49.6933| \right) = \max(44.0282, \; 41.5933) = \mathbf{44.0282}$$
+The true error ($44.0282$) is strictly bounded by the theoretical contraction bound ($72.9000$), confirming the mathematical validity of the stopping guarantee!
+
+**Step 3: Calculating Value Iteration Stopping Threshold for Policy Guarantee**
+By the Policy Sub-Optimality Bound (Derivation 11.3.2):
+$$\|V^{\pi_k} - V^*\|_\infty \le \frac{2 \gamma \epsilon_{\text{stop}}}{1 - \gamma}$$
+To guarantee that $\|V^{\pi_k} - V^*\|_\infty \le \delta = 0.05$:
+$$\frac{2 \gamma \epsilon_{\text{stop}}}{1 - \gamma} \le \delta \implies \epsilon_{\text{stop}} \le \frac{(1 - \gamma) \delta}{2 \gamma}$$
+Substituting $\gamma = 0.90$ and $\delta = 0.05$:
+$$\epsilon_{\text{stop}} \le \frac{(1 - 0.90) \times 0.05}{2 \times 0.90} = \frac{0.10 \times 0.05}{1.80} = \frac{0.0050}{1.80} = \mathbf{\frac{1}{360} \approx 0.002778}$$
+When Value Iteration is terminated once the maximum value change between iterations falls below $\epsilon_{\text{stop}} = 0.002778$, the resulting greedy policy is mathematically guaranteed to achieve at least $99.9\%$ of the optimal return in every state!
 
 ---
 

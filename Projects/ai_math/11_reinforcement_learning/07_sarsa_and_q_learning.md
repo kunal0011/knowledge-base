@@ -112,6 +112,196 @@ $$\mathbb{E} \left[ Q_B(S_{t+1}, A^*) \mid A^* \right] = Q^*(S_{t+1}, A^*)$$
 
 ---
 
+### 2.5 First-Principles Mathematical Derivations
+
+#### Derivation 11.7.1: Watkins & Dayan Theorem: Almost Sure Convergence of Q-Learning via Asynchronous Contractions
+
+##### Problem Statement & Goal
+Let $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$ be a finite MDP with bounded rewards $|R_t| \le R_{\max} < \infty$ and discount factor $\gamma \in [0, 1)$.
+The tabular Q-Learning algorithm updates action-values according to:
+$$Q_{t+1}(S_t, A_t) = Q_t(S_t, A_t) + \alpha_t(S_t, A_t) \left[ R_{t+1} + \gamma \max_{a' \in \mathcal{A}} Q_t(S_{t+1}, a') - Q_t(S_t, A_t) \right]$$
+while all other entries $(s, a) \ne (S_t, A_t)$ remain unchanged.
+We prove that under the Robbins-Monro conditions on learning rates:
+$$\sum_{t=1}^\infty \alpha_t(s, a) = \infty \quad \text{and} \quad \sum_{t=1}^\infty \alpha_t^2(s, a) < \infty \quad \forall (s, a) \in \mathcal{S} \times \mathcal{A}$$
+the action-value table $Q_t$ converges almost surely to the unique optimal action-value function $Q^*$:
+$$\mathbb{P}\left( \lim_{t \to \infty} Q_t(s, a) = Q^*(s, a) \right) = 1, \quad \forall (s, a) \in \mathcal{S} \times \mathcal{A}$$
+
+##### Explicit Assumptions
+1. Finite state and action spaces $|\mathcal{S}| < \infty, |\mathcal{A}| < \infty$.
+2. All state-action pairs $(s, a)$ are visited infinitely often.
+3. The learning rate schedule satisfies the Robbins-Monro conditions for all $(s, a)$.
+4. Discount factor satisfies $\gamma \in [0, 1)$.
+
+##### Underlying Intuition
+Q-learning is an asynchronous stochastic approximation of the Bellman Optimality Operator $\mathcal{T}^*$. In Chapter 11.4, we proved that $\mathcal{T}^*$ is a strict $\gamma$-contraction in the $L_\infty$ norm with unique fixed point $Q^*$. The stochastic update replaces the expected Bellman backup with a single sample. By Robbins-Monro conditions, the cumulative step sizes are large enough to overcome any initial condition, while the sum of squared step sizes is small enough to damp out the sample variance to zero, guaranteeing that the noise disappears and the contraction pulls the estimates to $Q^*$.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: The Error Dynamic Equation**
+Define the error vector $\Delta_t \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ with entries:
+$$\Delta_t(s, a) \equiv Q_t(s, a) - Q^*(s, a)$$
+Recall the Bellman optimality equation for $Q^*$:
+$$Q^*(s, a) = \mathcal{R}(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \max_{a' \in \mathcal{A}} Q^*(s', a') = (\mathcal{T}^* Q^*)(s, a)$$
+Subtract $Q^*(S_t, A_t)$ from both sides of the Q-learning update:
+$$\Delta_{t+1}(S_t, A_t) = (1 - \alpha_t) \Delta_t(S_t, A_t) + \alpha_t \left[ R_{t+1} + \gamma \max_{a'} Q_t(S_{t+1}, a') - Q^*(S_t, A_t) \right]$$
+Rewrite the bracketed term by adding and subtracting $\mathcal{T}^* Q_t(S_t, A_t)$:
+$$\begin{aligned}
+&R_{t+1} + \gamma \max_{a'} Q_t(S_{t+1}, a') - Q^*(S_t, A_t) \\
+&= \left[ (\mathcal{T}^* Q_t)(S_t, A_t) - Q^*(S_t, A_t) \right] + \left[ R_{t+1} + \gamma \max_{a'} Q_t(S_{t+1}, a') - (\mathcal{T}^* Q_t)(S_t, A_t) \right] \\
+&= \left[ (\mathcal{T}^* Q_t)(S_t, A_t) - (\mathcal{T}^* Q^*)(S_t, A_t) \right] + w_t(S_t, A_t)
+\end{aligned}$$
+where $w_t(S_t, A_t) \equiv R_{t+1} + \gamma \max_{a'} Q_t(S_{t+1}, a') - (\mathcal{T}^* Q_t)(S_t, A_t)$ is the zero-mean stochastic noise term.
+
+**Step 2: Properties of the Noise Term $w_t$**
+Condition on the filtration $\mathcal{F}_t$ (the history up to step $t$ including $S_t, A_t$):
+$$\mathbb{E}\left[ w_t(S_t, A_t) \mid \mathcal{F}_t \right] = \mathbb{E}\left[ R_{t+1} + \gamma \max_{a'} Q_t(S_{t+1}, a') \mid S_t, A_t \right] - (\mathcal{T}^* Q_t)(S_t, A_t) = 0$$
+Thus, $\{w_t\}$ is a Martingale Difference Sequence.
+Furthermore, because rewards are bounded ($|R| \le R_{\max}$) and $\gamma < 1$, the variance of $w_t$ conditional on $\mathcal{F}_t$ is uniformly bounded:
+$$\mathbb{E}\left[ w_t^2(S_t, A_t) \mid \mathcal{F}_t \right] \le C (1 + \|\Delta_t\|_\infty^2)$$
+for some constant $C < \infty$.
+
+**Step 3: Contraction Property of the Deterministic Part**
+From Derivation 11.3.2, the Bellman optimality operator $\mathcal{T}^*$ is a strict $\gamma$-contraction in $L_\infty$ norm:
+$$|(\mathcal{T}^* Q_t)(S_t, A_t) - (\mathcal{T}^* Q^*)(S_t, A_t)| \le \|\mathcal{T}^* Q_t - \mathcal{T}^* Q^*\|_\infty \le \gamma \|Q_t - Q^*\|_\infty = \gamma \|\Delta_t\|_\infty$$
+
+**Step 4: Application of the Jaakkola-Jordan-Singh (1994) Theorem**
+Consider the general stochastic iterative process on $\mathbb{R}^d$:
+$$\Delta_{t+1}(i) = (1 - \alpha_t(i)) \Delta_t(i) + \alpha_t(i) F_t(i)$$
+The Jaakkola, Jordan, and Singh theorem establishes that $\Delta_t \xrightarrow{a.s.} \mathbf{0}$ if:
+1. $\sum_t \alpha_t(i) = \infty$ and $\sum_t \alpha_t^2(i) < \infty$ almost surely.
+2. $\|\mathbb{E}[F_t \mid \mathcal{F}_t]\|_\infty \le \gamma \|\Delta_t\|_\infty$ with $\gamma < 1$.
+3. $\operatorname{Var}(F_t(i) \mid \mathcal{F}_t) \le C (1 + \|\Delta_t\|_\infty^2)$.
+
+All three conditions are strictly met:
+1. Robbins-Monro conditions are assumed.
+2. $\|\mathbb{E}[(\mathcal{T}^* Q_t - \mathcal{T}^* Q^*) + w_t \mid \mathcal{F}_t]\|_\infty \le \gamma \|\Delta_t\|_\infty + 0 = \gamma \|\Delta_t\|_\infty$.
+3. Variance of $w_t$ is bounded by $C(1 + \|\Delta_t\|_\infty^2)$.
+
+Therefore:
+$$\lim_{t \to \infty} \|\Delta_t\|_\infty = 0 \quad \text{almost surely}$$
+which implies $Q_t(s, a) \xrightarrow{a.s.} Q^*(s, a)$ for all $(s, a) \in \mathcal{S} \times \mathcal{A}$. $\blacksquare$
+
+---
+
+#### Derivation 11.7.2: Mathematical Proof of Maximization Bias via Jensen's Inequality and Order Statistics
+
+##### Problem Statement & Goal
+Let $X_1, X_2, \dots, X_m$ be $m \ge 2$ independent random variables with true means $\mu_i \equiv \mathbb{E}[X_i]$.
+Let $\hat{X}_i$ be independent, unbiased estimators of $\mu_i$: $\mathbb{E}[\hat{X}_i] = \mu_i$, each having non-zero variance $\sigma_i^2 > 0$.
+We prove:
+1. By Jensen's inequality and convexity of the maximum function:
+   $$\mathbb{E}\left[ \max_{1 \le i \le m} \hat{X}_i \right] \ge \max_{1 \le i \le m} \mathbb{E}[\hat{X}_i] = \max_{1 \le i \le m} \mu_i$$
+2. The inequality is strict whenever there is a non-zero probability that the argmax over estimates differs from the argmax over true means.
+3. For $m$ independent standard Gaussian estimators $\hat{X}_i \sim \mathcal{N}(0, \sigma^2)$, the expected overestimation bias scales asymptotically as:
+   $$\mathbb{E}\left[ \max_{1 \le i \le m} \hat{X}_i \right] \sim \sigma \sqrt{2 \ln m}$$
+
+##### Explicit Assumptions
+1. Estimators $\hat{X}_i$ have finite second moments: $\mathbb{E}[\hat{X}_i^2] < \infty$.
+2. The maximum operator acts on $m \ge 2$ distinct actions.
+
+##### Underlying Intuition
+The function $g(\mathbf{x}) = \max(x_1, \dots, x_m)$ is convex because it is the upper envelope of linear functions. Whenever random noise is added to the inputs of a convex function, Jensen's inequality guarantees that the expected output is greater than or equal to the function evaluated at the expected inputs. If any single action receives a lucky positive noise spike, the $\max$ operator latches onto that lucky outlier, systematically pulling the average upward.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Convexity of the Maximum Operator**
+Let $g: \mathbb{R}^m \to \mathbb{R}$ be defined by $g(\mathbf{x}) = \max_{1 \le i \le m} x_i$.
+Let $\mathbf{x}, \mathbf{y} \in \mathbb{R}^m$ and $\lambda \in [0, 1]$.
+For any specific coordinate $k \in \{1, \dots, m\}$:
+$$\lambda x_k + (1 - \lambda) y_k \le \lambda \max_i x_i + (1 - \lambda) \max_j y_j = \lambda g(\mathbf{x}) + (1 - \lambda) g(\mathbf{y})$$
+Since this holds for every coordinate $k$, it holds for the maximum over $k$:
+$$g(\lambda \mathbf{x} + (1 - \lambda) \mathbf{y}) = \max_{1 \le k \le m} \left[ \lambda x_k + (1 - \lambda) y_k \right] \le \lambda g(\mathbf{x}) + (1 - \lambda) g(\mathbf{y})$$
+Thus, $g$ is a convex function on $\mathbb{R}^m$.
+
+**Step 2: Proof of Jensen's Inequality for $g(\mathbf{X})$**
+By Jensen's Inequality, for any convex function $g$ and random vector $\hat{\mathbf{X}} = (\hat{X}_1, \dots, \hat{X}_m)^\top$:
+$$\mathbb{E}\left[ g(\hat{\mathbf{X}}) \right] \ge g\left( \mathbb{E}[\hat{\mathbf{X}}] \right)$$
+Substitute $g(\mathbf{x}) = \max_i x_i$:
+$$\mathbb{E}\left[ \max_{1 \le i \le m} \hat{X}_i \right] \ge \max_{1 \le i \le m} \mathbb{E}[\hat{X}_i] = \max_{1 \le i \le m} \mu_i$$
+
+**Step 3: Strictness of the Maximization Bias**
+Consider the two-action case $m = 2$ with $\mu_1 = \mu_2 = \mu$.
+Let $\hat{X}_1 = \mu + \epsilon_1$ and $\hat{X}_2 = \mu + \epsilon_2$, where $\epsilon_1, \epsilon_2$ are independent zero-mean random variables with variance $\sigma^2 > 0$.
+Recall the identity $\max(a, b) = \frac{a + b + |a - b|}{2}$:
+$$\max(\hat{X}_1, \hat{X}_2) = \frac{\hat{X}_1 + \hat{X}_2 + |\hat{X}_1 - \hat{X}_2|}{2} = \mu + \frac{\epsilon_1 + \epsilon_2}{2} + \frac{|\epsilon_1 - \epsilon_2|}{2}$$
+Taking expectations:
+$$\mathbb{E}\left[ \max(\hat{X}_1, \hat{X}_2) \right] = \mu + 0 + \frac{1}{2} \mathbb{E}\left[ |\epsilon_1 - \epsilon_2| \right]$$
+Because $\epsilon_1, \epsilon_2$ are independent with non-zero variance, the random variable $D = \epsilon_1 - \epsilon_2$ is non-degenerate with variance $2\sigma^2 > 0$.
+The absolute value of a non-zero-variance random variable has strictly positive expectation:
+$$\mathbb{E}\left[ |D| \right] > 0$$
+Therefore:
+$$\mathbb{E}\left[ \max(\hat{X}_1, \hat{X}_2) \right] = \mu + \frac{1}{2} \mathbb{E}[|D|] > \mu = \max(\mu_1, \mu_2)$$
+The bias is strictly positive!
+
+**Step 4: Asymptotic Scaling with Action Count $m$**
+For $m$ independent standard Gaussian estimators $\hat{X}_i \sim \mathcal{N}(0, \sigma^2)$, let $Z_i = \hat{X}_i / \sigma \sim \mathcal{N}(0, 1)$.
+Using the sub-Gaussian moment generating function $\mathbb{E}[e^{s Z_i}] = e^{s^2 / 2}$:
+By Chernoff bounding:
+$$\mathbb{E}\left[ \max_{1 \le i \le m} Z_i \right] \le \frac{\ln m}{s} + \frac{s}{2}$$
+Setting optimal $s = \sqrt{2 \ln m}$:
+$$\mathbb{E}\left[ \max_{1 \le i \le m} Z_i \right] \le \sqrt{2 \ln m}$$
+From extreme value theory, the asymptotic limit satisfies:
+$$\lim_{m \to \infty} \frac{\mathbb{E}[\max_{1 \le i \le m} \hat{X}_i]}{\sigma \sqrt{2 \ln m}} = 1$$
+Thus, as the action space size $m$ grows, standard Q-learning's overestimation bias grows as $\mathcal{O}(\sigma \sqrt{\ln m})$! $\blacksquare$
+
+---
+
+#### Derivation 11.7.3: Target Variance Reduction in Expected SARSA vs. SARSA
+
+##### Problem Statement & Goal
+Let $(S_t, A_t, R_{t+1}, S_{t+1})$ be an observed transition.
+Define the target variables:
+1. **SARSA Target:** $Y_{\text{SARSA}} \equiv R_{t+1} + \gamma Q(S_{t+1}, A_{t+1})$, where $A_{t+1} \sim \pi(\cdot \mid S_{t+1})$
+2. **Expected SARSA Target:** $Y_{\text{Exp}} \equiv R_{t+1} + \gamma \sum_{a' \in \mathcal{A}} \pi(a' \mid S_{t+1}) Q(S_{t+1}, a')$
+We prove:
+1. Unbiasedness equivalence: $\mathbb{E}[Y_{\text{SARSA}} \mid S_t, A_t, R_{t+1}, S_{t+1}] = Y_{\text{Exp}}$.
+2. Conditional target variance:
+   $$\operatorname{Var}(Y_{\text{SARSA}} \mid S_t, A_t, R_{t+1}, S_{t+1}) = \gamma^2 \sum_{a' \in \mathcal{A}} \pi(a' \mid S_{t+1}) \left( Q(S_{t+1}, a') - \bar{Q}(S_{t+1}) \right)^2 \ge 0$$
+   while $\operatorname{Var}(Y_{\text{Exp}} \mid S_t, A_t, R_{t+1}, S_{t+1}) \equiv 0$, proving that Expected SARSA completely removes the action-selection sampling variance.
+
+##### Explicit Assumptions
+1. Discrete action space $|\mathcal{A}| < \infty$.
+2. Target policy $\pi(\cdot \mid S_{t+1})$ is known and evaluable.
+
+##### Underlying Intuition
+In SARSA, after transitioning to $S_{t+1}$, the agent rolls a die to pick next action $A_{t+1}$ from $\pi$. That random roll adds pure sampling variance to the target. In Expected SARSA, since the policy probabilities $\pi(a' \mid S_{t+1})$ and the table values $Q(S_{t+1}, a')$ are already fully stored in memory, there is no need to roll a die! We can compute the exact weighted average analytically with zero added noise.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Conditional Expectation Equivalence**
+Let $\mathcal{H}_{t+1} = (S_t, A_t, R_{t+1}, S_{t+1})$ denote the transition history.
+Evaluate the conditional expectation of the SARSA target with respect to the sampling of $A_{t+1} \sim \pi(\cdot \mid S_{t+1})$:
+$$\begin{aligned}
+\mathbb{E}\left[ Y_{\text{SARSA}} \;\middle|\; \mathcal{H}_{t+1} \right] &= \mathbb{E}\left[ R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) \;\middle|\; \mathcal{H}_{t+1} \right] \\
+&= R_{t+1} + \gamma \mathbb{E}_{A_{t+1} \sim \pi}\left[ Q(S_{t+1}, A_{t+1}) \;\middle|\; S_{t+1} \right] \\
+&= R_{t+1} + \gamma \sum_{a' \in \mathcal{A}} \pi(a' \mid S_{t+1}) Q(S_{t+1}, a') \\
+&= Y_{\text{Exp}}
+\end{aligned}$$
+This proves that $Y_{\text{Exp}}$ has identically the same conditional mean as $Y_{\text{SARSA}}$.
+
+**Step 2: Conditional Variance of the SARSA Target**
+Evaluate the conditional variance of $Y_{\text{SARSA}}$:
+$$\operatorname{Var}\left( Y_{\text{SARSA}} \;\middle|\; \mathcal{H}_{t+1} \right) = \operatorname{Var}\left( R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) \;\middle|\; \mathcal{H}_{t+1} \right)$$
+Because $R_{t+1}$ and $S_{t+1}$ are fixed constants within $\mathcal{H}_{t+1}$:
+$$\operatorname{Var}\left( Y_{\text{SARSA}} \;\middle|\; \mathcal{H}_{t+1} \right) = \gamma^2 \operatorname{Var}_{A_{t+1} \sim \pi}\left( Q(S_{t+1}, A_{t+1}) \;\middle|\; S_{t+1} \right)$$
+Let $\bar{Q}(S_{t+1}) \equiv \sum_{a'} \pi(a' \mid S_{t+1}) Q(S_{t+1}, a')$. Expanding the variance:
+$$\operatorname{Var}_{A'}\left( Q(S_{t+1}, A') \right) = \sum_{a' \in \mathcal{A}} \pi(a' \mid S_{t+1}) \left[ Q(S_{t+1}, a') - \bar{Q}(S_{t+1}) \right]^2$$
+Therefore:
+$$\operatorname{Var}\left( Y_{\text{SARSA}} \;\middle|\; \mathcal{H}_{t+1} \right) = \gamma^2 \sum_{a' \in \mathcal{A}} \pi(a' \mid S_{t+1}) \left[ Q(S_{t+1}, a') - \bar{Q}(S_{t+1}) \right]^2 \ge 0$$
+
+**Step 3: Variance of the Expected SARSA Target**
+Notice that $Y_{\text{Exp}} = R_{t+1} + \gamma \bar{Q}(S_{t+1})$ is completely deterministic given $\mathcal{H}_{t+1}$:
+$$\operatorname{Var}\left( Y_{\text{Exp}} \;\middle|\; \mathcal{H}_{t+1} \right) = 0$$
+
+**Step 4: Total Variance Comparison via Eve's Law**
+By Eve's Law of Total Variance over the joint state-action transition distribution:
+$$\operatorname{Var}(Y_{\text{SARSA}}) = \operatorname{Var}(Y_{\text{Exp}}) + \mathbb{E}\left[ \operatorname{Var}(Y_{\text{SARSA}} \mid \mathcal{H}_{t+1}) \right]$$
+Since $\mathbb{E}[\operatorname{Var}(Y_{\text{SARSA}} \mid \mathcal{H}_{t+1})] \ge 0$:
+$$\operatorname{Var}(Y_{\text{SARSA}}) \ge \operatorname{Var}(Y_{\text{Exp}})$$
+with strict inequality whenever the action-values at successor states are non-identical ($Q(s', a_1) \ne Q(s', a_2)$) and policy $\pi$ is stochastic ($\epsilon > 0$). Expected SARSA purges all action-selection noise without incurring any bias penalty. $\blacksquare$
+
+---
+
 ## 3. Geometric & Physical Interpretation: The Cliff Walking Dilemma
 
 Consider the canonical **Cliff Walking** gridworld:
@@ -287,6 +477,170 @@ Show why Q-Learning initially prefers `left`, and prove that Double Q-Learning c
    Since $Q_2$ is independent of the noise that caused $Q_1(B, a^*)$ to be high:
    $$\mathbb{E} \left[ Q_2(B, a^*) \mid a^* \right] = \mathbb{E}[R] = -0.1 < 0$$
    Double Q-Learning produces an expected target of $-0.1$, so $Q(A, \text{left}) < Q(A, \text{right}) = 0$. The agent immediately learns the correct optimal policy! $\blacksquare$
+
+---
+
+### Illustration 2: The Cliff Walking Environment: Analytical Q-Values and Trajectory Risk Comparison
+
+**Problem:**
+Consider the $4 \times 12$ Cliff Walking gridworld with Start at $(3, 0)$ and Goal at $(3, 11)$. The Cliff occupies cells $(3, 1)$ through $(3, 10)$.
+Transition rules:
+- Normal transitions yield reward $-1.00$.
+- Stepping into the cliff yields reward $-100.00$ and teleports the agent back to Start.
+- Discount factor is $\gamma = 1.00$.
+- Actions: $\{\text{Up, Down, Left, Right}\}$.
+
+1. Calculate the return of the deterministic **The Optimal Path (Cliff Edge)**: Up to $(2, 0)$, Right $\times 11$ along row $2$, Down to Goal.
+2. Suppose the agent executes an $\epsilon$-greedy policy with $\epsilon = 0.10$. In row $2$ (one cell above the cliff), each step has probability $\frac{\epsilon}{4} = \frac{0.10}{4} = 0.025$ of taking action Down into the cliff. Calculate the expected return of attempting the Cliff Edge path under $\epsilon = 0.10$.
+3. Compute the expected return of the **Safe Path** (Up to row 0, Right $\times 11$ along the top row, Down to Goal) under $\epsilon = 0.10$.
+4. Explain why SARSA chooses the safe path while Q-Learning chooses the risky edge path.
+
+**Solution:**
+
+**Step 1: Deterministic Optimal Path (Zero Exploration)**
+The shortest path takes:
+- $1$ step Up to $(2, 0)$
+- $10$ steps Right to $(2, 11)$
+- $1$ step Down to $(3, 11)$ (Goal)
+Total steps: $12$ steps.
+Return:
+$$G_{\text{optimal}} = 12 \times (-1.00) = \mathbf{-12.0000}$$
+
+**Step 2: Expected Return of Edge Path under $\epsilon = 0.10$ Exploration**
+Along the 11 steps traversing row 2 directly above the cliff, the probability of taking random action Down at any step is $p_{\text{fall}} = \frac{\epsilon}{4} = 0.025$.
+The probability of completing all 11 steps without falling once is:
+$$P(\text{survive}) = (1 - 0.025)^{11} = (0.975)^{11} \approx \mathbf{0.7578}$$
+Probability of falling at least once:
+$$P(\text{fall}) = 1 - 0.7578 = \mathbf{0.2422}$$
+If the agent falls into the cliff, it incurs a $-100$ penalty and restarts from the beginning.
+The expected cost per completed episode can be modeled as:
+$$\mathbb{E}[G_{\text{edge}}] \approx \frac{-12.00 - P(\text{fall}) \times 100}{P(\text{survive})} \approx \frac{-12.00 - 24.22}{0.7578} = \frac{-36.22}{0.7578} \approx \mathbf{-47.80}$$
+Under an exploratory behavior policy, walking next to the cliff results in an average episodic return of approximately **$-48$**!
+
+**Step 3: Expected Return of the Safe Path under $\epsilon = 0.10$ Exploration**
+The safe path travels along the top perimeter (row 0):
+- $3$ steps Up from $(3, 0)$ to $(0, 0)$
+- $11$ steps Right from $(0, 0)$ to $(0, 11)$
+- $3$ steps Down from $(0, 11)$ to $(3, 11)$
+Total nominal length: $3 + 11 + 3 = 17$ steps.
+Because row 0 is 3 cells away from the cliff, an accidental exploratory action cannot reach the cliff. The only penalty incurred from exploration is a temporary 1-step detour against grid boundaries.
+Expected return:
+$$\mathbb{E}[G_{\text{safe}}] \approx 17 \times (-1.00) + \text{minor detour delay} \approx \mathbf{-17.50}$$
+
+**Step 4: Algorithm Policy Separation**
+- **Q-Learning** updates off-policy using $\max_a Q(s', a)$. It assumes that once it is in row 2, it will execute the greedy action ($\text{Right}$) with probability $1.0$. Thus, it evaluates the edge path at its theoretical optimum $-12.0$, blinding it to the actual risk of exploration.
+- **SARSA** updates on-policy using the sampled action $A_{t+1}$. It observes the actual $-100$ penalties suffered when random exploration triggers Down into the cliff. SARSA learns $Q^{\pi_{\epsilon}}(\text{row 2}) \approx -48$, while $Q^{\pi_{\epsilon}}(\text{safe}) \approx -17.5$. Consequently, SARSA's greedy choice shifts to the **Safe Path**!
+
+---
+
+### Illustration 3: Double Q-Learning vs. Standard Q-Learning: Exact Step-by-Step Update Trace on Overestimation State
+
+**Problem:**
+An agent is in state $S_0$, takes action $A_0$, observes reward $R = 0.00$, and transitions to state $S'$.
+Discount factor: $\gamma = 0.90$. Learning rate: $\alpha = 0.20$.
+In successor state $S'$, there are 3 available actions $\{a_1, a_2, a_3\}$ whose true values are all identically zero:
+$$Q^*(S', a_1) = 0.0000, \quad Q^*(S', a_2) = 0.0000, \quad Q^*(S', a_3) = 0.0000$$
+The current estimates in the tables have noisy approximation errors:
+- In Standard Q-learning:
+  $$Q(S', a_1) = +1.5000, \quad Q(S', a_2) = -0.5000, \quad Q(S', a_3) = +0.8000$$
+- In Double Q-learning (two independent tables $Q_A$ and $Q_B$):
+  $$Q_A(S') = \begin{bmatrix} +1.5000 \\ -0.5000 \\ +0.8000 \end{bmatrix}, \quad Q_B(S') = \begin{bmatrix} -0.4000 \\ +0.3000 \\ -0.9000 \end{bmatrix}$$
+Let the prior estimate be $Q(S_0, A_0) = 0.0000$ (and $Q_A(S_0, A_0) = 0.0000$).
+
+1. Compute the Standard Q-learning target and updated value $Q_{\text{new}}(S_0, A_0)$.
+2. Compute the Double Q-learning target and updated value $Q_{A, \text{new}}(S_0, A_0)$ when updating table $Q_A$.
+3. Compare the estimation error of both updates relative to the true target value $0.0000$.
+
+**Solution:**
+
+**Step 1: Standard Q-Learning Update**
+- Target uses the maximum of the single noisy table:
+  $$\max_{a'} Q(S', a') = \max(+1.5000, -0.5000, +0.8000) = \mathbf{+1.5000} \quad (\text{Action } a_1)$$
+- TD Target:
+  $$\text{Target}_{\text{Q}} = R + \gamma \max_{a'} Q(S', a') = 0.0000 + 0.90 \times (+1.5000) = \mathbf{+1.3500}$$
+- Value Update:
+  $$Q_{\text{new}}(S_0, A_0) = Q(S_0, A_0) + \alpha \left[ \text{Target}_{\text{Q}} - Q(S_0, A_0) \right] = 0.0000 + 0.20(1.3500 - 0.0000) = \mathbf{+0.2700}$$
+Standard Q-learning created an artificial positive value $+0.2700$ out of pure noise!
+
+**Step 2: Double Q-Learning Update**
+- **Action Selection** uses $Q_A$:
+  $$A^* = \arg\max_{a'} Q_A(S', a') = \arg\max(+1.5000, -0.5000, +0.8000) = \mathbf{a_1}$$
+- **Action Evaluation** uses the independent table $Q_B$ evaluated at $A^* = a_1$:
+  $$\text{Target}_{\text{DoubleQ}} = R + \gamma Q_B(S', A^*) = 0.0000 + 0.90 \times Q_B(S', a_1) = 0.90 \times (-0.4000) = \mathbf{-0.3600}$$
+- Value Update for $Q_A$:
+  $$Q_{A, \text{new}}(S_0, A_0) = Q_A(S_0, A_0) + \alpha \left[ \text{Target}_{\text{DoubleQ}} - Q_A(S_0, A_0) \right] = 0.0000 + 0.20(-0.3600 - 0.0000) = \mathbf{-0.0720}$$
+
+**Step 3: Comparison of Estimation Error**
+True optimal target is $R + \gamma \max_a Q^*(S', a) = 0 + 0.9(0) = \mathbf{0.0000}$.
+- Standard Q-learning error: $|+0.2700 - 0.0000| = \mathbf{+0.2700}$ (Systematic Overestimation Bias).
+- Double Q-learning error: $|-0.0720 - 0.0000| = \mathbf{0.0720}$ ($73.3\%$ lower absolute error, with zero systematic positive bias).
+
+---
+
+### Illustration 4: Expected SARSA vs. SARSA Target Variance Quantification Across Policy Stochasticity $\epsilon$
+
+**Problem:**
+Consider a transition $(S, A, R = 1.00, S')$ with discount factor $\gamma = 0.90$.
+Successor state $S'$ has two available actions with stored values:
+$$Q(S', a_1) = 2.0000, \quad Q(S', a_2) = 10.0000$$
+The target policy $\pi(\cdot \mid S')$ is an $\epsilon$-greedy policy where $a_2$ is the greedy action.
+For exploration parameters $\epsilon \in \{0.00, 0.10, 0.50, 1.00\}$:
+1. Determine action probabilities $\pi(a_1 \mid S')$ and $\pi(a_2 \mid S')$.
+2. Calculate the Expected SARSA target $Y_{\text{Exp}}$.
+3. Calculate the conditional target variance $\operatorname{Var}(Y_{\text{SARSA}} \mid S, A, S')$ of standard SARSA.
+
+**Solution:**
+
+**General Formulas:**
+For $|\mathcal{A}| = 2$:
+$$\pi(a_2 \mid S') = 1 - \epsilon + \frac{\epsilon}{2} = 1 - 0.5\epsilon, \quad \pi(a_1 \mid S') = \frac{\epsilon}{2} = 0.5\epsilon$$
+Expected next-state value:
+$$\bar{Q}(S') = \pi(a_1 \mid S') (2.0) + \pi(a_2 \mid S') (10.0)$$
+Expected SARSA Target:
+$$Y_{\text{Exp}} = R + \gamma \bar{Q}(S') = 1.00 + 0.90 \bar{Q}(S')$$
+SARSA Target Variance (Derivation 11.7.3):
+$$\operatorname{Var}(Y_{\text{SARSA}} \mid S, A, S') = \gamma^2 \left[ \pi(a_1 \mid S')(2.0 - \bar{Q}(S'))^2 + \pi(a_2 \mid S')(10.0 - \bar{Q}(S'))^2 \right]$$
+Since $\operatorname{Var}_{\text{Bernoulli}}(X) = p(1-p)(x_2 - x_1)^2$:
+$$\operatorname{Var}(Q(S', A')) = \pi(a_1 \mid S') \pi(a_2 \mid S') (10.0 - 2.0)^2 = 64 \pi(a_1 \mid S') \pi(a_2 \mid S')$$
+$$\operatorname{Var}(Y_{\text{SARSA}} \mid S, A, S') = (0.90)^2 \times 64 \pi(a_1 \mid S') \pi(a_2 \mid S') = 51.84 \pi(a_1 \mid S') \pi(a_2 \mid S')$$
+
+**Step-by-Step Evaluation Across $\epsilon$:**
+
+1. **Case $\epsilon = 0.00$ (Pure Greedy / Q-Learning Equivalence):**
+   - Probabilities: $\pi(a_1) = 0.00, \quad \pi(a_2) = 1.00$
+   - $\bar{Q}(S') = 1.00(10.0) = 10.0000$
+   - $Y_{\text{Exp}} = 1.0 + 0.9(10.0) = \mathbf{10.0000}$
+   - $\operatorname{Var}(Y_{\text{SARSA}}) = 51.84 \times (0.00)(1.00) = \mathbf{0.0000}$
+
+2. **Case $\epsilon = 0.10$ (Standard Exploration):**
+   - Probabilities: $\pi(a_1) = 0.05, \quad \pi(a_2) = 0.95$
+   - $\bar{Q}(S') = 0.05(2.0) + 0.95(10.0) = 0.10 + 9.50 = 9.6000$
+   - $Y_{\text{Exp}} = 1.0 + 0.9(9.60) = 1.0 + 8.64 = \mathbf{9.6400}$
+   - $\operatorname{Var}(Y_{\text{SARSA}}) = 51.84 \times (0.05)(0.95) = 51.84 \times 0.0475 = \mathbf{2.4624}$
+   - Expected SARSA eliminates variance of $2.4624$ entirely!
+
+3. **Case $\epsilon = 0.50$ (Heavy Exploration):**
+   - Probabilities: $\pi(a_1) = 0.25, \quad \pi(a_2) = 0.75$
+   - $\bar{Q}(S') = 0.25(2.0) + 0.75(10.0) = 0.50 + 7.50 = 8.0000$
+   - $Y_{\text{Exp}} = 1.0 + 0.9(8.00) = 1.0 + 7.20 = \mathbf{8.2000}$
+   - $\operatorname{Var}(Y_{\text{SARSA}}) = 51.84 \times (0.25)(0.75) = 51.84 \times 0.1875 = \mathbf{9.7200}$
+
+4. **Case $\epsilon = 1.00$ (Pure Uniform Random Exploration):**
+   - Probabilities: $\pi(a_1) = 0.50, \quad \pi(a_2) = 0.50$
+   - $\bar{Q}(S') = 0.50(2.0) + 0.50(10.0) = 1.00 + 5.00 = 6.0000$
+   - $Y_{\text{Exp}} = 1.0 + 0.9(6.00) = 1.0 + 5.40 = \mathbf{6.4000}$
+   - $\operatorname{Var}(Y_{\text{SARSA}}) = 51.84 \times (0.50)(0.50) = 51.84 \times 0.2500 = \mathbf{12.9600}$
+
+**Summary Comparison Table:**
+
+| Exploration $\epsilon$ | $\pi(a_1 \mid S')$ | $\pi(a_2 \mid S')$ | $Y_{\text{Exp}}$ Target | $\operatorname{Var}(Y_{\text{SARSA}})$ | $\operatorname{Var}(Y_{\text{Exp}})$ | Variance Reduction |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| $\mathbf{0.00}$ | $0.00$ | $1.00$ | $10.0000$ | $0.0000$ | $0.0000$ | $0\%$ |
+| $\mathbf{0.10}$ | $0.05$ | $0.95$ | $9.6400$ | $2.4624$ | $0.0000$ | $\mathbf{100\%}$ |
+| $\mathbf{0.50}$ | $0.25$ | $0.75$ | $8.2000$ | $9.7200$ | $0.0000$ | $\mathbf{100\%}$ |
+| $\mathbf{1.00}$ | $0.50$ | $0.50$ | $6.4000$ | $12.9600$ | $0.0000$ | $\mathbf{100\%}$ |
+
+Expected SARSA achieves complete $100\%$ elimination of target action-sampling variance regardless of policy exploration rate $\epsilon$!
 
 ---
 

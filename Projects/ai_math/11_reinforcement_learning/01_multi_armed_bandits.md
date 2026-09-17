@@ -182,6 +182,166 @@ It provably achieves the asymptotic **Lai-Robbins lower bound**!
 
 ---
 
+### 2.5 Rigorous Mathematical Derivations
+
+#### Derivation 11.1.1: Complete First-Principles Regret Bound of UCB1 via Hoeffding's Inequality
+
+**1. Context and Assumptions:**
+Let there be $K$ discrete actions $\mathcal{A} = \{1, \dots, K\}$.
+Assume reward distributions are bounded within the unit interval: $R_{a, s} \in [0, 1]$ for all arms $a$ and trial pulls $s \ge 1$.
+Let $q_*(a) \equiv \mathbb{E}[R_{a}]$ denote the true expected reward of arm $a$, with optimal value $q_*^* = \max_a q_*(a)$ achieved at arm $a^*$.
+For every suboptimal arm $a$, the suboptimality gap is $\Delta_a \equiv q_*^* - q_*(a) > 0$.
+The UCB1 index at step $t$ after $N_t(a)$ pulls of arm $a$ is:
+$$U_t(a) = \sqrt{\frac{2 \ln t}{N_t(a)}}, \qquad \text{Score}_t(a) = Q_t(a) + U_t(a)$$
+
+**2. Step 1: Decomposition of the Selection Condition:**
+Suppose suboptimal arm $a \ne a^*$ is selected at step $t$ ($A_t = a$).
+This event implies that arm $a$'s UCB score exceeded the UCB score of the optimal arm $a^*$:
+$$Q_t(a) + U_t(a) \ge Q_t(a^*) + U_t(a^*)$$
+We show that this inequality strictly requires at least one of the following three elementary events to occur:
+1. $E_1$: The optimal arm's sample average severely underestimates its true value:
+   $$Q_t(a^*) \le q_*^* - U_t(a^*)$$
+2. $E_2$: The suboptimal arm's sample average severely overestimates its true value:
+   $$Q_t(a) \ge q_*(a) + U_t(a)$$
+3. $E_3$: The true suboptimality gap is smaller than twice the suboptimal arm's uncertainty:
+   $$q_*^* < q_*(a) + 2 U_t(a)$$
+
+*Proof of Exhaustion:*
+Assume that both $E_1$ and $E_2$ are false, meaning:
+$$Q_t(a^*) > q_*^* - U_t(a^*) \quad \text{and} \quad Q_t(a) < q_*(a) + U_t(a)$$
+Then:
+$$Q_t(a^*) + U_t(a^*) > q_*^*$$
+$$Q_t(a) + U_t(a) < q_*(a) + 2 U_t(a)$$
+Since $A_t = a$, we have $Q_t(a) + U_t(a) \ge Q_t(a^*) + U_t(a^*)$. Therefore:
+$$q_*^* < Q_t(a^*) + U_t(a^*) \le Q_t(a) + U_t(a) < q_*(a) + 2 U_t(a)$$
+which implies $q_*^* < q_*(a) + 2 U_t(a)$, exactly event $E_3$.
+Thus, $\{A_t = a\} \subseteq E_1 \cup E_2 \cup E_3$.
+
+**3. Step 2: Bounding the Deterministic Event $E_3$:**
+Event $E_3$ states that:
+$$q_*^* - q_*(a) < 2 U_t(a) \implies \Delta_a < 2 \sqrt{\frac{2 \ln t}{N_t(a)}}$$
+Squaring both sides:
+$$\Delta_a^2 < \frac{8 \ln t}{N_t(a)} \implies N_t(a) < \frac{8 \ln t}{\Delta_a^2} \le \frac{8 \ln T}{\Delta_a^2}$$
+Define the integer threshold:
+$$u = \left\lceil \frac{8 \ln T}{\Delta_a^2} \right\rceil$$
+If $N_t(a) \ge u$, then event $E_3$ **cannot possibly occur**.
+
+**4. Step 3: Bounding the Probabilities of $E_1$ and $E_2$ via Hoeffding's Inequality:**
+By Hoeffding's Inequality for $s$ independent bounded random variables in $[0, 1]$ with sample average $\bar{X}_s$ and true mean $\mu$:
+$$\mathbb{P}(\bar{X}_s - \mu \ge \epsilon) \le e^{-2 s \epsilon^2}, \qquad \mathbb{P}(\mu - \bar{X}_s \ge \epsilon) \le e^{-2 s \epsilon^2}$$
+Substituting $\epsilon = \sqrt{\frac{2 \ln t}{s}}$:
+$$\mathbb{P}\left( \bar{X}_s - \mu \ge \sqrt{\frac{2 \ln t}{s}} \right) \le \exp\left( -2 s \frac{2 \ln t}{s} \right) = e^{-4 \ln t} = t^{-4}$$
+Because the number of pulls $N_t(a)$ is a random variable between $1$ and $t-1$, we apply the union bound over all possible sample counts $s \in \{1, \dots, t-1\}$:
+$$\mathbb{P}(E_1) \le \sum_{s=1}^t \mathbb{P}\left( q_*^* - \bar{R}_{a^*, s} \ge \sqrt{\frac{2 \ln t}{s}} \right) \le \sum_{s=1}^t t^{-4} = t \cdot t^{-4} = t^{-3}$$
+Similarly, for event $E_2$:
+$$\mathbb{P}(E_2) \le \sum_{s=1}^t \mathbb{P}\left( \bar{R}_{a, s} - q_*(a) \ge \sqrt{\frac{2 \ln t}{s}} \right) \le t \cdot t^{-4} = t^{-3}$$
+
+**5. Step 4: Summing Total Expected Suboptimal Pulls:**
+The expected number of pulls of suboptimal arm $a$ up to horizon $T$ is:
+$$\mathbb{E}[N_T(a)] = \sum_{t=1}^T \mathbb{I}(A_t = a) \le u + \sum_{t=u+1}^T \mathbb{I}(A_t = a, N_{t-1}(a) \ge u)$$
+For $t > u$, event $E_3$ is false, so $\{A_t = a\} \subseteq E_1 \cup E_2$:
+$$\mathbb{E}[N_T(a)] \le u + \sum_{t=u+1}^T \left( \mathbb{P}(E_1) + \mathbb{P}(E_2) \right) \le \left\lceil \frac{8 \ln T}{\Delta_a^2} \right\rceil + \sum_{t=1}^T 2 t^{-3} \le \frac{8 \ln T}{\Delta_a^2} + 1 + 2 \sum_{t=1}^\infty t^{-2}$$
+Since $\sum_{t=1}^\infty t^{-2} = \frac{\pi^2}{6} \approx 1.6449$:
+$$\mathbf{\mathbb{E}[N_T(a)] \le \frac{8 \ln T}{\Delta_a^2} + 1 + \frac{\pi^2}{3} \approx \frac{8 \ln T}{\Delta_a^2} + 4.2899}$$
+
+**6. Step 5: Finite-Time Total Expected Regret Bound:**
+Multiplying by gaps $\Delta_a$ across all suboptimal arms:
+$$\mathbf{L_T = \sum_{a: \Delta_a > 0} \Delta_a \mathbb{E}[N_T(a)] \le \sum_{a: \Delta_a > 0} \left( \frac{8 \ln T}{\Delta_a} \right) + \left( 1 + \frac{\pi^2}{3} \right) \sum_{a=1}^K \Delta_a = \mathcal{O}(\log T)}$$
+This completes the rigorous finite-time proof of UCB1's logarithmic regret bound.
+
+---
+
+#### Derivation 11.1.2: Bayesian Conjugate Beta-Bernoulli Posterior and Thompson Sampling Decision Theory
+
+**1. Context and Assumptions:**
+Consider an arm with binary rewards $R \in \{0, 1\}$ following a Bernoulli distribution with unknown parameter $\theta \in [0, 1]$:
+$$P(R = r \mid \theta) = \theta^r (1 - \theta)^{1 - r}, \quad r \in \{0, 1\}$$
+Assume a prior distribution over $\theta$ given by the Beta distribution:
+$$p(\theta; \alpha, \beta) = \frac{1}{\mathrm{B}(\alpha, \beta)} \theta^{\alpha - 1} (1 - \theta)^{\beta - 1}$$
+where $\mathrm{B}(\alpha, \beta) \triangleq \int_0^1 u^{\alpha - 1} (1 - u)^{\beta - 1} du = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha + \beta)}$ is the Beta function.
+
+**2. Step 1: Conjugate Posterior Derivation:**
+Suppose we observe a sequence of $n$ independent trials yielding $k$ successes ($R=1$) and $m = n - k$ failures ($R=0$).
+The joint likelihood of the observations $\mathcal{D} = \{r_1, \dots, r_n\}$ is:
+$$P(\mathcal{D} \mid \theta) = \prod_{i=1}^n \theta^{r_i} (1 - \theta)^{1 - r_i} = \theta^{\sum r_i} (1 - \theta)^{n - \sum r_i} = \theta^k (1 - \theta)^m$$
+By Bayes' theorem, the posterior probability density is:
+$$p(\theta \mid \mathcal{D}) = \frac{P(\mathcal{D} \mid \theta) p(\theta)}{\int_0^1 P(\mathcal{D} \mid \theta') p(\theta') d\theta'} \propto \left[ \theta^k (1 - \theta)^m \right] \cdot \left[ \theta^{\alpha - 1} (1 - \theta)^{\beta - 1} \right] = \theta^{(\alpha + k) - 1} (1 - \theta)^{(\beta + m) - 1}$$
+Recognizing the kernel of the Beta distribution:
+$$\mathbf{p(\theta \mid \mathcal{D}) = \operatorname{Beta}(\alpha + k, \, \beta + m)}$$
+The Beta family is strictly conjugate to the Bernoulli likelihood: each success increments $\alpha$ by 1, and each failure increments $\beta$ by 1.
+
+**3. Step 2: Posterior Mean and Variance:**
+To compute the $m$-th raw moment $\mathbb{E}[\theta^m]$:
+$$\mathbb{E}[\theta^m] = \int_0^1 \theta^m \frac{\theta^{\alpha - 1} (1 - \theta)^{\beta - 1}}{\mathrm{B}(\alpha, \beta)} d\theta = \frac{\mathrm{B}(\alpha + m, \beta)}{\mathrm{B}(\alpha, \beta)} = \frac{\Gamma(\alpha + m)\Gamma(\beta)}{\Gamma(\alpha + \beta + m)} \cdot \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)\Gamma(\beta)} = \frac{\Gamma(\alpha + m)\Gamma(\alpha + \beta)}{\Gamma(\alpha)\Gamma(\alpha + \beta + m)}$$
+For the first moment ($m = 1$), using $\Gamma(z + 1) = z \Gamma(z)$:
+$$\mathbb{E}[\theta] = \frac{\alpha \Gamma(\alpha)\Gamma(\alpha + \beta)}{\Gamma(\alpha)(\alpha + \beta)\Gamma(\alpha + \beta)} = \mathbf{\frac{\alpha}{\alpha + \beta}}$$
+For the second moment ($m = 2$):
+$$\mathbb{E}[\theta^2] = \frac{(\alpha + 1)\alpha \Gamma(\alpha)\Gamma(\alpha + \beta)}{\Gamma(\alpha)(\alpha + \beta + 1)(\alpha + \beta)\Gamma(\alpha + \beta)} = \frac{\alpha(\alpha + 1)}{(\alpha + \beta)(\alpha + \beta + 1)}$$
+The variance is:
+$$\operatorname{Var}(\theta) = \mathbb{E}[\theta^2] - (\mathbb{E}[\theta])^2 = \frac{\alpha(\alpha + 1)}{(\alpha + \beta)(\alpha + \beta + 1)} - \frac{\alpha^2}{(\alpha + \beta)^2} = \frac{\alpha(\alpha + \beta)(\alpha + 1) - \alpha^2(\alpha + \beta + 1)}{(\alpha + \beta)^2 (\alpha + \beta + 1)}$$
+Expanding the numerator:
+$$\alpha(\alpha^2 + \alpha\beta + \alpha + \beta) - \alpha^3 - \alpha^2\beta - \alpha^2 = \alpha^3 + \alpha^2\beta + \alpha^2 + \alpha\beta - \alpha^3 - \alpha^2\beta - \alpha^2 = \alpha\beta$$
+Therefore:
+$$\mathbf{\operatorname{Var}(\theta) = \frac{\alpha \beta}{(\alpha + \beta)^2 (\alpha + \beta + 1)}}$$
+As total pulls $n = \alpha + \beta \to \infty$, variance decays at rate $\mathcal{O}(n^{-1}) \to 0$.
+
+**4. Step 3: Closed-Form Probability of Action Selection in 2-Armed Bandits:**
+Let Arm 1 have posterior $\theta_1 \sim \operatorname{Beta}(\alpha_1, \beta_1)$ and Arm 2 have posterior $\theta_2 \sim \operatorname{Beta}(\alpha_2, \beta_2)$.
+Thompson Sampling selects Arm 1 with probability:
+$$\mathbb{P}(A = 1) = \mathbb{P}(\theta_1 > \theta_2) = \int_0^1 p_1(\theta_1) \left[ \int_0^{\theta_1} p_2(\theta_2) d\theta_2 \right] d\theta_1 = \int_0^1 p_1(\theta_1) I_{\theta_1}(\alpha_2, \beta_2) d\theta_1$$
+where $I_x(a, b) = \frac{1}{\mathrm{B}(a, b)} \int_0^x u^{a-1} (1-u)^{b-1} du$ is the regularized incomplete Beta function.
+For integer values of $\beta_2$, applying integration by parts yields the exact finite sum:
+$$\mathbb{P}(\theta_1 > \theta_2) = \sum_{j=0}^{\beta_2 - 1} \frac{\mathrm{B}(\alpha_1 + \alpha_2 + j, \, \beta_1 + \beta_2 - 1 - j)}{(\alpha_2 + j) \, \mathrm{B}(\alpha_1, \beta_1) \, \mathrm{B}(\alpha_2, \beta_2)}$$
+
+---
+
+#### Derivation 11.1.3: Gradient Bandit Algorithm and Policy Gradient Derivation via Softmax Action Preferences
+
+**1. Context and Assumptions:**
+Let there be $K$ actions $\mathcal{A} = \{1, \dots, K\}$ with numerical action preferences $H_t(a) \in \mathbb{R}$.
+The probability of selecting action $a$ is defined by the Softmax distribution (Gibbs policy):
+$$\pi_t(a) \triangleq \mathbb{P}(A_t = a) = \frac{e^{H_t(a)}}{\sum_{b=1}^K e^{H_t(b)}}$$
+The performance metric to maximize is the expected reward:
+$$\eta(\mathbf{H}) \triangleq \mathbb{E}[R_t] = \sum_{x=1}^K \pi_t(x) q_*(x)$$
+where $q_*(x) \equiv \mathbb{E}[R_t \mid A_t = x]$ is the true action value.
+
+**2. Step 1: Derivative of the Softmax Action Probabilities:**
+Compute the partial derivative of $\pi_t(x)$ with respect to preference $H_t(a)$:
+$$\frac{\partial \pi_t(x)}{\partial H_t(a)} = \frac{\partial}{\partial H_t(a)} \left[ \frac{e^{H_t(x)}}{\sum_{b=1}^K e^{H_t(b)}} \right]$$
+Applying the quotient rule:
+- Case 1 ($x = a$):
+  $$\frac{\partial \pi_t(a)}{\partial H_t(a)} = \frac{e^{H_t(a)}\sum e^{H_t(b)} - e^{H_t(a)}e^{H_t(a)}}{\left( \sum e^{H_t(b)} \right)^2} = \frac{e^{H_t(a)}}{\sum e^{H_t(b)}} \left( 1 - \frac{e^{H_t(a)}}{\sum e^{H_t(b)}} \right) = \pi_t(a)(1 - \pi_t(a))$$
+- Case 2 ($x \ne a$):
+  $$\frac{\partial \pi_t(x)}{\partial H_t(a)} = \frac{0 - e^{H_t(x)} e^{H_t(a)}}{\left( \sum e^{H_t(b)} \right)^2} = -\frac{e^{H_t(x)}}{\sum e^{H_t(b)}} \frac{e^{H_t(a)}}{\sum e^{H_t(b)}} = -\pi_t(x)\pi_t(a)$$
+Combining both cases using the Kronecker delta $\mathbb{I}(x = a)$:
+$$\mathbf{\frac{\partial \pi_t(x)}{\partial H_t(a)} = \pi_t(x) \left( \mathbb{I}(x = a) - \pi_t(a) \right)}$$
+
+**3. Step 2: Policy Gradient of Expected Reward:**
+Differentiating the objective $\eta(\mathbf{H})$ with respect to $H_t(a)$:
+$$\frac{\partial \eta(\mathbf{H})}{\partial H_t(a)} = \frac{\partial}{\partial H_t(a)} \left[ \sum_{x=1}^K \pi_t(x) q_*(x) \right] = \sum_{x=1}^K q_*(x) \frac{\partial \pi_t(x)}{\partial H_t(a)} = \sum_{x=1}^K q_*(x) \pi_t(x) \left( \mathbb{I}(x = a) - \pi_t(a) \right)$$
+
+**4. Step 3: Baseline Invariance Lemma:**
+Let $B_t$ be any arbitrary baseline that does **not** depend on the action index $x$.
+Consider the term $\sum_{x=1}^K B_t \frac{\partial \pi_t(x)}{\partial H_t(a)}$:
+$$\sum_{x=1}^K B_t \pi_t(x) \left( \mathbb{I}(x = a) - \pi_t(a) \right) = B_t \left( \sum_{x=1}^K \pi_t(x) \mathbb{I}(x = a) - \pi_t(a) \sum_{x=1}^K \pi_t(x) \right) = B_t \left( \pi_t(a) - \pi_t(a)(1) \right) = 0$$
+Because the sum of probabilities is identically 1, the gradient of the baseline sum is identically zero!
+Therefore, we can subtract $B_t$ freely inside the sum without altering the gradient:
+$$\frac{\partial \eta(\mathbf{H})}{\partial H_t(a)} = \sum_{x=1}^K \left( q_*(x) - B_t \right) \pi_t(x) \left( \mathbb{I}(x = a) - \pi_t(a) \right)$$
+
+**5. Step 4: Expectation Representation & Stochastic Update:**
+By definition of mathematical expectation under policy $A_t \sim \pi_t$:
+$$\frac{\partial \eta(\mathbf{H})}{\partial H_t(a)} = \mathbb{E}_{A_t \sim \pi_t} \left[ \left( q_*(A_t) - B_t \right) \left( \mathbb{I}(A_t = a) - \pi_t(a) \right) \right]$$
+Since $\mathbb{E}[R_t \mid A_t] = q_*(A_t)$, by the Law of Total Expectation:
+$$\mathbf{\frac{\partial \eta(\mathbf{H})}{\partial H_t(a)} = \mathbb{E}\left[ \left( R_t - \bar{R}_t \right) \left( \mathbb{I}(A_t = a) - \pi_t(a) \right) \right]}$$
+where $\bar{R}_t = \frac{1}{t}\sum_{i=1}^t R_i$ is the running average reward baseline.
+The stochastic gradient ascent update rule with step size $\alpha > 0$ is:
+$$\mathbf{H_{t+1}(a) = H_t(a) + \alpha \left( R_t - \bar{R}_t \right) \left( \mathbb{I}(A_t = a) - \pi_t(a) \right)}$$
+- If the chosen action $A_t = a$ yields reward $R_t > \bar{R}_t$ (above average), its preference $H(a)$ increases by $\alpha(R_t - \bar{R}_t)(1 - \pi_t(a))$, and all other arm preferences decrease.
+- If $R_t < \bar{R}_t$ (below average), its preference decreases, boosting unchosen arms.
+This is the mathematical origin of the **REINFORCE policy gradient algorithm** in general RL!
+
+---
+
 ## 3. Geometric & Physical Interpretation
 
 ### Uncertainty Ellipsoids & The Shrinking Confidence Horizon
@@ -347,6 +507,212 @@ $$\mathbb{E}[q] = \frac{\alpha}{\alpha + \beta} = \frac{5}{5 + 2} = \frac{5}{7} 
 Posterior variance:
 $$\operatorname{Var}(q) = \frac{\alpha \beta}{(\alpha + \beta)^2 (\alpha + \beta + 1)} = \frac{5 \times 2}{(7)^2 (8)} = \frac{10}{49 \times 8} = \frac{10}{392} \approx \mathbf{0.0255}$$
 The standard deviation shrunk from prior $\sqrt{1/12} \approx 0.2887$ down to $\sqrt{0.0255} \approx 0.1597$.
+
+---
+
+### Illustration 3: 2-Armed Bernoulli Thompson Sampling Hand Trace with Exact Win Probabilities
+
+**Problem:**
+Consider a 2-armed Bernoulli bandit with true hidden payout rates:
+$$\theta_1^* = 0.7000 \quad (\text{Arm 1 - Superior}), \qquad \theta_2^* = 0.4000 \quad (\text{Arm 2 - Suboptimal})$$
+Both arms start with uninformative uniform priors:
+$$\theta_1 \sim \operatorname{Beta}(1, 1), \qquad \theta_2 \sim \operatorname{Beta}(1, 1)$$
+Trace the first 3 trials under Thompson Sampling given the following Monte Carlo draws from the current posteriors:
+- **Round 1:** Sampled $\hat{\theta}_1^{(1)} = 0.6200$, $\hat{\theta}_2^{(1)} = 0.7500$.
+- **Round 2:** Sampled $\hat{\theta}_1^{(2)} = 0.5500$, $\hat{\theta}_2^{(2)} = 0.2800$.
+- **Round 3:** Sampled $\hat{\theta}_1^{(3)} = 0.7800$, $\hat{\theta}_2^{(3)} = 0.3500$.
+
+For each round:
+1. Identify the selected arm $A_t = \operatorname{argmax}_a \hat{\theta}_a^{(t)}$.
+2. Receive reward $R_t$ ($R_1 = 0$ for Arm 2, $R_2 = 1$ for Arm 1, $R_3 = 1$ for Arm 1).
+3. Update the Beta posterior parameters $(\alpha_a, \beta_a)$, posterior mean $\mathbb{E}[\theta_a]$, and posterior variance $\operatorname{Var}(\theta_a)$.
+4. Compute the exact analytical probability that Arm 1 is superior to Arm 2: $\mathbb{P}(\theta_1 > \theta_2)$.
+
+**Step-by-Step Solution:**
+
+**1. Initial State ($t = 1$):**
+$$\alpha_1 = 1, \beta_1 = 1 \implies \mathbb{E}[\theta_1] = 0.5000, \, \operatorname{Var}(\theta_1) = \frac{1}{12} \approx 0.0833$$
+$$\alpha_2 = 1, \beta_2 = 1 \implies \mathbb{E}[\theta_2] = 0.5000, \, \operatorname{Var}(\theta_2) = \frac{1}{12} \approx 0.0833$$
+By symmetry: $\mathbb{P}(\theta_1 > \theta_2) = \mathbf{0.5000}$.
+
+**2. Round 1 ($t = 1$):**
+- Candidate draws: $\hat{\theta}_1 = 0.6200, \hat{\theta}_2 = 0.7500$.
+- Action chosen: $A_1 = \operatorname{argmax}(0.6200, 0.7500) = \mathbf{\text{Arm 2}}$.
+- Environment observation: $R_1 = 0$ (failure).
+- Posterior update for Arm 2:
+  $$\alpha_2 \leftarrow 1 + 0 = 1, \qquad \beta_2 \leftarrow 1 + 1 = 2 \implies \theta_2 \sim \operatorname{Beta}(1, 2)$$
+  $$\mathbb{E}[\theta_2] = \frac{1}{1 + 2} = \mathbf{0.3333}$$
+  $$\operatorname{Var}(\theta_2) = \frac{1 \times 2}{(3)^2 (4)} = \frac{2}{36} = \mathbf{0.0556}$$
+  Arm 1 remains unchanged: $\theta_1 \sim \operatorname{Beta}(1, 1)$.
+- Exact win probability $\mathbb{P}(\theta_1 > \theta_2)$:
+  Density of $\theta_1$: $p_1(u) = 1$ on $[0, 1]$.
+  CDF of $\theta_2 \sim \operatorname{Beta}(1, 2)$: $F_2(u) = 1 - (1 - u)^2 = 2u - u^2$.
+  $$\mathbb{P}(\theta_1 > \theta_2) = \int_0^1 p_1(u) F_2(u) du = \int_0^1 (2u - u^2) du = \left[ u^2 - \frac{u^3}{3} \right]_0^1 = 1 - \frac{1}{3} = \mathbf{\frac{2}{3} \approx 0.6667}$$
+
+**3. Round 2 ($t = 2$):**
+- Candidate draws: $\hat{\theta}_1 = 0.5500, \hat{\theta}_2 = 0.2800$.
+- Action chosen: $A_2 = \operatorname{argmax}(0.5500, 0.2800) = \mathbf{\text{Arm 1}}$.
+- Environment observation: $R_2 = 1$ (success).
+- Posterior update for Arm 1:
+  $$\alpha_1 \leftarrow 1 + 1 = 2, \qquad \beta_1 \leftarrow 1 + 0 = 1 \implies \theta_1 \sim \operatorname{Beta}(2, 1)$$
+  $$\mathbb{E}[\theta_1] = \frac{2}{2 + 1} = \mathbf{0.6667}$$
+  $$\operatorname{Var}(\theta_1) = \frac{2 \times 1}{(3)^2 (4)} = \frac{2}{36} = \mathbf{0.0556}$$
+  Arm 2 remains: $\theta_2 \sim \operatorname{Beta}(1, 2)$.
+- Exact win probability $\mathbb{P}(\theta_1 > \theta_2)$:
+  Density of $\theta_1 \sim \operatorname{Beta}(2, 1)$: $p_1(u) = \frac{\Gamma(3)}{\Gamma(2)\Gamma(1)} u^{2-1} = 2u$.
+  $$\mathbb{P}(\theta_1 > \theta_2) = \int_0^1 2u (2u - u^2) du = \int_0^1 (4u^2 - 2u^3) du = \left[ \frac{4}{3} u^3 - \frac{2}{4} u^4 \right]_0^1 = \frac{4}{3} - \frac{1}{2} = \mathbf{\frac{5}{6} \approx 0.8333}$$
+
+**4. Round 3 ($t = 3$):**
+- Candidate draws: $\hat{\theta}_1 = 0.7800, \hat{\theta}_2 = 0.3500$.
+- Action chosen: $A_3 = \operatorname{argmax}(0.7800, 0.3500) = \mathbf{\text{Arm 1}}$.
+- Environment observation: $R_3 = 1$ (success).
+- Posterior update for Arm 1:
+  $$\alpha_1 \leftarrow 2 + 1 = 3, \qquad \beta_1 \leftarrow 1 + 0 = 1 \implies \theta_1 \sim \operatorname{Beta}(3, 1)$$
+  $$\mathbb{E}[\theta_1] = \frac{3}{3 + 1} = \mathbf{0.7500}$$
+  $$\operatorname{Var}(\theta_1) = \frac{3 \times 1}{(4)^2 (5)} = \frac{3}{80} = \mathbf{0.0375}$$
+- Exact win probability $\mathbb{P}(\theta_1 > \theta_2)$:
+  Density of $\theta_1 \sim \operatorname{Beta}(3, 1)$: $p_1(u) = 3u^2$.
+  $$\mathbb{P}(\theta_1 > \theta_2) = \int_0^1 3u^2 (2u - u^2) du = \int_0^1 (6u^3 - 3u^4) du = \left[ \frac{6}{4} u^4 - \frac{3}{5} u^5 \right]_0^1 = \frac{3}{2} - \frac{3}{5} = \frac{9}{10} = \mathbf{0.9000}$$
+
+**Summary Evolution Table:**
+
+| Trial $t$ | Arm 1 Posterior | $\mathbb{E}[\theta_1]$ | Arm 2 Posterior | $\mathbb{E}[\theta_2]$ | Arm Chosen | Reward $R_t$ | $\mathbb{P}(\theta_1 > \theta_2)$ |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Start ($t=0$)** | $\operatorname{Beta}(1, 1)$ | $0.5000$ | $\operatorname{Beta}(1, 1)$ | $0.5000$ | — | — | $50.00\%$ |
+| **After Round 1** | $\operatorname{Beta}(1, 1)$ | $0.5000$ | $\operatorname{Beta}(1, 2)$ | $0.3333$ | Arm 2 | $0$ | $66.67\%$ |
+| **After Round 2** | $\operatorname{Beta}(2, 1)$ | $0.6667$ | $\operatorname{Beta}(1, 2)$ | $0.3333$ | Arm 1 | $1$ | $83.33\%$ |
+| **After Round 3** | $\operatorname{Beta}(3, 1)$ | $0.7500$ | $\operatorname{Beta}(1, 2)$ | $0.3333$ | Arm 1 | $1$ | **$90.00\%$** |
+
+Thompson Sampling rapidly allocates $90\%$ of future sampling budget to the truly superior Arm 1, providing smooth convergence to optimal exploitation.
+
+---
+
+### Illustration 4: Gradient Bandit Algorithm Hand Trace with Softmax Policy and Running Baseline
+
+**Problem:**
+Consider a 3-armed bandit with action preferences initialized to zero: $\mathbf{H}_1 = [0.0, 0.0, 0.0]^\top$.
+Learning rate: $\alpha = 0.20$.
+Running reward baseline initialized to $\bar{R}_1 = 0.00$.
+Trace 2 consecutive training steps:
+- **Step 1:** Action $A_1 = 2$ is chosen, emitting reward $R_1 = 2.5000$.
+- **Step 2:** Action $A_2 = 1$ is chosen, emitting reward $R_2 = 0.5000$.
+
+Compute for each step:
+1. The Softmax action probability distribution $\boldsymbol{\pi}_t$.
+2. The running baseline update $\bar{R}_{t+1} = \bar{R}_t + \frac{1}{t}(R_t - \bar{R}_t)$.
+3. The preference vector update $\mathbf{H}_{t+1}$.
+
+**Step-by-Step Solution:**
+
+**1. Step 1 ($t = 1$):**
+- Preferences: $\mathbf{H}_1 = [0.0, 0.0, 0.0]^\top$.
+  $$\sum_{b=1}^3 e^{H_1(b)} = e^0 + e^0 + e^0 = 1 + 1 + 1 = 3.0$$
+  $$\pi_1(a) = \frac{1.0}{3.0} \approx \mathbf{0.333333} \quad \forall a \in \{1, 2, 3\}$$
+- Action chosen: $A_1 = 2$, with reward $R_1 = 2.5000$.
+- Baseline update:
+  $$\bar{R}_2 = \bar{R}_1 + \frac{1}{1}(R_1 - \bar{R}_1) = 0.0 + (2.5000 - 0.0) = \mathbf{2.5000}$$
+- Advantage term: $R_1 - \bar{R}_1 = 2.5000 - 0.0000 = +2.5000 > 0$ (above average!).
+- Preference updates with $\alpha = 0.20$:
+  For chosen arm $a = 2$:
+  $$H_2(2) = H_1(2) + \alpha(R_1 - \bar{R}_1)(1 - \pi_1(2)) = 0.0 + 0.20(2.5000)(1 - 0.333333) = 0.5000(0.666667) = \mathbf{+0.333333}$$
+  For unchosen arms $a \in \{1, 3\}$:
+  $$H_2(1) = H_1(1) - \alpha(R_1 - \bar{R}_1)\pi_1(1) = 0.0 - 0.20(2.5000)(0.333333) = -0.5000(0.333333) = \mathbf{-0.166667}$$
+  $$H_2(3) = \mathbf{-0.166667}$$
+  Updated preference vector: $\mathbf{H}_2 = [-0.166667, +0.333333, -0.166667]^\top$.
+
+**2. Step 2 ($t = 2$):**
+- Softmax probabilities at $t = 2$:
+  $$e^{H_2(1)} = e^{-0.166667} \approx 0.846482$$
+  $$e^{H_2(2)} = e^{+0.333333} \approx 1.395612$$
+  $$e^{H_2(3)} = e^{-0.166667} \approx 0.846482$$
+  $$\sum_{b=1}^3 e^{H_2(b)} = 0.846482 + 1.395612 + 0.846482 = 3.088576$$
+  $$\pi_2(1) = \frac{0.846482}{3.088576} = \mathbf{0.274069}$$
+  $$\pi_2(2) = \frac{1.395612}{3.088576} = \mathbf{0.451863}$$
+  $$\pi_2(3) = \frac{0.846482}{3.088576} = \mathbf{0.274069}$$
+  Notice that Arm 2's selection probability jumped from $33.33\% \to 45.19\%$!
+- Action chosen: $A_2 = 1$, with reward $R_2 = 0.5000$.
+- Baseline update:
+  $$\bar{R}_3 = \bar{R}_2 + \frac{1}{2}(R_2 - \bar{R}_2) = 2.5000 + 0.50(0.5000 - 2.5000) = 2.5000 - 1.0000 = \mathbf{1.5000}$$
+- Advantage term: $R_2 - \bar{R}_2 = 0.5000 - 2.5000 = \mathbf{-2.0000} < 0$ (below average!).
+- Preference updates with $\alpha = 0.20$ and advantage $\Delta = -2.0000$:
+  For chosen arm $a = 1$:
+  $$H_3(1) = H_2(1) + \alpha(R_2 - \bar{R}_2)(1 - \pi_2(1)) = -0.166667 + 0.20(-2.0000)(1 - 0.274069)$$
+  $$= -0.166667 - 0.4000(0.725931) = -0.166667 - 0.290372 = \mathbf{-0.457039}$$
+  For unchosen arm $a = 2$:
+  $$H_3(2) = H_2(2) - \alpha(R_2 - \bar{R}_2)\pi_2(2) = +0.333333 - 0.20(-2.0000)(0.451863)$$
+  $$= +0.333333 + 0.4000(0.451863) = +0.333333 + 0.180745 = \mathbf{+0.514078}$$
+  For unchosen arm $a = 3$:
+  $$H_3(3) = H_2(3) - \alpha(R_2 - \bar{R}_2)\pi_2(3) = -0.166667 + 0.4000(0.274069) = -0.166667 + 0.109628 = \mathbf{-0.057039}$$
+
+**Resulting Distribution at $t = 3$:**
+$$e^{-0.457039} \approx 0.633152, \quad e^{0.514078} \approx 1.672097, \quad e^{-0.057039} \approx 0.944555 \implies \sum = 3.249804$$
+$$\pi_3(1) = 19.48\%, \qquad \pi_3(2) = \mathbf{51.45\%}, \qquad \pi_3(3) = 29.07\%$$
+Because Arm 1 performed below the baseline ($0.50 < 2.50$), its preference was penalized and its probability dropped from $27.4\% \to 19.5\%$, while Arm 2's probability expanded to over $51\%$.
+
+---
+
+### Illustration 5: LinUCB Contextual Bandit Step-by-Step Matrix Inversion and Ridge Confidence Ellipsoid Calculation
+
+**Problem:**
+A personalized news recommendation engine selects between $K = 2$ articles ($a \in \{1, 2\}$) based on a $d = 2$ dimensional user context vector $\mathbf{x} = [x_1, x_2]^\top$.
+For each arm $a$, the expected reward is modeled as $q(\mathbf{x}, a) = \mathbf{x}^\top \boldsymbol{\theta}_a^*$.
+Ridge regularization parameter: $\lambda = 1.0 \implies \mathbf{A}_1 = \mathbf{A}_2 = \mathbf{I}_2$.
+Response vectors initialized to zero: $\mathbf{b}_1 = \mathbf{b}_2 = [0.0, 0.0]^\top$.
+Exploration parameter: $\alpha = 1.0$.
+
+1. **User 1 arrives** with context vector:
+   $$\mathbf{x}^{(1)} = \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix}$$
+   Compute the parameter estimates $\hat{\boldsymbol{\theta}}_a = \mathbf{A}_a^{-1} \mathbf{b}_a$ and the LinUCB decision scores:
+   $$\text{UCB}_a = \hat{\boldsymbol{\theta}}_a^\top \mathbf{x} + \alpha \sqrt{\mathbf{x}^\top \mathbf{A}_a^{-1} \mathbf{x}}$$
+   Break ties in favor of Arm 1.
+2. The user clicks on Article 1 ($R_1 = 1.0$).
+   Update the covariance matrix $\mathbf{A}_1 \leftarrow \mathbf{A}_1 + \mathbf{x}^{(1)} (\mathbf{x}^{(1)})^\top$ and response vector $\mathbf{b}_1 \leftarrow \mathbf{b}_1 + R_1 \mathbf{x}^{(1)}$.
+3. Compute the analytical inverse $\mathbf{A}_1^{-1}$ using direct $2 \times 2$ matrix inversion.
+4. **User 2 arrives** with identical context vector $\mathbf{x}^{(2)} = [0.80, 0.60]^\top$.
+   Compute the updated parameter vector $\hat{\boldsymbol{\theta}}_1$, the new uncertainty bonus, and the resulting LinUCB scores for both arms.
+
+**Step-by-Step Solution:**
+
+**1. Decision for User 1 ($t = 1$):**
+- Parameter estimates:
+  $$\hat{\boldsymbol{\theta}}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \mathbf{I}_2^{-1} \begin{bmatrix} 0 \\ 0 \end{bmatrix} = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}, \qquad \hat{\boldsymbol{\theta}}_2 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}$$
+- Uncertainty bonus for both arms:
+  $$\mathbf{x}^\top \mathbf{A}_a^{-1} \mathbf{x} = \mathbf{x}^\top \mathbf{I}_2 \mathbf{x} = \|\mathbf{x}\|_2^2 = (0.80)^2 + (0.60)^2 = 0.64 + 0.36 = 1.0000$$
+  $$\text{Bonus: } \alpha \sqrt{1.0000} = 1.0(1.0) = \mathbf{1.0000}$$
+- Total UCB scores:
+  $$\text{UCB}_1 = 0.0 + 1.0000 = \mathbf{1.0000}, \qquad \text{UCB}_2 = 0.0 + 1.0000 = \mathbf{1.0000}$$
+  Tie broken in favor of **Arm 1**.
+
+**2. Covariance and Response Vector Update for Arm 1:**
+- Outer product $\mathbf{x} \mathbf{x}^\top$:
+  $$\mathbf{x} \mathbf{x}^\top = \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix} \begin{bmatrix} 0.80 & 0.60 \end{bmatrix} = \begin{bmatrix} 0.64 & 0.48 \\ 0.48 & 0.36 \end{bmatrix}$$
+- Updated covariance $\mathbf{A}_1$:
+  $$\mathbf{A}_1 = \begin{bmatrix} 1.00 & 0.00 \\ 0.00 & 1.00 \end{bmatrix} + \begin{bmatrix} 0.64 & 0.48 \\ 0.48 & 0.36 \end{bmatrix} = \begin{bmatrix} \mathbf{1.64} & \mathbf{0.48} \\ \mathbf{0.48} & \mathbf{1.36} \end{bmatrix}$$
+- Updated response vector $\mathbf{b}_1$:
+  $$\mathbf{b}_1 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix} + 1.0 \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix} = \begin{bmatrix} \mathbf{0.80} \\ \mathbf{0.60} \end{bmatrix}$$
+
+**3. Direct Analytical Matrix Inversion of $\mathbf{A}_1$:**
+$$\det(\mathbf{A}_1) = (1.64)(1.36) - (0.48)^2 = 2.2304 - 0.2304 = \mathbf{2.0000}$$
+Using the $2 \times 2$ inverse formula $\begin{bmatrix} a & b \\ c & d \end{bmatrix}^{-1} = \frac{1}{ad - bc} \begin{bmatrix} d & -b \\ -c & a \end{bmatrix}$:
+$$\mathbf{A}_1^{-1} = \frac{1}{2.0000} \begin{bmatrix} 1.36 & -0.48 \\ -0.48 & 1.64 \end{bmatrix} = \begin{bmatrix} \mathbf{0.6800} & \mathbf{-0.2400} \\ \mathbf{-0.2400} & \mathbf{0.8200} \end{bmatrix}$$
+
+**4. Decision for User 2 ($t = 2$):**
+- Updated Ridge regression weights $\hat{\boldsymbol{\theta}}_1$:
+  $$\hat{\boldsymbol{\theta}}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \begin{bmatrix} 0.6800 & -0.2400 \\ -0.2400 & 0.8200 \end{bmatrix} \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix} = \begin{bmatrix} 0.6800(0.80) - 0.2400(0.60) \\ -0.2400(0.80) + 0.8200(0.60) \end{bmatrix} = \begin{bmatrix} 0.5440 - 0.1440 \\ -0.1920 + 0.4920 \end{bmatrix} = \begin{bmatrix} \mathbf{0.4000} \\ \mathbf{0.3000} \end{bmatrix}$$
+- Expected reward estimate for Arm 1:
+  $$\hat{\boldsymbol{\theta}}_1^\top \mathbf{x} = 0.4000(0.80) + 0.3000(0.60) = 0.3200 + 0.1800 = \mathbf{0.5000}$$
+- Uncertainty quadric for Arm 1:
+  $$\mathbf{x}^\top \mathbf{A}_1^{-1} \mathbf{x} = \begin{bmatrix} 0.80 & 0.60 \end{bmatrix} \begin{bmatrix} 0.4000 \\ 0.3000 \end{bmatrix} = 0.80(0.4000) + 0.60(0.3000) = 0.3200 + 0.1800 = \mathbf{0.5000}$$
+  $$\text{Uncertainty Bonus: } 1.0 \sqrt{0.5000} \approx \mathbf{0.707107}$$
+  Notice that Arm 1's uncertainty shrunk from $1.0000 \to 0.7071$!
+- Arm 1 UCB Score:
+  $$\text{UCB}_1 = 0.5000 + 0.707107 = \mathbf{1.207107}$$
+- Arm 2 UCB Score:
+  $$\text{UCB}_2 = 0.0000 + 1.0000 = \mathbf{1.000000}$$
+
+**Conclusion:**
+$\text{UCB}_1 = 1.2071 > \text{UCB}_2 = 1.0000$.
+Arm 1 is selected again with high confidence: although its uncertainty shrunk from $1.0 \to 0.707$, its high empirical reward ($0.50$) more than compensated for the uncertainty reduction, naturally balancing contextual exploitation and exploration!
 
 ---
 

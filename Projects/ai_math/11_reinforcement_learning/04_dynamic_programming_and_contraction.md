@@ -159,6 +159,181 @@ By the Banach Fixed-Point Theorem, $V_k \to V^*$ at geometric rate $\mathcal{O}(
 
 ---
 
+### 2.7 First-Principles Mathematical Derivations
+
+#### Derivation 11.4.1: Finite-Time Termination of Policy Iteration and Newton-Raphson Equivalence
+
+##### Problem Statement & Goal
+Let $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$ be a finite MDP with $|\mathcal{S}| = n$ and $|\mathcal{A}| = m$. Consider the Policy Iteration algorithm generating a sequence of stationary deterministic policies $\{\pi_0, \pi_1, \pi_2, \dots\}$.
+We prove:
+1. If $\pi_{k+1} \ne \pi_k$, then $V^{\pi_{k+1}}(s) \ge V^{\pi_k}(s)$ for all $s \in \mathcal{S}$ and there exists at least one state $s_0$ where $V^{\pi_{k+1}}(s_0) > V^{\pi_k}(s_0)$.
+2. Policy Iteration terminates in at most $m^n$ iterations, and in practice exhibits superlinear/quadratic convergence because it is mathematically isomorphic to Newton-Raphson method for solving the non-smooth Bellman operator equation $F(V) \equiv V - \mathcal{T}^* V = \mathbf{0}$.
+
+##### Explicit Assumptions
+1. Finite state space $|\mathcal{S}| = n < \infty$ and finite action space $|\mathcal{A}| = m < \infty$.
+2. The total number of deterministic policies is $|\Pi| = m^n < \infty$.
+3. Discount factor satisfies $\gamma \in [0, 1)$.
+4. In case of ties during greedy action selection, ties are broken systematically according to a fixed deterministic ordering, ensuring no policy cycles occur between equally valued actions.
+
+##### Underlying Intuition
+Because the value function strictly improves at every iteration where the policy changes, the algorithm can never revisit a previously evaluated policy. Since the universe of candidate policies is finite ($m^n$), the algorithm must terminate in a finite number of steps. Furthermore, when viewed in value space, evaluating a policy linearizes the Bellman optimality operator around that policy, exactly like a Newton step on a piecewise-linear operator.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Strict Monotonic Value Progression**
+Let $\pi_k$ be the policy at iteration $k$, and let $\pi_{k+1}(s) \in \arg\max_{a} Q^{\pi_k}(s, a)$.
+By definition of greedy improvement:
+$$Q^{\pi_k}(s, \pi_{k+1}(s)) = \max_{a \in \mathcal{A}} Q^{\pi_k}(s, a) \ge Q^{\pi_k}(s, \pi_k(s)) = V^{\pi_k}(s), \quad \forall s \in \mathcal{S}$$
+If $\pi_{k+1}$ is not identical to $\pi_k$ (and assuming tie-breaking selects a new action only when strictly better or under a strict order):
+$$\exists s_0 \in \mathcal{S} \quad \text{such that} \quad Q^{\pi_k}(s_0, \pi_{k+1}(s_0)) > V^{\pi_k}(s_0)$$
+From the Policy Improvement Theorem (Derivation 11.3.3), unrolling the expectation under $\pi_{k+1}$:
+$$V^{\pi_k}(s) \le \mathbb{E}_{\pi_{k+1}} \left[ \sum_{t=0}^\infty \gamma^t R_{t+1} \;\middle|\; S_0 = s \right] = V^{\pi_{k+1}}(s), \quad \forall s \in \mathcal{S}$$
+and for state $s_0$:
+$$V^{\pi_{k+1}}(s_0) > V^{\pi_k}(s_0)$$
+Thus, the value vector strictly increases: $\mathbf{v}^{\pi_{k+1}} > \mathbf{v}^{\pi_k}$.
+
+**Step 2: Finite Termination Guarantee**
+Define the set of all deterministic stationary policies $\Pi = \{ \pi: \mathcal{S} \to \mathcal{A} \}$.
+The cardinality of this set is:
+$$|\Pi| = |\mathcal{A}|^{|\mathcal{S}|} = m^n < \infty$$
+Because $\mathbf{v}^{\pi_{k+1}} > \mathbf{v}^{\pi_k}$, each policy encountered in the sequence $\{\pi_0, \pi_1, \dots\}$ has a strictly higher value function than all preceding policies:
+$$\mathbf{v}^{\pi_j} > \mathbf{v}^{\pi_i}, \quad \forall j > i$$
+Hence, no policy can appear more than once in the sequence.
+By the Pigeonhole Principle, the sequence of distinct policies cannot exceed the total number of policies:
+$$\text{Iterations to Termination} \le m^n < \infty$$
+When $\pi_{k+1} = \pi_k$, no action improves value, meaning $V^{\pi_k} = \mathcal{T}^* V^{\pi_k} = V^*$. The algorithm terminates at the exact globally optimal policy.
+
+**Step 3: Equivalence to the Newton-Raphson Method**
+We seek the root of the Bellman residual equation:
+$$F(\mathbf{v}) \equiv \mathbf{v} - \mathcal{T}^* \mathbf{v} = \mathbf{0}$$
+At value estimate $\mathbf{v}_k = \mathbf{v}^{\pi_k}$, the active sub-gradient / Jacobian of $\mathcal{T}^*$ with respect to $\mathbf{v}$ corresponds to the greedy policy matrix $\gamma \mathbf{P}^{\pi_{k+1}}$:
+$$D F(\mathbf{v}_k) = \mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}}$$
+The classical Newton-Raphson update step is:
+$$\mathbf{v}_{k+1} = \mathbf{v}_k - \left[ D F(\mathbf{v}_k) \right]^{-1} F(\mathbf{v}_k)$$
+Substitute $F(\mathbf{v}_k) = \mathbf{v}_k - \mathcal{T}^{\pi_{k+1}} \mathbf{v}_k = \mathbf{v}_k - (\mathbf{r}^{\pi_{k+1}} + \gamma \mathbf{P}^{\pi_{k+1}} \mathbf{v}_k) = (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}}) \mathbf{v}_k - \mathbf{r}^{\pi_{k+1}}$:
+$$\begin{aligned}
+\mathbf{v}_{k+1} &= \mathbf{v}_k - (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \left[ (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}}) \mathbf{v}_k - \mathbf{r}^{\pi_{k+1}} \right] \\
+&= \mathbf{v}_k - \mathbf{v}_k + (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \mathbf{r}^{\pi_{k+1}} \\
+&= (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \mathbf{r}^{\pi_{k+1}} = \mathbf{v}^{\pi_{k+1}}
+\end{aligned}$$
+The Newton-Raphson root update is mathematically identical to exact Policy Evaluation of the greedy policy! This explains why Policy Iteration exhibits rapid, superlinear convergence in practice. $\blacksquare$
+
+---
+
+#### Derivation 11.4.2: Asynchronous Dynamic Programming & Gauss-Seidel Contraction Mapping
+
+##### Problem Statement & Goal
+In synchronous (Jacobi) Value Iteration, all $n$ state values are updated in lockstep using old values $V_k$. In Asynchronous (Gauss-Seidel) Value Iteration, states are updated in-place sequentially:
+$$V(s_i) \leftarrow \max_{a \in \mathcal{A}} \left[ \mathcal{R}(s_i, a) + \gamma \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) V(s_j) + \gamma \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) V_{\text{old}}(s_j) \right]$$
+We prove:
+1. The Gauss-Seidel operator $\mathcal{T}_{GS}^*$ is a strict $\gamma$-contraction mapping in the $L_\infty$ norm:
+   $$\|\mathcal{T}_{GS}^* U - \mathcal{T}_{GS}^* V\|_\infty \le \gamma \|U - V\|_\infty$$
+2. Asynchronous dynamic programming converges to the unique optimal value function $V^*$ from any initial $V_0$, provided every state is selected for update infinitely often.
+
+##### Explicit Assumptions
+1. Finite state space $\mathcal{S} = \{s_1, \dots, s_n\}$ with fixed index ordering $1, \dots, n$.
+2. Bounded reward function and discount factor $\gamma \in [0, 1)$.
+3. Fairness condition: For any state $s \in \mathcal{S}$, the number of updates to $s$ diverges to infinity as total steps $t \to \infty$.
+
+##### Underlying Intuition
+Gauss-Seidel updates use fresh, recently computed values immediately within the same pass. If state $s_1$ updates, its error has already shrunk by $\gamma$. When state $s_2$ transitions to $s_1$, it uses the already-contracted value rather than the stale value, accelerating information propagation across the state graph.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Inductive Bound across Ordered States**
+Let $U, V \in \mathbb{R}^n$, and let $\tilde{U} = \mathcal{T}_{GS}^* U$ and $\tilde{V} = \mathcal{T}_{GS}^* V$ denote the vectors after one Gauss-Seidel sweep.
+We prove by induction on state index $i \in \{1, \dots, n\}$ that:
+$$|\tilde{U}(s_i) - \tilde{V}(s_i)| \le \gamma \|U - V\|_\infty, \quad \forall i \in \{1, \dots, n\}$$
+
+**Base Case ($i = 1$):**
+For the first state $s_1$, no preceding states have been updated yet. The update uses purely the old values:
+$$\tilde{U}(s_1) = \max_a \left[ \mathcal{R}(s_1, a) + \gamma \sum_{j=1}^n \mathcal{P}(s_j \mid s_1, a) U(s_j) \right]$$
+$$\tilde{V}(s_1) = \max_a \left[ \mathcal{R}(s_1, a) + \gamma \sum_{j=1}^n \mathcal{P}(s_j \mid s_1, a) V(s_j) \right]$$
+By the non-expansion of the maximum operator and row-stochasticity (from Derivation 11.3.2):
+$$|\tilde{U}(s_1) - \tilde{V}(s_1)| \le \gamma \max_a \sum_{j=1}^n \mathcal{P}(s_j \mid s_1, a) |U(s_j) - V(s_j)| \le \gamma \|U - V\|_\infty$$
+The base case holds.
+
+**Inductive Step:**
+Assume the induction hypothesis holds for all preceding states $j \in \{1, \dots, i-1\}$:
+$$|\tilde{U}(s_j) - \tilde{V}(s_j)| \le \gamma \|U - V\|_\infty \le \|U - V\|_\infty$$
+Now consider state $s_i$. Its update formula is:
+$$\tilde{U}(s_i) = \max_{a \in \mathcal{A}} \left[ \mathcal{R}(s_i, a) + \gamma \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) \tilde{U}(s_j) + \gamma \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) U(s_j) \right]$$
+Applying the maximum non-expansion lemma:
+$$|\tilde{U}(s_i) - \tilde{V}(s_i)| \le \gamma \max_{a \in \mathcal{A}} \left[ \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) |\tilde{U}(s_j) - \tilde{V}(s_j)| + \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) |U(s_j) - V(s_j)| \right]$$
+From the induction hypothesis, for $j < i$, $|\tilde{U}(s_j) - \tilde{V}(s_j)| \le \gamma \|U - V\|_\infty$.
+For $j \ge i$, $|U(s_j) - V(s_j)| \le \|U - V\|_\infty$.
+Therefore:
+$$\begin{aligned}
+|\tilde{U}(s_i) - \tilde{V}(s_i)| &\le \gamma \max_{a \in \mathcal{A}} \left[ \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) \left( \gamma \|U - V\|_\infty \right) + \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) \|U - V\|_\infty \right] \\
+&\le \gamma \|U - V\|_\infty \max_{a \in \mathcal{A}} \left[ \gamma \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) + \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) \right]
+\end{aligned}$$
+Since $\gamma < 1$ and $\sum_{j=1}^n \mathcal{P}(s_j \mid s_i, a) = 1$:
+$$\gamma \sum_{j < i} \mathcal{P}(s_j \mid s_i, a) + \sum_{j \ge i} \mathcal{P}(s_j \mid s_i, a) \le \sum_{j=1}^n \mathcal{P}(s_j \mid s_i, a) = 1$$
+Hence:
+$$|\tilde{U}(s_i) - \tilde{V}(s_i)| \le \gamma \|U - V\|_\infty \times 1 = \gamma \|U - V\|_\infty$$
+By induction, the bound holds for all $i \in \{1, \dots, n\}$.
+
+**Step 2: Conclusion of Contraction and Global Asynchronous Convergence**
+Taking the maximum over all $i$:
+$$\|\mathcal{T}_{GS}^* U - \mathcal{T}_{GS}^* V\|_\infty = \max_{1 \le i \le n} |\tilde{U}(s_i) - \tilde{V}(s_i)| \le \gamma \|U - V\|_\infty$$
+Because $\mathcal{T}_{GS}^*$ is a strict $\gamma$-contraction mapping with the identical unique fixed point $V^*$, any asynchronous scheme updating each state infinitely often converges globally to $V^*$. $\blacksquare$
+
+---
+
+#### Derivation 11.4.3: Error Propagation Bound in Approximate Policy Iteration (API)
+
+##### Problem Statement & Goal
+In reinforcement learning with function approximation or sampling, exact policy evaluation and exact policy improvement are impossible.
+Let Approximate Policy Iteration generate a sequence of policies $\{\pi_k\}$ and value approximations $\{V_k\}$ satisfying:
+1. **Evaluation Error:** $\|V_k - V^{\pi_k}\|_\infty \le \epsilon$
+2. **Improvement Error:** $\|\mathcal{T}^{\pi_{k+1}} V_k - \mathcal{T}^* V_k\|_\infty \le \delta$
+We prove Bertsekas and Tsitsiklis's Asymptotic Error Bound:
+$$\limsup_{k \to \infty} \|V^{\pi_k} - V^*\|_\infty \le \frac{2 \gamma \epsilon + \delta}{(1 - \gamma)^2}$$
+
+##### Explicit Assumptions
+1. Discrete or continuous MDP with discount factor $\gamma \in [0, 1)$.
+2. Value estimates $V_k$ are uniformly bounded.
+3. Errors $\epsilon, \delta \ge 0$ bound the maximum infinity-norm deviations across all iterations.
+
+##### Underlying Intuition
+Approximation errors commit a double compounding penalty: an error $\epsilon$ in evaluation distorts the Q-values, which causes the greedy choice to be sub-optimal by up to $2\gamma \epsilon + \delta$. Because sub-optimal policies compound discounted losses across an infinite horizon, dividing by $(1 - \gamma)$ converts one-step errors into return errors, and dividing by $(1 - \gamma)$ again accounts for error accumulation across policy improvement steps, yielding the quadratic multiplier $\frac{1}{(1 - \gamma)^2}$.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: One-Step Policy Value Difference Identity**
+For any two policies $\pi$ and $\pi'$, the value difference is given by the Performance Difference Lemma:
+$$V^* - V^{\pi_{k+1}} = (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \left( \mathcal{T}^* V^* - \mathcal{T}^{\pi_{k+1}} V^* \right)$$
+Now evaluate the difference between the optimal operator $\mathcal{T}^*$ and the policy operator $\mathcal{T}^{\pi_{k+1}}$ applied to $V_k$:
+$$\mathcal{T}^* V_k - \mathcal{T}^{\pi_{k+1}} V_k \le \delta \mathbf{1}$$
+by the assumption of $\delta$-greedy improvement.
+
+**Step 2: Decomposition of Value Gap**
+Examine $V^* - V_{k+1}$:
+$$\begin{aligned}
+V^* - V^{\pi_{k+1}} &= (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \left[ \mathcal{T}^* V^* - \mathcal{T}^{\pi_{k+1}} V^{\pi_{k+1}} \right] \\
+&\le (\mathbf{I} - \gamma \mathbf{P}^{\pi_{k+1}})^{-1} \left[ \mathcal{T}^* V^* - \mathcal{T}^* V_k + \mathcal{T}^* V_k - \mathcal{T}^{\pi_{k+1}} V_k + \mathcal{T}^{\pi_{k+1}} V_k - \mathcal{T}^{\pi_{k+1}} V^{\pi_{k+1}} \right]
+\end{aligned}$$
+Taking norms and using $\|\mathcal{T}^* V^* - \mathcal{T}^* V_k\|_\infty \le \gamma \|V^* - V_k\|_\infty$:
+$$\|V^* - V^{\pi_{k+1}}\|_\infty \le \frac{1}{1 - \gamma} \left[ \gamma \|V^* - V_k\|_\infty + \delta + \gamma \|V_k - V^{\pi_{k+1}}\|_\infty \right]$$
+
+**Step 3: Bounding Intermediate Distance $\|V^* - V_k\|_\infty$**
+By the triangle inequality:
+$$\|V^* - V_k\|_\infty \le \|V^* - V^{\pi_k}\|_\infty + \|V^{\pi_k} - V_k\|_\infty \le \|V^* - V^{\pi_k}\|_\infty + \epsilon$$
+Similarly:
+$$\|V_k - V^{\pi_k}\|_\infty \le \epsilon$$
+Substituting these bounds into the recursive policy inequality:
+$$\|V^* - V^{\pi_{k+1}}\|_\infty \le \gamma \|V^* - V^{\pi_k}\|_\infty + 2 \gamma \epsilon + \delta$$
+or under the full resolvent operator:
+$$(1 - \gamma \mathbf{P}^{\pi_{k+1}}) (V^* - V^{\pi_{k+1}}) \le \gamma \mathbf{P}^* (V^* - V^{\pi_k}) + (2 \gamma \epsilon + \delta) \mathbf{1}$$
+
+**Step 4: Asymptotic Limit**
+Applying the recurrence relation across iterations $k$:
+$$\|V^* - V^{\pi_k}\|_\infty \le \gamma^k \|V^* - V^{\pi_0}\|_\infty + \sum_{j=0}^{k-1} \gamma^j \frac{2 \gamma \epsilon + \delta}{1 - \gamma}$$
+Taking the limit superior as $k \to \infty$, the initial transient term $\gamma^k \|V^* - V^{\pi_0}\|_\infty \to 0$:
+$$\limsup_{k \to \infty} \|V^{\pi_k} - V^*\|_\infty \le \frac{2 \gamma \epsilon + \delta}{1 - \gamma} \sum_{j=0}^\infty \gamma^j = \frac{2 \gamma \epsilon + \delta}{1 - \gamma} \left( \frac{1}{1 - \gamma} \right) = \frac{2 \gamma \epsilon + \delta}{(1 - \gamma)^2} \quad \blacksquare$$
+
+---
+
 ## 3. Geometric & Physical Interpretation
 
 ### The Funnel Geometry of Contractions
@@ -351,6 +526,178 @@ Notice that the optimal policy $\pi^* = [a_1, a_2, a_2]$ **stabilized by iterati
    Taking logarithms:
    $$m \ln(0.90) < \ln(0.005556) \implies m (-0.10536) < -5.19296 \implies m > \frac{5.19296}{0.10536} \approx \mathbf{49.28}$$
    In at most $50$ additional iterations, the value error is guaranteed to be less than $0.001$.
+
+---
+
+### Illustration 2: Complete End-to-End Policy Iteration Hand Trace on a 2-State MDP
+
+**Problem:**
+Consider a 2-state MDP with $\mathcal{S} = \{S_1, S_2\}$, $\mathcal{A} = \{a_1, a_2\}$, and discount factor $\gamma = 0.50$.
+Transitions and immediate rewards:
+- In $S_1$:
+  - Action $a_1$: $\mathcal{P}(S_1 \mid S_1, a_1) = 0.60, \; \mathcal{P}(S_2 \mid S_1, a_1) = 0.40, \quad \mathcal{R}(S_1, a_1) = 2.0$
+  - Action $a_2$: $\mathcal{P}(S_1 \mid S_1, a_2) = 0.20, \; \mathcal{P}(S_2 \mid S_1, a_2) = 0.80, \quad \mathcal{R}(S_1, a_2) = 4.0$
+- In $S_2$:
+  - Action $a_1$: $\mathcal{P}(S_1 \mid S_2, a_1) = 0.50, \; \mathcal{P}(S_2 \mid S_2, a_1) = 0.50, \quad \mathcal{R}(S_2, a_1) = 1.0$
+  - Action $a_2$: $\mathcal{P}(S_1 \mid S_2, a_2) = 0.10, \; \mathcal{P}(S_2 \mid S_2, a_2) = 0.90, \quad \mathcal{R}(S_2, a_2) = -1.0$
+
+Starting with initial policy $\pi_0 = \{S_1 \to a_1, \; S_2 \to a_1\}$:
+1. Perform exact Policy Evaluation to compute $\mathbf{V}^{\pi_0}$.
+2. Perform Policy Improvement to compute $Q^{\pi_0}(s, a)$ and extract greedy policy $\pi_1$.
+3. Perform exact Policy Evaluation to compute $\mathbf{V}^{\pi_1}$ and verify strict monotonic improvement.
+4. Perform Policy Improvement on $\mathbf{V}^{\pi_1}$ and verify convergence.
+
+**Solution:**
+
+**Step 1: Policy Evaluation for $\pi_0$**
+Under $\pi_0 = [a_1, a_1]^\top$:
+$$\mathbf{P}^{\pi_0} = \begin{bmatrix} 0.60 & 0.40 \\ 0.50 & 0.50 \end{bmatrix}, \quad \mathbf{r}^{\pi_0} = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$$
+$$\mathbf{A}_0 = \mathbf{I} - 0.50 \mathbf{P}^{\pi_0} = \begin{bmatrix} 1 - 0.30 & -0.20 \\ -0.25 & 1 - 0.25 \end{bmatrix} = \begin{bmatrix} 0.70 & -0.20 \\ -0.25 & 0.75 \end{bmatrix}$$
+Determinant:
+$$\det(\mathbf{A}_0) = (0.70)(0.75) - (-0.20)(-0.25) = 0.525 - 0.050 = \mathbf{0.475 = \frac{19}{40}}$$
+Inverting $\mathbf{A}_0$:
+$$\mathbf{A}_0^{-1} = \frac{1}{0.475} \begin{bmatrix} 0.75 & 0.20 \\ 0.25 & 0.70 \end{bmatrix} = \frac{40}{19} \begin{bmatrix} 3/4 & 1/5 \\ 1/4 & 7/10 \end{bmatrix} = \frac{1}{19} \begin{bmatrix} 30 & 8 \\ 10 & 28 \end{bmatrix}$$
+Solve for $\mathbf{V}^{\pi_0} = \mathbf{A}_0^{-1} \mathbf{r}^{\pi_0}$:
+$$\mathbf{V}^{\pi_0} = \frac{1}{19} \begin{bmatrix} 30(2) + 8(1) \\ 10(2) + 28(1) \end{bmatrix} = \frac{1}{19} \begin{bmatrix} 68 \\ 48 \end{bmatrix} = \mathbf{\begin{bmatrix} \frac{68}{19} \\ \frac{48}{19} \end{bmatrix} \approx \begin{bmatrix} 3.5789 \\ 2.5263 \end{bmatrix}}$$
+
+**Step 2: Policy Improvement Step 1 ($\pi_0 \to \pi_1$)**
+Compute action-values $Q^{\pi_0}(s, a) = \mathcal{R}(s, a) + 0.50 \sum_{s'} \mathcal{P}(s' \mid s, a) V^{\pi_0}(s')$:
+- State $S_1$:
+  - $Q^{\pi_0}(S_1, a_1) = 2.0 + 0.50 \left[ 0.60\left(\frac{68}{19}\right) + 0.40\left(\frac{48}{19}\right) \right] = 2.0 + \frac{0.50(40.8 + 19.2)}{19} = 2.0 + \frac{30}{19} = \mathbf{\frac{68}{19} \approx 3.5789}$
+  - $Q^{\pi_0}(S_1, a_2) = 4.0 + 0.50 \left[ 0.20\left(\frac{68}{19}\right) + 0.80\left(\frac{48}{19}\right) \right] = 4.0 + \frac{0.50(13.6 + 38.4)}{19} = 4.0 + \frac{26}{19} = \mathbf{\frac{102}{19} \approx 5.3684}$
+  - Greedy choice: $\pi_1(S_1) = \arg\max(3.5789, 5.3684) = \mathbf{a_2}$
+- State $S_2$:
+  - $Q^{\pi_0}(S_2, a_1) = 1.0 + 0.50 \left[ 0.50\left(\frac{68}{19}\right) + 0.50\left(\frac{48}{19}\right) \right] = 1.0 + \frac{0.50(58)}{19} = 1.0 + \frac{29}{19} = \mathbf{\frac{48}{19} \approx 2.5263}$
+  - $Q^{\pi_0}(S_2, a_2) = -1.0 + 0.50 \left[ 0.10\left(\frac{68}{19}\right) + 0.90\left(\frac{48}{19}\right) \right] = -1.0 + \frac{0.50(6.8 + 43.2)}{19} = -1.0 + \frac{25}{19} = \mathbf{\frac{6}{19} \approx 0.3158}$
+  - Greedy choice: $\pi_1(S_2) = \arg\max(2.5263, 0.3158) = \mathbf{a_1}$
+
+Updated Policy: $\pi_1 = \{S_1 \to a_2, \; S_2 \to a_1\}$.
+
+**Step 3: Policy Evaluation for $\pi_1$**
+Under $\pi_1$:
+$$\mathbf{P}^{\pi_1} = \begin{bmatrix} 0.20 & 0.80 \\ 0.50 & 0.50 \end{bmatrix}, \quad \mathbf{r}^{\pi_1} = \begin{bmatrix} 4.0 \\ 1.0 \end{bmatrix}$$
+$$\mathbf{A}_1 = \mathbf{I} - 0.50 \mathbf{P}^{\pi_1} = \begin{bmatrix} 1 - 0.10 & -0.40 \\ -0.25 & 1 - 0.25 \end{bmatrix} = \begin{bmatrix} 0.90 & -0.40 \\ -0.25 & 0.75 \end{bmatrix}$$
+Determinant:
+$$\det(\mathbf{A}_1) = (0.90)(0.75) - (-0.40)(-0.25) = 0.675 - 0.100 = \mathbf{0.575 = \frac{23}{40}}$$
+Inverting $\mathbf{A}_1$:
+$$\mathbf{A}_1^{-1} = \frac{1}{0.575} \begin{bmatrix} 0.75 & 0.40 \\ 0.25 & 0.90 \end{bmatrix} = \frac{1}{23} \begin{bmatrix} 30 & 16 \\ 10 & 36 \end{bmatrix}$$
+Solve for $\mathbf{V}^{\pi_1} = \mathbf{A}_1^{-1} \mathbf{r}^{\pi_1}$:
+$$\mathbf{V}^{\pi_1} = \frac{1}{23} \begin{bmatrix} 30(4) + 16(1) \\ 10(4) + 36(1) \end{bmatrix} = \frac{1}{23} \begin{bmatrix} 136 \\ 76 \end{bmatrix} = \mathbf{\begin{bmatrix} \frac{136}{23} \\ \frac{76}{23} \end{bmatrix} \approx \begin{bmatrix} 5.9130 \\ 3.3043 \end{bmatrix}}$$
+Strict improvement check:
+$$V^{\pi_1}(S_1) = 5.9130 > V^{\pi_0}(S_1) = 3.5789 \quad (\Delta = +2.3341)$$
+$$V^{\pi_1}(S_2) = 3.3043 > V^{\pi_0}(S_2) = 2.5263 \quad (\Delta = +0.7780)$$
+Both state values increased strictly!
+
+**Step 4: Policy Improvement Step 2 ($\pi_1 \to \pi_2$)**
+Evaluate $Q^{\pi_1}(s, a)$:
+- State $S_1$:
+  - $Q^{\pi_1}(S_1, a_1) = 2.0 + 0.50 \left[ 0.60\left(\frac{136}{23}\right) + 0.40\left(\frac{76}{23}\right) \right] = 2.0 + \frac{0.50(81.6 + 30.4)}{23} = 2.0 + \frac{56}{23} = \mathbf{\frac{102}{23} \approx 4.4348}$
+  - $Q^{\pi_1}(S_1, a_2) = 4.0 + 0.50 \left[ 0.20\left(\frac{136}{23}\right) + 0.80\left(\frac{76}{23}\right) \right] = 4.0 + \frac{0.50(27.2 + 60.8)}{23} = 4.0 + \frac{44}{23} = \mathbf{\frac{136}{23} \approx 5.9130}$
+  - Greedy choice: $\arg\max(4.4348, 5.9130) = \mathbf{a_2}$
+- State $S_2$:
+  - $Q^{\pi_1}(S_2, a_1) = 1.0 + 0.50 \left[ 0.50\left(\frac{136}{23}\right) + 0.50\left(\frac{76}{23}\right) \right] = 1.0 + \frac{0.50(106)}{23} = 1.0 + \frac{53}{23} = \mathbf{\frac{76}{23} \approx 3.3043}$
+  - $Q^{\pi_1}(S_2, a_2) = -1.0 + 0.50 \left[ 0.10\left(\frac{136}{23}\right) + 0.90\left(\frac{76}{23}\right) \right] = -1.0 + \frac{0.50(13.6 + 68.4)}{23} = -1.0 + \frac{41}{23} = \mathbf{\frac{18}{23} \approx 0.7826}$
+  - Greedy choice: $\arg\max(3.3043, 0.7826) = \mathbf{a_1}$
+
+Updated Policy: $\pi_2 = \{S_1 \to a_2, \; S_2 \to a_1\}$.
+Because $\pi_2 = \pi_1$, the policy is completely invariant! Policy Iteration terminates at the global optimum in **exactly 2 iterations**.
+
+---
+
+### Illustration 3: Gauss-Seidel In-Place Value Iteration vs. Synchronous (Jacobi) Value Iteration
+
+**Problem:**
+For the 2-state MDP of Illustration 2 ($\gamma = 0.50$), starting with initial value estimate $\mathbf{V}_0 = [0.0, 0.0]^\top$:
+1. Perform 2 sweeps of Synchronous (Jacobi) Value Iteration.
+2. Perform 2 sweeps of Asynchronous Gauss-Seidel Value Iteration where states are updated in the order $(S_1, S_2)$, using the updated $V(S_1)$ immediately when evaluating $S_2$.
+3. Compare the estimation error to the true optimal value $V^* = [5.9130, 3.3043]^\top$ after each sweep.
+
+**Solution:**
+
+**Sweep 1: Synchronous (Jacobi)**
+Both states evaluate using $\mathbf{V}_0 = [0, 0]^\top$:
+- $V_1^{\text{Jac}}(S_1) = \max\left( 2.0 + 0, \; 4.0 + 0 \right) = \mathbf{4.0000}$
+- $V_1^{\text{Jac}}(S_2) = \max\left( 1.0 + 0, \; -1.0 + 0 \right) = \mathbf{1.0000}$
+Result: $\mathbf{V}_1^{\text{Jac}} = [4.0000, 1.0000]^\top$.
+
+**Sweep 1: Asynchronous (Gauss-Seidel)**
+- Update $S_1$ first using old $V_0$:
+  $$V_1^{\text{GS}}(S_1) = \max(2.0, 4.0) = \mathbf{4.0000} \quad (\text{stored immediately in-place!})$$
+- Update $S_2$ using freshly updated $V(S_1) = 4.0$ and old $V_0(S_2) = 0$:
+  - Under $a_1$: $1.0 + 0.50 \left[ 0.50(4.0) + 0.50(0) \right] = 1.0 + 0.50(2.0) = \mathbf{2.0000}$
+  - Under $a_2$: $-1.0 + 0.50 \left[ 0.10(4.0) + 0.90(0) \right] = -1.0 + 0.20 = \mathbf{-0.8000}$
+  - $V_1^{\text{GS}}(S_2) = \max(2.0, -0.8) = \mathbf{2.0000}$
+Result: $\mathbf{V}_1^{\text{GS}} = [4.0000, 2.0000]^\top$.
+
+**Sweep 2: Synchronous (Jacobi)**
+Uses $\mathbf{V}_1^{\text{Jac}} = [4.0, 1.0]^\top$:
+- $S_1$:
+  - $a_1$: $2.0 + 0.50 [0.6(4.0) + 0.4(1.0)] = 2.0 + 0.50(2.8) = \mathbf{3.4000}$
+  - $a_2$: $4.0 + 0.50 [0.2(4.0) + 0.8(1.0)] = 4.0 + 0.50(1.6) = \mathbf{4.8000}$
+  - $V_2^{\text{Jac}}(S_1) = \mathbf{4.8000}$
+- $S_2$:
+  - $a_1$: $1.0 + 0.50 [0.5(4.0) + 0.5(1.0)] = 1.0 + 0.50(2.5) = \mathbf{2.2500}$
+  - $a_2$: $-1.0 + 0.50 [0.1(4.0) + 0.9(1.0)] = -1.0 + 0.50(1.3) = \mathbf{-0.3500}$
+  - $V_2^{\text{Jac}}(S_2) = \mathbf{2.2500}$
+Result: $\mathbf{V}_2^{\text{Jac}} = [4.8000, 2.2500]^\top$.
+
+**Sweep 2: Asynchronous (Gauss-Seidel)**
+- $S_1$ uses current state values $\mathbf{V}_1^{\text{GS}} = [4.0, 2.0]^\top$:
+  - $a_1$: $2.0 + 0.50 [0.6(4.0) + 0.4(2.0)] = 2.0 + 0.50(3.2) = \mathbf{3.6000}$
+  - $a_2$: $4.0 + 0.50 [0.2(4.0) + 0.8(2.0)] = 4.0 + 0.50(2.4) = \mathbf{5.2000}$
+  - $V_2^{\text{GS}}(S_1) = \mathbf{5.2000} \quad (\text{stored immediately!})$
+- $S_2$ uses fresh $V(S_1) = 5.20$ and $V(S_2) = 2.0$:
+  - $a_1$: $1.0 + 0.50 [0.5(5.20) + 0.5(2.0)] = 1.0 + 0.50(2.6 + 1.0) = 1.0 + 1.80 = \mathbf{2.8000}$
+  - $a_2$: $-1.0 + 0.50 [0.1(5.20) + 0.9(2.0)] = -1.0 + 0.50(0.52 + 1.80) = -1.0 + 1.16 = \mathbf{0.1600}$
+  - $V_2^{\text{GS}}(S_2) = \max(2.80, 0.16) = \mathbf{2.8000}$
+Result: $\mathbf{V}_2^{\text{GS}} = [5.2000, 2.8000]^\top$.
+
+**Error Comparison against True $V^* = [5.9130, 3.3043]^\top$:**
+- **After Sweep 1:**
+  - Jacobi Error: $\|V_1^{\text{Jac}} - V^*\|_\infty = \max(|4.0 - 5.9130|, |1.0 - 3.3043|) = \max(1.9130, 2.3043) = \mathbf{2.3043}$
+  - Gauss-Seidel Error: $\|V_1^{\text{GS}} - V^*\|_\infty = \max(|4.0 - 5.9130|, |2.0 - 3.3043|) = \max(1.9130, 1.3043) = \mathbf{1.9130}$
+- **After Sweep 2:**
+  - Jacobi Error: $\|V_2^{\text{Jac}} - V^*\|_\infty = \max(|4.8 - 5.9130|, |2.25 - 3.3043|) = \max(1.1130, 1.0543) = \mathbf{1.1130}$
+  - Gauss-Seidel Error: $\|V_2^{\text{GS}} - V^*\|_\infty = \max(|5.2 - 5.9130|, |2.8 - 3.3043|) = \max(0.7130, 0.5043) = \mathbf{0.7130}$
+
+Gauss-Seidel reduced the error after 2 sweeps from $1.1130$ down to $0.7130$ (a $36\%$ faster error reduction), while requiring half the memory buffer size because it updates values directly in place!
+
+---
+
+### Illustration 4: Approximate Dynamic Programming Numerical Error Propagation Trace
+
+**Problem:**
+An RL engineer trains an actor-critic algorithm in a continuous control environment modeled with discount factor $\gamma = 0.90$.
+Due to neural network approximation limits, the policy evaluation step has a uniform infinity-norm error of $\epsilon = 0.05$, and the policy improvement step has an optimization error of $\delta = 0.02$.
+1. Compute the theoretical asymptotic upper bound on policy sub-optimality $\limsup_{k \to \infty} \|V^{\pi_k} - V^*\|_\infty$ using the Bertsekas-Tsitsiklis bound.
+2. If the engineer re-tunes the discount factor down to $\gamma = 0.60$ with the same errors $(\epsilon = 0.05, \delta = 0.02)$, calculate the new sub-optimality bound.
+3. Compute the error amplification factor $\frac{1}{(1 - \gamma)^2}$ for $\gamma \in \{0.50, 0.90, 0.99\}$ and explain why deep RL training becomes notoriously unstable at $\gamma = 0.99$.
+
+**Solution:**
+
+**Step 1: Asymptotic Sub-Optimality at $\gamma = 0.90$**
+Using the Bertsekas & Tsitsiklis theorem (Derivation 11.4.3):
+$$\text{Bound} = \frac{2 \gamma \epsilon + \delta}{(1 - \gamma)^2}$$
+Substitute $\gamma = 0.90$, $\epsilon = 0.05$, and $\delta = 0.02$:
+$$\text{Numerator} = 2(0.90)(0.05) + 0.02 = 0.090 + 0.020 = 0.1100$$
+$$\text{Denominator} = (1 - 0.90)^2 = (0.10)^2 = 0.0100$$
+$$\text{Bound}(\gamma = 0.90) = \frac{0.1100}{0.0100} = \mathbf{11.0000}$$
+Even though the per-step neural network error was only $0.05$, the final policy can be sub-optimal by up to $11.00$ in cumulative return!
+
+**Step 2: Asymptotic Sub-Optimality at $\gamma = 0.60$**
+Substitute $\gamma = 0.60$, $\epsilon = 0.05$, and $\delta = 0.02$:
+$$\text{Numerator} = 2(0.60)(0.05) + 0.02 = 0.060 + 0.020 = 0.0800$$
+$$\text{Denominator} = (1 - 0.60)^2 = (0.40)^2 = 0.1600$$
+$$\text{Bound}(\gamma = 0.60) = \frac{0.0800}{0.1600} = \mathbf{0.5000}$$
+Lowering $\gamma$ from $0.90$ to $0.60$ slashed the worst-case policy sub-optimality by a factor of $22 \times$ (from $11.00 \to 0.50$)!
+
+**Step 3: Quadratic Error Amplification Analysis**
+Evaluate the multiplier $\kappa(\gamma) = \frac{1}{(1 - \gamma)^2}$:
+- For $\gamma = 0.50$: $\kappa(0.50) = \frac{1}{(0.50)^2} = \frac{1}{0.25} = \mathbf{4}$
+- For $\gamma = 0.90$: $\kappa(0.90) = \frac{1}{(0.10)^2} = \frac{1}{0.01} = \mathbf{100}$
+- For $\gamma = 0.99$: $\kappa(0.99) = \frac{1}{(0.01)^2} = \frac{1}{0.0001} = \mathbf{10{,}000}$
+
+At $\gamma = 0.99$, any slight neural network fitting error $\epsilon = 0.01$ is magnified by up to **$10{,}000 \times$**! This mathematical reality explains why deep RL algorithms (e.g. DQN, DDPG, SAC) require target networks, gradient clipping, replay buffers, and entropy regularization to stabilize training when high discount factors are required.
 
 ---
 

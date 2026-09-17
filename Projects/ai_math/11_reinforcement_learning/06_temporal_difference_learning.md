@@ -100,6 +100,182 @@ This distinction explains why TD(0) consistently outperforms Monte Carlo on Mark
 
 ---
 
+### 2.5 First-Principles Mathematical Derivations
+
+#### Derivation 11.6.1: Telescoping Decomposition of Monte Carlo Error as a Cumulative Sum of TD Errors
+
+##### Problem Statement & Goal
+Let an episodic trajectory $\tau = (S_t, A_t, R_{t+1}, S_{t+1}, \dots, S_T)$ terminate at time step $T$ with absorbing terminal condition $V(S_T) \equiv 0$.
+Let the discounted return from step $t$ be $G_t \equiv \sum_{k=0}^{T - t - 1} \gamma^k R_{t+k+1}$, and let $\delta_{t+k} \equiv R_{t+k+1} + \gamma V(S_{t+k+1}) - V(S_{t+k})$ be the temporal-difference error at step $t+k$.
+We prove that the Monte Carlo error $G_t - V(S_t)$ decomposes identically into the discounted sum of future TD errors:
+$$G_t - V(S_t) = \sum_{k=0}^{T - t - 1} \gamma^k \delta_{t+k}$$
+
+##### Explicit Assumptions
+1. Episodic termination at step $T < \infty$.
+2. The value function evaluated at the terminal absorbing state satisfies $V(S_T) = 0$.
+3. Discount factor satisfies $\gamma \in [0, 1]$.
+
+##### Underlying Intuition
+The full Monte Carlo return aggregates future outcomes across the entire episode. By expressing each immediate reward $R_{t+k+1}$ as $\delta_{t+k} + V(S_{t+k}) - \gamma V(S_{t+k+1})$, all intermediate value terms $V(S_{t+1}), \dots, V(S_{T-1})$ telescope and cancel out pairwise. The TD error $\delta_t$ is therefore not an arbitrary heuristic approximation; it is the fundamental instantaneous derivative (rate of change) of the Monte Carlo return error!
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Expressing Immediate Reward in Terms of TD Error**
+From the definition of the 1-step TD error:
+$$\delta_j = R_{j+1} + \gamma V(S_{j+1}) - V(S_j)$$
+Rearranging for the immediate reward $R_{j+1}$:
+$$R_{j+1} = \delta_j + V(S_j) - \gamma V(S_{j+1})$$
+
+**Step 2: Substituting into the Discounted Return $G_t$**
+The return from time $t$ is:
+$$G_t = \sum_{k=0}^{T - t - 1} \gamma^k R_{t+k+1}$$
+Substitute $R_{t+k+1} = \delta_{t+k} + V(S_{t+k}) - \gamma V(S_{t+k+1})$:
+$$G_t = \sum_{k=0}^{T - t - 1} \gamma^k \left[ \delta_{t+k} + V(S_{t+k}) - \gamma V(S_{t+k+1}) \right]$$
+Splitting into two separate sums:
+$$G_t = \sum_{k=0}^{T - t - 1} \gamma^k \delta_{t+k} + \sum_{k=0}^{T - t - 1} \left[ \gamma^k V(S_{t+k}) - \gamma^{k+1} V(S_{t+k+1}) \right]$$
+
+**Step 3: Telescoping Expansion of the Second Sum**
+Let $H = T - t - 1$. Expand the second sum term-by-term:
+$$\begin{aligned}
+\sum_{k=0}^H \left[ \gamma^k V(S_{t+k}) - \gamma^{k+1} V(S_{t+k+1}) \right] &= \left[ V(S_t) - \gamma V(S_{t+1}) \right] \\
+&\quad + \left[ \gamma V(S_{t+1}) - \gamma^2 V(S_{t+2}) \right] \\
+&\quad + \left[ \gamma^2 V(S_{t+2}) - \gamma^3 V(S_{t+3}) \right] \\
+&\quad \dots \\
+&\quad + \left[ \gamma^H V(S_{t+H}) - \gamma^{H+1} V(S_{t+H+1}) \right]
+\end{aligned}$$
+Every intermediate term $\gamma^j V(S_{t+j})$ appears twice with opposite signs and cancels out completely.
+The sum collapses to the boundary terms:
+$$\sum_{k=0}^H \left[ \gamma^k V(S_{t+k}) - \gamma^{k+1} V(S_{t+k+1}) \right] = V(S_t) - \gamma^{H+1} V(S_{t+H+1})$$
+Since $t + H + 1 = t + (T - t - 1) + 1 = T$:
+$$= V(S_t) - \gamma^{T - t} V(S_T)$$
+
+**Step 4: Boundary Condition and Final Identity**
+Because $S_T$ is a terminal state, $V(S_T) = 0$. Hence:
+$$G_t = \sum_{k=0}^{T - t - 1} \gamma^k \delta_{t+k} + V(S_t) - 0$$
+Subtracting $V(S_t)$ from both sides yields the exact identity:
+$$G_t - V(S_t) = \sum_{k=0}^{T - t - 1} \gamma^k \delta_{t+k} \quad \blacksquare$$
+
+---
+
+#### Derivation 11.6.2: Bias and Variance Decomposition: 1-Step Bootstrapped TD Target vs. Full Monte Carlo Return
+
+##### Problem Statement & Goal
+Let $S_t = s$ be the state at step $t$. Define the target estimators:
+1. **1-Step TD Target:** $G_{t:t+1} \equiv R_{t+1} + \gamma V(S_{t+1})$
+2. **Full Monte Carlo Target:** $G_t \equiv \sum_{k=0}^\infty \gamma^k R_{t+k+1}$
+We prove:
+1. Conditional Bias: $\operatorname{Bias}(G_t \mid S_t = s) = 0$, whereas:
+   $$\operatorname{Bias}(G_{t:t+1} \mid S_t = s) = \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left[ V(s') - V^\pi(s') \right]$$
+2. Conditional Variance: By Eve's Law of Total Variance:
+   $$\operatorname{Var}_\pi(G_t \mid S_t = s) = \operatorname{Var}_\pi\left( R_{t+1} + \gamma V^\pi(S_{t+1}) \;\middle|\; S_t = s \right) + \gamma^2 \sum_{s'} \mathcal{P}^\pi(s' \mid s) \operatorname{Var}_\pi(G_{t+1} \mid S_{t+1} = s')$$
+   establishing that the Monte Carlo variance is strictly larger than the 1-step TD target variance whenever downstream transitions or rewards are stochastic.
+
+##### Explicit Assumptions
+1. Policy $\pi$ and environment dynamics $\mathcal{P}$ satisfy standard Markovian conditions.
+2. Value estimates $V$ and true values $V^\pi$ are bounded.
+
+##### Underlying Intuition
+Monte Carlo waits for all stochastic rolls of the dice from now until the end of time; each roll adds independent variance to the cumulative sum. TD(0) takes only the single immediate roll ($R_{t+1}$ and transition $S_{t+1}$) and replaces the remaining infinite sequence of future rolls with its deterministic expected value table $V(S_{t+1})$. This eliminates all downstream variance, paying a small bias penalty if $V$ is not yet converged.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Conditional Expectation and Bias of TD(0) Target**
+Take the conditional expectation of $G_{t:t+1}$ given $S_t = s$:
+$$\begin{aligned}
+\mathbb{E}_\pi\left[ G_{t:t+1} \mid S_t = s \right] &= \mathbb{E}_\pi \left[ R_{t+1} + \gamma V(S_{t+1}) \mid S_t = s \right] \\
+&= \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) V(s')
+\end{aligned}$$
+Recall the true Bellman expectation equation for $V^\pi(s)$:
+$$V^\pi(s) = \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) V^\pi(s')$$
+Subtracting the true value gives the exact conditional bias:
+$$\begin{aligned}
+\operatorname{Bias}(G_{t:t+1} \mid S_t = s) &\equiv \mathbb{E}_\pi\left[ G_{t:t+1} \mid S_t = s \right] - V^\pi(s) \\
+&= \left[ \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) V(s') \right] - \left[ \mathcal{R}^\pi(s) + \gamma \sum_{s'} \mathcal{P}^\pi(s' \mid s) V^\pi(s') \right] \\
+&= \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}^\pi(s' \mid s) \left[ V(s') - V^\pi(s') \right]
+\end{aligned}$$
+If $V = V^\pi$, the bias is zero. If $V \ne V^\pi$, the target is biased by the discounted weighted average error in successor states.
+
+**Step 2: Conditional Variance via the Law of Total Variance**
+Write the Monte Carlo return recursively:
+$$G_t = R_{t+1} + \gamma G_{t+1}$$
+By Eve's Law (Law of Total Variance), for any random variables $X$ and $Y$:
+$$\operatorname{Var}(X) = \mathbb{E}[\operatorname{Var}(X \mid Y)] + \operatorname{Var}(\mathbb{E}[X \mid Y])$$
+Let $X = G_t$ and condition on the successor state-reward pair $Y = (R_{t+1}, S_{t+1})$:
+$$\operatorname{Var}_\pi(G_t \mid S_t = s) = \mathbb{E}\left[ \operatorname{Var}_\pi(G_t \mid R_{t+1}, S_{t+1}) \mid S_t = s \right] + \operatorname{Var}\left( \mathbb{E}_\pi[G_t \mid R_{t+1}, S_{t+1}] \mid S_t = s \right)$$
+
+Evaluate the first term:
+$$\operatorname{Var}_\pi(G_t \mid R_{t+1}, S_{t+1}) = \operatorname{Var}_\pi(R_{t+1} + \gamma G_{t+1} \mid R_{t+1}, S_{t+1}) = \gamma^2 \operatorname{Var}_\pi(G_{t+1} \mid S_{t+1})$$
+Taking expectation over $S_{t+1} \sim \mathcal{P}^\pi(\cdot \mid s)$:
+$$\mathbb{E}\left[ \operatorname{Var}_\pi(G_t \mid R_{t+1}, S_{t+1}) \mid S_t = s \right] = \gamma^2 \sum_{s'} \mathcal{P}^\pi(s' \mid s) \operatorname{Var}_\pi(G_{t+1} \mid S_{t+1} = s')$$
+
+Evaluate the second term:
+$$\mathbb{E}_\pi[G_t \mid R_{t+1}, S_{t+1}] = R_{t+1} + \gamma \mathbb{E}_\pi[G_{t+1} \mid S_{t+1}] = R_{t+1} + \gamma V^\pi(S_{t+1})$$
+Hence:
+$$\operatorname{Var}\left( \mathbb{E}_\pi[G_t \mid R_{t+1}, S_{t+1}] \mid S_t = s \right) = \operatorname{Var}_\pi\left( R_{t+1} + \gamma V^\pi(S_{t+1}) \mid S_t = s \right)$$
+
+**Step 3: Variance Comparison**
+Combining both terms:
+$$\operatorname{Var}_\pi(G_t \mid S_t = s) = \operatorname{Var}_\pi\left( R_{t+1} + \gamma V^\pi(S_{t+1}) \mid S_t = s \right) + \gamma^2 \sum_{s'} \mathcal{P}^\pi(s' \mid s) \operatorname{Var}_\pi(G_{t+1} \mid S_{t+1} = s')$$
+Notice that the second term $\gamma^2 \sum_{s'} \mathcal{P}^\pi(s' \mid s) \operatorname{Var}_\pi(G_{t+1} \mid S_{t+1} = s') \ge 0$ is strictly positive whenever downstream transitions or rewards possess stochastic variance.
+The 1-step TD target with $V = V^\pi$ has variance equal to purely the first term:
+$$\operatorname{Var}_\pi(G_{t:t+1} \mid S_t = s) = \operatorname{Var}_\pi\left( R_{t+1} + \gamma V^\pi(S_{t+1}) \mid S_t = s \right)$$
+Therefore:
+$$\operatorname{Var}_\pi(G_t \mid S_t = s) \ge \operatorname{Var}_\pi(G_{t:t+1} \mid S_t = s)$$
+Bootstrapping prunes the entire cumulative variance tree of the future! $\blacksquare$
+
+---
+
+#### Derivation 11.6.3: Closed-Form Maximum Likelihood Certainty-Equivalence Batch TD(0) Solution
+
+##### Problem Statement & Goal
+Let $\mathcal{D} = \{ (s^{(k)}, r^{(k)}, s'^{(k)}) \}_{k=1}^K$ be a finite batch of observed transition tuples collected under policy $\pi$.
+Define the empirical visit counts and transition counts:
+$$N(s) \equiv \sum_{k=1}^K \mathbb{I}(s^{(k)} = s), \quad N(s, s') \equiv \sum_{k=1}^K \mathbb{I}(s^{(k)} = s, \, s'^{(k)} = s')$$
+We prove that when the batch TD(0) algorithm updates value estimates repeatedly with infinitesimal learning rate $\alpha \to 0$ until convergence, the resulting value vector converges to the exact Maximum Likelihood Certainty-Equivalence solution:
+$$\mathbf{V}_{\text{batch TD}} = (\mathbf{I} - \gamma \hat{\mathbf{P}})^{-1} \hat{\mathbf{r}}$$
+where $\hat{P}_{ij} = \frac{N(s_i, s_j)}{N(s_i)}$ and $\hat{r}_i = \frac{1}{N(s_i)} \sum_{k: s^{(k)}=s_i} r^{(k)}$.
+
+##### Explicit Assumptions
+1. Every state $s \in \mathcal{S}$ has been visited at least once: $N(s) \ge 1$.
+2. Discount factor satisfies $\gamma \in [0, 1)$, ensuring $(\mathbf{I} - \gamma \hat{\mathbf{P}})$ is strictly invertible (Derivation 11.2.1).
+3. The empirical transition matrix $\hat{\mathbf{P}}$ is row-stochastic on observed transitions.
+
+##### Underlying Intuition
+In batch training, the net parameter update across the entire dataset is the sum of all individual TD updates. At convergence (fixed point), the net gradient must vanish identically. Setting the sum of batch TD errors to zero for each state forces the value of that state to satisfy the empirical Bellman expectation equation for the maximum likelihood model $(\hat{\mathbf{P}}, \hat{\mathbf{r}})$.
+
+##### End-to-End Mathematical Derivation
+
+**Step 1: Batch TD Update Equation**
+Consider performing TD(0) in batch mode: in each epoch, the value vector $\mathbf{V}$ is updated by the sum of all sample TD errors across dataset $\mathcal{D}$:
+$$\Delta V(s) = \alpha \sum_{k: s^{(k)} = s} \left[ r^{(k)} + \gamma V(s'^{(k)}) - V(s) \right]$$
+
+**Step 2: Equilibrium Condition (Fixed Point of Batch Updates)**
+The batch process reaches convergence when the total batch increment vanishes for every state:
+$$\Delta V(s) = 0 \iff \sum_{k: s^{(k)} = s} \left[ r^{(k)} + \gamma V(s'^{(k)}) - V(s) \right] = 0$$
+Expand the summation over all $N(s)$ transitions originating from state $s$:
+$$\sum_{k: s^{(k)} = s} r^{(k)} + \gamma \sum_{k: s^{(k)} = s} V(s'^{(k)}) - \sum_{k: s^{(k)} = s} V(s) = 0$$
+Since $V(s)$ is constant with respect to the index $k$:
+$$\sum_{k: s^{(k)} = s} V(s) = N(s) V(s)$$
+Substituting:
+$$\sum_{k: s^{(k)} = s} r^{(k)} + \gamma \sum_{s' \in \mathcal{S}} N(s, s') V(s') - N(s) V(s) = 0$$
+
+**Step 3: Normalizing by State Visit Count $N(s)$**
+Divide both sides by $N(s) > 0$:
+$$\frac{1}{N(s)} \sum_{k: s^{(k)} = s} r^{(k)} + \gamma \sum_{s' \in \mathcal{S}} \frac{N(s, s')}{N(s)} V(s') - V(s) = 0$$
+Recognizing the maximum-likelihood empirical reward and empirical transition probabilities:
+$$\hat{r}(s) \equiv \frac{1}{N(s)} \sum_{k: s^{(k)} = s} r^{(k)}, \quad \hat{\mathcal{P}}(s' \mid s) \equiv \frac{N(s, s')}{N(s)}$$
+The equilibrium condition becomes:
+$$V(s) = \hat{r}(s) + \gamma \sum_{s' \in \mathcal{S}} \hat{\mathcal{P}}(s' \mid s) V(s'), \quad \forall s \in \mathcal{S}$$
+
+**Step 4: Vector Formulation and Matrix Inversion**
+Writing this system in matrix notation:
+$$\mathbf{V} = \hat{\mathbf{r}} + \gamma \hat{\mathbf{P}} \mathbf{V} \iff (\mathbf{I} - \gamma \hat{\mathbf{P}}) \mathbf{V} = \hat{\mathbf{r}}$$
+Since $\hat{\mathbf{P}}$ is row-stochastic ($\sum_{s'} \hat{\mathcal{P}}(s' \mid s) = \sum_{s'} \frac{N(s, s')}{N(s)} = \frac{N(s)}{N(s)} = 1$) and $\gamma < 1$, the matrix $(\mathbf{I} - \gamma \hat{\mathbf{P}})$ is strictly non-singular (Derivation 11.2.1).
+Inverting the matrix yields:
+$$\mathbf{V}_{\text{batch TD}} = (\mathbf{I} - \gamma \hat{\mathbf{P}})^{-1} \hat{\mathbf{r}} \quad \blacksquare$$
+
+---
+
 ## 3. Geometric & Physical Interpretation
 
 ### 3.1 Projection in State-Value Function Space
@@ -287,6 +463,135 @@ Assume $\gamma = 1.0$. What are the values $V(A)$ and $V(B)$ under:
 
 **Conclusion:** 
 TD(0) correctly recognizes that entering $A$ guarantees transition to $B$, which has an expected payout of $0.75$. Batch MC overfits to the single observed sample return, ignoring the transition graph structure. $\blacksquare$
+
+---
+
+### Illustration 2: 5-State Random Walk Analytical Solution vs. Batch TD(0) vs. Batch Monte Carlo
+
+**Problem:**
+Consider Sutton's classic 5-State Random Walk task with non-terminal states $\mathcal{S} = \{A, B, C, D, E\}$ arranged linearly:
+$$\text{Left Terminal (Reward 0)} \xleftarrow{0.5} A \xleftrightarrow{0.5} B \xleftrightarrow{0.5} C \xleftrightarrow{0.5} D \xleftrightarrow{0.5} E \xrightarrow{0.5} \text{Right Terminal (Reward 1)}$$
+All internal transitions yield reward $0.00$. From each state, the agent transitions left with probability $0.50$ and right with probability $0.50$. Discount factor is $\gamma = 1.00$.
+1. Set up and solve the system of Bellman expectation equations to find the exact true analytical values $\mathbf{V}^* = [V(A), V(B), V(C), V(D), V(E)]^\top$.
+2. Explain why Batch TD(0) converges to this exact linear gradient $[1/6, 2/6, 3/6, 4/6, 5/6]^\top$ on finite batches while Batch Monte Carlo produces jagged sample-average errors.
+
+**Solution:**
+
+**Step 1: Set up the Linear Bellman Expectation System**
+For an undiscounted random walk with equal transition probabilities, each state's value is the average of its neighbors:
+- State $A$: $V(A) = 0.5(0) + 0.5 V(B) = 0.5 V(B)$
+- State $B$: $V(B) = 0.5 V(A) + 0.5 V(C)$
+- State $C$: $V(C) = 0.5 V(B) + 0.5 V(D)$
+- State $D$: $V(D) = 0.5 V(C) + 0.5 V(E)$
+- State $E$: $V(E) = 0.5 V(D) + 0.5(1) = 0.5 V(D) + 0.50$
+
+Notice that the second differences vanish:
+$$V(s) - V(s_{\text{left}}) = V(s_{\text{right}}) - V(s) = \Delta$$
+This implies that the value function must be a linear arithmetic progression between the boundary conditions $V(\text{Left}) = 0$ and $V(\text{Right}) = 1$.
+There are 6 total transition steps between the left and right terminal states.
+Hence, the step difference is:
+$$\Delta = \frac{1.0 - 0.0}{6} = \mathbf{\frac{1}{6}}$$
+
+**Step 2: Exact Value Vector**
+$$\begin{aligned}
+V(A) &= 1 \times \frac{1}{6} = \mathbf{\frac{1}{6} \approx 0.1667} \\
+V(B) &= 2 \times \frac{1}{6} = \mathbf{\frac{2}{6} = \frac{1}{3} \approx 0.3333} \\
+V(C) &= 3 \times \frac{1}{6} = \mathbf{\frac{3}{6} = \frac{1}{2} = 0.5000} \\
+V(D) &= 4 \times \frac{1}{6} = \mathbf{\frac{4}{6} = \frac{2}{3} \approx 0.6667} \\
+V(E) &= 5 \times \frac{1}{6} = \mathbf{\frac{5}{6} \approx 0.8333}
+\end{aligned}$$
+
+**Step 3: Batch TD(0) vs. Batch Monte Carlo Analysis**
+- **Batch TD(0):** Forms the empirical transition counts $\hat{\mathcal{P}}(s' \mid s)$ from the training episodes. As established in Derivation 11.6.3, Batch TD solves the certainty-equivalence system $(\mathbf{I} - \hat{\mathbf{P}})^{-1} \hat{\mathbf{r}}$. Because the observed state-to-state transitions closely approximate local symmetry $\hat{P}(s-1 \mid s) \approx \hat{P}(s+1 \mid s) \approx 0.5$, Batch TD reconstructs the correct smooth linear slope even for states visited few times.
+- **Batch Monte Carlo:** Evaluates each state by the raw proportion of times episodes passing through that state happened to terminate at the right end. If an episode starting at $B$ takes an unusually lucky direct run to the right, MC assigns return $1.0$ to $B$, producing a jagged, high-variance estimate that violates the neighbor-averaging property of Markov chains.
+
+---
+
+### Illustration 3: Exact Step-by-Step Hand Verification of the Telescoping Identity $G_0 - V(S_0) = \sum_{k=0}^{T-1} \gamma^k \delta_k$
+
+**Problem:**
+Consider a 4-step trajectory terminating at $T = 4$:
+$$\tau = \left( S_0, R_1 = 2.0, \quad S_1, R_2 = 1.0, \quad S_2, R_3 = 4.0, \quad S_3, R_4 = 10.0, \quad \text{Terminal} \right)$$
+Discount factor: $\gamma = 0.50$.
+Let the agent's current value estimates be:
+$$V(S_0) = 3.0000, \quad V(S_1) = 4.0000, \quad V(S_2) = 8.0000, \quad V(S_3) = 12.0000, \quad V(\text{Terminal}) = 0.0000$$
+
+1. Calculate the exact discounted Monte Carlo return $G_0$ and compute the error $G_0 - V(S_0)$.
+2. Calculate all four individual 1-step TD errors $\delta_0, \delta_1, \delta_2, \delta_3$.
+3. Compute the discounted sum $\sum_{k=0}^3 \gamma^k \delta_k$ and verify the exact numerical identity with $G_0 - V(S_0)$.
+
+**Solution:**
+
+**Step 1: Compute Monte Carlo Return $G_0$ and Direct Error**
+$$G_0 = R_1 + \gamma R_2 + \gamma^2 R_3 + \gamma^3 R_4$$
+With $\gamma = 0.50$:
+$$G_0 = 2.0 + 0.50(1.0) + (0.50)^2(4.0) + (0.50)^3(10.0) = 2.0 + 0.50 + 0.25(4.0) + 0.125(10.0) = 2.0 + 0.50 + 1.00 + 1.25 = \mathbf{4.7500}$$
+Direct Monte Carlo prediction error:
+$$G_0 - V(S_0) = 4.7500 - 3.0000 = \mathbf{+1.7500}$$
+
+**Step 2: Compute Individual 1-Step TD Errors $\delta_k = R_{k+1} + \gamma V(S_{k+1}) - V(S_k)$**
+- **At Step $k = 0$ ($S_0 \to S_1$):**
+  $$\delta_0 = R_1 + \gamma V(S_1) - V(S_0) = 2.0 + 0.50(4.0) - 3.0 = 2.0 + 2.0 - 3.0 = \mathbf{+1.0000}$$
+- **At Step $k = 1$ ($S_1 \to S_2$):**
+  $$\delta_1 = R_2 + \gamma V(S_2) - V(S_1) = 1.0 + 0.50(8.0) - 4.0 = 1.0 + 4.0 - 4.0 = \mathbf{+1.0000}$$
+- **At Step $k = 2$ ($S_2 \to S_3$):**
+  $$\delta_2 = R_3 + \gamma V(S_3) - V(S_2) = 4.0 + 0.50(12.0) - 8.0 = 4.0 + 6.0 - 8.0 = \mathbf{+2.0000}$$
+- **At Step $k = 3$ ($S_3 \to \text{Terminal}$):**
+  $$\delta_3 = R_4 + \gamma V(\text{Terminal}) - V(S_3) = 10.0 + 0.50(0.0) - 12.0 = 10.0 - 12.0 = \mathbf{-2.0000}$$
+
+**Step 3: Compute Discounted Sum of TD Errors**
+$$\sum_{k=0}^3 \gamma^k \delta_k = \delta_0 + \gamma \delta_1 + \gamma^2 \delta_2 + \gamma^3 \delta_3$$
+Substitute numerical values:
+$$\begin{aligned}
+\sum_{k=0}^3 \gamma^k \delta_k &= 1.0000 + 0.50(1.0000) + 0.25(2.0000) + 0.125(-2.0000) \\
+&= 1.0000 + 0.5000 + 0.5000 - 0.2500 \\
+&= \mathbf{+1.7500}
+\end{aligned}$$
+
+**Verification:**
+$$G_0 - V(S_0) = 1.7500 = \sum_{k=0}^3 \gamma^k \delta_k$$
+The identity proven in Derivation 11.6.1 holds to exact machine precision!
+
+---
+
+### Illustration 4: Quantitative Variance Reduction: 1-Step Bootstrapped TD Target vs. Full Monte Carlo Return
+
+**Problem:**
+Consider a 2-step stochastic environment $S_0 \xrightarrow{R_1} S_1 \xrightarrow{R_2} \text{Terminal}$ with $\gamma = 1.00$.
+The reward distributions are:
+- At $S_0$: $R_1 \in \{0.0, 2.0\}$ with equal probability $0.50$:
+  $$\mathbb{E}[R_1] = 1.0, \quad \operatorname{Var}(R_1) = 0.5(0 - 1)^2 + 0.5(2 - 1)^2 = \mathbf{1.0000}$$
+- At $S_1$: $R_2 \in \{0.0, 10.0\}$ with equal probability $0.50$:
+  $$\mathbb{E}[R_2] = 5.0, \quad \operatorname{Var}(R_2) = 0.5(0 - 5)^2 + 0.5(10 - 5)^2 = 0.5(25) + 0.5(25) = \mathbf{25.0000}$$
+Assume $R_1$ and $R_2$ are conditionally independent, and the value function at $S_1$ has converged to its true expectation: $V(S_1) = V^\pi(S_1) = 5.0000$.
+
+1. Compute the expectation and variance of the full Monte Carlo return $G_0 = R_1 + R_2$.
+2. Compute the expectation and variance of the 1-step TD target $G_{0:1} = R_1 + \gamma V(S_1)$.
+3. Compute the Variance Reduction Factor $\frac{\operatorname{Var}(G_0)}{\operatorname{Var}(G_{0:1})}$ and discuss the practical implications for deep RL.
+
+**Solution:**
+
+**Step 1: Full Monte Carlo Target Analysis**
+The full return is $G_0 = R_1 + R_2$.
+- Expected Return:
+  $$\mathbb{E}[G_0] = \mathbb{E}[R_1] + \mathbb{E}[R_2] = 1.0 + 5.0 = \mathbf{6.0000}$$
+- Variance of Return:
+  Since $R_1$ and $R_2$ are independent:
+  $$\operatorname{Var}(G_0) = \operatorname{Var}(R_1) + \operatorname{Var}(R_2) = 1.0000 + 25.0000 = \mathbf{26.0000}$$
+
+**Step 2: 1-Step Bootstrapped TD Target Analysis**
+The TD target is $G_{0:1} = R_1 + \gamma V(S_1) = R_1 + 1.0(5.0) = R_1 + 5.0$.
+- Expected Target:
+  $$\mathbb{E}[G_{0:1}] = \mathbb{E}[R_1 + 5.0] = \mathbb{E}[R_1] + 5.0 = 1.0 + 5.0 = \mathbf{6.0000}$$
+  Notice that $\mathbb{E}[G_{0:1}] = \mathbb{E}[G_0] = 6.0000$, confirming zero bias because $V(S_1) = V^\pi(S_1)$.
+- Variance of Target:
+  Since $5.0$ is a deterministic scalar constant:
+  $$\operatorname{Var}(G_{0:1}) = \operatorname{Var}(R_1 + 5.0) = \operatorname{Var}(R_1) = \mathbf{1.0000}$$
+
+**Step 3: Variance Reduction Factor**
+$$\text{Variance Reduction Ratio} = \frac{\operatorname{Var}(G_0)}{\operatorname{Var}(G_{0:1})} = \frac{26.0000}{1.0000} = \mathbf{26.0}$$
+Bootstrapping reduced target variance by **$26 \times$** ($96.15\%$ variance reduction)!
+In deep reinforcement learning, high-variance targets require millions of environment interactions to average out the stochasticity. By substituting the learned estimate $V(S_{t+1})$ for downstream random variables, TD learning drastically accelerates sample efficiency.
 
 ---
 

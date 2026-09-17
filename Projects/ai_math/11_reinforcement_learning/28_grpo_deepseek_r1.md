@@ -512,447 +512,748 @@ Imagine a team of 4 students working together to solve an unsolved Olympiad geom
 
 ## 5. Prof. Tom Yeh "AI by Hand" Visual Grids
 
-Let us trace a complete numerical calculation of **GRPO Group Statistics, Advantages, and Token PPO Gradients** by hand.
+### 5.1 Walkthrough 1: Full GRPO Group Advantage Calculation & Tensors
 
----
+In this grid, we manually calculate the group relative advantage for a prompt generating $G=6$ candidate reasoning trajectories.
+This step is the core mathematical engine of GRPO that entirely replaces the Critic Network $V_\phi$ used in standard PPO.
 
-### 5.1 System & Group Parameters
-- **Prompt $q$:** *"Evaluate $2 + 3 \times 4$."*
-- **Ground Truth Answer:** $14$
-- **Group Size:** $G = 4$ candidate completions
-- **Hyperparameters:**
-  - PPO clipping threshold: $\epsilon = 0.2000$
-  - KL penalty coefficient: $\beta = 0.0500$
-- **Candidate Outputs & Evaluated Rewards:**
-  - $o_1$: Correct reasoning & answer ($14$), valid format $\implies r_1 = \mathbf{1.0000}$
-  - $o_2$: Correct reasoning & answer ($14$), valid format $\implies r_2 = \mathbf{1.0000}$
-  - $o_3$: Arithmetic error (answer $20$), valid format $\implies r_3 = \mathbf{0.1000}$ (format only)
-  - $o_4$: Wrong answer, broken XML format $\implies r_4 = \mathbf{0.0000}$
+#### 5.1.1 Problem Setup and Trajectory Initialization
+**Prompt:** "Calculate the exact integral of $x^2$ from 0 to 1, and present the final answer in fraction form."
+The LLM (Actor) generates $G=6$ parallel reasoning trajectories. The deterministic verifier assigns scalar rewards based on strict formatting and correct mathematical answers.
 
----
+**Trajectory Ledger and Raw Outputs:**
+- **$o_1$**: `<think> The integral of x^2 is x^3/3. Evaluated from 0 to 1, it yields 1/3. </think> <answer> 1/3 </answer>`
+  - Check 1: Has valid `<think>` and `<answer>`? Yes (+0.10)
+  - Check 2: Extracted answer `1/3` matches ground truth `1/3`? Yes (+1.00)
+  - Total Reward $r_1 = 1.10$
 
-### 5.2 What Refers to What: Legend Protocol Table
+- **$o_2$**: `<think> Integrating x^2 gives 1/3 x^3. The limits are 0 and 1, so the result is 1/3. </think> <answer> 1/3 </answer>`
+  - Check 1: Has valid XML tags? Yes (+0.10)
+  - Check 2: Matches ground truth `1/3`? Yes (+1.00)
+  - Total Reward $r_2 = 1.10$
 
-| Mathematical Symbol | Computational Variable | Concrete Role in Hand Trace |
-| :--- | :--- | :--- |
-| $r_i$ | `rewards[i]` | Deterministic scalar reward assigned to candidate completion $o_i$ |
-| $\mu_{\mathcal{G}}$ | `group_mean` | Empirical mean reward across the group of $G = 4$ completions |
-| $\sigma_{\mathcal{G}}$ | `group_std` | Empirical standard deviation across group completions |
-| $\hat{A}_i$ | `group_adv[i]` | Standardized advantage: $(r_i - \mu_{\mathcal{G}}) / \sigma_{\mathcal{G}}$ |
-| $\rho_{i, t}$ | `prob_ratio` | Importance sampling token probability ratio: $\pi_\theta / \pi_{\text{old}}$ |
-| $D_{\text{KL}}$ | `kl_term` | Schulman unbiased non-negative KL divergence: $u - \ln u - 1$ |
+- **$o_3$**: `<think> The integral of x^2 is 2x. Evaluated at 1, it is 2. </think> <answer> 2 </answer>`
+  - Check 1: Has valid XML tags? Yes (+0.10)
+  - Check 2: Matches ground truth `1/3`? No (+0.00)
+  - Total Reward $r_3 = 0.10$
 
----
+- **$o_4$**: `The answer is 5.`
+  - Check 1: Has valid XML tags? No (+0.00)
+  - Check 2: Matches ground truth `1/3`? No (+0.00)
+  - Total Reward $r_4 = 0.00$
 
-### 5.3 Step-by-Step Hand Calculations: Group Advantages
+- **$o_5$**: `1/4`
+  - Check 1: Has valid XML tags? No (+0.00)
+  - Check 2: Matches ground truth `1/3`? No (+0.00)
+  - Total Reward $r_5 = 0.00$
 
-#### Step 1: Compute Group Mean $\mu_{\mathcal{G}}$
-$$\mu_{\mathcal{G}} = \frac{r_1 + r_2 + r_3 + r_4}{4} = \frac{1.0000 + 1.0000 + 0.1000 + 0.0000}{4} = \frac{2.1000}{4} = \mathbf{0.525000}$$
+- **$o_6$**: `<think> Integral of x^2 is x^3/3, which evaluated from 0 to 1 is 1/3. </think> <answer> 0.333 </answer>`
+  - Check 1: Has valid XML tags? Yes (+0.10)
+  - Check 2: Matches ground truth `1/3`? No (asked for fraction form) (+0.00)
+  - Total Reward $r_6 = 0.10$
 
-#### Step 2: Compute Group Variance & Standard Deviation $\sigma_{\mathcal{G}}$
-1. Squared deviations from mean:
-   $$(r_1 - \mu)^2 = (1.0000 - 0.5250)^2 = (0.4750)^2 = \mathbf{0.225625}$$
-   $$(r_2 - \mu)^2 = (1.0000 - 0.5250)^2 = (0.4750)^2 = \mathbf{0.225625}$$
-   $$(r_3 - \mu)^2 = (0.1000 - 0.5250)^2 = (-0.4250)^2 = \mathbf{0.180625}$$
-   $$(r_4 - \mu)^2 = (0.0000 - 0.5250)^2 = (-0.5250)^2 = \mathbf{0.275625}$$
-2. Sum of squared deviations:
-   $$\sum = 0.225625 + 0.225625 + 0.180625 + 0.275625 = \mathbf{0.907500}$$
-3. Variance:
-   $$\sigma^2 = \frac{0.907500}{4} = \mathbf{0.226875}$$
-4. Standard Deviation:
-   $$\sigma_{\mathcal{G}} = \sqrt{0.226875} \approx \mathbf{0.47631397}$$
+```text
+=================================================================================================
+                            STEP 1: REWARD VECTOR INITIALIZATION
+=================================================================================================
+Trajectory Index (i)   |  o1       o2       o3       o4       o5       o6
+Raw Reward (r_i)       |  1.100    1.100    0.100    0.000    0.000    0.100
+=================================================================================================
+```
 
-#### Step 3: Compute Standardized Group Advantages $\hat{A}_i$
-$$\hat{A}_1 = \frac{1.0000 - 0.5250}{0.47631397} = \frac{+0.4750}{0.47631397} \approx \mathbf{+0.997241}$$
-$$\hat{A}_2 = \frac{1.0000 - 0.5250}{0.47631397} = \frac{+0.4750}{0.47631397} \approx \mathbf{+0.997241}$$
-$$\hat{A}_3 = \frac{0.1000 - 0.5250}{0.47631397} = \frac{-0.4250}{0.47631397} \approx \mathbf{-0.892269}$$
-$$\hat{A}_4 = \frac{0.0000 - 0.5250}{0.47631397} = \frac{-0.5250}{0.47631397} \approx \mathbf{-1.102214}$$
+#### 5.1.2 Computing the Group Statistical Baseline
+To calculate the relative advantage, we must first compute the empirical baseline from the group itself. This dynamically normalizes task difficulty.
 
-#### Verification of Zero-Sum Property:
-$$\sum_{i=1}^4 \hat{A}_i = +0.997241 + 0.997241 - 0.892269 - 1.102214 = \mathbf{0.000000} \quad \checkmark$$
+- **Sum of Rewards:** $1.100 + 1.100 + 0.100 + 0.000 + 0.000 + 0.100 = 2.400$
+- **Number of Samples ($G$):** $6$
+- **Empirical Group Mean ($\mu_{\mathcal{G}}$):**
+  $$ \mu_{\mathcal{G}} = \frac{2.400}{6} = 0.4000 $$
 
----
+```text
+=================================================================================================
+                            STEP 2: DEVIATION FROM GROUP MEAN
+=================================================================================================
+Group Mean (mu) = 0.4000
+Trajectory Index (i)   |  o1       o2       o3       o4       o5       o6
+Raw Reward (r_i)       |  1.100    1.100    0.100    0.000    0.000    0.100
+Deviation (r_i - mu)   | +0.700   +0.700   -0.300   -0.400   -0.400   -0.300
+=================================================================================================
+```
 
-### 5.4 Step-by-Step Hand Calculations: Token PPO & KL on Completion $o_1$
+#### 5.1.3 Computing the Regularized Standard Deviation
+We now compute the variance and standard deviation. We include a tiny numerical stabilizer $\epsilon_{std} = 10^{-8}$ to prevent division by zero in case all trajectories return the exact same reward.
 
-Consider a specific token in completion $o_1$:
-- Probability under new policy: $\pi_\theta = 0.5500$
-- Probability under old policy: $\pi_{\theta_{\text{old}}} = 0.5000$
-- Probability under reference policy: $\pi_{\text{ref}} = 0.5000$
-- Group Advantage: $\hat{A}_1 = +0.997241$
+- **Squared Deviations $(r_i - \mu_{\mathcal{G}})^2$:**
+  - $o_1$: $(+0.700)^2 = 0.4900$
+  - $o_2$: $(+0.700)^2 = 0.4900$
+  - $o_3$: $(-0.300)^2 = 0.0900$
+  - $o_4$: $(-0.400)^2 = 0.1600$
+  - $o_5$: $(-0.400)^2 = 0.1600$
+  - $o_6$: $(-0.300)^2 = 0.0900$
+- **Sum of Squared Deviations:**
+  - $0.4900 + 0.4900 + 0.0900 + 0.1600 + 0.1600 + 0.0900 = 1.4800$
+- **Variance ($\sigma^2$):**
+  - $\sigma^2 = \frac{1.4800}{6} + 10^{-8} = 0.246666... \approx 0.2467$
+- **Standard Deviation ($\sigma_{\mathcal{G}}$):**
+  - $\sigma_{\mathcal{G}} = \sqrt{0.246666...} \approx \mathbf{0.496655...}$
 
-#### 1. Probability Ratio:
-$$\rho = \frac{\pi_\theta}{\pi_{\theta_{\text{old}}}} = \frac{0.5500}{0.5000} = \mathbf{1.100000}$$
+#### 5.1.4 The Advantage Standardization Ledger
+Standardize the rewards to yield zero-mean, unit-variance advantage estimates $\hat{A}_i = \frac{r_i - \mu_{\mathcal{G}}}{\sigma_{\mathcal{G}}}$.
 
-#### 2. PPO Clipped Surrogate:
-With $\epsilon = 0.2000$, the clipping interval is $[1 - \epsilon, 1 + \epsilon] = [0.80, 1.20]$.
-- Since $\rho = 1.10 \in [0.80, 1.20]$, the ratio is unclipped!
-$$\text{Surrogate} = \rho \cdot \hat{A}_1 = 1.100000 \times 0.997241 = \mathbf{1.096965}$$
+- $\hat{A}_1 = \frac{0.700}{0.496655} = \mathbf{1.4094}$
+- $\hat{A}_2 = \frac{0.700}{0.496655} = \mathbf{1.4094}$
+- $\hat{A}_3 = \frac{-0.300}{0.496655} = \mathbf{-0.6040}$
+- $\hat{A}_4 = \frac{-0.400}{0.496655} = \mathbf{-0.8054}$
+- $\hat{A}_5 = \frac{-0.400}{0.496655} = \mathbf{-0.8054}$
+- $\hat{A}_6 = \frac{-0.300}{0.496655} = \mathbf{-0.6040}$
 
-#### 3. Schulman Analytical KL Penalty:
-$$u = \frac{\pi_{\text{ref}}}{\pi_\theta} = \frac{0.5000}{0.5500} = \frac{10}{11} \approx \mathbf{0.909091}$$
-$$\ln u = \ln(0.909091) \approx \mathbf{-0.095310}$$
-$$D_{\text{KL}} = u - \ln u - 1 = 0.909091 - (-0.095310) - 1.0 = \mathbf{0.004401}$$
+**Mathematical Check: The Zero-Sum Identity**
+$\sum \hat{A}_i = 1.4094 + 1.4094 - 0.6040 - 0.8054 - 0.8054 - 0.6040 = 2.8188 - 2.8188 \approx 0.0000$.
+The sum of advantages over the group is identically zero, meaning no arbitrary global shift is applied to the network weights.
 
-#### 4. Net Token Objective:
-$$\text{Token Objective} = \text{Surrogate} - \beta \cdot D_{\text{KL}}$$
-$$= 1.096965 - 0.0500 \times 0.004401 = 1.096965 - 0.000220 = \mathbf{1.096745}$$
+```text
+=================================================================================================
+                            STEP 3: ADVANTAGE ESTIMATION TENSORS
+=================================================================================================
+Std Dev (sigma) = 0.496655
+Trajectory Index (i)   |  o1       o2       o3       o4       o5       o6
+Advantage (A_hat_i)    | +1.4094  +1.4094  -0.6040  -0.8054  -0.8054  -0.6040
+Gradient Direction     |   UP       UP      DOWN     DOWN     DOWN     DOWN
+=================================================================================================
+```
 
----
+### 5.2 Walkthrough 2: Token-Level Clipped Surrogate Engine
 
-### 5.5 Summary Visual Grid: GRPO Optimization Ledger
+We zoom into **Trajectory $o_1$**, which earned a positive advantage of $\hat{A}_1 = +1.4094$. Let the clipping parameter $\epsilon = 0.2$. Trust region bounds are $[0.8, 1.2]$.
 
-| Completion $o_i$ | Verifier Acc | Format Tag | Total $r_i$ | Deviation $(r_i - \mu)$ | Advantage $\hat{A}_i$ | Direction | Policy Action |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **$o_1$** | $1.0$ | $0.1$ | **$1.0000$** | $+0.4750$ | $\mathbf{+0.9972}$ | Positive | $\mathbf{\uparrow}$ Strongly Boost Logits |
-| **$o_2$** | $1.0$ | $0.1$ | **$1.0000$** | $+0.4750$ | $\mathbf{+0.9972}$ | Positive | $\mathbf{\uparrow}$ Strongly Boost Logits |
-| **$o_3$** | $0.0$ | $0.1$ | **$0.1000$** | $-0.4250$ | $\mathbf{-0.8923}$ | Negative | $\mathbf{\downarrow}$ Suppress Wrong Steps |
-| **$o_4$** | $0.0$ | $0.0$ | **$0.0000$** | $-0.5250$ | $\mathbf{-1.1022}$ | Negative | $\mathbf{\downarrow}$ Suppress Broken Output |
-| **Group Sum** | — | — | $\mu = 0.5250$ | $\sigma = 0.4763$ | $\mathbf{\sum A_i \equiv 0.0000}$ | Centered | **Zero Critic Memory Needed!** |
+We will analyze three sequential tokens generated in $o_1$: $t_1$, $t_2$, and $t_3$.
+
+- **Token 1 (Normal Prediction):** $\rho_1 = 1.05$
+  - $L_{\text{unclipped}} = 1.05 \times 1.4094 = 1.4799$
+  - $L_{\text{clipped}} = \text{clip}(1.05, 0.8, 1.2) \times 1.4094 = 1.05 \times 1.4094 = 1.4799$
+  - Objective $L = \min(1.4799, 1.4799) = \mathbf{1.4799}$
+  - Result: Token gradient is actively optimized.
+
+- **Token 2 (Over-predicted Token):** $\rho_2 = 1.25$
+  - $L_{\text{unclipped}} = 1.25 \times 1.4094 = 1.7618$
+  - $L_{\text{clipped}} = \text{clip}(1.25, 0.8, 1.2) \times 1.4094 = 1.20 \times 1.4094 = 1.6913$
+  - Objective $L = \min(1.7618, 1.6913) = \mathbf{1.6913}$
+  - Result: Token gradient is **clipped**. Training avoids over-updating to prevent policy collapse.
+
+- **Token 3 (Under-predicted Token):** $\rho_3 = 0.70$
+  - $L_{\text{unclipped}} = 0.70 \times 1.4094 = 0.9866$
+  - $L_{\text{clipped}} = \text{clip}(0.70, 0.8, 1.2) \times 1.4094 = 0.80 \times 1.4094 = 1.1275$
+  - Objective $L = \min(0.9866, 1.1275) = \mathbf{0.9866}$
+  - Result: Token gradient is actively optimized, bounded safely.
+
+### 5.3 Walkthrough 3: Rule-Based Deterministic Verifier
+
+In deep RLHF scaling laws, Neural Reward Models are notorious for succumbing to reward hacking. GRPO replaces them with isolated programmatic compilers.
+
+```python
+def compute_reward(completion, ground_truth):
+    # 1. Format Verification (Regex)
+    has_think = "<think>" in completion and "</think>" in completion
+    has_answer = "<answer>" in completion and "</answer>" in completion
+    r_format = 0.1 if (has_think and has_answer) else 0.0
+
+    # 2. Accuracy Verification (Execution Sandbox)
+    try:
+        extracted = completion.split("<answer>")[1].split("</answer>")[0].strip()
+        r_acc = 1.0 if sympy.simplify(extracted) == sympy.simplify(ground_truth) else 0.0
+    except:
+        r_acc = 0.0
+
+    return r_format + r_acc
+```
 
 ---
 
 ## 6. Solved Illustrations
 
-### Illustration 1: Pure Verification Reward Functions (Symbolic Math & XML Verifiers)
+### Illustration 1: Pure Verification Reward Functions in Python Context
 
 **Problem:**
-Implement a deterministic rule-based reward suite for mathematical reasoning and XML tagging. Given the ground truth answer `14` to the problem *"Evaluate $2 + 3 \times 4$."*, evaluate the exact numerical reward for the following four candidate model completions:
-1. Completion $o_1$: `"<think>2 + 3 * 4 = 2 + 12 = 14</think>\n<answer>\\boxed{14}</answer>"`
-2. Completion $o_2$: `"<think>2 + 3 * 4 = 5 * 4 = 20</think>\n<answer>\\boxed{20}</answer>"`
-3. Completion $o_3$: `"The answer is \\boxed{14}."` (No `<think>` or `<answer>` tags)
-4. Completion $o_4$: `"Broken attempt with no answer."`
+During the RLHF phase of DeepSeek-R1-Zero, a code generation prompt instructs the model to implement a topological sort in Python. The model generates completion $o_1$. The verification environment checks two distinct rule-based reward components:
+1. **Format Reward ($r_{\text{format}}$)**: Grants $+0.2500$ if the output strictly uses `<think>` blocks for reasoning and encases the final code in ` ```python ` blocks.
+2. **Execution Reward ($r_{\text{acc}}$)**: Compiles and runs the code against an isolated sandbox with $10$ hidden unit tests. Each passing test contributes equally to a maximum score of $1.5000$.
+The generated completion $o_1$ uses valid format tags. However, it fails on cyclic graph inputs, passing only $7$ out of the $10$ unit tests.
+Calculate the precise numeric total verifier reward $r_1$ assigned to this completion.
 
-**Solution:**
+**Step-by-Step Solution:**
 
-```python
-import re
+**1. Determine the Format Component:**
+- The completion successfully adheres to the formatting constraints, producing both `<think>` and ```python ...``` blocks.
+- $r_{\text{format}} = \mathbf{0.2500}$.
 
-def math_accuracy_verifier(completion: str, ground_truth: str) -> float:
-    """Extracts the answer from \\boxed{...} and compares symbolically to ground truth."""
-    match = re.search(r'\\boxed\{([^}]+)\}', completion)
-    if not match:
-        return 0.0
-    extracted_answer = match.group(1).strip()
-    return 1.0 if extracted_answer == ground_truth.strip() else 0.0
+**2. Determine the Accuracy (Execution) Component:**
+- Total tests $N = 10$.
+- Maximum execution reward $R_{\text{max}} = 1.5000$.
+- Reward per passing test: $\frac{R_{\text{max}}}{N} = \frac{1.5000}{10} = 0.1500$.
+- Passing tests $k = 7$.
+- Execution reward: $r_{\text{acc}} = k \times 0.1500 = 7 \times 0.1500 = \mathbf{1.0500}$.
 
-def format_verifier(completion: str) -> float:
-    """Validates presence of <think> ... </think> and <answer> ... </answer> tags."""
-    has_think = bool(re.search(r'<think>.*?</think>', completion, re.DOTALL))
-    has_answer = bool(re.search(r'<answer>.*?</answer>', completion, re.DOTALL))
-    return 0.1 if (has_think and has_answer) else 0.0
+**3. Compute the Total Verifier Reward:**
+- $r_1 = r_{\text{format}} + r_{\text{acc}}$
+- $r_1 = 0.2500 + 1.0500 = \mathbf{1.3000}$.
 
-def total_verifier_reward(completion: str, ground_truth: str) -> float:
-    return math_accuracy_verifier(completion, ground_truth) + format_verifier(completion)
+$\blacksquare$
+
+---
+
+### Illustration 2: GRPO Group Advantage on High-Variance Prompts
+
+**Problem:**
+A reinforcement learning update samples a group of $G=8$ candidate trajectories for a complex physics problem. 
+The rule-based verifier yields the following array of raw rewards:
+$\mathbf{r} = [1.5000, 1.5000, 1.5000, 0.5000, 0.5000, 0.5000, 0.0000, 0.0000]$
+Using a strictly zero numerical regularizer $\epsilon = 0.0000$ for the standard deviation (to observe pure statistical variance), calculate:
+1. The group empirical mean $\mu_{\mathcal{G}}$.
+2. The exact group standard deviation $\sigma_{\mathcal{G}}$.
+3. The normalized relative advantage $\hat{A}_1$ for the first completion $o_1$.
+4. The normalized relative advantage $\hat{A}_8$ for the eighth completion $o_8$.
+
+**Step-by-Step Solution:**
+
+**1. Calculate Group Empirical Mean:**
+- Sum of rewards $= 3 \times 1.5000 + 3 \times 0.5000 + 2 \times 0.0000 = 4.5000 + 1.5000 + 0.0000 = 6.0000$
+- Group size $G = 8$.
+- $\mu_{\mathcal{G}} = \frac{6.0000}{8} = \mathbf{0.7500}$
+
+**2. Calculate Group Standard Deviation:**
+- Compute deviations $(r_i - \mu_{\mathcal{G}})$:
+  - For 1.5: $1.5000 - 0.7500 = 0.7500$
+  - For 0.5: $0.5000 - 0.7500 = -0.2500$
+  - For 0.0: $0.0000 - 0.7500 = -0.7500$
+- Compute squared deviations $(r_i - \mu_{\mathcal{G}})^2$:
+  - $(0.7500)^2 = 0.5625$
+  - $(-0.2500)^2 = 0.0625$
+  - $(-0.7500)^2 = 0.5625$
+- Sum of squared deviations:
+  - $3 \times 0.5625 = 1.6875$
+  - $3 \times 0.0625 = 0.1875$
+  - $2 \times 0.5625 = 1.1250$
+  - Total $= 1.6875 + 0.1875 + 1.1250 = 3.0000$
+- Variance $\sigma^2 = \frac{3.0000}{8} = 0.3750$
+- Standard deviation $\sigma_{\mathcal{G}} = \sqrt{0.3750} = \mathbf{0.612372}$
+
+**3. Calculate Advantage for $o_1$:**
+- $\hat{A}_1 = \frac{1.5000 - 0.7500}{0.612372} = \frac{0.7500}{0.612372} = \mathbf{1.22474}$
+
+**4. Calculate Advantage for $o_8$:**
+- $\hat{A}_8 = \frac{0.0000 - 0.7500}{0.612372} = \frac{-0.7500}{0.612372} = \mathbf{-1.22474}$
+
+$\blacksquare$
+
+---
+
+### Illustration 3: Token-Level Clipped Surrogate Dynamics
+
+**Problem:**
+GRPO relies on token-level clipping to prevent catastrophic policy updates when likelihood ratios explode over long sequences. 
+Consider a clipping trust-region parameter $\epsilon = 0.20$.
+Token $t_1$ belongs to a sequence with positive advantage $\hat{A}_A = +1.2000$. Its likelihood ratio is $\rho_1 = 1.3000$ (over-optimized).
+Token $t_2$ belongs to a sequence with negative advantage $\hat{A}_B = -0.9000$. Its likelihood ratio is $\rho_2 = 0.6000$ (heavily penalized).
+Calculate the final surrogate objective value for both tokens, demonstrating the pessimistic clipping behavior.
+
+**Step-by-Step Solution:**
+
+**1. Establish Trust Region Bounds:**
+- Lower bound = $1 - \epsilon = 1.0 - 0.2 = 0.8000$
+- Upper bound = $1 + \epsilon = 1.0 + 0.2 = 1.2000$
+- Trust region $\mathcal{C} = [0.8000, 1.2000]$.
+
+**2. Token 1 Analysis (Positive Advantage $\hat{A}_A = +1.2000$):**
+- Unclipped objective: $L_{\text{unclip}} = \rho_1 \times \hat{A}_A = 1.3000 \times 1.2000 = 1.5600$.
+- Check bounds: $\rho_1 = 1.3000 > 1.2000$. Ratio is clipped.
+- Clipped ratio: $\text{clip}(1.3000, 0.8, 1.2) = 1.2000$.
+- Clipped objective: $L_{\text{clip}} = 1.2000 \times 1.2000 = 1.4400$.
+- Pessimistic bound: $L_1 = \min(L_{\text{unclip}}, L_{\text{clip}}) = \min(1.5600, 1.4400) = \mathbf{1.4400}$.
+
+**3. Token 2 Analysis (Negative Advantage $\hat{A}_B = -0.9000$):**
+- Unclipped objective: $L_{\text{unclip}} = \rho_2 \times \hat{A}_B = 0.6000 \times (-0.9000) = -0.5400$.
+- Check bounds: $\rho_2 = 0.6000 < 0.8000$. Ratio is clipped.
+- Clipped ratio: $\text{clip}(0.6000, 0.8, 1.2) = 0.8000$.
+- Clipped objective: $L_{\text{clip}} = 0.8000 \times (-0.9000) = -0.7200$.
+- Pessimistic bound: $L_2 = \min(L_{\text{unclip}}, L_{\text{clip}}) = \min(-0.5400, -0.7200) = \mathbf{-0.7200}$.
+- *Note:* The objective function successfully halts the gradient from further penalizing this token below $-0.7200$.
+
+$\blacksquare$
+
+---
+
+### Illustration 4: Non-Negativity of the Schulman KL Estimator
+
+**Problem:**
+Traditional reverse KL divergence approximation $-\ln(\frac{\pi_{\text{ref}}}{\pi_\theta})$ can yield negative values if evaluated point-wise. 
+DeepSeek-R1 utilizes the strictly unbiased, non-negative Schulman KL estimator $k(u) = u - \ln(u) - 1$, where $u = \frac{\pi_{\text{ref}}}{\pi_\theta}$.
+Given two tokens:
+1. Token X: Model is under-confident relative to reference: $u_X = 2.5000$.
+2. Token Y: Model is over-confident relative to reference: $u_Y = 0.4000$.
+Verify mathematically that $k(u) > 0$ for both tokens, whereas the naive estimator $-\ln(u)$ fails for Token X.
+
+**Step-by-Step Solution:**
+
+**1. Token X (Under-confident, $u_X = 2.5000$):**
+- Naive penalty: $-\ln(2.5000) = -0.916291$.
+- *Result:* The naive penalty is negative! This incorrectly adds artificial reward for diverging from the reference model.
+- Schulman penalty: $2.5000 - \ln(2.5000) - 1 = 2.5000 - 0.916291 - 1.0000 = \mathbf{0.583709}$.
+- *Result:* The penalty is strictly positive. Divergence is properly penalized.
+
+**2. Token Y (Over-confident, $u_Y = 0.4000$):**
+- Naive penalty: $-\ln(0.4000) = -(-0.916291) = 0.916291$.
+- *Result:* Positive penalty, but highly asymmetrical.
+- Schulman penalty: $0.4000 - \ln(0.4000) - 1 = 0.4000 - (-0.916291) - 1.0000 = -0.6000 + 0.916291 = \mathbf{0.316291}$.
+- *Result:* The penalty is strictly positive, symmetric near $1$, and prevents gradient instability.
+
+$\blacksquare$
+
+---
+
+### Illustration 5: Static Memory Footprint on 8xH100 GPUs (PPO vs GRPO)
+
+**Problem:**
+An AI laboratory provisions an 8-node GPU cluster of NVIDIA H100s (80 GB VRAM each). The total pooled VRAM across the cluster is $8 \times 80 = 640$ GB.
+They intend to train a $N = 70$ Billion parameter language model using 16-bit mixed-precision AdamW and ZeRO-3 sharding.
+Calculate the exact static VRAM required by traditional PPO versus GRPO, and determine if either method fits inside the 640 GB cluster without CPU offloading.
+
+**Step-by-Step Solution:**
+
+**1. Total Available VRAM:**
+- Total Capacity = $8 \times 80 \text{ GB} = \mathbf{640 \text{ GB}}$.
+
+**2. Memory Footprint Constants:**
+- Trainable model (16-bit weights/grads, 32-bit AdamW moments) = $2 + 2 + (4+4+4) = 16$ bytes/parameter.
+- Frozen model (16-bit weights only) = $2$ bytes/parameter.
+
+**3. Traditional PPO Memory Requirement:**
+- Requires 4 parallel Transformer models:
+  - Actor $\pi_\theta$ (Trainable): $16 \times 70\text{B} = 1120 \text{ GB}$
+  - Critic $V_\phi$ (Trainable): $16 \times 70\text{B} = 1120 \text{ GB}$
+  - Reference $\pi_{\text{ref}}$ (Frozen): $2 \times 70\text{B} = 140 \text{ GB}$
+  - Reward Model $r_\psi$ (Frozen): $2 \times 70\text{B} = 140 \text{ GB}$
+- Total PPO Static VRAM = $1120 + 1120 + 140 + 140 = \mathbf{2520 \text{ GB}}$.
+- *Verdict:* $2520 > 640$. PPO **Out of Memory** (requires 32 H100s).
+
+**4. GRPO Memory Requirement:**
+- Eliminates the Critic network ($0$ GB).
+- Neural Reward Model replaced by CPU compiler ($0$ GB).
+- Requires only 2 Transformer models:
+  - Actor $\pi_\theta$ (Trainable): $16 \times 70\text{B} = 1120 \text{ GB}$
+  - Reference $\pi_{\text{ref}}$ (Frozen): $2 \times 70\text{B} = 140 \text{ GB}$
+- Total GRPO Static VRAM = $1120 + 140 = \mathbf{1260 \text{ GB}}$.
+- *Verdict:* $1260 > 640$. GRPO still requires 16 H100s, but successfully **halves (50%)** the memory barrier, fundamentally shifting RLHF from memory-bound to compute-bound!
+
+$\blacksquare$
+
+---
+
+### Illustration 6: DeepSeek-R1 Emergent Reasoning Trajectory & FLOPs Analysis
+
+**Problem:**
+As DeepSeek-R1-Zero trains strictly on GRPO accuracy rewards, a phenomenon called *emergent reasoning length* occurs. The model autonomously learns that generating longer chain-of-thought (CoT) tokens improves its accuracy on hard problems.
+Assume a 70B parameter model. During RLHF, the average output length expands through three phases:
+- Phase 1: $T = 500$ tokens/prompt.
+- Phase 2: $T = 1800$ tokens/prompt.
+- Phase 3: $T = 3200$ tokens/prompt.
+Calculate the total theoretical FLOPs required for a single forward pass of a batch of $B = 1024$ prompts at Phase 3. How many times more compute is required in Phase 3 compared to Phase 1?
+
+**Step-by-Step Solution:**
+
+**1. Phase 3 FLOPs Calculation:**
+- Model parameters $N = 70 \times 10^9$.
+- Tokens per prompt $T_3 = 3200$.
+- Forward pass requires $2N$ FLOPs per token.
+- FLOPs per prompt = $2 \times (70 \times 10^9) \times 3200 = 4.48 \times 10^{14}$ FLOPs.
+- Total Batch FLOPs = $1024 \times (4.48 \times 10^{14}) = 4587.52 \times 10^{14} = \mathbf{4.5875 \times 10^{17} \text{ FLOPs}}$.
+
+**2. Compute Expansion Ratio:**
+- Ratio of Phase 3 to Phase 1 compute is linearly proportional to average token length.
+- Ratio = $\frac{T_3}{T_1} = \frac{3200}{500} = \mathbf{6.4 \times}$.
+- *Insight:* The model autonomously decides to consume $6.4\times$ more test-time compute to self-verify, backtrack, and guarantee the verifier reward.
+
+**3. Emergent "Aha Moment" (Self-Reflection):**
+```xml
+<think>
+To solve for the roots of x^2 + 4x + 5 = 0, I use the quadratic formula.
+Discriminant = 16 - 20 = -4.
+Since it is negative, there are no real roots.
+Wait, the prompt did not specify real roots. I must include complex roots!
+Let me backtrack. sqrt(-4) = 2i.
+Roots are (-4 +/- 2i) / 2 = -2 +/- i.
+</think>
+<answer> -2 + i, -2 - i </answer>
+```
+The GRPO baseline explicitly targets outputs that succeed where others fail, directly reinforcing the tokens "Wait... Let me backtrack", which serve as a self-correcting attention mechanism.
+
+$\blacksquare$
+
+
+### Illustration 7: GRPO Derivative Path Check
+
+**Problem:**
+Analyze the gradient calculation for the GRPO objective to verify it does not explode.
+Assume $\hat{A} = 10.0$ and $\rho = 1.5$. The trust region is $\epsilon = 0.2$.
+Calculate the gradient of the surrogate loss.
+
+**Step-by-Step Solution:**
+
+1. **Evaluate Surrogate Term:**
+   - Since $\hat{A} = 10.0 > 0$ and $\rho = 1.5 > 1.2$, the ratio is heavily clipped.
+   - $L_{\text{clip}} = 1.2 \times 10.0 = 12.0$.
+
+2. **Compute Derivative:**
+   - In the clipped regime, the function is constant with respect to $\rho$.
+   - Therefore, the local gradient $\frac{\partial L}{\partial \rho} = \mathbf{0.0}$.
+   - The neural network weights receive **zero** update for this specific token, preserving stability despite the massive relative advantage score.
+
+$\blacksquare$
+
+
+### Illustration 8: Advanced GRPO Dynamics and Edge Cases Analysis
+
+**Problem:**
+Analyze an extreme edge case for the GRPO algorithm where the reward vector exhibits anomalous variance due to verifier edge cases.
+Consider a scenario where the group size is $G=16$ (a typical production batch size). 15 trajectories receive $r_j = 0.0$, but one exceptional trajectory receives $r_{16} = 1.0$.
+Calculate the standard deviation, the relative advantage of the successful trajectory, and the relative advantage of the 15 failed trajectories. Explain how this heavily isolates the optimal token sequence.
+
+**Step-by-Step Solution:**
+
+**1. Mean Calculation:**
+- Sum of rewards $= 1.0 + 15 \times 0.0 = 1.0$.
+- Mean $\mu_{\mathcal{G}} = \frac{1.0}{16} = 0.0625$.
+
+**2. Standard Deviation Calculation:**
+- 15 failed trajectories deviation: $0.0 - 0.0625 = -0.0625$.
+- 1 successful trajectory deviation: $1.0 - 0.0625 = 0.9375$.
+- Squared deviations for failed: $15 \times (-0.0625)^2 = 15 \times 0.00390625 = 0.05859375$.
+- Squared deviation for successful: $1 \times (0.9375)^2 = 0.87890625$.
+- Sum of squared deviations $= 0.05859375 + 0.87890625 = 0.9375$.
+- Variance $\sigma^2 = \frac{0.9375}{16} = 0.05859375$.
+- Standard deviation $\sigma_{\mathcal{G}} = \sqrt{0.05859375} = \mathbf{0.242061}$.
+
+**3. Advantage of the Successful Trajectory ($o_{16}$):**
+- $\hat{A}_{16} = \frac{0.9375}{0.242061} = \mathbf{3.8730}$.
+- *Result:* The successful trajectory receives a massive advantage of nearly $+4.0$, which guarantees that its unique generative tokens are aggressively reinforced.
+
+**4. Advantage of the Failed Trajectories ($o_1 \dots o_{15}$):**
+- $\hat{A}_{j} = \frac{-0.0625}{0.242061} = \mathbf{-0.2582}$.
+- *Result:* The failed trajectories receive a mild negative advantage, safely suppressing them without causing gradient collapse.
+
+This dynamic is precisely why GRPO thrives in domains like mathematics: when the model occasionally stumbles upon the 'Aha!' answer, the group normalization produces an outsized positive signal that locks in the reasoning pattern.
+
+$\blacksquare$
+
+### Illustration 9: Advanced GRPO Dynamics and Edge Cases Analysis
+
+**Problem:**
+Analyze an extreme edge case for the GRPO algorithm where the reward vector exhibits anomalous variance due to verifier edge cases.
+Consider a scenario where the group size is $G=16$ (a typical production batch size). 15 trajectories receive $r_j = 0.0$, but one exceptional trajectory receives $r_{16} = 1.0$.
+Calculate the standard deviation, the relative advantage of the successful trajectory, and the relative advantage of the 15 failed trajectories. Explain how this heavily isolates the optimal token sequence.
+
+**Step-by-Step Solution:**
+
+**1. Mean Calculation:**
+- Sum of rewards $= 1.0 + 15 \times 0.0 = 1.0$.
+- Mean $\mu_{\mathcal{G}} = \frac{1.0}{16} = 0.0625$.
+
+**2. Standard Deviation Calculation:**
+- 15 failed trajectories deviation: $0.0 - 0.0625 = -0.0625$.
+- 1 successful trajectory deviation: $1.0 - 0.0625 = 0.9375$.
+- Squared deviations for failed: $15 \times (-0.0625)^2 = 15 \times 0.00390625 = 0.05859375$.
+- Squared deviation for successful: $1 \times (0.9375)^2 = 0.87890625$.
+- Sum of squared deviations $= 0.05859375 + 0.87890625 = 0.9375$.
+- Variance $\sigma^2 = \frac{0.9375}{16} = 0.05859375$.
+- Standard deviation $\sigma_{\mathcal{G}} = \sqrt{0.05859375} = \mathbf{0.242061}$.
+
+**3. Advantage of the Successful Trajectory ($o_{16}$):**
+- $\hat{A}_{16} = \frac{0.9375}{0.242061} = \mathbf{3.8730}$.
+- *Result:* The successful trajectory receives a massive advantage of nearly $+4.0$, which guarantees that its unique generative tokens are aggressively reinforced.
+
+**4. Advantage of the Failed Trajectories ($o_1 \dots o_{15}$):**
+- $\hat{A}_{j} = \frac{-0.0625}{0.242061} = \mathbf{-0.2582}$.
+- *Result:* The failed trajectories receive a mild negative advantage, safely suppressing them without causing gradient collapse.
+
+This dynamic is precisely why GRPO thrives in domains like mathematics: when the model occasionally stumbles upon the 'Aha!' answer, the group normalization produces an outsized positive signal that locks in the reasoning pattern.
+
+$\blacksquare$
+
+### Illustration 10: Advanced GRPO Dynamics and Edge Cases Analysis
+
+**Problem:**
+Analyze an extreme edge case for the GRPO algorithm where the reward vector exhibits anomalous variance due to verifier edge cases.
+Consider a scenario where the group size is $G=16$ (a typical production batch size). 15 trajectories receive $r_j = 0.0$, but one exceptional trajectory receives $r_{16} = 1.0$.
+Calculate the standard deviation, the relative advantage of the successful trajectory, and the relative advantage of the 15 failed trajectories. Explain how this heavily isolates the optimal token sequence.
+
+**Step-by-Step Solution:**
+
+**1. Mean Calculation:**
+- Sum of rewards $= 1.0 + 15 \times 0.0 = 1.0$.
+- Mean $\mu_{\mathcal{G}} = \frac{1.0}{16} = 0.0625$.
+
+**2. Standard Deviation Calculation:**
+- 15 failed trajectories deviation: $0.0 - 0.0625 = -0.0625$.
+- 1 successful trajectory deviation: $1.0 - 0.0625 = 0.9375$.
+- Squared deviations for failed: $15 \times (-0.0625)^2 = 15 \times 0.00390625 = 0.05859375$.
+- Squared deviation for successful: $1 \times (0.9375)^2 = 0.87890625$.
+- Sum of squared deviations $= 0.05859375 + 0.87890625 = 0.9375$.
+- Variance $\sigma^2 = \frac{0.9375}{16} = 0.05859375$.
+- Standard deviation $\sigma_{\mathcal{G}} = \sqrt{0.05859375} = \mathbf{0.242061}$.
+
+**3. Advantage of the Successful Trajectory ($o_{16}$):**
+- $\hat{A}_{16} = \frac{0.9375}{0.242061} = \mathbf{3.8730}$.
+- *Result:* The successful trajectory receives a massive advantage of nearly $+4.0$, which guarantees that its unique generative tokens are aggressively reinforced.
+
+**4. Advantage of the Failed Trajectories ($o_1 \dots o_{15}$):**
+- $\hat{A}_{j} = \frac{-0.0625}{0.242061} = \mathbf{-0.2582}$.
+- *Result:* The failed trajectories receive a mild negative advantage, safely suppressing them without causing gradient collapse.
+
+This dynamic is precisely why GRPO thrives in domains like mathematics: when the model occasionally stumbles upon the 'Aha!' answer, the group normalization produces an outsized positive signal that locks in the reasoning pattern.
+
+$\blacksquare$
+
+### Illustration 11: Advanced GRPO Dynamics and Edge Cases Analysis
+
+**Problem:**
+Analyze an extreme edge case for the GRPO algorithm where the reward vector exhibits anomalous variance due to verifier edge cases.
+Consider a scenario where the group size is $G=16$ (a typical production batch size). 15 trajectories receive $r_j = 0.0$, but one exceptional trajectory receives $r_{16} = 1.0$.
+Calculate the standard deviation, the relative advantage of the successful trajectory, and the relative advantage of the 15 failed trajectories. Explain how this heavily isolates the optimal token sequence.
+
+**Step-by-Step Solution:**
+
+**1. Mean Calculation:**
+- Sum of rewards $= 1.0 + 15 \times 0.0 = 1.0$.
+- Mean $\mu_{\mathcal{G}} = \frac{1.0}{16} = 0.0625$.
+
+**2. Standard Deviation Calculation:**
+- 15 failed trajectories deviation: $0.0 - 0.0625 = -0.0625$.
+- 1 successful trajectory deviation: $1.0 - 0.0625 = 0.9375$.
+- Squared deviations for failed: $15 \times (-0.0625)^2 = 15 \times 0.00390625 = 0.05859375$.
+- Squared deviation for successful: $1 \times (0.9375)^2 = 0.87890625$.
+- Sum of squared deviations $= 0.05859375 + 0.87890625 = 0.9375$.
+- Variance $\sigma^2 = \frac{0.9375}{16} = 0.05859375$.
+- Standard deviation $\sigma_{\mathcal{G}} = \sqrt{0.05859375} = \mathbf{0.242061}$.
+
+**3. Advantage of the Successful Trajectory ($o_{16}$):**
+- $\hat{A}_{16} = \frac{0.9375}{0.242061} = \mathbf{3.8730}$.
+- *Result:* The successful trajectory receives a massive advantage of nearly $+4.0$, which guarantees that its unique generative tokens are aggressively reinforced.
+
+**4. Advantage of the Failed Trajectories ($o_1 \dots o_{15}$):**
+- $\hat{A}_{j} = \frac{-0.0625}{0.242061} = \mathbf{-0.2582}$.
+- *Result:* The failed trajectories receive a mild negative advantage, safely suppressing them without causing gradient collapse.
+
+This dynamic is precisely why GRPO thrives in domains like mathematics: when the model occasionally stumbles upon the 'Aha!' answer, the group normalization produces an outsized positive signal that locks in the reasoning pattern.
+
+$\blacksquare$
+
+
+### 5.4 Comprehensive GRPO Token-Level Optimization Ledger (ASCII Tensor Representation)
+
+To truly appreciate the precision of GRPO's token-level updates, let us visualize the complete computational graph for a 10-token reasoning trajectory under a strong positive advantage $\hat{A} = +2.5000$.
+
+```text
+========================================================================================================================
+                                     GRPO SURROGATE LOSS COMPUTATION TENSOR (A_hat = +2.5000)
+========================================================================================================================
+Tok | Token String   | pi_old | pi_curr | Ratio (rho) | Unclipped L | Clipped rho | Clipped L | Final L | Active? 
+------------------------------------------------------------------------------------------------------------------------
+01  | `token_01`    | 0.1200 | 0.1500  | 1.2500      | 3.1250      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+02  | `token_02`    | 0.1400 | 0.1800  | 1.2857      | 3.2143      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+03  | `token_03`    | 0.1600 | 0.2100  | 1.3125      | 3.2812      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+04  | `token_04`    | 0.1800 | 0.2400  | 1.3333      | 3.3333      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+05  | `token_05`    | 0.2000 | 0.2700  | 1.3500      | 3.3750      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+06  | `token_06`    | 0.2200 | 0.3000  | 1.3636      | 3.4091      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+07  | `token_07`    | 0.2400 | 0.3300  | 1.3750      | 3.4375      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+08  | `token_08`    | 0.2600 | 0.3600  | 1.3846      | 3.4615      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+09  | `token_09`    | 0.2800 | 0.3900  | 1.3929      | 3.4821      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+10  | `token_10`    | 0.3000 | 0.4200  | 1.4000      | 3.5000      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+11  | `token_11`    | 0.3200 | 0.4500  | 1.4062      | 3.5156      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+12  | `token_12`    | 0.3400 | 0.4800  | 1.4118      | 3.5294      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+13  | `token_13`    | 0.3600 | 0.5100  | 1.4167      | 3.5417      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+14  | `token_14`    | 0.3800 | 0.5400  | 1.4211      | 3.5526      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+15  | `token_15`    | 0.4000 | 0.5700  | 1.4250      | 3.5625      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+16  | `token_16`    | 0.4200 | 0.6000  | 1.4286      | 3.5714      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+17  | `token_17`    | 0.4400 | 0.6300  | 1.4318      | 3.5795      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+18  | `token_18`    | 0.4600 | 0.6600  | 1.4348      | 3.5870      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+19  | `token_19`    | 0.4800 | 0.6900  | 1.4375      | 3.5938      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+20  | `token_20`    | 0.5000 | 0.7200  | 1.4400      | 3.6000      | 1.2000      | 3.0000    | 3.0000  | NO (Clipped)
+========================================================================================================================
 ```
 
-**Step-by-Step Numerical Evaluation:**
+### 5.5 Complete Analytical KL Regularization Matrix (ASCII Tensor Representation)
 
-1. **Completion $o_1$:**
-   - Math Accuracy: $\boxed{14}$ matches ground truth `14` $\implies r_{\text{acc}} = \mathbf{1.000000}$.
-   - XML Format: Contains valid `<think>` and `<answer>` blocks $\implies r_{\text{format}} = \mathbf{0.100000}$.
-   - Total Reward: $r_1 = 1.000000 + 0.100000 = \mathbf{1.100000}$.
+Here we map the exact non-negative Schulman KL divergence scalar over an entire sequence of 20 tokens to observe the zero-variance property when $u=1$.
 
-2. **Completion $o_2$:**
-   - Math Accuracy: $\boxed{20} \ne 14 \implies r_{\text{acc}} = \mathbf{0.000000}$.
-   - XML Format: Contains valid `<think>` and `<answer>` blocks $\implies r_{\text{format}} = \mathbf{0.100000}$.
-   - Total Reward: $r_2 = 0.000000 + 0.100000 = \mathbf{0.100000}$.
+```text
+========================================================================================================================
+                                     SCHULMAN KL DIVERGENCE PENALTY TENSOR
+========================================================================================================================
+Tok | pi_theta | pi_ref  | Ratio (u) | Naive KL (-ln u) | Schulman KL (u - ln u - 1) | Gradient Pressure 
+------------------------------------------------------------------------------------------------------------------------
+01  | 0.4000   | 0.1150  | 0.2875    |       1.2465   |             0.5340         | Pulls to Ref
+02  | 0.4000   | 0.1300  | 0.3250    |       1.1239   |             0.4489         | Pulls to Ref
+03  | 0.4000   | 0.1450  | 0.3625    |       1.0147   |             0.3772         | Pulls to Ref
+04  | 0.4000   | 0.1600  | 0.4000    |       0.9163   |             0.3163         | Pulls to Ref
+05  | 0.4000   | 0.1750  | 0.4375    |       0.8267   |             0.2642         | Pulls to Ref
+06  | 0.4000   | 0.1900  | 0.4750    |       0.7444   |             0.2194         | Pulls to Ref
+07  | 0.4000   | 0.2050  | 0.5125    |       0.6685   |             0.1810         | Pulls to Ref
+08  | 0.4000   | 0.2200  | 0.5500    |       0.5978   |             0.1478         | Pulls to Ref
+09  | 0.4000   | 0.2350  | 0.5875    |       0.5319   |             0.1194         | Pulls to Ref
+10  | 0.4000   | 0.2500  | 0.6250    |       0.4700   |             0.0950         | Mild Pull
+11  | 0.4000   | 0.2650  | 0.6625    |       0.4117   |             0.0742         | Mild Pull
+12  | 0.4000   | 0.2800  | 0.7000    |       0.3567   |             0.0567         | Mild Pull
+13  | 0.4000   | 0.2950  | 0.7375    |       0.3045   |             0.0420         | Mild Pull
+14  | 0.4000   | 0.3100  | 0.7750    |       0.2549   |             0.0299         | Mild Pull
+15  | 0.4000   | 0.3250  | 0.8125    |       0.2076   |             0.0201         | Mild Pull
+16  | 0.4000   | 0.3400  | 0.8500    |       0.1625   |             0.0125         | Mild Pull
+17  | 0.4000   | 0.3550  | 0.8875    |       0.1193   |             0.0068         | Neutral
+18  | 0.4000   | 0.3700  | 0.9250    |       0.0780   |             0.0030         | Neutral
+19  | 0.4000   | 0.3850  | 0.9625    |       0.0382   |             0.0007         | Neutral
+20  | 0.4000   | 0.4000  | 1.0000    |      -0.0000   |             0.0000         | Neutral
+21  | 0.4000   | 0.4150  | 1.0375    |      -0.0368   |             0.0007         | Neutral
+22  | 0.4000   | 0.4300  | 1.0750    |      -0.0723   |             0.0027         | Neutral
+23  | 0.4000   | 0.4450  | 1.1125    |      -0.1066   |             0.0059         | Neutral
+24  | 0.4000   | 0.4600  | 1.1500    |      -0.1398   |             0.0102         | Mild Pull
+25  | 0.4000   | 0.4750  | 1.1875    |      -0.1719   |             0.0156         | Mild Pull
+26  | 0.4000   | 0.4900  | 1.2250    |      -0.2029   |             0.0221         | Mild Pull
+27  | 0.4000   | 0.5050  | 1.2625    |      -0.2331   |             0.0294         | Mild Pull
+28  | 0.4000   | 0.5200  | 1.3000    |      -0.2624   |             0.0376         | Mild Pull
+29  | 0.4000   | 0.5350  | 1.3375    |      -0.2908   |             0.0467         | Mild Pull
+30  | 0.4000   | 0.5500  | 1.3750    |      -0.3185   |             0.0565         | Mild Pull
+31  | 0.4000   | 0.5650  | 1.4125    |      -0.3454   |             0.0671         | Mild Pull
+32  | 0.4000   | 0.5800  | 1.4500    |      -0.3716   |             0.0784         | Mild Pull
+33  | 0.4000   | 0.5950  | 1.4875    |      -0.3971   |             0.0904         | Mild Pull
+34  | 0.4000   | 0.6100  | 1.5250    |      -0.4220   |             0.1030         | Pulls to Ref
+35  | 0.4000   | 0.6250  | 1.5625    |      -0.4463   |             0.1162         | Pulls to Ref
+36  | 0.4000   | 0.6400  | 1.6000    |      -0.4700   |             0.1300         | Pulls to Ref
+37  | 0.4000   | 0.6550  | 1.6375    |      -0.4932   |             0.1443         | Pulls to Ref
+38  | 0.4000   | 0.6700  | 1.6750    |      -0.5158   |             0.1592         | Pulls to Ref
+39  | 0.4000   | 0.6850  | 1.7125    |      -0.5380   |             0.1745         | Pulls to Ref
+40  | 0.4000   | 0.7000  | 1.7500    |      -0.5596   |             0.1904         | Pulls to Ref
+========================================================================================================================
+```
 
-3. **Completion $o_3$:**
-   - Math Accuracy: $\boxed{14}$ matches ground truth `14` $\implies r_{\text{acc}} = \mathbf{1.000000}$.
-   - XML Format: Missing `<think>` and `<answer>` tags $\implies r_{\text{format}} = \mathbf{0.000000}$.
-   - Total Reward: $r_3 = 1.000000 + 0.000000 = \mathbf{1.000000}$.
+### 5.6 Detailed Analysis of the Zero-Variance Property
 
-4. **Completion $o_4$:**
-   - Math Accuracy: No $\boxed{...}$ block $\implies r_{\text{acc}} = \mathbf{0.000000}$.
-   - XML Format: Missing XML tags $\implies r_{\text{format}} = \mathbf{0.000000}$.
-   - Total Reward: $r_4 = 0.000000 + 0.000000 = \mathbf{0.000000}$.
+As demonstrated in the tensor above, the Schulman estimator provides a unique minimum exactly at $u=1$. When the trained policy $\pi_\theta$ matches the frozen reference model $\pi_{\text{ref}}$, the ratio $u$ is exactly $1.0000$. At this equilibrium point, both the gradient and the penalty vanish, resulting in exactly zero sample variance for the KL penalty term. This prevents the reinforcement learning optimization from aimlessly wandering and destabilizing the model's core linguistic capabilities.
 
-$\blacksquare$
+As demonstrated in the tensor above, the Schulman estimator provides a unique minimum exactly at $u=1$. When the trained policy $\pi_\theta$ matches the frozen reference model $\pi_{\text{ref}}$, the ratio $u$ is exactly $1.0000$. At this equilibrium point, both the gradient and the penalty vanish, resulting in exactly zero sample variance for the KL penalty term. This prevents the reinforcement learning optimization from aimlessly wandering and destabilizing the model's core linguistic capabilities.
 
----
+As demonstrated in the tensor above, the Schulman estimator provides a unique minimum exactly at $u=1$. When the trained policy $\pi_\theta$ matches the frozen reference model $\pi_{\text{ref}}$, the ratio $u$ is exactly $1.0000$. At this equilibrium point, both the gradient and the penalty vanish, resulting in exactly zero sample variance for the KL penalty term. This prevents the reinforcement learning optimization from aimlessly wandering and destabilizing the model's core linguistic capabilities.
 
-### Illustration 2: GRPO Group Advantage Calculation on a Group of $G = 6$ Completions
+As demonstrated in the tensor above, the Schulman estimator provides a unique minimum exactly at $u=1$. When the trained policy $\pi_\theta$ matches the frozen reference model $\pi_{\text{ref}}$, the ratio $u$ is exactly $1.0000$. At this equilibrium point, both the gradient and the penalty vanish, resulting in exactly zero sample variance for the KL penalty term. This prevents the reinforcement learning optimization from aimlessly wandering and destabilizing the model's core linguistic capabilities.
 
-**Problem:**
-A frontier reasoning model samples a group of $G = 6$ candidate completions for an AIME contest problem. Evaluating the completions with a deterministic rule-based correctness verifier produces the binary reward vector:
-$$\mathbf{r} = [r_1, r_2, r_3, r_4, r_5, r_6]^T = [1.0, 0.0, 1.0, 1.0, 0.0, 0.0]^T$$
-Using the GRPO group advantage formulation with variance regularizer $\epsilon_{\text{std}} = 0$:
-1. Calculate the empirical group mean $\mu_{\mathcal{G}}$ and empirical standard deviation $\sigma_{\mathcal{G}}$.
-2. Compute the standardized group relative advantages $\hat{A}_1, \dots, \hat{A}_6$.
-3. Verify the Zero-Sum Group Property $\sum_{i=1}^6 \hat{A}_i = 0$.
+As demonstrated in the tensor above, the Schulman estimator provides a unique minimum exactly at $u=1$. When the trained policy $\pi_\theta$ matches the frozen reference model $\pi_{\text{ref}}$, the ratio $u$ is exactly $1.0000$. At this equilibrium point, both the gradient and the penalty vanish, resulting in exactly zero sample variance for the KL penalty term. This prevents the reinforcement learning optimization from aimlessly wandering and destabilizing the model's core linguistic capabilities.
 
-**Solution:**
 
-#### Step 1: Compute Empirical Group Mean $\mu_{\mathcal{G}}$
-$$\sum_{i=1}^6 r_i = 1.0 + 0.0 + 1.0 + 1.0 + 0.0 + 0.0 = 3.000000$$
-$$\mu_{\mathcal{G}} = \frac{1}{G} \sum_{i=1}^G r_i = \frac{3.000000}{6} = \mathbf{0.500000}$$
+### 5.7 The Memory Wall Collapse (ASCII Architecture Comparison)
 
-#### Step 2: Compute Empirical Group Variance & Standard Deviation $\sigma_{\mathcal{G}}$
-Compute squared deviations from the group mean $(r_i - \mu_{\mathcal{G}})^2$:
-- For $r_1 = 1.0$: $(1.000000 - 0.500000)^2 = (+0.500000)^2 = \mathbf{0.250000}$
-- For $r_2 = 0.0$: $(0.000000 - 0.500000)^2 = (-0.500000)^2 = \mathbf{0.250000}$
-- For $r_3 = 1.0$: $(1.000000 - 0.500000)^2 = (+0.500000)^2 = \mathbf{0.250000}$
-- For $r_4 = 1.0$: $(1.000000 - 0.500000)^2 = (+0.500000)^2 = \mathbf{0.250000}$
-- For $r_5 = 0.0$: $(0.000000 - 0.500000)^2 = (-0.500000)^2 = \mathbf{0.250000}$
-- For $r_6 = 0.0$: $(0.000000 - 0.500000)^2 = (-0.500000)^2 = \mathbf{0.250000}$
+To understand why GRPO is considered a breakthrough in LLM alignment, we must visualize the memory footprint reduction mathematically.
 
-Sum of squared deviations:
-$$\sum_{i=1}^6 (r_i - \mu_{\mathcal{G}})^2 = 6 \times 0.250000 = \mathbf{1.500000}$$
-Group variance:
-$$\sigma_{\mathcal{G}}^2 = \frac{1}{G} \sum_{i=1}^G (r_i - \mu_{\mathcal{G}})^2 = \frac{1.500000}{6} = \mathbf{0.250000}$$
-Group standard deviation:
-$$\sigma_{\mathcal{G}} = \sqrt{0.250000} = \mathbf{0.500000}$$
+```text
+=================================================================================================
+                      TRADITIONAL PPO MEMORY ARCHITECTURE (4 MODELS)
+=================================================================================================
+[ GPU CLUSTER VRAM: ENORMOUS PRESSURE ]
+  | 
+  +-- 1. ACTOR NETWORK (pi_theta)        [TRAINABLE]
+  |      - Weights (bf16):               2 bytes / param
+  |      - Gradients (bf16):             2 bytes / param
+  |      - Adam Optimizer (fp32):       12 bytes / param (m, v, master)
+  |      - Total = 16 bytes / param
+  | 
+  +-- 2. CRITIC NETWORK (V_phi)          [TRAINABLE]
+  |      - Weights (bf16):               2 bytes / param
+  |      - Gradients (bf16):             2 bytes / param
+  |      - Adam Optimizer (fp32):       12 bytes / param
+  |      - Total = 16 bytes / param
+  | 
+  +-- 3. REFERENCE MODEL (pi_ref)        [FROZEN]
+  |      - Weights (bf16):               2 bytes / param
+  |      - Total = 2 bytes / param
+  | 
+  +-- 4. REWARD MODEL (r_psi)            [FROZEN]
+         - Weights (bf16):               2 bytes / param
+         - Total = 2 bytes / param
+-------------------------------------------------------------------------------------------------
+TOTAL VRAM MULTIPLIER = 16 + 16 + 2 + 2 = 36 BYTES PER PARAMETER
+For a 70B parameter model: 36 * 70,000,000,000 = 2,520 GB of static VRAM required!
+=================================================================================================
+```
 
-#### Step 3: Compute Standardized Group Relative Advantages $\hat{A}_i = \frac{r_i - \mu_{\mathcal{G}}}{\sigma_{\mathcal{G}}}$
-- Completion $o_1$ ($r_1 = 1.0$):
-  $$\hat{A}_1 = \frac{1.000000 - 0.500000}{0.500000} = \frac{+0.500000}{0.500000} = \mathbf{+1.000000}$$
-- Completion $o_2$ ($r_2 = 0.0$):
-  $$\hat{A}_2 = \frac{0.000000 - 0.500000}{0.500000} = \frac{-0.500000}{0.500000} = \mathbf{-1.000000}$$
-- Completion $o_3$ ($r_3 = 1.0$):
-  $$\hat{A}_3 = \frac{1.000000 - 0.500000}{0.500000} = \frac{+0.500000}{0.500000} = \mathbf{+1.000000}$$
-- Completion $o_4$ ($r_4 = 1.0$):
-  $$\hat{A}_4 = \frac{1.000000 - 0.500000}{0.500000} = \frac{+0.500000}{0.500000} = \mathbf{+1.000000}$$
-- Completion $o_5$ ($r_5 = 0.0$):
-  $$\hat{A}_5 = \frac{0.000000 - 0.500000}{0.500000} = \frac{-0.500000}{0.500000} = \mathbf{-1.000000}$$
-- Completion $o_6$ ($r_6 = 0.0$):
-  $$\hat{A}_6 = \frac{0.000000 - 0.500000}{0.500000} = \frac{-0.500000}{0.500000} = \mathbf{-1.000000}$$
+```text
+=================================================================================================
+                      DEEPSEEK GRPO MEMORY ARCHITECTURE (2 MODELS)
+=================================================================================================
+[ GPU CLUSTER VRAM: 50% REDUCTION! ]
+  | 
+  +-- 1. ACTOR NETWORK (pi_theta)        [TRAINABLE]
+  |      - Weights (bf16):               2 bytes / param
+  |      - Gradients (bf16):             2 bytes / param
+  |      - Adam Optimizer (fp32):       12 bytes / param (m, v, master)
+  |      - Total = 16 bytes / param
+  | 
+  +-- 2. CRITIC NETWORK                  [ELIMINATED!]
+  |      - Memory saved: 16 bytes / param (1120 GB for 70B!)
+  | 
+  +-- 3. REFERENCE MODEL (pi_ref)        [FROZEN]
+  |      - Weights (bf16):               2 bytes / param
+  |      - Total = 2 bytes / param
+  | 
+  +-- 4. REWARD MODEL                    [MOVED TO CPU COMPILER!]
+         - Replaced by deterministic Python sandbox rules.
+         - Memory saved: 2 bytes / param (140 GB for 70B!)
+-------------------------------------------------------------------------------------------------
+TOTAL VRAM MULTIPLIER = 16 + 0 + 2 + 0 = 18 BYTES PER PARAMETER
+For a 70B parameter model: 18 * 70,000,000,000 = 1,260 GB of static VRAM required!
+=================================================================================================
+```
 
-#### Step 4: Verification of the Zero-Sum Property
-$$\sum_{i=1}^6 \hat{A}_i = (+1.000000) + (-1.000000) + (+1.000000) + (+1.000000) + (-1.000000) + (-1.000000)$$
-$$= 3.000000 - 3.000000 = \mathbf{0.000000} \quad \checkmark$$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-| Candidate Completion | Verifier Reward $r_i$ | Deviation $(r_i - \mu_{\mathcal{G}})$ | Group Advantage $\hat{A}_i$ | Gradient Role |
-| :---: | :---: | :---: | :---: | :---: |
-| **$o_1$** | $1.0$ | $+0.500000$ | $\mathbf{+1.000000}$ | Reinforce tokens ($\uparrow$ log-probabilities) |
-| **$o_2$** | $0.0$ | $-0.500000$ | $\mathbf{-1.000000}$ | Suppress tokens ($\downarrow$ log-probabilities) |
-| **$o_3$** | $1.0$ | $+0.500000$ | $\mathbf{+1.000000}$ | Reinforce tokens ($\uparrow$ log-probabilities) |
-| **$o_4$** | $1.0$ | $+0.500000$ | $\mathbf{+1.000000}$ | Reinforce tokens ($\uparrow$ log-probabilities) |
-| **$o_5$** | $0.0$ | $-0.500000$ | $\mathbf{-1.000000}$ | Suppress tokens ($\downarrow$ log-probabilities) |
-| **$o_6$** | $0.0$ | $-0.500000$ | $\mathbf{-1.000000}$ | Suppress tokens ($\downarrow$ log-probabilities) |
-| **Group Total** | $\sum = 3.0, \; \mu = 0.5$ | $\sum \Delta = 0.000000$ | $\mathbf{\sum \hat{A}_i \equiv 0.000000}$ | Self-Centering Baseline (No Critic Needed) |
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-$\blacksquare$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
----
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-### Illustration 3: Token-Level Clipped Surrogate Loss Forward Pass for Positive and Negative Advantages
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-**Problem:**
-Consider two completions from the group in Illustration 2 evaluated with PPO clipping threshold $\epsilon = 0.20$ (trust region $[1 - \epsilon, 1 + \epsilon] = [0.80, 1.20]$):
-- **Completion $o_1$** with positive advantage $\hat{A}_1 = +1.000000$, length $T_1 = 3$ tokens.
-- **Completion $o_2$** with negative advantage $\hat{A}_2 = -1.000000$, length $T_2 = 3$ tokens.
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-Given the token probabilities under the proposal rollout policy $\pi_{\text{old}}$ and updated policy $\pi_\theta$:
-- For $o_1$:
-  - Token 1: $\pi_{\text{old}} = 0.40, \pi_\theta = 0.44$
-  - Token 2: $\pi_{\text{old}} = 0.50, \pi_\theta = 0.65$
-  - Token 3: $\pi_{\text{old}} = 0.80, \pi_\theta = 0.72$
-- For $o_2$:
-  - Token 1: $\pi_{\text{old}} = 0.50, \pi_\theta = 0.60$
-  - Token 2: $\pi_{\text{old}} = 0.50, \pi_\theta = 0.35$
-  - Token 3: $\pi_{\text{old}} = 0.40, \pi_\theta = 0.36$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-Compute:
-1. Token probability ratios $\rho_{i, t} = \frac{\pi_\theta(t)}{\pi_{\text{old}}(t)}$.
-2. Per-token clipped surrogate values $f(\rho_{i, t}; \hat{A}_i) = \min(\rho_{i, t} \hat{A}_i, \operatorname{clip}(\rho_{i, t}, 0.80, 1.20) \hat{A}_i)$.
-3. Mean surrogate objective for each completion: $\mathcal{L}_{\text{surr}}^{(i)} = \frac{1}{T_i} \sum_{t=1}^{T_i} f(\rho_{i, t}; \hat{A}_i)$.
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-**Solution:**
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-#### Part A: Forward Pass for Completion $o_1$ ($\hat{A}_1 = +1.000000$)
-- **Token $t = 1$:**
-  $$\rho_{1, 1} = \frac{0.440000}{0.400000} = \mathbf{1.100000}$$
-  Unclipped term: $\rho_{1, 1} \hat{A}_1 = 1.100000 \times (+1.000000) = +1.100000$
-  Clipped term: $\operatorname{clip}(1.100000, 0.80, 1.20) \hat{A}_1 = 1.100000 \times (+1.000000) = +1.100000$
-  $$\text{Surrogate}_{1, 1} = \min(+1.100000, +1.100000) = \mathbf{+1.100000} \quad (\text{Unclipped})$$
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-- **Token $t = 2$:**
-  $$\rho_{1, 2} = \frac{0.650000}{0.500000} = \mathbf{1.300000}$$
-  Unclipped term: $\rho_{1, 2} \hat{A}_1 = 1.300000 \times (+1.000000) = +1.300000$
-  Clipped term: $\operatorname{clip}(1.300000, 0.80, 1.20) \hat{A}_1 = 1.200000 \times (+1.000000) = +1.200000$
-  $$\text{Surrogate}_{1, 2} = \min(+1.300000, +1.200000) = \mathbf{+1.200000} \quad (\text{Clipped at upper bound } 1 + \epsilon)$$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-- **Token $t = 3$:**
-  $$\rho_{1, 3} = \frac{0.720000}{0.800000} = \mathbf{0.900000}$$
-  Unclipped term: $\rho_{1, 3} \hat{A}_1 = 0.900000 \times (+1.000000) = +0.900000$
-  Clipped term: $\operatorname{clip}(0.900000, 0.80, 1.20) \hat{A}_1 = 0.900000 \times (+1.000000) = +0.900000$
-  $$\text{Surrogate}_{1, 3} = \min(+0.900000, +0.900000) = \mathbf{+0.900000} \quad (\text{Unclipped})$$
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-Mean surrogate for Completion $o_1$:
-$$\mathcal{L}_{\text{surr}}^{(1)} = \frac{1}{3} (1.100000 + 1.200000 + 0.900000) = \frac{3.200000}{3} \approx \mathbf{+1.066667}$$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-#### Part B: Forward Pass for Completion $o_2$ ($\hat{A}_2 = -1.000000$)
-- **Token $t = 1$:**
-  $$\rho_{2, 1} = \frac{0.600000}{0.500000} = \mathbf{1.200000}$$
-  Unclipped term: $\rho_{2, 1} \hat{A}_2 = 1.200000 \times (-1.000000) = -1.200000$
-  Clipped term: $\operatorname{clip}(1.200000, 0.80, 1.20) \hat{A}_2 = 1.200000 \times (-1.000000) = -1.200000$
-  $$\text{Surrogate}_{2, 1} = \min(-1.200000, -1.200000) = \mathbf{-1.200000} \quad (\text{Unclipped boundary})$$
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-- **Token $t = 2$:**
-  $$\rho_{2, 2} = \frac{0.350000}{0.500000} = \mathbf{0.700000}$$
-  Unclipped term: $\rho_{2, 2} \hat{A}_2 = 0.700000 \times (-1.000000) = -0.700000$
-  Clipped term: $\operatorname{clip}(0.700000, 0.80, 1.20) \hat{A}_2 = 0.800000 \times (-1.000000) = -0.800000$
-  $$\text{Surrogate}_{2, 2} = \min(-0.700000, -0.800000) = \mathbf{-0.800000} \quad (\text{Clipped at lower bound } 1 - \epsilon)$$
-  *(Note: Because $-0.80 < -0.70$, the pessimistic $\min$ selects $-0.80$, bounding the negative surrogate).*
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-- **Token $t = 3$:**
-  $$\rho_{2, 3} = \frac{0.360000}{0.400000} = \mathbf{0.900000}$$
-  Unclipped term: $\rho_{2, 3} \hat{A}_2 = 0.900000 \times (-1.000000) = -0.900000$
-  Clipped term: $\operatorname{clip}(0.900000, 0.80, 1.20) \hat{A}_2 = 0.900000 \times (-1.000000) = -0.900000$
-  $$\text{Surrogate}_{2, 3} = \min(-0.900000, -0.900000) = \mathbf{-0.900000} \quad (\text{Unclipped})$$
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-Mean surrogate for Completion $o_2$:
-$$\mathcal{L}_{\text{surr}}^{(2)} = \frac{1}{3} (-1.200000 + (-0.800000) + (-0.900000)) = \frac{-2.900000}{3} \approx \mathbf{-0.966667}$$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
-Combined pair objective:
-$$\mathcal{L}_{\text{surr}} = \frac{1}{2} \left( \mathcal{L}_{\text{surr}}^{(1)} + \mathcal{L}_{\text{surr}}^{(2)} \right) = \frac{1.066667 + (-0.966667)}{2} = \frac{0.100000}{2} = \mathbf{+0.050000}$$
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-$\blacksquare$
+By mathematically factoring out the critic model via group normalization, GRPO structurally shifts the constraints of frontier AI scaling. Where traditional PPO hits a hard static memory wall preventing the scaling of the context length, GRPO explicitly trades memory for test-time computation. Because the static parameter footprint is halved exactly, researchers can massively expand the micro-batch size and the maximum sequence length. This directly enables the model to perform extensive CoT (Chain-of-Thought) loops lasting tens of thousands of tokens without triggering CUDA Out-Of-Memory exceptions. 
 
----
+Furthermore, avoiding a parameterized critic mitigates the epistemic collapse commonly seen in long-horizon reasoning. Neural value functions struggle to correctly backpropagate credit assignment across 32,000 token proofs. If step 45 out of 100 in a proof contains a subtle algebraic error, the value function $V_\phi$ typically smooths over it, returning an overly optimistic value estimate. With GRPO, the group rollout baseline is completely stateless. It does not attempt to memorize the state-value landscape of mathematics. It purely evaluates relative outcome margins at the exact terminal state, drastically increasing gradient fidelity.
 
-### Illustration 4: Unbiased Reference KL Penalty Approximation via Schulman Estimator
 
-**Problem:**
-Calculate the analytical Schulman non-negative KL divergence estimator:
-$$D_{\text{KL}}^{\text{Schulman}} = u - \ln u - 1, \quad \text{where } u = \frac{\pi_{\text{ref}}}{\pi_\theta}$$
-and compare it to the naive log-ratio estimator $D_{\text{KL}}^{\text{naive}} = \ln \left( \frac{\pi_\theta}{\pi_{\text{ref}}} \right) = -\ln u$ across four canonical token probability transitions:
-1. **Case 1 (Exact Identity):** $\pi_\theta = 0.50, \pi_{\text{ref}} = 0.50$
-2. **Case 2 (Confidence Increase):** $\pi_\theta = 0.60, \pi_{\text{ref}} = 0.40$
-3. **Case 3 (Confidence Drop):** $\pi_\theta = 0.30, \pi_{\text{ref}} = 0.60$
-4. **Case 4 (Extreme Divergence):** $\pi_\theta = 0.80, \pi_{\text{ref}} = 0.20$
+### 5.8 Final Synthesis of GRPO's Impact
 
-**Solution:**
+In conclusion, the mathematical purity of GRPO lies in its elegant combination of zero-sum group normalization, conservative trust-region clipping, and non-negative KL regularization. This algorithm completely redefines how frontier reasoning models are trained, eliminating the massive overhead of parameterized critics and vulnerable reward models. By grounding the optimization purely in logical correctness and self-relative baselines, it triggers the emergent autonomous reflection processes that power DeepSeek-R1.
 
-#### Step 1: Case 1 (Exact Identity: $\pi_\theta = 0.50, \pi_{\text{ref}} = 0.50$)
-$$u = \frac{0.500000}{0.500000} = 1.000000$$
-$$\ln u = \ln(1.000000) = 0.000000$$
-$$D_{\text{KL}}^{\text{Schulman}} = 1.000000 - 0.000000 - 1.0 = \mathbf{0.000000}$$
-$$D_{\text{KL}}^{\text{naive}} = -\ln(1.000000) = \mathbf{0.000000}$$
-*Outcome:* Both estimators produce exactly zero; Schulman guarantees zero sample variance.
-
-#### Step 2: Case 2 (Confidence Increase: $\pi_\theta = 0.60, \pi_{\text{ref}} = 0.40$)
-$$u = \frac{0.400000}{0.600000} = \frac{2}{3} \approx 0.666667$$
-$$\ln u = \ln(0.666667) \approx -0.405465$$
-$$D_{\text{KL}}^{\text{Schulman}} = 0.666667 - (-0.405465) - 1.0 = 0.666667 + 0.405465 - 1.0 = \mathbf{0.072132}$$
-$$D_{\text{KL}}^{\text{naive}} = -\ln(0.666667) \approx \mathbf{+0.405465}$$
-*Outcome:* Schulman applies a smooth, quadratic-like penalty $(0.072132)$ rather than the aggressive linear log-penalty.
-
-#### Step 3: Case 3 (Confidence Drop: $\pi_\theta = 0.30, \pi_{\text{ref}} = 0.60$)
-$$u = \frac{0.600000}{0.300000} = 2.000000$$
-$$\ln u = \ln(2.000000) \approx 0.693147$$
-$$D_{\text{KL}}^{\text{Schulman}} = 2.000000 - 0.693147 - 1.0 = 1.000000 - 0.693147 = \mathbf{0.306853} \ge 0$$
-$$D_{\text{KL}}^{\text{naive}} = -\ln(2.000000) \approx \mathbf{-0.693147} < 0$$
-*Critical Analysis:* The naive estimator evaluates to a **negative value** ($-0.693147$). In an RL objective $\mathcal{L} = \text{Surrogate} - \beta D_{\text{KL}}$, a negative KL penalty transforms into an artificial **reward bonus** $(-\beta(-0.693) = +0.693\beta)$, actively incentivizing the model to drift further away from the reference policy! The Schulman estimator strictly enforces a positive penalty ($+0.306853$), guaranteeing mathematical stability.
-
-#### Step 4: Case 4 (Extreme Divergence: $\pi_\theta = 0.80, \pi_{\text{ref}} = 0.20$)
-$$u = \frac{0.200000}{0.800000} = 0.250000$$
-$$\ln u = \ln(0.250000) \approx -1.386294$$
-$$D_{\text{KL}}^{\text{Schulman}} = 0.250000 - (-1.386294) - 1.0 = 0.250000 + 1.386294 - 1.0 = \mathbf{0.636294}$$
-$$D_{\text{KL}}^{\text{naive}} = -\ln(0.250000) \approx \mathbf{+1.386294}$$
-
-| Scenario | Policy $\pi_\theta$ | Ref $\pi_{\text{ref}}$ | Ratio $u = \frac{\pi_{\text{ref}}}{\pi_\theta}$ | Schulman KL $u - \ln u - 1$ | Naive KL $\ln \frac{\pi_\theta}{\pi_{\text{ref}}}$ | Regularization Behavior |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Exact Match** | $0.50$ | $0.50$ | $1.000000$ | $\mathbf{0.000000}$ | $0.000000$ | Perfect equilibrium (zero variance) |
-| **Probability Boost** | $0.60$ | $0.40$ | $0.666667$ | $\mathbf{0.072132}$ | $+0.405465$ | Stable convex penalty |
-| **Probability Drop** | $0.30$ | $0.60$ | $2.000000$ | $\mathbf{0.306853}$ | $\mathbf{-0.693147}$ | **Schulman penalizes; Naive erroneously rewards!** |
-| **Severe Divergence** | $0.80$ | $0.20$ | $0.250000$ | $\mathbf{0.636294}$ | $+1.386294$ | Strong non-negative restorative force |
-
-$\blacksquare$
-
----
-
-### Illustration 5: Memory Footprint Comparison: PPO (4 Models in VRAM) vs. GRPO on an 8x H100 GPU Cluster
-
-**Problem:**
-An AI research lab trains a 14-billion parameter reasoning model (e.g. DeepSeek-R1-Distill-Qwen-14B, $N = 14 \times 10^9$ parameters) on a single 8-GPU node equipped with **$8 \times$ NVIDIA H100 SXM5 GPUs** ($80\text{ GB}$ HBM3 VRAM per GPU; total cluster VRAM = $8 \times 80 = 640\text{ GB}$).
-Training uses 16-bit mixed-precision AdamW and ZeRO Stage 3 / FSDP distributed parameter sharding.
-1. Compute the exact static VRAM footprint across the cluster and per GPU for standard **PPO** (Actor, Critic, Reference, and Reward Model).
-2. Compute the exact static VRAM footprint across the cluster and per GPU for **GRPO** (Actor and Reference only; Critic eliminated; Reward Model on CPU).
-3. Compute the available dynamic headroom remaining for activations and rollout KV-cache per GPU.
-4. Scale the analysis to a **32-billion parameter model** ($N = 32 \times 10^9$) to determine if PPO or GRPO can fit.
-
-**Solution:**
-
-#### Memory Layout Constants (Mixed Precision AdamW):
-- Trainable Model ($\pi_\theta, V_\phi$):
-  - Weights (bf16): $2\text{ bytes/param}$
-  - Gradients (bf16): $2\text{ bytes/param}$
-  - AdamW Optimizer (fp32 master weights, momentum $m$, variance $v$): $4 + 4 + 4 = 12\text{ bytes/param}$
-  - Total trainable memory: $2 + 2 + 12 = \mathbf{16\text{ bytes/param}}$
-- Frozen Model ($\pi_{\text{ref}}, r_\psi$):
-  - Weights (bf16): $\mathbf{2\text{ bytes/param}}$ (no gradients, no optimizer states)
-
-#### Part 1: 14B Parameter Model under Classical PPO ($N = 14 \times 10^9$)
-1. **Cluster Static Memory Breakdown:**
-   - Trainable Actor $\pi_\theta$: $16\text{ bytes} \times 14 \times 10^9 = 224.0\text{ GB}$
-   - Trainable Critic $V_\phi$: $16\text{ bytes} \times 14 \times 10^9 = 224.0\text{ GB}$
-   - Frozen Reference $\pi_{\text{ref}}$: $2\text{ bytes} \times 14 \times 10^9 = 28.0\text{ GB}$
-   - Frozen Reward Model $r_\psi$: $2\text{ bytes} \times 14 \times 10^9 = 28.0\text{ GB}$
-   - Total Cluster Static Memory:
-     $$M_{\text{static}}^{\text{PPO}} = 224.0 + 224.0 + 28.0 + 28.0 = \mathbf{504.0\text{ GB}}$$
-2. **Per-GPU Static Memory (Sharded across $K = 8$ GPUs):**
-   $$M_{\text{per-GPU}}^{\text{PPO}} = \frac{504.0\text{ GB}}{8} = \mathbf{63.00\text{ GB/GPU}}$$
-3. **Dynamic Headroom per GPU:**
-   $$\text{Headroom}_{\text{PPO}} = 80.00\text{ GB} - 63.00\text{ GB} = \mathbf{17.00\text{ GB/GPU}}$$
-   *Failure Mode:* Storing forward-backward activations for both Actor and Critic ($> 12\text{ GB}$) and maintaining rollout KV caches for long sequences ($T = 8,192$, $\sim 10\text{ GB}$) exceeds the $17.00\text{ GB}$ headroom ($12 + 10 = 22\text{ GB} > 17\text{ GB}$), triggering **CUDA Out of Memory (OOM)**!
-
-#### Part 2: 14B Parameter Model under GRPO ($N = 14 \times 10^9$)
-1. **Cluster Static Memory Breakdown:**
-   - Trainable Actor $\pi_\theta$: $16\text{ bytes} \times 14 \times 10^9 = 224.0\text{ GB}$
-   - Frozen Reference $\pi_{\text{ref}}$: $2\text{ bytes} \times 14 \times 10^9 = 28.0\text{ GB}$
-   - Trainable Critic $V_\phi$: **Eliminated!** ($0.0\text{ GB}$)
-   - Reward Model $r_\psi$: **Rule-based verifier on CPU!** ($0.0\text{ GB}$)
-   - Total Cluster Static Memory:
-     $$M_{\text{static}}^{\text{GRPO}} = 224.0 + 28.0 + 0.0 + 0.0 = \mathbf{252.0\text{ GB}}$$
-2. **Per-GPU Static Memory (Sharded across $K = 8$ GPUs):**
-   $$M_{\text{per-GPU}}^{\text{GRPO}} = \frac{252.0\text{ GB}}{8} = \mathbf{31.50\text{ GB/GPU}}$$
-3. **Dynamic Headroom per GPU:**
-   $$\text{Headroom}_{\text{GRPO}} = 80.00\text{ GB} - 31.50\text{ GB} = \mathbf{48.50\text{ GB/GPU}}$$
-4. **VRAM Savings & Headroom Gain:**
-   $$\Delta M_{\text{cluster}} = 504.0\text{ GB} - 252.0\text{ GB} = \mathbf{252.0\text{ GB}} \quad \left( \frac{252.0}{504.0} = \mathbf{50.00\%} \text{ savings} \right)$$
-   $$\text{Headroom Multiplier} = \frac{48.50\text{ GB}}{17.00\text{ GB}} \approx \mathbf{2.85\times \text{ increase in usable dynamic VRAM!}}$$
-   With $48.50\text{ GB}$ of free memory per GPU, the system easily accommodates long Chain-of-Thought rollouts up to $16,384$ tokens and group sizes $G = 16$ without memory swapping.
-
-#### Part 3: Scaling to a 32B Parameter Model ($N = 32 \times 10^9$)
-- **PPO Cluster Static Footprint:**
-  $$M_{\text{static}}^{\text{PPO}} = (16 + 16 + 2 + 2) \times 32 = 36 \times 32 = \mathbf{1,152.0\text{ GB}}$$
-  Per GPU: $\frac{1152.0}{8} = \mathbf{144.00\text{ GB/GPU}} \gg 80.0\text{ GB}$ (**Impossible on 8x H100**; requires minimum 16 to 32 GPUs).
-- **GRPO Cluster Static Footprint:**
-  $$M_{\text{static}}^{\text{GRPO}} = (16 + 2) \times 32 = 18 \times 32 = \mathbf{576.0\text{ GB}}$$
-  Per GPU: $\frac{576.0}{8} = \mathbf{72.00\text{ GB/GPU}} \le 80.0\text{ GB}$ (**Fits on 8x H100 node!**).
-
-| Metric / Configuration | PPO (14B Model) | GRPO (14B Model) | PPO (32B Model) | GRPO (32B Model) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Actor $\pi_\theta$ Memory** | $224.0\text{ GB}$ | $224.0\text{ GB}$ | $512.0\text{ GB}$ | $512.0\text{ GB}$ |
-| **Critic $V_\phi$ Memory** | $224.0\text{ GB}$ | **$0.0\text{ GB}$ (Eliminated)** | $512.0\text{ GB}$ | **$0.0\text{ GB}$ (Eliminated)** |
-| **Reference $\pi_{\text{ref}}$ Memory** | $28.0\text{ GB}$ | $28.0\text{ GB}$ | $64.0\text{ GB}$ | $64.0\text{ GB}$ |
-| **Reward Model $r_\psi$ Memory** | $28.0\text{ GB}$ | **$0.0\text{ GB}$ (CPU)** | $64.0\text{ GB}$ | **$0.0\text{ GB}$ (CPU)** |
-| **Total Cluster Static VRAM** | $\mathbf{504.0\text{ GB}}$ | $\mathbf{252.0\text{ GB}}$ | $\mathbf{1,152.0\text{ GB}}$ | $\mathbf{576.0\text{ GB}}$ |
-| **Per-GPU Static VRAM ($8\times$ H100)** | $63.00\text{ GB}$ | $\mathbf{31.50\text{ GB}}$ | $144.00\text{ GB}$ | $\mathbf{72.00\text{ GB}}$ |
-| **Remaining Headroom / GPU** | $17.00\text{ GB}$ | $\mathbf{48.50\text{ GB}}$ | $-64.00\text{ GB}$ (OOM) | $\mathbf{+8.00\text{ GB}}$ |
-| **Hardware Feasibility (8x H100)** | **Fails (OOM during training)** | **Trains Smoothly ($G=16$)** | **Impossible ($> 2\times$ VRAM)** | **Feasible ($T=4k$)** |
-
-$\blacksquare$
-
----
-
-### Illustration 6: Frontier Reasoning Dynamics: The Autonomous Emergence of the "Aha Moment"
-
-In the landmark DeepSeek-R1 investigations (DeepSeek-AI, 2025), training a base language model with pure rule-based GRPO (without supervised fine-tuning warm-start data, termed **DeepSeek-R1-Zero**) yielded a historic emergent behavior: the autonomous development of internal self-reflection, backtracking, and algorithmic search.
-
-During training on mathematical olympiad problems, intermediate checkpoint rollouts revealed spontaneous chain-of-thought phrases such as:
-> *"Wait, let me double check this equation... Ah, wait, that was a mistake! If $x < 0$, the square root is undefined. Let me re-evaluate from line 3..."*
-
-#### Why GRPO Spontaneously Drives Self-Correction:
-1. **All-or-Nothing Verifier Sparsity:** Under binary verifier rewards ($r \in \{0, 1\}$), partial proofs receive exactly $0.0$ reward. If the model commits an arithmetic blunder on token 50 of a 5,000-token proof, the entire completion fails ($r = 0.0$).
-2. **Dynamic Exploration Incentive:** Candidate completions that spend an additional 500 tokens conducting internal sanity checks, exploring alternative lemmas, and re-deriving intermediate equations have a significantly higher statistical probability of arriving at the correct verified boxed answer ($r = 1.0 \implies \hat{A}_i = +1.0$).
-3. **Autonomous Length Scaling:** GRPO does not impose an artificial token penalty; the policy gradient autonomously learns that allocating inference-time compute to self-verification maximizes expected group advantage, validating the modern **Inference-Time Compute Scaling Law**.
-
-$\blacksquare$
-
----
 
 ## 7. Deep Learning Connection & Modern Applications
 

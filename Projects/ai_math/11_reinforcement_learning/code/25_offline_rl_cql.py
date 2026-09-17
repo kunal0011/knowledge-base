@@ -192,12 +192,105 @@ def verify_cql_offline_learning():
 
 
 # =====================================================================
+# 3. Section 6 Numerical Illustrations Verification
+# =====================================================================
+
+def verify_section6_illustrations():
+    print("=" * 70)
+    print("3. VERIFYING SECTION 6 NUMERICAL ILLUSTRATIONS")
+    print("=" * 70)
+
+    # Illustration 2: 3-action CQL penalty
+    Q2 = np.array([4.0, 2.0, 8.0])
+    N2 = np.array([100.0, 50.0, 0.0])
+    pi_beta2 = N2 / np.sum(N2)
+    exp_Q2 = np.exp(Q2)
+    sum_exp2 = np.sum(exp_Q2)
+    p_soft2 = exp_Q2 / sum_exp2
+    grad_R2 = p_soft2 - pi_beta2
+    delta_Q2 = - 0.1 * 1.0 * grad_R2
+    Q_new2 = Q2 + delta_Q2
+
+    assert np.isclose(np.log(sum_exp2), 8.020581, atol=1e-5)
+    assert np.isclose(p_soft2[0], 0.017943, atol=1e-5)
+    assert np.isclose(p_soft2[2], 0.979629, atol=1e-5)
+    assert np.isclose(Q_new2[0], 4.064872, atol=1e-5)
+    assert np.isclose(Q_new2[1], 2.033091, atol=1e-5)
+    assert np.isclose(Q_new2[2], 7.902037, atol=1e-5)
+    print(">> Illustration 2 (3-Action CQL Penalty): VERIFIED!")
+
+    # Illustration 3: CQL-SAC Target Calculation
+    r3 = 1.50
+    gamma3 = 0.95
+    alpha_sac3 = 0.20
+    log_pi3 = -1.20
+    min_q3 = min(12.00, 10.50)
+    v_targ3 = min_q3 - alpha_sac3 * log_pi3
+    y_bellman3 = r3 + gamma3 * v_targ3
+    td_err3 = 11.00 - y_bellman3
+    td_loss3 = 0.5 * (td_err3 ** 2)
+
+    q_samples3 = np.array([8.0, 6.0, 13.0, 10.0])
+    lse_sac3 = np.log(np.mean(np.exp(q_samples3)))
+    cql_reg3 = lse_sac3 - 11.00
+    total_loss3 = td_loss3 + 1.0 * cql_reg3
+
+    assert np.isclose(v_targ3, 10.7400, atol=1e-4)
+    assert np.isclose(y_bellman3, 11.7030, atol=1e-4)
+    assert np.isclose(td_loss3, 0.247104, atol=1e-4)
+    assert np.isclose(lse_sac3, 11.669554, atol=1e-4)
+    assert np.isclose(total_loss3, 0.916658, atol=1e-4)
+    print(">> Illustration 3 (CQL-SAC Soft Bellman Target): VERIFIED!")
+
+    # Illustration 4: Standard vs CQL Error Propagation
+    qd = 2.80
+    qo = 4.50
+    alpha4 = 2.0
+    lr4 = 0.2
+    y4 = 2.80
+
+    for step in range(1, 6):
+        td_e = qd - y4
+        ed = np.exp(qd)
+        eo = np.exp(qo)
+        se = ed + eo
+        pd = ed / se
+        po = eo / se
+        gd = td_e + alpha4 * (pd - 1.0)
+        go = alpha4 * po
+        qd = qd - lr4 * gd
+        qo = qo - lr4 * go
+
+    assert np.isclose(qd, 3.601508, atol=1e-4)
+    assert np.isclose(qo, 3.223142, atol=1e-4)
+    assert qd > qo, "At step 5, in-data action must exceed OOD action!"
+    print(">> Illustration 4 (Standard vs CQL Error Propagation): VERIFIED!")
+
+    # Illustration 5: TD3+BC Adaptive Regularization
+    Q_batch5 = np.array([120.0, -80.0, 150.0, 50.0])
+    mean_abs_Q5 = np.mean(np.abs(Q_batch5))
+    lam5 = 2.50 / mean_abs_Q5
+    diff5 = np.array([0.80, -0.40]) - np.array([0.50, -0.10])
+    bc_loss5 = np.sum(diff5 ** 2)
+    grad_bc5 = 2 * diff5
+    rl_grad5 = lam5 * np.array([40.0, -20.0])
+    total_actor_grad5 = rl_grad5 - grad_bc5
+
+    assert np.isclose(mean_abs_Q5, 100.0, atol=1e-4)
+    assert np.isclose(lam5, 0.0250, atol=1e-4)
+    assert np.isclose(bc_loss5, 0.1800, atol=1e-4)
+    assert np.allclose(total_actor_grad5, [0.40, 0.10], atol=1e-4)
+    print(">> Illustration 5 (TD3+BC Adaptive Weight Normalization): VERIFIED!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
 if __name__ == "__main__":
     verify_part5_hand_calculation()
     verify_cql_offline_learning()
+    verify_section6_illustrations()
     print("=" * 70)
     print("ALL MODULE 11 CHAPTER 25 (OFFLINE RL & CQL) VERIFICATIONS PASSED!")
     print("=" * 70)

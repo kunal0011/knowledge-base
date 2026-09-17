@@ -313,6 +313,132 @@ def verify_dynaq_plus_bonus():
 
 
 # =====================================================================
+# 5. Section 6 Numerical Illustrations Verification Suite
+# =====================================================================
+
+def verify_illustration2_dyna_cycle():
+    print("=" * 70)
+    print("4. VERIFYING ILLUSTRATION 2: DYNA-Q REAL & PLANNING STEP CYCLE")
+    print("=" * 70)
+    alpha = 0.2000
+    gamma = 0.9000
+    Q = {"S0": 0.0000, "S1": 0.0000, "S2": 0.0000}
+
+    # Real step: (S2, a0) -> S3, R = 10.0000 (S3 terminal)
+    target_real = 10.0000 + gamma * 0.0000
+    Q["S2"] = Q["S2"] + alpha * (target_real - Q["S2"])
+    assert np.isclose(Q["S2"], 2.0000, atol=1e-8), f"Expected 2.0, got {Q['S2']}"
+
+    # Planning Step 1: sample (S1, a0) -> (R=0, S2)
+    target_p1 = 0.0000 + gamma * Q["S2"]
+    Q["S1"] = Q["S1"] + alpha * (target_p1 - Q["S1"])
+    assert np.isclose(Q["S1"], 0.3600, atol=1e-8), f"Expected 0.36, got {Q['S1']}"
+
+    # Planning Step 2: sample (S0, a0) -> (R=0, S1)
+    target_p2 = 0.0000 + gamma * Q["S1"]
+    Q["S0"] = Q["S0"] + alpha * (target_p2 - Q["S0"])
+    assert np.isclose(Q["S0"], 0.0648, atol=1e-8), f"Expected 0.0648, got {Q['S0']}"
+
+    # Planning Step 3: sample (S1, a0) -> (R=0, S2)
+    target_p3 = 0.0000 + gamma * Q["S2"]
+    Q["S1"] = Q["S1"] + alpha * (target_p3 - Q["S1"])
+    assert np.isclose(Q["S1"], 0.6480, atol=1e-8), f"Expected 0.6480, got {Q['S1']}"
+
+    print(f">> SUCCESS: Illustration 2 cycle verified: Q(S2)={Q['S2']:.4f}, Q(S1)={Q['S1']:.4f}, Q(S0)={Q['S0']:.4f}\n")
+
+
+def verify_illustration3_shortcut_overtaking():
+    print("=" * 70)
+    print("5. VERIFYING ILLUSTRATION 3: DYNA-Q+ SHORTCUT OVERTAKING")
+    print("=" * 70)
+    kappa = 0.0010
+    gap = 0.1200
+    tau_star = (gap / kappa)**2
+    assert np.isclose(tau_star, 14400.0, atol=1e-8), f"Expected 14400, got {tau_star}"
+
+    for tau, expected_bonus, expected_flip in [
+        (900, 0.0300, False),
+        (4900, 0.0700, False),
+        (10000, 0.1000, False),
+        (14400, 0.1200, True),
+        (25600, 0.1600, True),
+    ]:
+        bonus = kappa * np.sqrt(tau)
+        assert np.isclose(bonus, expected_bonus, atol=1e-8)
+        assert (bonus >= gap) == expected_flip
+
+    print(f">> SUCCESS: Illustration 3 verified: tau* = {tau_star:.0f} steps for shortcut discovery!\n")
+
+
+def verify_illustration4_compounding_error():
+    print("=" * 70)
+    print("6. VERIFYING ILLUSTRATION 4: SIMULATION LEMMA & COMPOUNDING BOUNDS")
+    print("=" * 70)
+    eps_m = 0.0500
+    R_max = 1.0000
+    gamma = 0.9500
+
+    expected_vals = {
+        1: (0.0500, 0.0500, 0.0500),
+        5: (0.2500, 0.7500, 0.655502),
+        10: (0.5000, 2.7500, 2.037861),
+        20: (1.0000, 10.5000, 5.660603),
+    }
+
+    for H, (exp_step_tv, exp_cum_tv, exp_val_err) in expected_vals.items():
+        step_tv = H * eps_m
+        cum_tv = H * (H + 1) / 2.0 * eps_m
+        t_arr = np.arange(1, H + 1)
+        val_err = np.sum(gamma**(t_arr - 1) * t_arr * eps_m * R_max)
+        assert np.isclose(step_tv, exp_step_tv, atol=1e-4)
+        assert np.isclose(cum_tv, exp_cum_tv, atol=1e-4)
+        assert np.isclose(val_err, exp_val_err, atol=1e-4)
+
+    bound_inf = (gamma * eps_m * R_max) / ((1 - gamma)**2)
+    assert np.isclose(bound_inf, 19.0000, atol=1e-8)
+    print(f">> SUCCESS: Illustration 4 verified: compounding bounds match theoretical formulas!\n")
+
+
+def verify_illustration5_rls_transition_model():
+    print("=" * 70)
+    print("7. VERIFYING ILLUSTRATION 5: RECURSIVE LEAST SQUARES TRANSITION MODEL")
+    print("=" * 70)
+    theta = np.array([0.0000, 0.0000])
+    P = 10.0000 * np.eye(2)
+
+    # Step 1: x_1 = [1.0, 2.0], y_1 = 1.8000
+    x_1 = np.array([1.0, 2.0])
+    y_1 = 1.8000
+    denom_1 = 1.0 + float(x_1 @ P @ x_1)
+    k_1 = (P @ x_1) / denom_1
+    pred_1 = float(x_1 @ theta)
+    e_1 = y_1 - pred_1
+    theta = theta + k_1 * e_1
+    P = (np.eye(2) - np.outer(k_1, x_1)) @ P
+
+    assert np.isclose(denom_1, 51.0000, atol=1e-8)
+    assert np.allclose(k_1, [10.0 / 51.0, 20.0 / 51.0], atol=1e-8)
+    assert np.allclose(theta, [18.0 / 51.0, 36.0 / 51.0], atol=1e-8)
+    assert np.allclose(theta, [0.352941, 0.705882], atol=1e-4)
+
+    # Step 2: x_2 = [1.8, -1.0], y_2 = 0.9400
+    x_2 = np.array([1.8, -1.0])
+    y_2 = 0.9400
+    P_x2 = P @ x_2
+    denom_2 = 1.0 + float(x_2 @ P_x2)
+    k_2 = P_x2 / denom_2
+    pred_2 = float(x_2 @ theta)
+    e_2 = y_2 - pred_2
+    theta = theta + k_2 * e_2
+    P = (np.eye(2) - np.outer(k_2, x_2)) @ P
+
+    assert np.isclose(denom_2, 43.321569, atol=1e-4)
+    assert np.allclose(theta, [0.781986, 0.490903], atol=1e-4)
+    assert np.isclose(P[0, 0], 0.230832, atol=1e-4)
+    print(f">> SUCCESS: Illustration 5 verified: RLS converged to theta = [{theta[0]:.4f}, {theta[1]:.4f}]!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
@@ -320,6 +446,11 @@ if __name__ == "__main__":
     verify_part5_hand_calculation()
     run_gridworld_benchmark()
     verify_dynaq_plus_bonus()
+    verify_illustration2_dyna_cycle()
+    verify_illustration3_shortcut_overtaking()
+    verify_illustration4_compounding_error()
+    verify_illustration5_rls_transition_model()
     print("=" * 70)
     print("ALL MODULE 11 CHAPTER 21 (DYNA-Q) VERIFICATIONS PASSED SUCCESSFULLY!")
     print("=" * 70)
+

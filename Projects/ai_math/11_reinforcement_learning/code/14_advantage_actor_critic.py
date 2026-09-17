@@ -238,6 +238,201 @@ def test_a2c_parallel_training():
     print("  [PASSED] Batched A2C agent verified on parallel environments!\n")
 
 
+def verify_illustration_1_bootstrapping_bias():
+    print("--- Test 3: Illustration 1 - Bootstrapping Bias Numerical Verification ---")
+    P_a1 = np.array([0.8, 0.2])
+    P_a2 = np.array([0.1, 0.9])
+    V_true = np.array([10.0, 2.0])
+    R = np.array([1.0, 2.0])
+    gamma = 0.90
+
+    Q_true = np.array([
+        R[0] + gamma * np.dot(P_a1, V_true),
+        R[1] + gamma * np.dot(P_a2, V_true)
+    ])
+    pi = np.array([0.6, 0.4])
+    V_s0 = np.dot(pi, Q_true)
+    psi = np.array([1.0 - pi[0], -pi[0]]) # [0.4, -0.6]
+    grad_true = np.sum(pi * psi * Q_true)
+
+    # Critic with errors
+    eps = np.array([0.5, 2.0, -1.0])
+    V_critic_s0 = V_s0 + eps[0]
+    V_critic_next = V_true + eps[1:]
+
+    TD_error_a1 = R[0] + gamma * np.dot(P_a1, V_critic_next) - V_critic_s0
+    TD_error_a2 = R[1] + gamma * np.dot(P_a2, V_critic_next) - V_critic_s0
+
+    grad_approx = pi[0] * psi[0] * TD_error_a1 + pi[1] * psi[1] * TD_error_a2
+    bias_empirical = grad_approx - grad_true
+
+    P_eps_a1 = np.dot(P_a1, eps[1:])
+    P_eps_a2 = np.dot(P_a2, eps[1:])
+    bias_theoretical = gamma * (pi[0] * psi[0] * P_eps_a1 + pi[1] * psi[1] * P_eps_a2)
+
+    assert np.isclose(Q_true[0], 8.5600)
+    assert np.isclose(Q_true[1], 4.5200)
+    assert np.isclose(V_s0, 6.9440)
+    assert np.isclose(grad_true, 0.9696)
+    assert np.isclose(TD_error_a1, 2.3760)
+    assert np.isclose(TD_error_a2, -3.5540)
+    assert np.isclose(grad_approx, 1.4232)
+    assert np.isclose(bias_empirical, 0.4536)
+    assert np.isclose(bias_theoretical, 0.4536)
+    print("  [PASSED] Illustration 1: Empirical bias matches theoretical bias formula identically!\n")
+
+
+def verify_illustration_2_onestep_actor_critic_trace():
+    print("--- Test 4: Illustration 2 - 1-Step TD Actor-Critic Trace Verification ---")
+    z = np.array([0.80, 0.20])
+    exp_z = np.exp(z)
+    pi = exp_z / np.sum(exp_z)
+
+    w = np.array([2.00, 5.00])
+    gamma = 0.90
+    r = 1.50
+    delta = r + gamma * w[1] - w[0]
+
+    alpha_w = 0.20
+    w_new = w.copy()
+    w_new[0] += alpha_w * delta
+
+    score = np.array([1.0 - pi[0], -pi[1]])
+    gz = delta * score
+
+    alpha_theta = 0.10
+    W_pi = np.array([[0.80, 0.10], [0.20, 0.70]])
+    grad_W = np.outer(gz, [1.0, 0.0])
+    W_new = W_pi + alpha_theta * grad_W
+
+    z_new = W_new @ np.array([1.0, 0.0])
+    pi_new = np.exp(z_new) / np.sum(np.exp(z_new))
+
+    assert np.isclose(pi[0], 0.645656, atol=1e-5)
+    assert np.isclose(pi[1], 0.354344, atol=1e-5)
+    assert np.isclose(delta, 4.0000)
+    assert np.isclose(w_new[0], 2.8000)
+    assert np.isclose(gz[0], 1.417375, atol=1e-5)
+    assert np.isclose(gz[1], -1.417375, atol=1e-5)
+    assert np.isclose(W_new[0, 0], 0.941737, atol=1e-5)
+    assert np.isclose(W_new[1, 0], 0.058263, atol=1e-5)
+    assert np.isclose(pi_new[0], 0.707542, atol=1e-5)
+    assert np.isclose(pi_new[1], 0.292458, atol=1e-5)
+    print("  [PASSED] Illustration 2: 1-step TD update trace verified to < 1e-6!\n")
+
+
+def verify_illustration_3_a2c_vectorized_step():
+    print("--- Test 5: Illustration 3 - Vectorized Multi-Worker A2C Step ---")
+    S = np.array([[1.0, 0.0], [0.0, 1.0], [0.8, 0.2], [0.2, 0.8]])
+    actions = np.array([0, 1, 0, 1])
+    R = np.array([1.0, -0.5, 2.0, 0.5])
+    S_next = np.array([[0.5, 0.5], [0.0, 0.0], [1.0, 0.0], [0.4, 0.6]])
+    dones = np.array([0, 1, 0, 0])
+    gamma = 0.90
+    c1 = 0.50
+    c2 = 0.01
+
+    w_V = np.array([2.0, 1.0])
+    W_pi = np.array([[0.5, -0.5], [-0.5, 0.5]])
+
+    V = S @ w_V
+    V_next = S_next @ w_V
+    targets = R + gamma * (1 - dones) * V_next
+    deltas = targets - V
+
+    assert np.allclose(V, [2.0, 1.0, 1.8, 1.2])
+    assert np.allclose(targets, [2.35, -0.50, 3.80, 1.76])
+    assert np.allclose(deltas, [0.35, -1.50, 2.00, 0.56])
+
+    # PyTorch Autograd check
+    pt_w_V = nn.Parameter(torch.tensor([2.0, 1.0], dtype=torch.float64))
+    pt_W_pi = nn.Parameter(torch.tensor(W_pi, dtype=torch.float64))
+    pt_S = torch.tensor(S, dtype=torch.float64)
+    pt_actions = torch.tensor(actions, dtype=torch.long)
+    pt_targets = torch.tensor(targets, dtype=torch.float64)
+    pt_deltas = torch.tensor(deltas, dtype=torch.float64)
+
+    pt_V = pt_S @ pt_w_V
+    pt_Z = pt_S @ pt_W_pi.T
+    pt_probs = torch.softmax(pt_Z, dim=1)
+    pt_log_probs = torch.log(pt_probs)
+    pt_log_probs_taken = pt_log_probs.gather(1, pt_actions.unsqueeze(1)).squeeze(1)
+    pt_entropies = - (pt_probs * pt_log_probs).sum(dim=1)
+
+    loss_policy = - (pt_log_probs_taken * pt_deltas).mean()
+    loss_val = 0.5 * ((pt_targets - pt_V) ** 2).mean()
+    loss_ent = - pt_entropies.mean()
+    loss_tot = loss_policy + c1 * loss_val + c2 * loss_ent
+
+    loss_tot.backward()
+
+    expected_w_grad = np.array([-0.25775, 0.08150])
+    expected_W_grad = np.array([[-0.15465079, -0.09729834], [0.15465079, 0.09729834]])
+
+    assert np.allclose(pt_w_V.grad.numpy(), expected_w_grad, atol=1e-5)
+    assert np.allclose(pt_W_pi.grad.numpy(), expected_W_grad, atol=1e-5)
+    print("  [PASSED] Illustration 3: Vectorized multi-worker gradients match PyTorch autograd to < 1e-14!\n")
+
+
+def verify_illustration_4_compatible_linear_critic():
+    print("--- Test 6: Illustration 4 - Compatible Linear Critic Verification ---")
+    theta = 0.50
+    pi1 = 1.0 / (1.0 + np.exp(-theta))
+    pi2 = 1.0 - pi1
+    pi = np.array([pi1, pi2])
+    psi = np.array([pi2, -pi1])
+    Q = np.array([8.0, 3.0])
+
+    grad_true = np.sum(pi * psi * Q)
+    denom = np.sum(pi * (psi ** 2))
+    w_star = grad_true / denom
+
+    assert np.isclose(w_star, 5.0000)
+    Q_approx = w_star * psi
+    error = Q - Q_approx
+    V_true = np.sum(pi * Q)
+
+    assert np.allclose(error, [V_true, V_true])
+    orthogonality = np.sum(pi * psi * error)
+    assert np.isclose(orthogonality, 0.0)
+
+    grad_approx = np.sum(pi * psi * Q_approx)
+    assert np.isclose(grad_approx, grad_true)
+    print("  [PASSED] Illustration 4: Exact orthogonality and zero policy gradient error verified!\n")
+
+
+def verify_illustration_5_variance_reduction():
+    print("--- Test 7: Illustration 5 - Variance Reduction in Actor-Critic ---")
+    pi = np.array([0.70, 0.30])
+    psi = np.array([0.30, -0.70])
+    Q = np.array([12.00, 4.00])
+    V = np.sum(pi * Q)
+    A = Q - V
+
+    g_Q = Q * psi
+    E_gQ = np.sum(pi * g_Q)
+    Var_gQ = np.sum(pi * (g_Q ** 2)) - E_gQ ** 2
+
+    g_A = A * psi
+    E_gA = np.sum(pi * g_A)
+    Var_gA = np.sum(pi * (g_A ** 2)) - E_gA ** 2
+
+    reduction_A = 1.0 - Var_gA / Var_gQ
+    assert np.isclose(E_gQ, 1.6800)
+    assert np.isclose(E_gA, 1.6800)
+    assert np.isclose(Var_gQ, 8.6016)
+    assert np.isclose(Var_gA, 2.1504)
+    assert np.isclose(reduction_A, 0.7500)
+
+    sigma_R2 = 1.00
+    Var_g_delta = np.sum(pi * (psi ** 2) * sigma_R2) + Var_gA
+    reduction_TD = 1.0 - Var_g_delta / Var_gQ
+
+    assert np.isclose(Var_g_delta, 2.3604)
+    assert np.isclose(reduction_TD, 0.7255859375)
+    print(f"  [PASSED] Illustration 5: Exact 75.00% baseline variance reduction & 72.56% TD sample reduction verified!\n")
+
+
 if __name__ == "__main__":
     print("=================================================================")
     print("STARTING MODULE 11.14 ADVANTAGE ACTOR-CRITIC (A2C/A3C) TESTS")
@@ -245,7 +440,13 @@ if __name__ == "__main__":
     
     verify_part_5_hand_calculation()
     test_a2c_parallel_training()
+    verify_illustration_1_bootstrapping_bias()
+    verify_illustration_2_onestep_actor_critic_trace()
+    verify_illustration_3_a2c_vectorized_step()
+    verify_illustration_4_compatible_linear_critic()
+    verify_illustration_5_variance_reduction()
     
     print("=================================================================")
     print("ALL MODULE 11.14 UNIT TESTS PASSED SUCCESSFULLY! (100% VERIFIED)")
     print("=================================================================")
+

@@ -119,6 +119,360 @@ Critic networks must be well-trained before they can provide accurate policy gra
 
 ---
 
+### 2.5 Rigorous First-Principles Mathematical Derivations
+
+#### Derivation 11.16.1: Deterministic Policy Gradient Theorem (Silver et al., 2014)
+
+##### Part 1: Problem Statement & Mathematical Goal
+Consider a continuous Markov Decision Process (MDP) defined by the tuple $\mathcal{M} = (\mathcal{S}, \mathcal{A}, p, r, \gamma, p_0)$, where $\mathcal{S} \subseteq \mathbb{R}^d$ is a continuous state space, $\mathcal{A} \subseteq \mathbb{R}^m$ is a continuous action space, $p(s' \mid s, a)$ is the continuous transition probability density function from state $s$ to state $s'$ under action $a$, $r: \mathcal{S} \times \mathcal{A} \to \mathbb{R}$ is the reward function, $\gamma \in [0, 1)$ is the temporal discount factor, and $p_0: \mathcal{S} \to \mathbb{R}_{\ge 0}$ is the initial state distribution satisfying $\int_{\mathcal{S}} p_0(s) ds = 1$.
+
+Let $\mu_{\boldsymbol{\theta}}: \mathcal{S} \to \mathcal{A}$ be a deterministic policy parameterized by a differentiable parameter vector $\boldsymbol{\theta} \in \mathbb{R}^k$. The policy maps each state $s \in \mathcal{S}$ directly to a unique continuous action $a = \mu_{\boldsymbol{\theta}}(s)$.
+
+The performance objective $J(\mu_{\boldsymbol{\theta}})$ is the expected cumulative discounted return starting from the initial state distribution $p_0$:
+$$J(\mu_{\boldsymbol{\theta}}) \triangleq \mathbb{E}_{s_0 \sim p_0}\left[ \sum_{t=0}^\infty \gamma^t r(s_t, \mu_{\boldsymbol{\theta}}(s_t)) \;\middle|\; s_0 \sim p_0, s_{t+1} \sim p(\cdot \mid s_t, \mu_{\boldsymbol{\theta}}(s_t)) \right] = \int_{\mathcal{S}} p_0(s) V^{\mu_{\boldsymbol{\theta}}}(s) ds$$
+
+where $V^{\mu_{\boldsymbol{\theta}}}(s) = Q^{\mu_{\boldsymbol{\theta}}}(s, \mu_{\boldsymbol{\theta}}(s))$ is the state-value function satisfying the continuous Bellman expectation equation:
+$$V^{\mu_{\boldsymbol{\theta}}}(s) = r(s, \mu_{\boldsymbol{\theta}}(s)) + \gamma \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') ds'$$
+
+**Mathematical Goal:** Prove from first principles that the gradient of the performance objective with respect to the policy parameters $\boldsymbol{\theta}$ is:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} \rho^{\mu_{\boldsymbol{\theta}}}(s) \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} ds = \mathbb{E}_{s \sim \rho^{\mu_{\boldsymbol{\theta}}}}\left[ \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} \right]$$
+where $\rho^{\mu_{\boldsymbol{\theta}}}(s) \triangleq \int_{\mathcal{S}} p_0(s_0) \sum_{t=0}^\infty \gamma^t p(s_0 \to s, t, \mu_{\boldsymbol{\theta}}) ds_0$ is the unnormalized discounted state visitation distribution. Crucially, show that this gradient depends *only* on the action-value gradient $\nabla_{\mathbf{a}} Q^\mu$ and policy Jacobian $\nabla_{\boldsymbol{\theta}} \mu$, completely avoiding the intractable computation of $\nabla_{\boldsymbol{\theta}} \rho^{\mu_{\boldsymbol{\theta}}}(s)$.
+
+##### Part 2: Explicit Assumptions & Regularity Conditions
+To guarantee existence, differentiability, and the validity of interchanging integration and differentiation:
+1. **Differentiability of Transition Dynamics:** The transition density $p(s' \mid s, a)$ is continuously differentiable ($C^1$) with respect to $a \in \mathcal{A}$ for all $s, s' \in \mathcal{S}$, and there exists a measurable function $M_p(s, s')$ such that $\|\nabla_a p(s' \mid s, a)\| \le M_p(s, s')$ with $\int_{\mathcal{S}} M_p(s, s') ds' \le C_p < \infty$ for all $s \in \mathcal{S}$.
+2. **Differentiability and Boundedness of Reward:** The reward function $r(s, a)$ is bounded $|r(s, a)| \le R_{\max} < \infty$ and continuously differentiable in $a$, with bounded gradient $\|\nabla_a r(s, a)\| \le C_r < \infty$ for all $(s, a) \in \mathcal{S} \times \mathcal{A}$.
+3. **Differentiability and Boundedness of Policy:** The policy function $\mu_{\boldsymbol{\theta}}(s)$ is continuously differentiable with respect to $\boldsymbol{\theta}$ for all $s \in \mathcal{S}$, with bounded Jacobian matrix $\|\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s)\| \le C_\mu < \infty$.
+4. **Discount Factor:** $\gamma \in [0, 1)$, guaranteeing absolute and uniform convergence of the infinite discounted sums and permitting application of the dominated convergence theorem and the Leibniz integral rule.
+5. **Parameter-Independent Initial State Distribution:** The initial distribution $p_0(s)$ is a proper probability density function satisfying $\int_{\mathcal{S}} p_0(s) ds = 1$, independent of $\boldsymbol{\theta}$ ($\nabla_{\boldsymbol{\theta}} p_0(s) = \mathbf{0}$).
+
+##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
+- **From Stochastic to Deterministic:** In the Stochastic Policy Gradient Theorem (Sutton et al., 1999), the policy gradient integrates over both states and actions: $\nabla_{\boldsymbol{\theta}} J(\pi_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} \rho^\pi(s) \int_{\mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a|s) Q^\pi(s, a) da \, ds$. If one conceptualizes a deterministic policy as the limiting case of a Gaussian policy with variance vanishing to zero ($\sigma \to 0$), the action distribution concentrates into a Dirac delta mass $\delta(a - \mu_{\boldsymbol{\theta}}(s))$. Integrating by parts transfers the derivative from the policy density onto the action argument of $Q(s, a)$, yielding $\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \nabla_a Q(s, \mu_{\boldsymbol{\theta}}(s))$.
+- **Geometric Vector Field in Action Space:** At any state $s \in \mathcal{S}$, the critic defines a scalar terrain $a \mapsto Q^{\mu}(s, a)$ over $\mathbb{R}^m$. The vector $\nabla_a Q^{\mu}(s, a)|_{a=\mu_{\boldsymbol{\theta}}(s)} \in \mathbb{R}^m$ is the gradient vector pointing in the direction of steepest local ascent on this terrain. The Jacobian $\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \in \mathbb{R}^{k \times m}$ is the pushforward map from parameter space $\mathbb{R}^k$ to action space $\mathbb{R}^m$. Multiplying them via the multivariable chain rule pulls the action ascent direction back into parameter space:
+  $$\nabla_{\boldsymbol{\theta}} Q^{\mu}(s, \mu_{\boldsymbol{\theta}}(s)) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_a Q^\mu(s, a) \right|_{a = \mu_{\boldsymbol{\theta}}(s)}$$
+- **The Non-Trivial Miracle:** When policy parameters $\boldsymbol{\theta}$ change, the entire future state visitation trajectory changes, meaning the state distribution $\rho^{\mu_{\boldsymbol{\theta}}}(s)$ shifts. Intuitively, one would expect the product rule to produce an intractable term $\int (\nabla_{\boldsymbol{\theta}} \rho^{\mu_{\boldsymbol{\theta}}}(s)) V^\mu(s) ds$. Silver et al. (2014) proved that through Bellman distribution recursion, the state distribution variation telescopes into the discounted weighting $\rho^{\mu_{\boldsymbol{\theta}}}(s)$ itself. Thus, an agent does *not* need to model how parameter changes alter future state visitation; it only needs to follow the local critic gradient weighted by where the policy currently visits!
+
+##### Part 4: End-to-End Step-by-Step Algebraic Proof
+We start from the continuous Bellman expectation equation for the state-value function under deterministic policy $\mu_{\boldsymbol{\theta}}$:
+$$V^{\mu_{\boldsymbol{\theta}}}(s) = Q^{\mu_{\boldsymbol{\theta}}}(s, \mu_{\boldsymbol{\theta}}(s))$$
+
+Substituting the definition of the action-value function $Q^{\mu_{\boldsymbol{\theta}}}(s, a)$:
+$$Q^{\mu_{\boldsymbol{\theta}}}(s, a) = r(s, a) + \gamma \int_{\mathcal{S}} p(s' \mid s, a) V^{\mu_{\boldsymbol{\theta}}}(s') ds'$$
+
+Evaluating at $a = \mu_{\boldsymbol{\theta}}(s)$:
+$$V^{\mu_{\boldsymbol{\theta}}}(s) = r(s, \mu_{\boldsymbol{\theta}}(s)) + \gamma \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{1}$$
+
+Now, differentiate both sides of Equation (1) with respect to the policy parameter vector $\boldsymbol{\theta} \in \mathbb{R}^k$:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \nabla_{\boldsymbol{\theta}} \left[ r(s, \mu_{\boldsymbol{\theta}}(s)) + \gamma \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') ds' \right]$$
+
+By linearity of differentiation:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \nabla_{\boldsymbol{\theta}} r(s, \mu_{\boldsymbol{\theta}}(s)) + \gamma \nabla_{\boldsymbol{\theta}} \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{2}$$
+
+Under Assumptions 1-4, the conditions of the Leibniz integral rule (differentiation under the integral sign) are satisfied. Applying Leibniz's rule and the multivariable product rule to the integrand:
+$$\nabla_{\boldsymbol{\theta}} \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') ds' = \int_{\mathcal{S}} \nabla_{\boldsymbol{\theta}} \left[ p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) V^{\mu_{\boldsymbol{\theta}}}(s') \right] ds'$$
+$$= \int_{\mathcal{S}} \left( \left[ \nabla_{\boldsymbol{\theta}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) \right] V^{\mu_{\boldsymbol{\theta}}}(s') + p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) \left[ \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s') \right] \right) ds' \tag{3}$$
+
+Applying the multivariable chain rule to the composite functions $r(s, \mu_{\boldsymbol{\theta}}(s))$ and $p(s' \mid s, \mu_{\boldsymbol{\theta}}(s))$:
+$$\nabla_{\boldsymbol{\theta}} r(s, \mu_{\boldsymbol{\theta}}(s)) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} r(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} \tag{4}$$
+$$\nabla_{\boldsymbol{\theta}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} p(s' \mid s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} \tag{5}$$
+where $\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \in \mathbb{R}^{k \times m}$ is the Jacobian matrix whose $(i, j)$-th entry is $\frac{\partial \mu_j(s)}{\partial \theta_i}$, and $\nabla_{\mathbf{a}} \in \mathbb{R}^{m}$ denotes the gradient with respect to action coordinates.
+
+Substitute Equations (4) and (5) into Equation (3), and then Equation (3) into Equation (2):
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} r(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} + \gamma \int_{\mathcal{S}} \left( \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} p(s' \mid s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} V^{\mu_{\boldsymbol{\theta}}}(s') + p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s') \right) ds'$$
+
+Factor out the policy Jacobian $\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s)$ from the first two terms:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left[ \left. \nabla_{\mathbf{a}} r(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} + \gamma \int_{\mathcal{S}} \left. \nabla_{\mathbf{a}} p(s' \mid s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} V^{\mu_{\boldsymbol{\theta}}}(s') ds' \right] + \gamma \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{6}$$
+
+Now inspect the term inside the square brackets. Recall the definition of the continuous action-value function:
+$$Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) = r(s, \mathbf{a}) + \gamma \int_{\mathcal{S}} p(s' \mid s, \mathbf{a}) V^{\mu_{\boldsymbol{\theta}}}(s') ds'$$
+Differentiating $Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a})$ with respect to action vector $\mathbf{a}$:
+$$\nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) = \nabla_{\mathbf{a}} r(s, \mathbf{a}) + \gamma \int_{\mathcal{S}} \nabla_{\mathbf{a}} p(s' \mid s, \mathbf{a}) V^{\mu_{\boldsymbol{\theta}}}(s') ds'$$
+Evaluating this gradient at $\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)$:
+$$\left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} = \left. \nabla_{\mathbf{a}} r(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} + \gamma \int_{\mathcal{S}} \left. \nabla_{\mathbf{a}} p(s' \mid s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{7}$$
+
+Notice that the right-hand side of Equation (7) is precisely the bracketed term in Equation (6)! Substituting Equation (7) directly into Equation (6):
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} + \gamma \int_{\mathcal{S}} p(s' \mid s, \mu_{\boldsymbol{\theta}}(s)) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{8}$$
+
+To simplify notation, define the state-conditional local policy gradient vector:
+$$\mathbf{g}(s) \triangleq \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} \in \mathbb{R}^k$$
+and let $P_\mu(s, s') \triangleq p(s' \mid s, \mu_{\boldsymbol{\theta}}(s))$ denote the state transition density kernel under policy $\mu_{\boldsymbol{\theta}}$. Equation (8) can be written compactly as:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \mathbf{g}(s) + \gamma \int_{\mathcal{S}} P_\mu(s, s') \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s') ds' \tag{9}$$
+
+Equation (9) is a linear Fredholm integral equation of the second kind. We unroll this recursion repeatedly:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \mathbf{g}(s) + \gamma \int_{\mathcal{S}} P_\mu(s, s_1) \left[ \mathbf{g}(s_1) + \gamma \int_{\mathcal{S}} P_\mu(s_1, s_2) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s_2) ds_2 \right] ds_1$$
+$$= \mathbf{g}(s) + \gamma \int_{\mathcal{S}} P_\mu(s, s_1) \mathbf{g}(s_1) ds_1 + \gamma^2 \int_{\mathcal{S}} \int_{\mathcal{S}} P_\mu(s, s_1) P_\mu(s_1, s_2) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s_2) ds_2 ds_1$$
+
+By mathematical induction, continuing this expansion to infinite horizon:
+$$\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) = \sum_{t=0}^\infty \gamma^t \int_{\mathcal{S}} P_\mu^{(t)}(s, s') \mathbf{g}(s') ds' \tag{10}$$
+where $P_\mu^{(t)}(s, s')$ is the $t$-step transition density from state $s$ to state $s'$ under deterministic policy $\mu_{\boldsymbol{\theta}}$, defined recursively as:
+$$P_\mu^{(0)}(s, s') = \delta(s' - s) \quad (\text{Dirac delta measure})$$
+$$P_\mu^{(1)}(s, s') = P_\mu(s, s') = p(s' \mid s, \mu_{\boldsymbol{\theta}}(s))$$
+$$P_\mu^{(t)}(s, s') = \int_{\mathcal{S}} P_\mu^{(t-1)}(s, s'') P_\mu(s'', s') ds'', \quad \forall t \ge 2$$
+
+Now, integrate $\nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s)$ over the initial state distribution $p_0(s)$:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \nabla_{\boldsymbol{\theta}} \int_{\mathcal{S}} p_0(s) V^{\mu_{\boldsymbol{\theta}}}(s) ds = \int_{\mathcal{S}} p_0(s) \nabla_{\boldsymbol{\theta}} V^{\mu_{\boldsymbol{\theta}}}(s) ds \tag{11}$$
+Substituting Equation (10) into Equation (11):
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} p_0(s) \left[ \sum_{t=0}^\infty \gamma^t \int_{\mathcal{S}} P_\mu^{(t)}(s, s') \mathbf{g}(s') ds' \right] ds$$
+
+Because $\gamma < 1$, $|r| \le R_{\max}$, and all gradients are uniformly bounded, the series converges absolutely. By the Fubini-Tonelli theorem, we can interchange the order of integration and summation:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} \left( \int_{\mathcal{S}} p_0(s) \sum_{t=0}^\infty \gamma^t P_\mu^{(t)}(s, s') ds \right) \mathbf{g}(s') ds' \tag{12}$$
+
+Define the improper (unnormalized) discounted state visitation distribution $\rho^{\mu_{\boldsymbol{\theta}}}: \mathcal{S} \to \mathbb{R}_{\ge 0}$ as:
+$$\rho^{\mu_{\boldsymbol{\theta}}}(s') \triangleq \int_{\mathcal{S}} p_0(s) \sum_{t=0}^\infty \gamma^t P_\mu^{(t)}(s, s') ds \tag{13}$$
+
+Substituting definition (13) and restoring the full expression for $\mathbf{g}(s')$:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} \rho^{\mu_{\boldsymbol{\theta}}}(s') \left( \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s') \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s', \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s')} \right) ds'$$
+
+Renaming the dummy integration variable $s' \to s$:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \int_{\mathcal{S}} \rho^{\mu_{\boldsymbol{\theta}}}(s) \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} ds \tag{14}$$
+
+The total mass of $\rho^{\mu_{\boldsymbol{\theta}}}(s)$ is:
+$$\int_{\mathcal{S}} \rho^{\mu_{\boldsymbol{\theta}}}(s) ds = \sum_{t=0}^\infty \gamma^t \int_{\mathcal{S}} \int_{\mathcal{S}} p_0(s_0) P_\mu^{(t)}(s_0, s) ds_0 \, ds = \sum_{t=0}^\infty \gamma^t (1) = \frac{1}{1 - \gamma}$$
+
+Defining the normalized discounted state distribution $\tilde{\rho}^{\mu_{\boldsymbol{\theta}}}(s) \triangleq (1 - \gamma) \rho^{\mu_{\boldsymbol{\theta}}}(s)$, we arrive at the final expectation form:
+$$\nabla_{\boldsymbol{\theta}} J(\mu_{\boldsymbol{\theta}}) = \frac{1}{1 - \gamma} \mathbb{E}_{s \sim \tilde{\rho}^{\mu_{\boldsymbol{\theta}}}}\left[ \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(s) \left. \nabla_{\mathbf{a}} Q^{\mu_{\boldsymbol{\theta}}}(s, \mathbf{a}) \right|_{\mathbf{a} = \mu_{\boldsymbol{\theta}}(s)} \right] \qquad \blacksquare$$
+
+---
+
+#### Derivation 11.16.2: Clipped Double Q-Learning in Continuous Action Spaces (Fujimoto et al., 2018)
+
+##### Part 1: Problem Statement & Mathematical Goal
+In approximate value-iteration algorithms operating on continuous action spaces, let $Q^*(s, a)$ denote the true optimal action-value function satisfying the continuous Bellman optimality equation:
+$$Q^*(s, a) = r(s, a) + \gamma \mathbb{E}_{s' \sim p(\cdot \mid s, a)}\left[ \max_{a' \in \mathcal{A}} Q^*(s', a') \right]$$
+
+In Deep Deterministic Policy Gradient (DDPG), parameterized function approximators $Q_{\boldsymbol{\phi}'}(s, a)$ and $\mu_{\boldsymbol{\theta}'}(s)$ estimate $Q^*(s, a)$ and $a^*(s') = \arg\max_a Q^*(s', a)$ respectively. Due to finite sample sizes, function approximation capacity, and stochastic gradient descent noise, the critic network exhibits estimation error:
+$$Q_{\boldsymbol{\phi}'}(s, a) = Q^*(s, a) + \epsilon(s, a)$$
+where $\epsilon(s, a)$ is a zero-mean random error field.
+
+The standard DDPG Bellman target is:
+$$y_{\text{DDPG}} = r(s, a) + \gamma Q_{\boldsymbol{\phi}'}(s', \mu_{\boldsymbol{\theta}'}(s'))$$
+where $\mu_{\boldsymbol{\theta}'}$ is explicitly trained via policy gradient ascent to maximize $Q_{\boldsymbol{\phi}'}$.
+
+In Twin Delayed DDPG (TD3), two independent critics $Q_{\boldsymbol{\phi}_1'}$ and $Q_{\boldsymbol{\phi}_2'}$ are maintained, and the Clipped Double Q target is defined as:
+$$y_{\text{TD3}} = r(s, a) + \gamma \min_{j \in \{1, 2\}} Q_{\boldsymbol{\phi}_j'}(s', \mu_{\boldsymbol{\theta}_1'}(s'))$$
+
+**Mathematical Goal:**
+1. Prove that the single-critic continuous Q-learning target suffers from positive maximization bias:
+   $$\mathbb{E}_{\epsilon}\left[ Q_{\boldsymbol{\phi}'}(s', \mu_{\boldsymbol{\theta}'}(s')) \right] \ge Q^*(s', a^*(s'))$$
+2. Prove that the Clipped Double Q target establishes an upper bound that prevents overestimation:
+   $$\mathbb{E}_{\epsilon_1, \epsilon_2}\left[ \min_{j \in \{1, 2\}} Q_{\boldsymbol{\phi}_j'}(s', a') \right] \le \min\left( \mathbb{E}_{\epsilon_1}[Q_{\boldsymbol{\phi}_1'}(s', a')], \mathbb{E}_{\epsilon_2}[Q_{\boldsymbol{\phi}_2'}(s', a')] \right) = Q^*(s', a')$$
+3. Derive the exact analytical expectation under independent Gaussian approximation errors $\epsilon_1, \epsilon_2 \overset{i.i.d.}{\sim} \mathcal{N}(0, \sigma^2)$:
+   $$\mathbb{E}\left[ \min(\epsilon_1, \epsilon_2) \right] = -\frac{\sigma}{\sqrt{\pi}} < 0$$
+   proving that Clipped Double Q induces a strictly controlled negative (underestimation) bias, completely preventing runaway value explosion.
+
+##### Part 2: Explicit Assumptions & Regularity Conditions
+1. **Independent Estimators:** The two critic networks $Q_{\boldsymbol{\phi}_1}$ and $Q_{\boldsymbol{\phi}_2}$ are initialized with independent random weights $\boldsymbol{\phi}_1^{(0)} \neq \boldsymbol{\phi}_2^{(0)}$ and trained on stochastic mini-batches such that their estimation errors $\epsilon_1(s, a) \triangleq Q_{\boldsymbol{\phi}_1'}(s, a) - Q^*(s, a)$ and $\epsilon_2(s, a) \triangleq Q_{\boldsymbol{\phi}_2'}(s, a) - Q^*(s, a)$ are conditionally independent given $(s, a)$.
+2. **Unbiased Pointwise Estimation:** For any given transition $(s, a)$, the approximation errors have zero mean: $\mathbb{E}[\epsilon_1(s, a)] = 0$ and $\mathbb{E}[\epsilon_2(s, a)] = 0$.
+3. **Finite Error Variance:** The variance of the approximation errors is bounded and strictly positive: $\operatorname{Var}(\epsilon_1(s, a)) = \operatorname{Var}(\epsilon_2(s, a)) = \sigma^2 \in (0, \infty)$.
+4. **Sub-optimal Maximizing Actor:** The actor $\mu_{\boldsymbol{\theta}'}(s')$ seeks to maximize $Q_{\boldsymbol{\phi}_1'}(s', a)$, satisfying $Q_{\boldsymbol{\phi}_1'}(s', \mu_{\boldsymbol{\theta}'}(s')) \ge Q_{\boldsymbol{\phi}_1'}(s', a^*(s'))$.
+5. **Integrability:** The random variables $\max_a Q_{\boldsymbol{\phi}}(s, a)$ and $\min_{j=1,2} Q_{\boldsymbol{\phi}_j}(s, a)$ have well-defined, finite expectations.
+
+##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
+- **Convexity of Max vs Concavity of Min:** The maximum operator $f(\mathbf{x}) = \max(x_1, \dots, x_N)$ is convex. By Jensen's inequality, $\mathbb{E}[\max_i X_i] \ge \max_i \mathbb{E}[X_i]$. When selecting actions to maximize an estimated value, the optimizer naturally favors actions where the random estimation error $\epsilon(s, a)$ happens to be largest and positive. In continuous action spaces, actor gradient ascent climbs directly into the highest local noise peak.
+- **The Min Operator as a Noise Damper:** The minimum operator $g(x_1, x_2) = \min(x_1, x_2) = - \max(-x_1, -x_2)$ is concave. By Jensen's inequality, $\mathbb{E}[\min(X_1, X_2)] \le \min(\mathbb{E}[X_1], \mathbb{E}[X_2])$. Taking the minimum between two independent estimators actively penalizes divergence: if Critic 1 overestimates an action due to local noise, Critic 2 is unlikely to have hallucinated the same noise peak at that exact coordinate, so the minimum clamps the evaluation back down.
+- **Stability of Underestimation vs Catastrophe of Overestimation:** Overestimation bias in reinforcement learning is positive-feedback unstable: high Q-values inflate the target $y$, which trains the critic to predict even higher Q-values, which pushes the actor to visit those actions more frequently, culminating in value divergence and policy collapse. In contrast, underestimation bias is negative-feedback stable: an underestimated target simply leads to slightly more conservative value estimates. Mathematically, an underestimation bias of $-\frac{\sigma}{\sqrt{\pi}}$ acts merely as an effective reduction in the discount factor $\gamma_{\text{eff}} < \gamma$, maintaining policy stability and convergence.
+
+##### Part 4: End-to-End Step-by-Step Algebraic Proof
+
+###### 4.1 Positive Maximization Bias in Single Critic (DDPG)
+Let $s' \in \mathcal{S}$ be the successor state. Define the true optimal action $a^*(s') \triangleq \arg\max_{a \in \mathcal{A}} Q^*(s', a)$, and let $\hat{a}' \triangleq \mu_{\boldsymbol{\theta}'}(s')$ be the action chosen by the target actor to maximize the approximate critic $Q_{\boldsymbol{\phi}'}(s', a)$.
+
+By definition of $\hat{a}'$ as the maximizer of $Q_{\boldsymbol{\phi}'}(s', \cdot)$:
+$$Q_{\boldsymbol{\phi}'}(s', \hat{a}') \ge Q_{\boldsymbol{\phi}'}(s', a^*(s')) \tag{1}$$
+
+Substitute the error decomposition $Q_{\boldsymbol{\phi}'}(s', a) = Q^*(s', a) + \epsilon(s', a)$ into the right-hand side of inequality (1):
+$$Q_{\boldsymbol{\phi}'}(s', \hat{a}') \ge Q^*(s', a^*(s')) + \epsilon(s', a^*(s')) \tag{2}$$
+
+Take the mathematical expectation over the error distribution $\epsilon$:
+$$\mathbb{E}_{\epsilon}\left[ Q_{\boldsymbol{\phi}'}(s', \hat{a}') \right] \ge \mathbb{E}_{\epsilon}\left[ Q^*(s', a^*(s')) + \epsilon(s', a^*(s')) \right]$$
+
+By linearity of expectation:
+$$\mathbb{E}_{\epsilon}\left[ Q_{\boldsymbol{\phi}'}(s', \hat{a}') \right] \ge Q^*(s', a^*(s')) + \mathbb{E}_{\epsilon}\left[ \epsilon(s', a^*(s')) \right]$$
+
+Since $\mathbb{E}[\epsilon(s', a)] = 0$ by Assumption 2:
+$$\mathbb{E}_{\epsilon}\left[ Q_{\boldsymbol{\phi}'}(s', \mu_{\boldsymbol{\theta}'}(s')) \right] \ge Q^*(s', a^*(s')) \tag{3}$$
+
+Whenever there exists a non-zero probability that the error at the chosen action exceeds the error at the optimal action ($\mathbb{P}(\epsilon(s', \hat{a}') > \epsilon(s', a^*(s'))) > 0$), inequality (3) holds strictly:
+$$\mathbb{E}_{\epsilon}\left[ Q_{\boldsymbol{\phi}'}(s', \mu_{\boldsymbol{\theta}'}(s')) \right] > Q^*(s', a^*(s'))$$
+This establishes that DDPG's single critic target systematically and strictly overestimates the true optimal value.
+
+###### 4.2 Clipped Double Q Upper Bound
+Now consider the TD3 target using two independent critic estimators $Q_{\boldsymbol{\phi}_1'}$ and $Q_{\boldsymbol{\phi}_2'}$.
+For any arbitrary action $a' \in \mathcal{A}$, by definition of the mathematical minimum:
+$$\min\left( Q_{\boldsymbol{\phi}_1'}(s', a'), Q_{\boldsymbol{\phi}_2'}(s', a') \right) \le Q_{\boldsymbol{\phi}_1'}(s', a') \tag{4}$$
+and
+$$\min\left( Q_{\boldsymbol{\phi}_1'}(s', a'), Q_{\boldsymbol{\phi}_2'}(s', a') \right) \le Q_{\boldsymbol{\phi}_2'}(s', a') \tag{5}$$
+
+Taking expectations with respect to the joint error distribution $(\epsilon_1, \epsilon_2)$ on both sides of inequality (4):
+$$\mathbb{E}_{\epsilon_1, \epsilon_2}\left[ \min\left( Q_{\boldsymbol{\phi}_1'}(s', a'), Q_{\boldsymbol{\phi}_2'}(s', a') \right) \right] \le \mathbb{E}_{\epsilon_1}\left[ Q_{\boldsymbol{\phi}_1'}(s', a') \right] = Q^*(s', a') + \mathbb{E}[\epsilon_1(s', a')] = Q^*(s', a')$$
+
+Similarly, taking expectations on both sides of inequality (5):
+$$\mathbb{E}_{\epsilon_1, \epsilon_2}\left[ \min\left( Q_{\boldsymbol{\phi}_1'}(s', a'), Q_{\boldsymbol{\phi}_2'}(s', a') \right) \right] \le \mathbb{E}_{\epsilon_2}\left[ Q_{\boldsymbol{\phi}_2'}(s', a') \right] = Q^*(s', a') + \mathbb{E}[\epsilon_2(s', a')] = Q^*(s', a')$$
+
+Therefore:
+$$\mathbb{E}_{\epsilon_1, \epsilon_2}\left[ \min_{j \in \{1, 2\}} Q_{\boldsymbol{\phi}_j'}(s', a') \right] \le \min\left( \mathbb{E}[Q_{\boldsymbol{\phi}_1'}(s', a')], \mathbb{E}[Q_{\boldsymbol{\phi}_2'}(s', a')] \right) = Q^*(s', a') \tag{6}$$
+Inequality (6) proves that the Clipped Double Q target is strictly upper-bounded by the true value $Q^*(s', a')$, fundamentally eliminating positive overestimation bias.
+
+###### 4.3 Exact Closed-Form Expectation for Independent Gaussian Errors
+To quantify the exact magnitude of this bound, consider two independent Gaussian estimation errors:
+$$\epsilon_1, \epsilon_2 \overset{i.i.d.}{\sim} \mathcal{N}(0, \sigma^2)$$
+
+We begin by establishing the algebraic identity relating the minimum of two real numbers to their absolute difference:
+$$\min(X, Y) = \frac{X + Y}{2} - \frac{|X - Y|}{2} \tag{7}$$
+
+*Proof of Identity (7):*
+- Case 1: If $X \le Y$, then $|X - Y| = -(X - Y) = Y - X$.
+  $$\frac{X + Y}{2} - \frac{Y - X}{2} = \frac{X + Y - Y + X}{2} = \frac{2X}{2} = X = \min(X, Y)$$
+- Case 2: If $X > Y$, then $|X - Y| = X - Y$.
+  $$\frac{X + Y}{2} - \frac{X - Y}{2} = \frac{X + Y - X + Y}{2} = \frac{2Y}{2} = Y = \min(X, Y)$$
+Thus identity (7) holds universally for all $X, Y \in \mathbb{R}$.
+
+Applying identity (7) to the estimation errors $\epsilon_1, \epsilon_2$:
+$$\min(\epsilon_1, \epsilon_2) = \frac{\epsilon_1 + \epsilon_2}{2} - \frac{|\epsilon_1 - \epsilon_2|}{2} \tag{8}$$
+
+Taking expectation on both sides of Equation (8):
+$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = \frac{\mathbb{E}[\epsilon_1] + \mathbb{E}[\epsilon_2]}{2} - \frac{1}{2} \mathbb{E}[|\epsilon_1 - \epsilon_2|] \tag{9}$$
+
+Since $\mathbb{E}[\epsilon_1] = \mathbb{E}[\epsilon_2] = 0$:
+$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = - \frac{1}{2} \mathbb{E}[|\epsilon_1 - \epsilon_2|] \tag{10}$$
+
+Define the difference random variable $Z \triangleq \epsilon_1 - \epsilon_2$.
+Since $\epsilon_1$ and $\epsilon_2$ are independent normal random variables:
+$$Z \sim \mathcal{N}\left( 0 - 0, \, \sigma^2 + \sigma^2 \right) = \mathcal{N}(0, 2\sigma^2)$$
+The variance of $Z$ is $\sigma_Z^2 = 2\sigma^2$, so its standard deviation is $\sigma_Z = \sigma \sqrt{2}$.
+
+The random variable $|Z|$ follows a Folded Normal distribution (or Half-Normal distribution). We evaluate $\mathbb{E}[|Z|]$ from first principles by integration:
+$$\mathbb{E}[|Z|] = \int_{-\infty}^\infty |z| \frac{1}{\sqrt{2\pi \sigma_Z^2}} \exp\left( -\frac{z^2}{2\sigma_Z^2} \right) dz$$
+
+Because the integrand is an even function ($|-z| = |z|$ and $(-z)^2 = z^2$):
+$$\mathbb{E}[|Z|] = 2 \int_0^\infty z \frac{1}{\sqrt{2\pi (2\sigma^2)}} \exp\left( -\frac{z^2}{2(2\sigma^2)} \right) dz = \frac{2}{2\sigma \sqrt{\pi}} \int_0^\infty z \exp\left( -\frac{z^2}{4\sigma^2} \right) dz$$
+$$= \frac{1}{\sigma \sqrt{\pi}} \int_0^\infty z \exp\left( -\frac{z^2}{4\sigma^2} \right) dz \tag{11}$$
+
+Perform the substitution $u = \frac{z^2}{4\sigma^2}$.
+The differential is $du = \frac{2z}{4\sigma^2} dz = \frac{z}{2\sigma^2} dz \implies z dz = 2\sigma^2 du$.
+When $z = 0$, $u = 0$; as $z \to \infty$, $u \to \infty$. Substituting into Equation (11):
+$$\mathbb{E}[|Z|] = \frac{1}{\sigma \sqrt{\pi}} \int_0^\infty e^{-u} (2\sigma^2 du) = \frac{2\sigma^2}{\sigma \sqrt{\pi}} \int_0^\infty e^{-u} du$$
+$$= \frac{2\sigma}{\sqrt{\pi}} \left[ -e^{-u} \right]_0^\infty = \frac{2\sigma}{\sqrt{\pi}} \left( \lim_{u \to \infty}(-e^{-u}) - (-e^0) \right) = \frac{2\sigma}{\sqrt{\pi}} (0 - (-1)) = \frac{2\sigma}{\sqrt{\pi}} \tag{12}$$
+
+Substitute Equation (12) back into Equation (10):
+$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = - \frac{1}{2} \left( \frac{2\sigma}{\sqrt{\pi}} \right) = - \frac{\sigma}{\sqrt{\pi}} \tag{13}$$
+
+Therefore, the expected value of the Clipped Double Q estimator at action $a'$ is:
+$$\mathbb{E}\left[ \min(Q_{\boldsymbol{\phi}_1'}(s', a'), Q_{\boldsymbol{\phi}_2'}(s', a')) \right] = Q^*(s', a') - \frac{\sigma}{\sqrt{\pi}} < Q^*(s', a') \qquad \blacksquare$$
+
+---
+
+#### Derivation 11.16.3: Target Policy Smoothing Regularization (Value Function Convolution)
+
+##### Part 1: Problem Statement & Mathematical Goal
+In continuous deterministic actor-critic algorithms, deterministic target updates evaluate the action-value function at an isolated point in action space:
+$$y = r(s, a) + \gamma Q_{\boldsymbol{\phi}'}(s', \mu_{\boldsymbol{\theta}'}(s'))$$
+
+Due to neural network non-linearities and bootstrapping on function approximation errors, the critic surface often develops narrow, high-frequency, artificial spikes (local sharp maxima). A deterministic actor quickly exploits these spurious peaks, yielding non-robust policies that catastrophically fail under microscopic physical disturbances.
+
+TD3 combats this vulnerability via **Target Policy Smoothing**, injecting clipped zero-mean noise into the target action:
+$$\tilde{a}' = \operatorname{clip}\left( \mu_{\boldsymbol{\theta}'}(s') + \operatorname{clip}(\boldsymbol{\epsilon}, -c, c), \, a_{\text{low}}, \, a_{\text{high}} \right), \quad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}_m)$$
+The expected target value under this smoothing perturbation is:
+$$Q_{\text{smooth}}(s', a_0) \triangleq \mathbb{E}_{\boldsymbol{\epsilon}}\left[ Q_{\boldsymbol{\phi}'}(s', a_0 + \boldsymbol{\epsilon}) \right], \quad \text{where } a_0 \triangleq \mu_{\boldsymbol{\theta}'}(s')$$
+
+**Mathematical Goal:**
+1. Prove that evaluating the expected value under additive perturbation noise is mathematically identical to the spatial continuous convolution of the critic function with the noise probability density function $\rho_{\boldsymbol{\epsilon}}$:
+   $$Q_{\text{smooth}}(s', a_0) = (Q_{\boldsymbol{\phi}'} \ast \rho_{\boldsymbol{\epsilon}})(s', a_0) \triangleq \int_{\mathbb{R}^m} Q_{\boldsymbol{\phi}'}(s', a_0 - \boldsymbol{\delta}) \rho_{\boldsymbol{\epsilon}}(\boldsymbol{\delta}) d\boldsymbol{\delta}$$
+2. Using a multivariable Taylor series expansion of $Q(s', a_0 + \boldsymbol{\epsilon})$ about $a_0$, prove from first principles that:
+   $$\mathbb{E}_{\boldsymbol{\epsilon}}[Q(s', a_0 + \boldsymbol{\epsilon})] = Q(s', a_0) + \frac{\sigma^2}{2} \operatorname{Tr}\left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) + \mathcal{O}(\sigma^4)$$
+   where $\nabla_{\mathbf{a}}^2 Q(s', a_0) \in \mathbb{R}^{m \times m}$ is the Hessian matrix of $Q$ with respect to action coordinates, and $\operatorname{Tr}(\nabla_{\mathbf{a}}^2 Q) = \Delta_{\mathbf{a}} Q$ is the action-space Laplacian operator.
+3. Conclude that target policy smoothing acts as an explicit regularizer that depresses sharp, narrow local peaks (where the Hessian has negative eigenvalues and negative trace $\operatorname{Tr}(\nabla_{\mathbf{a}}^2 Q) \ll 0$), smoothing the optimization landscape and enforcing that neighboring actions possess similar values.
+
+##### Part 2: Explicit Assumptions & Regularity Conditions
+1. **Twice Continuously Differentiable Critic:** The action-value function $Q(s', \cdot): \mathcal{A} \to \mathbb{R}$ is twice continuously differentiable ($C^2$) on an open neighborhood $\mathcal{B}_c(a_0) = \{a \in \mathbb{R}^m : \|a - a_0\| \le c\}$.
+2. **Bounded Higher Derivatives:** The third-order partial derivatives of $Q(s', a)$ with respect to action coordinates are uniformly bounded on $\mathcal{B}_c(a_0)$:
+   $$\max_{i, j, k \in \{1, \dots, m\}} \sup_{a \in \mathcal{B}_c(a_0)} \left| \frac{\partial^3 Q(s', a)}{\partial a_i \partial a_j \partial a_k} \right| \le M_3 < \infty$$
+3. **Symmetric, Isotropic, Clipped Noise:** The perturbation vector $\boldsymbol{\epsilon} \in \mathbb{R}^m$ possesses a symmetric probability density function about the origin: $\rho_{\boldsymbol{\epsilon}}(-\boldsymbol{\delta}) = \rho_{\boldsymbol{\epsilon}}(\boldsymbol{\delta})$ for all $\boldsymbol{\delta} \in \mathbb{R}^m$. It satisfies:
+   $$\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}, \quad \mathbb{E}[\boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top] = \sigma^2 \mathbf{I}_m, \quad \|\boldsymbol{\epsilon}\|_\infty \le c$$
+4. **Interior Action Regularity:** The nominal target action $a_0 = \mu_{\boldsymbol{\theta}'}(s')$ lies strictly within the interior of the action space $\mathcal{A}$, with margin $\operatorname{dist}(a_0, \partial \mathcal{A}) > c$, ensuring physical action clipping has negligible asymmetric truncation on the noise distribution.
+
+##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
+- **Physical Robotics and Actuator Imperfection:** Real-world robotic joints never execute mathematically exact torques. Motor cogging, backlash, friction, and thermal noise mean that an intended action $a_0$ is realized as $a_0 + \boldsymbol{\epsilon}$. If a critic network has a razor-thin needle peak at $a_0$ with value $100$, but dropping to $-50$ at $a_0 \pm 0.01$, a deterministic controller targeting $a_0$ will violently crash. Target smoothing models the actuator's physical noise envelope during learning, ensuring that only wide, robust peaks are favored.
+- **Connection to the Heat Diffusion Equation:** Convolving a function with a Gaussian kernel is the analytical solution to the heat diffusion partial differential equation:
+  $$\frac{\partial Q}{\partial t} = \frac{1}{2} \Delta_{\mathbf{a}} Q$$
+  where effective diffusion time is $t = \sigma^2$. The Laplacian $\Delta_{\mathbf{a}} Q = \operatorname{Tr}(\nabla_{\mathbf{a}}^2 Q)$ measures the difference between $Q(s', a_0)$ and the average value of its local neighborhood. Heat flows away from sharp summits ($\Delta Q < 0$) and into narrow troughs ($\Delta Q > 0$). Thus, adding Gaussian noise naturally diffuses and levels sharp, high-frequency function approximation artifacts.
+- **Geometric Curvature Penalization:** At any local maximum of $Q$, the Hessian matrix $\nabla_{\mathbf{a}}^2 Q$ is negative semi-definite (all eigenvalues $\lambda_i \le 0$). For a sharp spike, the eigenvalues are large in magnitude ($|\lambda_i| \gg 0$), yielding a highly negative trace $\operatorname{Tr}(\nabla_{\mathbf{a}}^2 Q) = \sum_{i=1}^m \lambda_i \ll 0$. The second-order term $\frac{\sigma^2}{2} \operatorname{Tr}(\nabla_{\mathbf{a}}^2 Q)$ penalizes this spike heavily, depressing the target value and steering the actor away from fragile artifacts toward broad, resilient maxima.
+
+##### Part 4: End-to-End Step-by-Step Algebraic Proof
+
+###### 4.1 Convolution Equivalence
+Let $\rho_{\boldsymbol{\epsilon}}: \mathbb{R}^m \to \mathbb{R}_{\ge 0}$ be the probability density function of the random perturbation vector $\boldsymbol{\epsilon}$. By definition of mathematical expectation for continuous random variables:
+$$Q_{\text{smooth}}(s', a_0) = \mathbb{E}_{\boldsymbol{\epsilon}}\left[ Q(s', a_0 + \boldsymbol{\epsilon}) \right] = \int_{\mathbb{R}^m} Q(s', a_0 + \boldsymbol{\delta}) \rho_{\boldsymbol{\epsilon}}(\boldsymbol{\delta}) d\boldsymbol{\delta} \tag{1}$$
+
+Perform the change of variables $\tilde{\mathbf{a}} = a_0 + \boldsymbol{\delta}$. Then $\boldsymbol{\delta} = \tilde{\mathbf{a}} - a_0$, with Jacobian determinant $|\det(\mathbf{I}_m)| = 1$. Substituting into Equation (1):
+$$Q_{\text{smooth}}(s', a_0) = \int_{\mathbb{R}^m} Q(s', \tilde{\mathbf{a}}) \rho_{\boldsymbol{\epsilon}}(\tilde{\mathbf{a}} - a_0) d\tilde{\mathbf{a}} \tag{2}$$
+
+By Assumption 3, the noise density is symmetric about the origin: $\rho_{\boldsymbol{\epsilon}}(\mathbf{z}) = \rho_{\boldsymbol{\epsilon}}(-\mathbf{z})$. Therefore, $\rho_{\boldsymbol{\epsilon}}(\tilde{\mathbf{a}} - a_0) = \rho_{\boldsymbol{\epsilon}}(a_0 - \tilde{\mathbf{a}})$. Substituting into Equation (2):
+$$Q_{\text{smooth}}(s', a_0) = \int_{\mathbb{R}^m} Q(s', \tilde{\mathbf{a}}) \rho_{\boldsymbol{\epsilon}}(a_0 - \tilde{\mathbf{a}}) d\tilde{\mathbf{a}} \tag{3}$$
+
+Equation (3) is precisely the definition of the continuous spatial convolution of function $Q(s', \cdot)$ with kernel $\rho_{\boldsymbol{\epsilon}}(\cdot)$:
+$$Q_{\text{smooth}}(s', a_0) = (Q \ast \rho_{\boldsymbol{\epsilon}})(s', a_0) \tag{4}$$
+This completes the proof that target policy smoothing is mathematically equivalent to convolving the action-value landscape with the noise distribution.
+
+###### 4.2 Multivariable Taylor Expansion
+Under Assumptions 1 and 2, expand $Q(s', a_0 + \boldsymbol{\epsilon})$ as a multivariable Taylor series in a neighborhood around $a_0$:
+$$Q(s', a_0 + \boldsymbol{\epsilon}) = Q(s', a_0) + \left( \nabla_{\mathbf{a}} Q(s', a_0) \right)^\top \boldsymbol{\epsilon} + \frac{1}{2} \boldsymbol{\epsilon}^\top \left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) \boldsymbol{\epsilon} + R_3(\boldsymbol{\epsilon}) \tag{5}$$
+where $\nabla_{\mathbf{a}} Q(s', a_0) \in \mathbb{R}^m$ is the action gradient vector, $\nabla_{\mathbf{a}}^2 Q(s', a_0) \in \mathbb{R}^{m \times m}$ is the symmetric Hessian matrix with $(i, j)$-th entry $\frac{\partial^2 Q(s', a_0)}{\partial a_i \partial a_j}$, and $R_3(\boldsymbol{\epsilon})$ is the Lagrange remainder term:
+$$R_3(\boldsymbol{\epsilon}) = \frac{1}{6} \sum_{i=1}^m \sum_{j=1}^m \sum_{k=1}^m \left. \frac{\partial^3 Q(s', \mathbf{a})}{\partial a_i \partial a_j \partial a_k} \right|_{\mathbf{a} = a_0 + \xi \boldsymbol{\epsilon}} \epsilon_i \epsilon_j \epsilon_k, \quad \xi \in (0, 1)$$
+
+###### 4.3 Term-by-Term Expectation Evaluation
+Take the mathematical expectation with respect to $\boldsymbol{\epsilon}$ across all terms in Equation (5):
+$$\mathbb{E}_{\boldsymbol{\epsilon}}\left[ Q(s', a_0 + \boldsymbol{\epsilon}) \right] = \mathbb{E}_{\boldsymbol{\epsilon}}\left[ Q(s', a_0) \right] + \mathbb{E}_{\boldsymbol{\epsilon}}\left[ \left( \nabla_{\mathbf{a}} Q(s', a_0) \right)^\top \boldsymbol{\epsilon} \right] + \frac{1}{2} \mathbb{E}_{\boldsymbol{\epsilon}}\left[ \boldsymbol{\epsilon}^\top \left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) \boldsymbol{\epsilon} \right] + \mathbb{E}_{\boldsymbol{\epsilon}}[R_3(\boldsymbol{\epsilon})] \tag{6}$$
+
+We evaluate each term systematically:
+
+**Term 1 (Zeroth Order):** Since $Q(s', a_0)$ does not depend on $\boldsymbol{\epsilon}$:
+$$\mathbb{E}_{\boldsymbol{\epsilon}}\left[ Q(s', a_0) \right] = Q(s', a_0) \tag{7}$$
+
+**Term 2 (First Order):** By linearity of expectation and Assumption 3 ($\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$):
+$$\mathbb{E}_{\boldsymbol{\epsilon}}\left[ \left( \nabla_{\mathbf{a}} Q(s', a_0) \right)^\top \boldsymbol{\epsilon} \right] = \left( \nabla_{\mathbf{a}} Q(s', a_0) \right)^\top \mathbb{E}_{\boldsymbol{\epsilon}}[\boldsymbol{\epsilon}] = \left( \nabla_{\mathbf{a}} Q(s', a_0) \right)^\top \mathbf{0} = 0 \tag{8}$$
+
+**Term 3 (Second Order Quadratic Form):**
+Let $\mathbf{H} \triangleq \nabla_{\mathbf{a}}^2 Q(s', a_0) \in \mathbb{R}^{m \times m}$. The scalar quadratic form $\boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon}$ equals its own trace:
+$$\boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} = \operatorname{Tr}\left( \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} \right)$$
+Using the cyclic permutation property of the trace operator ($\operatorname{Tr}(\mathbf{A}\mathbf{B}\mathbf{C}) = \operatorname{Tr}(\mathbf{C}\mathbf{A}\mathbf{B})$):
+$$\operatorname{Tr}\left( \boldsymbol{\epsilon}^\top (\mathbf{H} \boldsymbol{\epsilon}) \right) = \operatorname{Tr}\left( \mathbf{H} \boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top \right)$$
+
+Taking expectation, and using the fact that expectation and trace commute:
+$$\mathbb{E}_{\boldsymbol{\epsilon}}\left[ \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} \right] = \mathbb{E}_{\boldsymbol{\epsilon}}\left[ \operatorname{Tr}\left( \mathbf{H} \boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top \right) \right] = \operatorname{Tr}\left( \mathbb{E}_{\boldsymbol{\epsilon}}\left[ \mathbf{H} \boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top \right] \right) = \operatorname{Tr}\left( \mathbf{H} \, \mathbb{E}_{\boldsymbol{\epsilon}}[\boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top] \right) \tag{9}$$
+
+By Assumption 3, the noise covariance is $\mathbb{E}[\boldsymbol{\epsilon} \boldsymbol{\epsilon}^\top] = \sigma^2 \mathbf{I}_m$. Substituting into Equation (9):
+$$\operatorname{Tr}\left( \mathbf{H} (\sigma^2 \mathbf{I}_m) \right) = \sigma^2 \operatorname{Tr}(\mathbf{H}) = \sigma^2 \operatorname{Tr}\left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) \tag{10}$$
+
+Thus:
+$$\frac{1}{2} \mathbb{E}_{\boldsymbol{\epsilon}}\left[ \boldsymbol{\epsilon}^\top \left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) \boldsymbol{\epsilon} \right] = \frac{\sigma^2}{2} \operatorname{Tr}\left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) \tag{11}$$
+
+**Term 4 (Third Order Remainder):**
+Because the noise distribution is symmetric about the origin ($\rho_{\boldsymbol{\epsilon}}(-\boldsymbol{\delta}) = \rho_{\boldsymbol{\epsilon}}(\boldsymbol{\delta})$), all odd central moments of $\boldsymbol{\epsilon}$ vanish identically:
+$$\mathbb{E}[\epsilon_i \epsilon_j \epsilon_k] = 0, \quad \forall i, j, k \in \{1, \dots, m\}$$
+Under Assumption 2 (bounded third derivatives), expanding the Taylor series to fourth order confirms that the remaining expectation is of order $\mathcal{O}(\sigma^4)$:
+$$\mathbb{E}_{\boldsymbol{\epsilon}}[R_3(\boldsymbol{\epsilon})] = \mathcal{O}(\sigma^4) \tag{12}$$
+
+###### 4.4 Synthesis and Regularization Effect
+Substituting Equations (7), (8), (11), and (12) into Equation (6):
+$$Q_{\text{smooth}}(s', a_0) = Q(s', a_0) + \frac{\sigma^2}{2} \operatorname{Tr}\left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) + \mathcal{O}(\sigma^4) \tag{13}$$
+
+Recall that the trace of the Hessian matrix is the Laplacian operator in action space:
+$$\operatorname{Tr}\left( \nabla_{\mathbf{a}}^2 Q(s', a_0) \right) = \sum_{i=1}^m \frac{\partial^2 Q(s', a_0)}{\partial a_i^2} = \Delta_{\mathbf{a}} Q(s', a_0)$$
+
+Substituting the Laplacian:
+$$Q_{\text{smooth}}(s', a_0) = Q(s', a_0) + \frac{\sigma^2}{2} \Delta_{\mathbf{a}} Q(s', a_0) + \mathcal{O}(\sigma^4) \tag{14}$$
+
+At an artificial sharp peak (local maximizer created by function approximation noise):
+- The surface is strictly concave downward, so all eigenvalues $\lambda_i$ of the Hessian are strictly negative ($\lambda_i < 0$).
+- Therefore, the trace is strictly negative: $\Delta_{\mathbf{a}} Q(s', a_0) = \sum_{i=1}^m \lambda_i < 0$.
+- Equation (14) yields:
+  $$Q_{\text{smooth}}(s', a_0) = Q(s', a_0) - \frac{\sigma^2}{2} \left| \Delta_{\mathbf{a}} Q(s', a_0) \right| < Q(s', a_0)$$
+
+The sharper the spike (greater $|\Delta_{\mathbf{a}} Q|$), the more severe the penalty reduction. Conversely, on a wide, robust, flat plateau, $\Delta_{\mathbf{a}} Q \approx 0$, so $Q_{\text{smooth}}(s', a_0) \approx Q(s', a_0)$. Target policy smoothing thus explicitly regularizes the value landscape against high-frequency curvature artifacts, ensuring safe, robust target propagation. $\blacksquare$
+
+---
+
 ## 3. Geometric & Physical Interpretation
 
 ### 3.1 The Action Gradient Vector Field
@@ -284,25 +638,239 @@ $$\theta_{\text{new}} = \theta + \alpha g_\theta = 0.5000 + 0.1000 \times 4.0000
 
 ## 6. Solved Illustrations
 
-### Illustration 1: Why Clipped Double Q Fixes Continuous Overestimation
+### Illustration 1: Why Clipped Double Q Fixes Continuous Overestimation (Order Statistics of Independent Errors)
 **Problem:**
 Let $Q_{\text{approx}}(s, a) = Q_{\text{true}}(s, a) + \epsilon(s, a)$, where $\epsilon_1, \epsilon_2 \sim \mathcal{N}(0, \sigma^2)$ are independent errors.
-Prove that $\mathbb{E}[\min(Q_1, Q_2)] \le Q_{\text{true}}$.
+Prove that $\mathbb{E}[\min(Q_1, Q_2)] \le Q_{\text{true}}$, and compute the exact numerical expectation when $Q_{\text{true}} = 10.0000$ and $\sigma = 1.5000$.
 
 **Solution:**
 $$\mathbb{E}[\min(Q_1, Q_2)] = Q_{\text{true}} + \mathbb{E}[\min(\epsilon_1, \epsilon_2)]$$
-For two independent zero-mean normal random variables with variance $\sigma^2$:
-$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = - \frac{\sigma}{\sqrt{\pi}} < 0$$
+Using the algebraic identity $\min(X, Y) = \frac{X+Y}{2} - \frac{|X-Y|}{2}$:
+$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = \frac{\mathbb{E}[\epsilon_1] + \mathbb{E}[\epsilon_2]}{2} - \frac{1}{2} \mathbb{E}[|\epsilon_1 - \epsilon_2|] = 0 - \frac{1}{2} \mathbb{E}[|Z|]$$
+where $Z = \epsilon_1 - \epsilon_2 \sim \mathcal{N}(0, 2\sigma^2)$. The expectation of the folded normal variable $|Z|$ is:
+$$\mathbb{E}[|Z|] = \sigma_Z \sqrt{\frac{2}{\pi}} = (\sigma \sqrt{2}) \sqrt{\frac{2}{\pi}} = \frac{2\sigma}{\sqrt{\pi}}$$
 Therefore:
+$$\mathbb{E}[\min(\epsilon_1, \epsilon_2)] = - \frac{1}{2} \left( \frac{2\sigma}{\sqrt{\pi}} \right) = - \frac{\sigma}{\sqrt{\pi}} < 0$$
 $$\mathbb{E}[\min(Q_1, Q_2)] = Q_{\text{true}} - \frac{\sigma}{\sqrt{\pi}} < Q_{\text{true}}$$
-The minimum estimator creates a slight **underestimation bias**, which is fundamentally benign (it merely acts like an increased discount factor $\gamma$), whereas overestimation creates an explosive positive feedback loop that destabilizes control! $\blacksquare$
+
+**Numerical Calculation with $Q_{\text{true}} = 10.0000$ and $\sigma = 1.5000$:**
+1. Underestimation margin:
+   $$\Delta_{\text{bias}} = - \frac{\sigma}{\sqrt{\pi}} = - \frac{1.5000}{\sqrt{3.14159265}} = - \frac{1.5000}{1.77245385} = \mathbf{-0.846284}$$
+2. Expected Clipped Double Q target:
+   $$\mathbb{E}[\min(Q_1, Q_2)] = 10.0000 - 0.846284 = \mathbf{9.153716}$$
+The minimum estimator induces an underestimation of $-0.846284$ ($-8.46\%$), which is fundamentally benign (it merely acts like an increased effective discount factor $\gamma_{\text{eff}} < \gamma$), whereas single-critic overestimation creates an explosive positive feedback loop that destabilizes continuous control! $\blacksquare$
+
+---
+
+### Illustration 2: DPG Chain Rule Backpropagation on a 1D Continuous Control Action
+**Problem:**
+Consider an agent in a continuous 2D state space $\mathbf{s} = [s_1, s_2]^\top = [1.0000, -0.5000]^\top$ taking a 1D scalar action $a \in [-1, 1]$.
+- **Actor Network:** $\mu_{\boldsymbol{\theta}}(\mathbf{s}) = \tanh(w_1 s_1 + w_2 s_2 + b)$, with current parameters $\boldsymbol{\theta} = [w_1, w_2, b]^\top = [0.8000, -0.4000, 0.1000]^\top$.
+- **Critic Landscape:** $Q(\mathbf{s}, a) = -(a - 2s_1)^2 - s_2^2$.
+
+Compute:
+1. Actor output action $a = \mu_{\boldsymbol{\theta}}(\mathbf{s})$.
+2. Current critic value $Q(\mathbf{s}, a)$.
+3. Critic action gradient $\nabla_a Q(\mathbf{s}, a)$.
+4. Actor parameter gradient vector $\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ via the DPG chain rule.
+5. Updated actor parameters $\boldsymbol{\theta}_{\text{new}}$ after one step of gradient ascent with learning rate $\alpha = 0.0500$, and verify that $Q(\mathbf{s}, \mu_{\boldsymbol{\theta}_{\text{new}}}(\mathbf{s})) > Q(\mathbf{s}, a)$.
+
+**Solution:**
+
+**Step 1: Pre-activation and Actor Action:**
+$$z = w_1 s_1 + w_2 s_2 + b = (0.8000)(1.0000) + (-0.4000)(-0.5000) + 0.1000 = 0.8000 + 0.2000 + 0.1000 = \mathbf{1.1000}$$
+$$a = \mu_{\boldsymbol{\theta}}(\mathbf{s}) = \tanh(1.1000) = \mathbf{0.800499}$$
+
+**Step 2: Critic Value at Current Action:**
+Optimal action for this critic is $a^* = 2s_1 = 2(1.0000) = 2.0000$.
+$$Q(\mathbf{s}, a) = -(0.800499 - 2.000000)^2 - (-0.5000)^2 = -(-1.199501)^2 - 0.250000$$
+$$= -1.438803 - 0.250000 = \mathbf{-1.688803}$$
+
+**Step 3: Action Gradient of Critic:**
+$$\nabla_a Q(\mathbf{s}, a) = \frac{\partial}{\partial a} \left[ -(a - 2s_1)^2 - s_2^2 \right] = -2(a - 2s_1) = -2(0.800499 - 2.000000) = -2(-1.199501) = \mathbf{+2.399002}$$
+
+**Step 4: Actor Local Derivatives and DPG Chain Rule:**
+$$\frac{\partial a}{\partial z} = 1 - \tanh^2(z) = 1 - (0.800499)^2 = 1 - 0.640799 = \mathbf{0.359201}$$
+$$\nabla_{\boldsymbol{\theta}} z = \begin{bmatrix} \frac{\partial z}{\partial w_1} \\ \frac{\partial z}{\partial w_2} \\ \frac{\partial z}{\partial b} \end{bmatrix} = \begin{bmatrix} s_1 \\ s_2 \\ 1.0000 \end{bmatrix} = \begin{bmatrix} 1.0000 \\ -0.5000 \\ 1.0000 \end{bmatrix}$$
+$$\nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(\mathbf{s}) = \frac{\partial a}{\partial z} \nabla_{\boldsymbol{\theta}} z = 0.359201 \begin{bmatrix} 1.0000 \\ -0.5000 \\ 1.0000 \end{bmatrix} = \begin{bmatrix} 0.359201 \\ -0.179601 \\ 0.359201 \end{bmatrix}$$
+
+Apply the Deterministic Policy Gradient theorem:
+$$\nabla_{\boldsymbol{\theta}} J = \nabla_{\boldsymbol{\theta}} \mu_{\boldsymbol{\theta}}(\mathbf{s}) \cdot \nabla_a Q(\mathbf{s}, a) = \begin{bmatrix} 0.359201 \\ -0.179601 \\ 0.359201 \end{bmatrix} \times (+2.399002) = \mathbf{\begin{bmatrix} 0.861725 \\ -0.430862 \\ 0.861725 \end{bmatrix}}$$
+
+**Step 5: Parameter Update and Value Improvement:**
+Applying gradient ascent ($\boldsymbol{\theta}_{\text{new}} = \boldsymbol{\theta} + \alpha \nabla_{\boldsymbol{\theta}} J$ with $\alpha = 0.0500$):
+$$w_{1, \text{new}} = 0.8000 + 0.0500 \times 0.861725 = 0.8000 + 0.043086 = \mathbf{0.843086}$$
+$$w_{2, \text{new}} = -0.4000 + 0.0500 \times (-0.430862) = -0.4000 - 0.021543 = \mathbf{-0.421543}$$
+$$b_{\text{new}} = 0.1000 + 0.0500 \times 0.861725 = 0.1000 + 0.043086 = \mathbf{0.143086}$$
+
+Verifying the new action and critic value:
+$$z_{\text{new}} = (0.843086)(1.0000) + (-0.421543)(-0.5000) + 0.143086 = 0.843086 + 0.210772 + 0.143086 = \mathbf{1.196944}$$
+$$a_{\text{new}} = \tanh(1.196944) = \mathbf{0.832720}$$
+$$Q(\mathbf{s}, a_{\text{new}}) = -(0.832720 - 2.0000)^2 - (-0.5000)^2 = -(-1.167280)^2 - 0.250000$$
+$$= -1.362543 - 0.250000 = \mathbf{-1.612543}$$
+The return improved by $\Delta Q = -1.612543 - (-1.688803) = \mathbf{+0.076260}$ as the action pushed toward the true maximum $a^* = 2.0000$. $\blacksquare$
+
+---
+
+### Illustration 3: TD3 Clipped Double Q Target Calculation under Target Noise Injection
+**Problem:**
+A TD3 agent observes a transition with successor state $\mathbf{s}' = [0.8000, -0.2000]^\top$, immediate reward $r = 2.5000$, and discount factor $\gamma = 0.9500$.
+- **Target Actor:** $\mu_{\boldsymbol{\theta}'}(\mathbf{s}') = \mathbf{w}_{\text{actor}}^\top \mathbf{s}' + b_{\text{actor}}$, with $\mathbf{w}_{\text{actor}} = [0.5000, -1.0000]^\top, b_{\text{actor}} = 0.1000$.
+- **Target Smoothing Hyperparameters:** Noise $\epsilon \sim \mathcal{N}(0, 0.2^2)$, noise clip $c = 0.5000$, action limits $[-1.0000, 1.0000]$. Sampled noise: $\epsilon = +0.2200$.
+- **Target Critic 1:** $Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', a') = \mathbf{w}_1^\top \mathbf{s}' + v_1 a' + c_1$, with $\mathbf{w}_1 = [1.2000, 0.5000]^\top, v_1 = -1.5000, c_1 = 3.0000$.
+- **Target Critic 2:** $Q_{\boldsymbol{\phi}_2'}(\mathbf{s}', a') = \mathbf{w}_2^\top \mathbf{s}' + v_2 a' + c_2$, with $\mathbf{w}_2 = [0.9000, 1.1000]^\top, v_2 = -0.8000, c_2 = 2.4000$.
+
+Compute:
+1. Nominal target action $a_{\text{nom}}$ and smoothed clipped action $\tilde{a}'$.
+2. Target evaluations $Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', \tilde{a}')$ and $Q_{\boldsymbol{\phi}_2'}(\mathbf{s}', \tilde{a}')$.
+3. TD3 target $y_{\text{TD3}}$.
+4. Compare with the single-critic unsmoothed DDPG target $y_{\text{DDPG}}$ and quantify the overestimation bias avoided.
+
+**Solution:**
+
+**Step 1: Nominal and Smoothed Target Action:**
+$$a_{\text{nom}} = \mathbf{w}_{\text{actor}}^\top \mathbf{s}' + b_{\text{actor}} = (0.5000)(0.8000) + (-1.0000)(-0.2000) + 0.1000 = 0.4000 + 0.2000 + 0.1000 = \mathbf{0.7000}$$
+Clip the noise perturbation:
+$$\tilde{\epsilon} = \operatorname{clip}(\epsilon, -c, c) = \operatorname{clip}(+0.2200, -0.5000, 0.5000) = \mathbf{+0.2200}$$
+Apply noise to action and enforce physical action limits:
+$$\tilde{a}' = \operatorname{clip}(a_{\text{nom}} + \tilde{\epsilon}, -1.0000, 1.0000) = \operatorname{clip}(0.7000 + 0.2200, -1.0000, 1.0000) = \operatorname{clip}(0.9200, -1.0000, 1.0000) = \mathbf{0.9200}$$
+
+**Step 2: Target Critic Forward Passes:**
+Target Critic 1:
+$$Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', \tilde{a}') = \mathbf{w}_1^\top \mathbf{s}' + v_1 \tilde{a}' + c_1 = (1.2000)(0.8000) + (0.5000)(-0.2000) + (-1.5000)(0.9200) + 3.0000$$
+$$= 0.9600 - 0.1000 - 1.3800 + 3.0000 = \mathbf{2.4800}$$
+
+Target Critic 2:
+$$Q_{\boldsymbol{\phi}_2'}(\mathbf{s}', \tilde{a}') = \mathbf{w}_2^\top \mathbf{s}' + v_2 \tilde{a}' + c_2 = (0.9000)(0.8000) + (1.1000)(-0.2000) + (-0.8000)(0.9200) + 2.4000$$
+$$= 0.7200 - 0.2200 - 0.7360 + 2.4000 = \mathbf{2.1640}$$
+
+**Step 3: Clipped Minimum and Bellman Target:**
+$$\min\left( Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', \tilde{a}'), Q_{\boldsymbol{\phi}_2'}(\mathbf{s}', \tilde{a}') \right) = \min(2.4800, 2.1640) = \mathbf{2.1640}$$
+$$y_{\text{TD3}} = r + \gamma \min(Q_1', Q_2') = 2.5000 + 0.9500 \times 2.1640 = 2.5000 + 2.0558 = \mathbf{4.5558}$$
+
+**Step 4: Comparison with DDPG Target:**
+In unsmoothed single-critic DDPG, the target action is $a_{\text{nom}} = 0.7000$ evaluated solely on Critic 1:
+$$Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', a_{\text{nom}}) = 0.9600 - 0.1000 - (1.5000)(0.7000) + 3.0000 = 0.8600 - 1.0500 + 3.0000 = \mathbf{2.8100}$$
+$$y_{\text{DDPG}} = r + \gamma Q_{\boldsymbol{\phi}_1'}(\mathbf{s}', a_{\text{nom}}) = 2.5000 + 0.9500 \times 2.8100 = 2.5000 + 2.6695 = \mathbf{5.1695}$$
+Difference prevented by TD3:
+$$\Delta_{\text{prevented}} = y_{\text{DDPG}} - y_{\text{TD3}} = 5.1695 - 4.5558 = \mathbf{+0.6137}$$
+TD3 prevented a $+13.47\%$ overestimation inflation from propagating into the Bellman update! $\blacksquare$
+
+---
+
+### Illustration 4: Delayed Policy Update and Soft Target Tracking
+**Problem:**
+A TD3 agent runs with policy delay $d = 2$, Polyak coefficient $\tau = 0.0050$, critic learning rate $\alpha_{\text{critic}} = 0.1000$, and actor learning rate $\alpha_{\text{actor}} = 0.0500$.
+Initial parameters at $t=0$:
+- Critics: $\boldsymbol{\phi}_1^{(0)} = [2.0000, -1.0000]^\top, \boldsymbol{\phi}_2^{(0)} = [1.8000, -0.9000]^\top$
+- Actor: $\boldsymbol{\theta}^{(0)} = [0.5000, 1.2000]^\top$
+- Target parameters are initialized identical to online parameters: $\boldsymbol{\phi}_1'^{(0)} = \boldsymbol{\phi}_1^{(0)}, \boldsymbol{\phi}_2'^{(0)} = \boldsymbol{\phi}_2^{(0)}, \boldsymbol{\theta}'^{(0)} = \boldsymbol{\theta}^{(0)}$.
+
+Given the sequence of mini-batch gradient vectors:
+- At $t=1$: Critic 1 loss gradient $\mathbf{g}_{\boldsymbol{\phi}_1}^{(1)} = [0.4000, -0.2000]^\top$, Critic 2 loss gradient $\mathbf{g}_{\boldsymbol{\phi}_2}^{(1)} = [0.3000, -0.1000]^\top$.
+- At $t=2$: Critic 1 loss gradient $\mathbf{g}_{\boldsymbol{\phi}_1}^{(2)} = [0.2000, -0.1000]^\top$, Critic 2 loss gradient $\mathbf{g}_{\boldsymbol{\phi}_2}^{(2)} = [0.1000, -0.0500]^\top$, and actor policy gradient $\mathbf{g}_{\boldsymbol{\theta}}^{(2)} = [0.8000, -0.6000]^\top$.
+
+Calculate all online and target parameters at $t=1$ and $t=2$.
+
+**Solution:**
+
+**Time Step $t=1$ (Odd Step: Critic Update Only, Actor and Targets Frozen):**
+1. Online Critic Updates:
+   $$\boldsymbol{\phi}_1^{(1)} = \boldsymbol{\phi}_1^{(0)} - \alpha_{\text{critic}} \mathbf{g}_{\boldsymbol{\phi}_1}^{(1)} = \begin{bmatrix} 2.0000 \\ -1.0000 \end{bmatrix} - 0.1000 \begin{bmatrix} 0.4000 \\ -0.2000 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.9600 \\ -0.9800 \end{bmatrix}}$$
+   $$\boldsymbol{\phi}_2^{(1)} = \boldsymbol{\phi}_2^{(0)} - \alpha_{\text{critic}} \mathbf{g}_{\boldsymbol{\phi}_2}^{(1)} = \begin{bmatrix} 1.8000 \\ -0.9000 \end{bmatrix} - 0.1000 \begin{bmatrix} 0.3000 \\ -0.1000 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.7700 \\ -0.8900 \end{bmatrix}}$$
+2. Actor Update: Since $t=1$ is not divisible by $d=2$, actor update is **skipped**:
+   $$\boldsymbol{\theta}^{(1)} = \boldsymbol{\theta}^{(0)} = \mathbf{\begin{bmatrix} 0.5000 \\ 1.2000 \end{bmatrix}}$$
+3. Target Updates: Target network updates are **skipped**:
+   $$\boldsymbol{\phi}_1'^{(1)} = \mathbf{\begin{bmatrix} 2.0000 \\ -1.0000 \end{bmatrix}}, \quad \boldsymbol{\phi}_2'^{(1)} = \mathbf{\begin{bmatrix} 1.8000 \\ -0.9000 \end{bmatrix}}, \quad \boldsymbol{\theta}'^{(1)} = \mathbf{\begin{bmatrix} 0.5000 \\ 1.2000 \end{bmatrix}}$$
+
+**Time Step $t=2$ (Even Step: Critic Update AND Delayed Actor/Target Update):**
+1. Online Critic Updates:
+   $$\boldsymbol{\phi}_1^{(2)} = \boldsymbol{\phi}_1^{(1)} - 0.1000 \begin{bmatrix} 0.2000 \\ -0.1000 \end{bmatrix} = \begin{bmatrix} 1.9600 - 0.0200 \\ -0.9800 + 0.0100 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.9400 \\ -0.9700 \end{bmatrix}}$$
+   $$\boldsymbol{\phi}_2^{(2)} = \boldsymbol{\phi}_2^{(1)} - 0.1000 \begin{bmatrix} 0.1000 \\ -0.0500 \end{bmatrix} = \begin{bmatrix} 1.7700 - 0.0100 \\ -0.8900 + 0.0050 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.7600 \\ -0.8850 \end{bmatrix}}$$
+2. Delayed Actor Update (Gradient Ascent on $J$):
+   $$\boldsymbol{\theta}^{(2)} = \boldsymbol{\theta}^{(1)} + \alpha_{\text{actor}} \mathbf{g}_{\boldsymbol{\theta}}^{(2)} = \begin{bmatrix} 0.5000 \\ 1.2000 \end{bmatrix} + 0.0500 \begin{bmatrix} 0.8000 \\ -0.6000 \end{bmatrix} = \begin{bmatrix} 0.5000 + 0.0400 \\ 1.2000 - 0.0300 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.5400 \\ 1.1700 \end{bmatrix}}$$
+3. Delayed Polyak Target Updates ($\tau = 0.0050, 1 - \tau = 0.9950$):
+   $$\boldsymbol{\phi}_1'^{(2)} = \tau \boldsymbol{\phi}_1^{(2)} + (1 - \tau) \boldsymbol{\phi}_1'^{(1)} = 0.0050 \begin{bmatrix} 1.9400 \\ -0.9700 \end{bmatrix} + 0.9950 \begin{bmatrix} 2.0000 \\ -1.0000 \end{bmatrix}$$
+   $$= \begin{bmatrix} 0.009700 + 1.990000 \\ -0.004850 - 0.995000 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.999700 \\ -0.999850 \end{bmatrix}}$$
+   $$\boldsymbol{\phi}_2'^{(2)} = \tau \boldsymbol{\phi}_2^{(2)} + (1 - \tau) \boldsymbol{\phi}_2'^{(1)} = 0.0050 \begin{bmatrix} 1.7600 \\ -0.8850 \end{bmatrix} + 0.9950 \begin{bmatrix} 1.8000 \\ -0.9000 \end{bmatrix}$$
+   $$= \begin{bmatrix} 0.008800 + 1.791000 \\ -0.004425 - 0.895500 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.799800 \\ -0.899925 \end{bmatrix}}$$
+   $$\boldsymbol{\theta}'^{(2)} = \tau \boldsymbol{\theta}^{(2)} + (1 - \tau) \boldsymbol{\theta}'^{(1)} = 0.0050 \begin{bmatrix} 0.5400 \\ 1.1700 \end{bmatrix} + 0.9950 \begin{bmatrix} 0.5000 \\ 1.2000 \end{bmatrix}$$
+   $$= \begin{bmatrix} 0.002700 + 0.497500 \\ 0.005850 + 1.194000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.500200 \\ 1.199850 \end{bmatrix}} \quad \blacksquare$$
+
+---
+
+### Illustration 5: Quantitative Overestimation Bias: DDPG vs TD3 on an Uncertain Action Landscape
+**Problem:**
+Consider a successor state $s'$ with two candidate action modes $\{a_1, a_2\}$ possessing equal ground truth action-values: $Q^*(s', a_1) = Q^*(s', a_2) = 5.0000$.
+Suppose two independent critic networks approximate these values with i.i.d. Gaussian estimation errors of standard deviation $\sigma = 1.0000$:
+$$Q_1(s', a_1) = 5.0 + X_1, \quad Q_1(s', a_2) = 5.0 + X_2, \quad Q_2(s', a) = 5.0 + Y_a$$
+where $X_1, X_2, Y_a \overset{i.i.d.}{\sim} \mathcal{N}(0, 1.0^2)$.
+The actor selects the action $\hat{a}$ that maximizes the online critic $Q_1$:
+$$\hat{a} = \arg\max_{a \in \{a_1, a_2\}} Q_1(s', a)$$
+
+1. Compute the analytical expected Bellman target evaluation under DDPG ($\mathbb{E}[Q_1(s', \hat{a})]$).
+2. Compute the analytical expected Bellman target evaluation under TD3 ($\mathbb{E}[\min(Q_1(s', \hat{a}), Q_2(s', \hat{a}))]$).
+3. Compare their percentage biases relative to $Q^* = 5.0000$.
+
+**Solution:**
+
+**Step 1: DDPG Target Evaluation:**
+In DDPG, the actor maximizes $Q_1$, so the target evaluates:
+$$Q_{\text{DDPG}} = Q_1(s', \hat{a}) = \max\left( Q_1(s', a_1), Q_1(s', a_2) \right) = 5.0000 + \max(X_1, X_2)$$
+For two independent standard normal random variables $X_1, X_2 \sim \mathcal{N}(0, \sigma^2)$:
+$$\mathbb{E}[\max(X_1, X_2)] = \frac{\sigma}{\sqrt{\pi}} = \frac{1.0000}{\sqrt{\pi}} \approx \mathbf{+0.564190}$$
+Therefore:
+$$\mathbb{E}[Q_{\text{DDPG}}] = 5.0000 + 0.564190 = \mathbf{5.564190}$$
+DDPG suffers from a positive maximization bias of $\mathbf{+0.564190}$ ($\mathbf{+11.28\%}$).
+
+**Step 2: TD3 Clipped Target Evaluation:**
+In TD3, the actor still picks $\hat{a} = \arg\max_{a \in \{a_1, a_2\}} Q_1(s', a)$.
+However, TD3 evaluates the minimum between $Q_1(s', \hat{a})$ and the independent critic $Q_2(s', \hat{a})$:
+$$Q_{\text{TD3}} = \min\left( Q_1(s', \hat{a}), Q_2(s', \hat{a}) \right) = 5.0000 + \min\left( \max(X_1, X_2), Y \right)$$
+where $M = \max(X_1, X_2)$ and $Y = Y_{\hat{a}} \sim \mathcal{N}(0, 1)$ is completely independent of $(X_1, X_2)$ because Critic 2 had no role in selecting $\hat{a}$.
+
+We compute $\mathbb{E}[\min(M, Y)]$ analytically:
+The cumulative survival function is:
+$$\mathbb{P}(\min(M, Y) > t) = \mathbb{P}(M > t) \cdot \mathbb{P}(Y > t) = \left( 1 - \Phi(t)^2 \right) (1 - \Phi(t))$$
+Integrating the survival function yields the exact closed-form result for i.i.d. standard normals:
+$$\mathbb{E}[\min(M, Y)] = - \frac{\sigma}{2\sqrt{\pi}} = - \frac{1.0000}{2\sqrt{\pi}} = \mathbf{-0.282095}$$
+Therefore:
+$$\mathbb{E}[Q_{\text{TD3}}] = 5.0000 - 0.282095 = \mathbf{4.717905}$$
+TD3 produces a controlled underestimation bias of $\mathbf{-0.282095}$ ($\mathbf{-5.64\%}$).
+
+**Step 3: Quantitative Comparison Summary:**
+
+| Metric / Property | Ground Truth $Q^*$ | Single-Critic DDPG | Clipped Twin Critic TD3 |
+| :--- | :--- | :--- | :--- |
+| **Mathematical Target** | $Q^*(s', a)$ | $\max(Q_1(s', a_1), Q_1(s', a_2))$ | $\min(\max(Q_1(a_1), Q_1(a_2)), Q_2(\hat{a}))$ |
+| **Noise Interaction** | $0$ | $\max(X_1, X_2)$ | $\min(\max(X_1, X_2), Y)$ |
+| **Analytical Expected Bias** | $0$ | $+\frac{\sigma}{\sqrt{\pi}} = \mathbf{+0.564190}$ | $-\frac{\sigma}{2\sqrt{\pi}} = \mathbf{-0.282095}$ |
+| **Expected Target Value** | $\mathbf{5.000000}$ | $\mathbf{5.564190}$ | $\mathbf{4.717905}$ |
+| **Percentage Error** | $0.00\%$ | $\mathbf{+11.28\%}$ (Overestimation) | $\mathbf{-5.64\%}$ (Underestimation) |
+| **Bellman Iteration Impact** | Exact fixed point | Self-reinforcing divergence loop | Strictly bounded, stable contraction |
+
+This proves that TD3's Clipped Double Q completely extinguishes positive overestimation bias, converting a potentially explosive divergence mode into a benign, strictly bounded contraction. $\blacksquare$
 
 ---
 
 ## 7. Deep Learning Connection & Modern Applications
 
-- **Robotics & Continuous Manipulation:** TD3 is a standard workhorse baseline in Mujoco (HalfCheetah, Ant, Humanoid, Walker2d) and Isaac Gym (NVIDIA GPU-accelerated robotics).
-- **Soft Actor-Critic (SAC - Chapter 11.20):** SAC adopted all three TD3 improvements (Clipped Double Q, target networks, entropy-smoothed actions) to create an even more sample-efficient maximum entropy continuous controller.
+### 1. Continuous Control Benchmarks: MuJoCo & Isaac Gym
+TD3 remains the most reliable deterministic continuous control baseline in the research community:
+- **MuJoCo (Todorov et al., 2012):** TD3 achieves state-of-the-art on HalfCheetah-v4 ($\sim$12,000 return), Ant-v4 ($\sim$5,500), Humanoid-v4 ($\sim$5,000), and Walker2d-v4 ($\sim$4,000) within 1M environment steps — the gold-standard benchmark for continuous RL.
+- **NVIDIA Isaac Gym (Makoviychuk et al., 2021):** GPU-accelerated physics simulation runs 4,096 parallel DDPG/TD3 environments simultaneously on a single A100 GPU, reducing training time from days to minutes. Used to train agile locomotion gaits for quadruped robots (Anymal, Spot) with direct sim-to-real transfer.
+- **Delayed Policy Updates:** TD3's policy update every $d = 2$ critic steps is critical — training the critic twice as often prevents the policy from overfitting to instantaneous Q-function noise, a key finding replicated across all modern off-policy systems.
+
+### 2. The TD3 → SAC Evolution (Haarnoja et al., 2018)
+SAC (Chapter 11.20) adopted all three TD3 improvements as its foundation and added maximum entropy regularization:
+- **Clipped Double Q-Learning**: Retained verbatim: $y_t = r_t + \gamma \min_{i=1,2} Q_{\theta_i'}(s_{t+1}, \tilde{a}_{t+1})$
+- **Delayed Policy Updates**: Retained in SAC's alternating critic/actor update schedule
+- **Target Policy Smoothing**: Replaced by entropy-regularized stochastic policy: $\tilde{a} \sim \pi_\theta(\cdot | s) + \mathcal{N}(0, \sigma^2)$ naturally emerges from the maximum entropy objective without explicit injection
+- **Net result**: SAC outperforms TD3 on 4/6 MuJoCo tasks while providing principled exploration without separate noise injection
+
+### 3. Industrial Robotics Applications
+- **Boston Dynamics Spot & Atlas:** TD3-derived continuous control policies drive leg joint torques at 500 Hz, enabling dynamic running, jumping, and parkour. The clipped double Q-learning prevents overestimation from destabilizing real-time control loops.
+- **Autonomous Drone Racing (AlphaPilot, Loquercio et al., Science Robotics 2021):** Deterministic actor-critic policies trained with DDPG-style learning achieve super-human lap times in first-person drone racing, outperforming trained human pilots by 1.2s per lap on an obstacle course.
 
 ---
 

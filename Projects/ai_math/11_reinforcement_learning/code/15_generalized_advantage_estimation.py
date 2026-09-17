@@ -169,6 +169,106 @@ def test_gae_bias_variance_tradeoff():
     print("  [PASSED] GAE bias-variance spectrum mathematically confirmed!\n")
 
 
+def test_section_6_illustrations():
+    print("--- Test 4: Section 6 Solved Illustrations Verification ---")
+    
+    # --- Illustration 1: Telescoping Sum & Numerical Cancellation ---
+    gamma1 = 0.90
+    R1 = np.array([1.0, 2.0, 5.0])
+    V1 = np.array([3.0, 4.0, 5.0, 0.0])
+    deltas1 = np.array([R1[t] + gamma1 * V1[t+1] - V1[t] for t in range(3)])
+    expected_deltas1 = np.array([1.6, 2.5, 0.0])
+    assert np.allclose(deltas1, expected_deltas1), f"Ill 1 deltas mismatch: {deltas1}"
+    
+    sum_td1 = deltas1[0] + gamma1 * deltas1[1] + (gamma1**2) * deltas1[2]
+    G0 = R1[0] + gamma1 * R1[1] + (gamma1**2) * R1[2]
+    assert np.isclose(sum_td1, 3.8500), f"Ill 1 TD sum expected 3.85, got {sum_td1}"
+    assert np.isclose(G0 - V1[0], 3.8500), f"Ill 1 G0 - V0 expected 3.85, got {G0 - V1[0]}"
+    print("  [PASSED] Illustration 1: Telescoping sum verified numerically (3.8500 == 3.8500).")
+    
+    # --- Illustration 2: 4-Step Trajectory Backward Recursion ---
+    gamma2 = 0.99
+    lam2 = 0.95
+    gl2 = gamma2 * lam2
+    R2 = np.array([1.5, -0.5, 2.0, 3.0])
+    V2 = np.array([2.0, 2.5, 1.8, 3.2, 0.0])
+    deltas2 = np.array([R2[t] + gamma2 * V2[t+1] - V2[t] for t in range(4)])
+    expected_deltas2 = np.array([1.9750, -1.2180, 3.3680, -0.2000])
+    assert np.allclose(deltas2, expected_deltas2, atol=1e-4), f"Ill 2 deltas mismatch: {deltas2}"
+    
+    gae2 = np.zeros(4)
+    last = 0.0
+    for t in reversed(range(4)):
+        last = deltas2[t] + gl2 * last
+        gae2[t] = last
+    expected_gae2 = np.array([3.6422, 1.7727, 3.1799, -0.2000])
+    assert np.allclose(gae2, expected_gae2, atol=1e-4), f"Ill 2 GAE mismatch: {gae2}"
+    print(f"  [PASSED] Illustration 2: 4-step backward recursion verified {np.round(gae2, 4)}.")
+    
+    # --- Illustration 3: Comparison across lambdas ---
+    for l, expected_A0 in [(0.0, 1.9750), (0.5, 2.1731), (0.95, 3.6422), (1.0, 3.8761)]:
+        last = 0.0
+        gae_l = np.zeros(4)
+        for t in reversed(range(4)):
+            last = deltas2[t] + (gamma2 * l) * last
+            gae_l[t] = last
+        assert np.isclose(gae_l[0], expected_A0, atol=1e-4), f"Ill 3 lambda={l} expected {expected_A0}, got {gae_l[0]}"
+    # Verify exact match with Monte Carlo returns at lambda=1.0:
+    G2 = np.zeros(4)
+    curr_g = 0.0
+    for t in reversed(range(4)):
+        curr_g = R2[t] + gamma2 * curr_g
+        G2[t] = curr_g
+    mc_adv2 = G2 - V2[:4]
+    assert np.allclose(mc_adv2, [3.8761, 1.9203, 3.1700, -0.2000], atol=1e-4)
+    print("  [PASSED] Illustration 3: Lambda parameter sweep verified from 1-step TD to Monte Carlo.")
+    
+    # --- Illustration 4: Mini-Batch PPO Advantage Normalization ---
+    adv4 = np.array([3.6422, 1.7727, 3.1799, -0.2000, -1.4500, 0.8500])
+    mu4 = np.mean(adv4)
+    assert np.isclose(mu4, 1.299133, atol=1e-5), f"Ill 4 mean mismatch: {mu4}"
+    s4 = np.std(adv4, ddof=1)
+    assert np.isclose(s4, 1.962568, atol=1e-5), f"Ill 4 sample std mismatch: {s4}"
+    norm4 = (adv4 - mu4) / (s4 + 1e-8)
+    expected_norm4 = np.array([1.1939, 0.2413, 0.9583, -0.7639, -1.4008, -0.2288])
+    assert np.allclose(norm4, expected_norm4, atol=1e-4), f"Ill 4 normalized mismatch: {norm4}"
+    assert np.isclose(np.mean(norm4), 0.0, atol=1e-7)
+    assert np.isclose(np.std(norm4, ddof=1), 1.0, atol=1e-7)
+    print("  [PASSED] Illustration 4: PPO advantage standardization verified (mean=0.0, std=1.0).")
+    
+    # --- Illustration 5: Episode Termination vs Truncation ---
+    gamma5 = 0.95
+    lam5 = 0.90
+    gl5 = gamma5 * lam5
+    R5 = np.array([1.0, 0.0, 2.0, -1.0, 3.0])
+    V5 = np.array([1.5, 2.0, 1.0, 2.5, 3.0, 2.0])
+    
+    # Case A: Natural termination (d_5 = 1)
+    deltas_A = np.array([R5[t] + gamma5 * (V5[t+1] if t < 4 else 0.0) - V5[t] for t in range(5)])
+    gae_A = np.zeros(5)
+    last = 0.0
+    for t in reversed(range(5)):
+        last = deltas_A[t] + gl5 * last
+        gae_A[t] = last
+    assert np.allclose(gae_A, [2.5632, 1.3605, 2.8192, -0.6500, 0.0000], atol=1e-4)
+    
+    # Case B: Time-limit truncation (d_5 = 0, bootstrap V(S5)=2.0)
+    deltas_B = np.array([R5[t] + gamma5 * V5[t+1] - V5[t] for t in range(5)])
+    gae_B = np.zeros(5)
+    last = 0.0
+    for t in reversed(range(5)):
+        last = deltas_B[t] + gl5 * last
+        gae_B[t] = last
+    assert np.allclose(gae_B, [3.5785, 2.5480, 4.2082, 0.9745, 1.9000], atol=1e-4)
+    
+    # Difference shockwave decay:
+    diff = gae_B - gae_A
+    for t in range(5):
+        theoretical_diff = (gamma5 * V5[-1]) * (gl5 ** (4 - t))
+        assert np.isclose(diff[t], theoretical_diff, atol=1e-4)
+    print("  [PASSED] Illustration 5: Termination vs truncation shockwave transmission confirmed.\n")
+
+
 if __name__ == "__main__":
     print("=================================================================")
     print("STARTING MODULE 11.15 GENERALIZED ADVANTAGE ESTIMATION (GAE) TESTS")
@@ -177,7 +277,9 @@ if __name__ == "__main__":
     verify_part_5_hand_calculation()
     test_gae_boundary_cases()
     test_gae_bias_variance_tradeoff()
+    test_section_6_illustrations()
     
     print("=================================================================")
     print("ALL MODULE 11.15 UNIT TESTS PASSED SUCCESSFULLY! (100% VERIFIED)")
     print("=================================================================")
+

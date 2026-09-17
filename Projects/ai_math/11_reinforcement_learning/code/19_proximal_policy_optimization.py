@@ -65,6 +65,149 @@ def verify_part_5_hand_calculation():
     print("  [PASSED] Part 5 PPO-Clip hand calculations and gradients verified to exact precision!\n")
 
 
+def verify_illustration_1_counterexamples():
+    print("--- Test 2: Illustration 1: Mandatory Outer Min Operator & Failure Modes ---")
+    eps = 0.20
+    
+    # Counterexample 1: Bad action A = -10.0, ratio exploded to r = 2.0
+    r_bad = torch.tensor([2.0], dtype=torch.float32, requires_grad=True)
+    A_bad = torch.tensor([-10.0], dtype=torch.float32)
+    # Naive clip: clip(r) * A
+    naive_clip = torch.clamp(r_bad, 1.0 - eps, 1.0 + eps) * A_bad
+    naive_clip.backward()
+    grad_naive = r_bad.grad.item()
+    assert np.isclose(naive_clip.item(), -12.0000)
+    assert np.isclose(grad_naive, 0.0000), "Naive clipping must produce 0 gradient (frozen)"
+    
+    # PPO min-clip: min(r*A, clip(r)*A)
+    r_bad_ppo = torch.tensor([2.0], dtype=torch.float32, requires_grad=True)
+    ppo_clip = torch.min(r_bad_ppo * A_bad, torch.clamp(r_bad_ppo, 1.0 - eps, 1.0 + eps) * A_bad)
+    ppo_clip.backward()
+    grad_ppo = r_bad_ppo.grad.item()
+    assert np.isclose(ppo_clip.item(), -20.0000)
+    assert np.isclose(grad_ppo, -10.0000), "PPO must produce active restoring gradient -10.0"
+    
+    # Counterexample 2: Good action A = +5.0, ratio collapsed to r = 0.5
+    r_good = torch.tensor([0.5], dtype=torch.float32, requires_grad=True)
+    A_good = torch.tensor([5.0], dtype=torch.float32)
+    ppo_good = torch.min(r_good * A_good, torch.clamp(r_good, 1.0 - eps, 1.0 + eps) * A_good)
+    ppo_good.backward()
+    grad_good = r_good.grad.item()
+    assert np.isclose(ppo_good.item(), 2.5000)
+    assert np.isclose(grad_good, 5.0000), "PPO must produce active restoring gradient +5.0"
+    
+    print("  [PASSED] Illustration 1 counterexamples verified: outer min prevents catastrophic policy collapse!\n")
+
+
+def verify_illustration_3_minibatch_gae():
+    print("--- Test 3: Illustration 3: Mini-batch GAE Backward Pass on 4 Transitions ---")
+    R = np.array([0.0, 4.0, -3.0, 1.0])
+    V_base = np.array([1.0, 2.0, 1.0, 3.0, 0.0]) # terminal V(S_4) = 0
+    gamma = 1.0
+    lam = 0.5
+    
+    # 1. TD errors
+    deltas = R + gamma * V_base[1:] - V_base[:-1]
+    assert np.allclose(deltas, [1.0, 3.0, -1.0, -2.0])
+    
+    # 2. GAE backward recursion
+    A_gae = np.zeros(4)
+    gae = 0.0
+    for t in reversed(range(4)):
+        gae = deltas[t] + gamma * lam * gae
+        A_gae[t] = gae
+    assert np.allclose(A_gae, [2.0, 2.0, -2.0, -2.0])
+    
+    # 3. Advantage standardization
+    mu_A = np.mean(A_gae)
+    sigma_A = np.std(A_gae)
+    A_norm = (A_gae - mu_A) / sigma_A
+    assert np.isclose(mu_A, 0.0000)
+    assert np.isclose(sigma_A, 2.0000)
+    assert np.allclose(A_norm, [1.0, 1.0, -1.0, -1.0])
+    
+    # 4. Critic targets
+    V_targ = A_gae + V_base[:-1]
+    assert np.allclose(V_targ, [3.0, 4.0, -1.0, 1.0])
+    
+    # 5. Policy ratios and clipping
+    r = np.array([1.10, 1.30, 0.90, 0.70])
+    r_clip = np.clip(r, 0.80, 1.20)
+    l_clip = np.minimum(r * A_norm, r_clip * A_norm)
+    assert np.allclose(l_clip, [1.10, 1.20, -0.90, -0.80])
+    mean_l_clip = np.mean(l_clip)
+    assert np.isclose(mean_l_clip, 0.1500)
+    
+    # 6. Value function loss
+    V_pred = np.array([1.2, 2.3, 0.8, 2.8])
+    l_vf = (V_pred - V_targ) ** 2
+    assert np.allclose(l_vf, [3.24, 2.89, 3.24, 3.24])
+    mean_l_vf = np.mean(l_vf)
+    assert np.isclose(mean_l_vf, 3.1525)
+    
+    # 7. Policy entropy bonus
+    p = np.array([0.44, 0.65, 0.54, 0.35])
+    H = - (p * np.log(p) + (1.0 - p) * np.log(1.0 - p))
+    assert np.allclose(H, [0.68593, 0.64745, 0.68994, 0.64745], atol=1e-4)
+    mean_H = np.mean(H)
+    assert np.isclose(mean_H, 0.66769, atol=1e-4)
+    
+    # 8. Total multi-task loss
+    c1, c2 = 0.50, 0.01
+    L_ppo = mean_l_clip - c1 * mean_l_vf + c2 * mean_H
+    assert np.isclose(L_ppo, -1.41957, atol=1e-4)
+    
+    print("  [PASSED] Illustration 3 GAE, mini-batch loss, and entropy verified to exact precision!\n")
+
+
+def verify_illustration_4_adaptive_kl():
+    print("--- Test 4: Illustration 4: Adaptive KL Penalty Multiplier Trace ---")
+    beta = 1.0000
+    d_targ = 0.0100
+    d_samples = [0.0040, 0.0250, 0.0090]
+    expected_betas = [0.5000, 1.0000, 1.0000]
+    
+    history = []
+    for d in d_samples:
+        if d < d_targ / 1.5:
+            beta = beta / 2.0
+        elif d > d_targ * 1.5:
+            beta = beta * 2.0
+        history.append(beta)
+        
+    assert np.allclose(history, expected_betas)
+    print("  [PASSED] Illustration 4 adaptive KL penalty multiplier updates verified!\n")
+
+
+def verify_illustration_5_multi_epoch_drift():
+    print("--- Test 5: Illustration 5: Multi-Epoch Gradient Reuse & Drift Prevention ---")
+    theta_cpi = 0.0000
+    theta_ppo = 0.0000
+    eta = 0.4000
+    A = 2.0000
+    eps = 0.2000
+    
+    cpi_thetas = [theta_cpi]
+    ppo_thetas = [theta_ppo]
+    
+    for _ in range(5):
+        pi_c = 1.0 / (1.0 + np.exp(-theta_cpi))
+        grad_c = (1.0 / 0.50) * A * pi_c * (1.0 - pi_c)
+        theta_cpi += eta * grad_c
+        cpi_thetas.append(theta_cpi)
+        
+        pi_p = 1.0 / (1.0 + np.exp(-theta_ppo))
+        r_p = pi_p / 0.50
+        grad_p = (1.0 / 0.50) * A * pi_p * (1.0 - pi_p) if r_p <= 1.0 + eps else 0.0
+        theta_ppo += eta * grad_p
+        ppo_thetas.append(theta_ppo)
+        
+    assert np.isclose(cpi_thetas[5], 1.67435, atol=1e-4)
+    assert np.isclose(ppo_thetas[5], 0.78442, atol=1e-4)
+    assert np.isclose(ppo_thetas[2], ppo_thetas[5]), "PPO parameter must freeze once clipped plateau is reached"
+    print("  [PASSED] Illustration 5 multi-epoch drift prevention verified!\n")
+
+
 def test_ppo_agent_training():
     print("--- Test 2: Production-Grade PPO on CartPole Dynamics ---")
     
@@ -231,6 +374,10 @@ if __name__ == "__main__":
     print("=================================================================\n")
     
     verify_part_5_hand_calculation()
+    verify_illustration_1_counterexamples()
+    verify_illustration_3_minibatch_gae()
+    verify_illustration_4_adaptive_kl()
+    verify_illustration_5_multi_epoch_drift()
     test_ppo_agent_training()
     
     print("=================================================================")

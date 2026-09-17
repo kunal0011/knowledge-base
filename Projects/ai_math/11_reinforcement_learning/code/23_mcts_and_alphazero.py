@@ -314,12 +314,119 @@ def verify_mcts_tic_tac_toe():
 
 
 # =====================================================================
+# 4. Section 6 Solved Illustrations Verification
+# =====================================================================
+
+def verify_section6_illustrations():
+    print("=" * 70)
+    print("3. VERIFYING SECTION 6 SOLVED ILLUSTRATIONS")
+    print("=" * 70)
+
+    # --- Illustration 1: Minimax vs Negamax Equivalence ---
+    v11, v12 = 0.70, 0.20
+    v21, v22 = -0.50, 0.90
+    minimax_root = max(min(v11, v12), min(v21, v22))
+    u_s1 = max(-v11, -v12)
+    u_s2 = max(-v21, -v22)
+    negamax_root = max(-u_s1, -u_s2)
+    print(f"Ill 1: Minimax root = {minimax_root:.4f}, Negamax root = {negamax_root:.4f}")
+    assert np.isclose(minimax_root, 0.20, atol=1e-6)
+    assert np.isclose(negamax_root, 0.20, atol=1e-6)
+
+    # --- Illustration 2: 3-Action PUCT Selection ---
+    c_puct = 1.414
+    P = np.array([0.60, 0.30, 0.10])
+    N = np.array([10, 5, 1])
+    Q = np.array([0.40, 0.50, 0.20])
+    n_tot = np.sum(N)
+    sqrt_tot = np.sqrt(n_tot)
+    U = c_puct * P * (sqrt_tot / (1 + N))
+    scores = Q + U
+    print(f"Ill 2: Scores = {[round(s, 6) for s in scores]} | Selected = a{np.argmax(scores) + 1}")
+    assert np.isclose(scores[0], 0.708509, atol=1e-5)
+    assert np.isclose(scores[1], 0.782800, atol=1e-5)
+    assert np.isclose(scores[2], 0.482800, atol=1e-5)
+    assert np.argmax(scores) == 1  # a2 selected
+
+    # --- Illustration 3: 3-Level Tree with Virtual Loss ---
+    N0, W0 = 4, 1.60
+    N1, W1 = 2, -0.60
+    vl = 1
+    Q0_vl = (W0 - 1.0 * vl) / (N0 + vl)
+    Q1_vl = (W1 - 1.0 * vl) / (N1 + vl)
+    print(f"Ill 3: Virtual Loss Q(s0) = {Q0_vl:.4f}, Q(s1) = {Q1_vl:.4f}")
+    assert np.isclose(Q0_vl, 0.1200, atol=1e-6)
+    assert np.isclose(Q1_vl, -1.60 / 3.0, atol=1e-6)
+
+    v_leaf = 0.75  # Player 1 perspective
+    # Node 1 backup (Player 2):
+    N1_final = N1 + 1
+    W1_final = W1 - v_leaf
+    Q1_final = W1_final / N1_final
+    # Node 0 backup (Player 1):
+    N0_final = N0 + 1
+    W0_final = W0 + v_leaf
+    Q0_final = W0_final / N0_final
+    print(f"Ill 3 Backup: Q(s1) = {Q1_final:.4f}, Q(s0) = {Q0_final:.4f}")
+    assert np.isclose(Q1_final, -0.4500, atol=1e-6)
+    assert np.isclose(Q0_final, 0.4700, atol=1e-6)
+
+    # --- Illustration 4: Temperature Annealing ---
+    N_tau = np.array([60, 25, 10, 5], dtype=np.float64)
+    # tau = 1.0
+    pi_1 = (N_tau ** 1.0) / np.sum(N_tau ** 1.0)
+    # tau = 0.5
+    pi_05 = (N_tau ** 2.0) / np.sum(N_tau ** 2.0)
+    # tau = 0.2
+    pi_02 = (N_tau ** 5.0) / np.sum(N_tau ** 5.0)
+    print(f"Ill 4: Pi(tau=1.0) = {[round(p, 4) for p in pi_1]}")
+    print(f"Ill 4: Pi(tau=0.5) = {[round(p, 4) for p in pi_05]}")
+    print(f"Ill 4: Pi(tau=0.2) = {[round(p, 4) for p in pi_02]}")
+    assert np.isclose(pi_1[0], 0.600000, atol=1e-6)
+    assert np.isclose(pi_05[0], 24.0 / 29.0, atol=1e-6)
+    assert np.isclose(pi_02[0], 777600000.0 / 787468750.0, atol=1e-6)
+
+    # --- Illustration 5: Dual Head Backpropagation ---
+    z_pol = np.array([1.2, 0.4, -0.6])
+    p_soft = np.exp(z_pol) / np.sum(np.exp(z_pol))
+    pi_target = np.array([0.70, 0.20, 0.10])
+    L_pol = -np.sum(pi_target * np.log(p_soft))
+    grad_z_pol = p_soft - pi_target
+
+    v_val = np.tanh(0.50)
+    z_target = 1.00
+    L_val = (z_target - v_val) ** 2
+    grad_z_val = -2.0 * (z_target - v_val) * (1.0 - v_val ** 2)
+    L_total = L_pol + L_val
+
+    print(f"Ill 5: L_pol = {L_pol:.6f}, L_val = {L_val:.6f}, L_total = {L_total:.6f}")
+    print(f"Ill 5: grad_z_pol = {[round(g, 6) for g in grad_z_pol]}, grad_z_val = {grad_z_val:.6f}")
+    assert np.isclose(L_pol, 0.819104, atol=1e-5)
+    assert np.isclose(L_val, 0.289318, atol=1e-5)
+    assert np.isclose(L_total, 1.108422, atol=1e-5)
+    assert np.allclose(grad_z_pol, [-0.080662, 0.078286, 0.002376], atol=1e-5)
+    assert np.isclose(grad_z_val, -0.846033, atol=1e-5)
+
+    # --- Illustration 6: Dirichlet Prior Blending ---
+    P_prior = np.array([0.90, 0.08, 0.02])
+    eta = np.array([0.10, 0.60, 0.30])
+    eps = 0.25
+    P_blended = (1.0 - eps) * P_prior + eps * eta
+    print(f"Ill 6: Blended prior = {[round(p, 4) for p in P_blended]}")
+    assert np.allclose(P_blended, [0.7000, 0.2100, 0.0900], atol=1e-6)
+
+    print(">> SUCCESS: Section 6 Illustrations 1-6 verified to exact numerical precision!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
 if __name__ == "__main__":
     verify_part5_hand_calculation()
     verify_mcts_tic_tac_toe()
+    verify_section6_illustrations()
     print("=" * 70)
     print("ALL MODULE 11 CHAPTER 23 (MCTS & ALPHAZERO) VERIFICATIONS PASSED!")
     print("=" * 70)
+

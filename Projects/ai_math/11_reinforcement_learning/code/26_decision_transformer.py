@@ -265,6 +265,139 @@ def simulate_autoregressive_dt_rollout():
 
 
 # =====================================================================
+# 4. Section 6 Solved Illustrations Numerical Verification
+# =====================================================================
+
+def verify_section6_illustrations():
+    print("=" * 70)
+    print("4. VERIFYING SECTION 6 SOLVED ILLUSTRATIONS")
+    print("=" * 70)
+
+    # -------------------------------------------------------------
+    # Illustration 2: 3-step Episode Trajectory Tokenization
+    # -------------------------------------------------------------
+    r = np.array([2.0, 5.0, -1.0])
+    R = np.zeros(3)
+    R[2] = r[2]
+    R[1] = r[1] + R[2]
+    R[0] = r[0] + R[1]
+    assert np.allclose(R, [6.0, 4.0, -1.0])
+
+    s = np.array([[1.0, 0.0], [0.5, 1.5], [-1.0, 2.0]])
+    a = np.array([[0.5], [-0.8], [1.2]])
+
+    W_R = np.array([[0.5], [-0.2]])
+    W_s = np.array([[0.4, 0.1], [-0.2, 0.3]])
+    W_a = np.array([[0.6], [0.2]])
+    pos = np.array([[0.1, 0.1], [0.2, 0.2], [0.3, 0.3]])
+
+    e_R1 = W_R.flatten() * R[0] + pos[0]
+    e_s1 = W_s @ s[0] + pos[0]
+    e_a1 = W_a.flatten() * a[0] + pos[0]
+    assert np.allclose(e_R1, [3.1, -1.1])
+    assert np.allclose(e_s1, [0.5, -0.1])
+    assert np.allclose(e_a1, [0.4, 0.2])
+
+    e_R2 = W_R.flatten() * R[1] + pos[1]
+    e_s2 = W_s @ s[1] + pos[1]
+    e_a2 = W_a.flatten() * a[1] + pos[1]
+    assert np.allclose(e_R2, [2.2, -0.6])
+    assert np.allclose(e_s2, [0.55, 0.55])
+    assert np.allclose(e_a2, [-0.28, 0.04])
+
+    e_R3 = W_R.flatten() * R[2] + pos[2]
+    e_s3 = W_s @ s[2] + pos[2]
+    e_a3 = W_a.flatten() * a[2] + pos[2]
+    assert np.allclose(e_R3, [-0.2, 0.5])
+    assert np.allclose(e_s3, [0.1, 1.1])
+    assert np.allclose(e_a3, [1.02, 0.54])
+    print(">> Illustration 2 (Tokenization & Positional Embeddings): Verified!")
+
+    # -------------------------------------------------------------
+    # Illustration 3: Causal Masking & Self-Attention Matrix
+    # -------------------------------------------------------------
+    U = np.array([
+        [1.0, 0.0],
+        [0.0, 2.0],
+        [1.0, 1.0],
+        [2.0, -1.0]
+    ])
+    S_raw = U @ U.T
+    scale = np.sqrt(2.0)
+    S = S_raw / scale
+    mask = np.triu(np.full((4, 4), -np.inf), k=1)
+    S_masked = S + mask
+
+    def softmax_masked(row):
+        valid = row != -np.inf
+        m = np.max(row[valid])
+        exp_r = np.zeros_like(row)
+        exp_r[valid] = np.exp(row[valid] - m)
+        return exp_r / np.sum(exp_r[valid])
+
+    A = np.zeros((4, 4))
+    for i in range(4):
+        A[i] = softmax_masked(S_masked[i])
+    Y = A @ U
+
+    assert np.allclose(A[0], [1.0, 0.0, 0.0, 0.0])
+    assert np.allclose(A[1], [0.055807, 0.944193, 0.0, 0.0], atol=1e-5)
+    assert np.allclose(A[2], [0.197776, 0.401112, 0.401112, 0.0], atol=1e-5)
+    assert np.allclose(A[3], [0.101068, 0.005974, 0.049834, 0.843125], atol=1e-5)
+    assert np.allclose(Y[1], [0.055807, 1.888386], atol=1e-5)
+    print(">> Illustration 3 (Causal Self-Attention Matrix Pass): Verified!")
+
+    # -------------------------------------------------------------
+    # Illustration 4: 2-Step Rollout with RTG Decrementing
+    # -------------------------------------------------------------
+    W_R_i4 = np.array([[0.1], [0.1]])
+    W_s_i4 = np.array([[1.0, 0.0], [0.0, 1.0]])
+    W_a_i4 = np.array([[1.0], [0.0]])
+    W_act_i4 = np.array([[1.0, 1.0]])
+
+    R1 = 20.0
+    s1 = np.array([1.0, 0.0])
+    e_R1 = (W_R_i4 * R1).flatten()
+    e_s1 = W_s_i4 @ s1
+
+    z = np.array([np.dot(e_s1, e_R1), np.dot(e_s1, e_s1)]) / scale
+    exp_z = np.exp(z)
+    w1 = exp_z / np.sum(exp_z)
+    Y1 = w1[0] * e_R1 + w1[1] * e_s1
+    a1 = (W_act_i4 @ Y1)[0]
+    assert np.isclose(a1, 3.009285, atol=1e-5)
+
+    r1 = 3.0
+    R2 = R1 - r1
+    s2 = np.array([0.0, 2.0])
+    e_a1 = (W_a_i4 * a1).flatten()
+    e_R2 = (W_R_i4 * R2).flatten()
+    e_s2 = W_s_i4 @ s2
+
+    tokens = np.array([e_R1, e_s1, e_a1, e_R2, e_s2])
+    dots = tokens @ e_s2
+    z5 = dots / scale
+    exp_z5 = np.exp(z5)
+    w2 = exp_z5 / np.sum(exp_z5)
+    Y2 = w2 @ tokens
+    a2 = (W_act_i4 @ Y2)[0]
+    assert np.isclose(a2, 3.051953, atol=1e-5)
+    print(">> Illustration 4 (DT Inference Action Sampling & RTG Decrement): Verified!")
+
+    # -------------------------------------------------------------
+    # Illustration 5: Stochastic Pitfall & Sub-trajectory Stitching
+    # -------------------------------------------------------------
+    Q_safe = 18.0
+    Q_gamble = 0.1 * 100.0 + 0.9 * 0.0
+    assert Q_safe == 18.0 and Q_gamble == 10.0
+    dt_return = 0.1 * 100.0 + 0.9 * 0.0
+    assert dt_return == 10.0
+    drop = (dt_return - Q_safe) / Q_safe
+    assert np.isclose(drop, -0.444444, atol=1e-5)
+    print(">> Illustration 5 (Stitching vs Stochastic MDP Failure): Verified!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
@@ -272,6 +405,8 @@ if __name__ == "__main__":
     verify_part5_hand_calculation()
     verify_decision_transformer_model()
     simulate_autoregressive_dt_rollout()
+    verify_section6_illustrations()
     print("=" * 70)
     print("ALL MODULE 11 CHAPTER 26 (DECISION TRANSFORMER) VERIFICATIONS PASSED!")
     print("=" * 70)
+

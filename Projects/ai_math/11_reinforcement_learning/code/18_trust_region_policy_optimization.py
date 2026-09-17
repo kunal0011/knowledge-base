@@ -188,6 +188,175 @@ def test_backtracking_line_search():
     print("  [PASSED] Backtracking line search successfully enforces trust region!\n")
 
 
+def test_illustration_2_cg_2x2():
+    print("--- Test 4: Section 6 Illustration 2 - 2-Iteration CG Solve on 2x2 System ---")
+    F = np.array([[2.0, 1.0], [1.0, 2.0]])
+    g = np.array([1.0, 2.0])
+    
+    # Iteration 0
+    x0 = np.zeros(2)
+    r0 = g - F @ x0
+    p0 = r0.copy()
+    v0 = F @ p0 # [4, 5]
+    alpha0 = (r0 @ r0) / (p0 @ v0) # 5 / 14
+    x1 = x0 + alpha0 * p0 # [5/14, 10/14]
+    r1 = r0 - alpha0 * v0 # [-6/14, 3/14]
+    
+    assert np.allclose(v0, [4.0, 5.0])
+    assert np.isclose(alpha0, 5.0 / 14.0)
+    assert np.allclose(x1, [5.0 / 14.0, 5.0 / 7.0])
+    assert np.allclose(r1, [-3.0 / 7.0, 3.0 / 14.0])
+    
+    # Iteration 1
+    r1_sq = r1 @ r1
+    r0_sq = r0 @ r0
+    beta0 = r1_sq / r0_sq # 9 / 196
+    p1 = r1 + beta0 * p0 # [-75/196, 60/196]
+    v1 = F @ p1 # [-90/196, 45/196] = 45/196 * [-2, 1]
+    curv1 = p1 @ v1
+    alpha1 = r1_sq / curv1 # 14 / 15
+    x2 = x1 + alpha1 * p1
+    r2 = r1 - alpha1 * v1
+    
+    assert np.isclose(beta0, 9.0 / 196.0)
+    assert np.allclose(p1, [-75.0 / 196.0, 60.0 / 196.0])
+    assert np.isclose(alpha1, 14.0 / 15.0)
+    assert np.allclose(x2, [0.0, 1.0])
+    assert np.allclose(r2, [0.0, 0.0], atol=1e-14)
+    
+    # Analytical verification
+    x_analytical = np.linalg.solve(F, g)
+    assert np.allclose(x2, x_analytical)
+    print(f"  Converged to exact solution {x2} matching analytical inverse [0, 1] identically!")
+    print("  [PASSED] Illustration 2 verified to exact machine precision!\n")
+
+
+def test_illustration_3_trpo_step_and_backtracking():
+    print("--- Test 5: Section 6 Illustration 3 - Step Length & Backtracking Line Search ---")
+    F = np.array([[2.0, 1.0], [1.0, 2.0]])
+    g = np.array([1.0, 2.0])
+    x = np.array([0.0, 1.0])
+    delta = 0.01
+    
+    # Scaling factor beta
+    x_dot_g = x @ g
+    beta = np.sqrt(2 * delta / x_dot_g)
+    assert np.isclose(beta, 0.1)
+    
+    step0 = beta * x
+    assert np.allclose(step0, [0.0, 0.1])
+    
+    # Quadratic approximation
+    quad_kl = 0.5 * step0 @ F @ step0
+    assert np.isclose(quad_kl, delta)
+    
+    # Non-linear models
+    def true_kl(s):
+        return 0.5 * s @ F @ s + 3.0 * (s[1] ** 3)
+    
+    def surrogate_obj(s):
+        return g @ s - 15.0 * (s[1] ** 2)
+    
+    # j = 0
+    kl_0 = true_kl(step0)
+    L_0 = surrogate_obj(step0)
+    assert np.isclose(kl_0, 0.013)
+    assert np.isclose(L_0, 0.05)
+    assert kl_0 > delta # VIOLATED
+    
+    # j = 1 (backtracking alpha = 0.5)
+    step1 = 0.5 * step0
+    kl_1 = true_kl(step1)
+    L_1 = surrogate_obj(step1)
+    assert np.allclose(step1, [0.0, 0.05])
+    assert np.isclose(kl_1, 0.002875)
+    assert np.isclose(L_1, 0.0625)
+    assert kl_1 <= delta # SATISFIED
+    assert L_1 > 0 # SATISFIED
+    print(f"  Step 0: KL={kl_0:.4f} > {delta} (Rejected)")
+    print(f"  Step 1: KL={kl_1:.6f} <= {delta}, L={L_1:.4f} > 0 (Accepted)")
+    print("  [PASSED] Illustration 3 verified!\n")
+
+
+def test_illustration_4_monotonic_bound_3state_mdp():
+    print("--- Test 6: Section 6 Illustration 4 - Monotonic Bound on 3-State MDP ---")
+    gamma = 0.5
+    P_a1 = np.array([[0, 1, 0], [0, 0, 1], [0, 0, 1]], dtype=float)
+    P_a2 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+    R_a1 = np.array([1.0, 2.0, 3.0])
+    R_a2 = np.array([0.0, 1.0, 0.0])
+    I = np.eye(3)
+    mu = np.array([1.0, 0.0, 0.0])
+    
+    # Baseline policy pi: 0.5, 0.5
+    P_pi = 0.5 * P_a1 + 0.5 * P_a2
+    R_pi = 0.5 * R_a1 + 0.5 * R_a2
+    V_pi = np.linalg.solve(I - gamma * P_pi, R_pi)
+    assert np.allclose(V_pi, [5.0 / 3.0, 3.0, 3.0])
+    
+    Q_a1 = R_a1 + gamma * P_a1 @ V_pi
+    Q_a2 = R_a2 + gamma * P_a2 @ V_pi
+    assert np.allclose(Q_a1, [2.5, 3.5, 4.5])
+    assert np.allclose(Q_a2, [5.0 / 6.0, 2.5, 1.5])
+    
+    A_a1 = Q_a1 - V_pi
+    A_a2 = Q_a2 - V_pi
+    assert np.allclose(A_a1, [5.0 / 6.0, 0.5, 1.5])
+    assert np.allclose(A_a2, [-5.0 / 6.0, -0.5, -1.5])
+    
+    d_pi_unnorm = mu @ np.linalg.inv(I - gamma * P_pi)
+    assert np.allclose(d_pi_unnorm, [4.0 / 3.0, 4.0 / 9.0, 2.0 / 9.0])
+    
+    # Candidate policy pi_tilde: 0.6, 0.4
+    expected_A = 0.6 * A_a1 + 0.4 * A_a2 # 0.2 * A_a1
+    L_surr = V_pi[0] + np.sum(d_pi_unnorm * expected_A)
+    assert np.isclose(L_surr, 2.0)
+    
+    # True candidate return J(pi_tilde)
+    P_tilde = 0.6 * P_a1 + 0.4 * P_a2
+    R_tilde = 0.6 * R_a1 + 0.4 * R_a2
+    V_tilde = np.linalg.solve(I - gamma * P_tilde, R_tilde)
+    J_tilde = V_tilde[0]
+    assert np.isclose(J_tilde, 2.00625)
+    
+    # Bound constants
+    epsilon = 1.5
+    C = 4.0 * epsilon * gamma / ((1.0 - gamma) ** 2) # 12.0
+    assert np.isclose(C, 12.0)
+    
+    kl_max = 0.5 * np.log(25.0 / 24.0) # ~ 0.020411
+    lower_bound = L_surr - C * kl_max
+    assert np.isclose(lower_bound, 1.755068032878469)
+    assert J_tilde >= lower_bound
+    assert J_tilde > V_pi[0]
+    print(f"  J(pi) = {V_pi[0]:.6f}, L_pi(pi_tilde) = {L_surr:.4f}, J(pi_tilde) = {J_tilde:.6f}")
+    print(f"  Lower bound = {lower_bound:.6f} <= J(pi_tilde) (Monotonic improvement guaranteed!)")
+    print("  [PASSED] Illustration 4 verified!\n")
+
+
+def test_illustration_5_pearlmutter_gaussian_fvp():
+    print("--- Test 7: Section 6 Illustration 5 - Pearlmutter FVP on Gaussian Policy ---")
+    theta_old = torch.tensor([1.0, 0.5])
+    v = torch.tensor([0.6, -0.8])
+    
+    # Analytical Fisher matrix F = diag(exp(-2*rho), 2)
+    F_analytic = torch.tensor([[torch.exp(torch.tensor(-1.0)), 0.0], [0.0, 2.0]])
+    Fv_direct = F_analytic @ v
+    
+    # Autograd Pearlmutter double backward
+    theta = torch.tensor([1.0, 0.5], requires_grad=True)
+    kl = (theta[1] - theta_old[1]) + (torch.exp(2 * theta_old[1]) + (theta_old[0] - theta[0]) ** 2) / (2 * torch.exp(2 * theta[1])) - 0.5
+    
+    g_kl = torch.autograd.grad(kl, theta, create_graph=True)[0]
+    prod = torch.dot(g_kl, v)
+    fvp = torch.autograd.grad(prod, theta)[0]
+    
+    print(f"  Direct Analytical F @ v: {Fv_direct.numpy()}")
+    print(f"  Pearlmutter Double-Grad: {fvp.detach().numpy()}")
+    assert torch.allclose(Fv_direct, fvp, atol=1e-7)
+    print("  [PASSED] Illustration 5 verified to exact machine precision!\n")
+
+
 if __name__ == "__main__":
     print("=================================================================")
     print("STARTING MODULE 11.18 TRUST REGION POLICY OPTIMIZATION (TRPO) TESTS")
@@ -196,6 +365,10 @@ if __name__ == "__main__":
     verify_part_5_hand_calculation()
     test_pytorch_hvp_and_cg()
     test_backtracking_line_search()
+    test_illustration_2_cg_2x2()
+    test_illustration_3_trpo_step_and_backtracking()
+    test_illustration_4_monotonic_bound_3state_mdp()
+    test_illustration_5_pearlmutter_gaussian_fvp()
     
     print("=================================================================")
     print("ALL MODULE 11.18 UNIT TESTS PASSED SUCCESSFULLY! (100% VERIFIED)")

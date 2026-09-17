@@ -204,6 +204,99 @@ def test_sac_continuous_control():
     print("  [PASSED] Soft Actor-Critic agent verified on continuous dynamics!\n")
 
 
+def verify_section_6_illustrations():
+    print("--- Test 3: Section 6 Solved Illustrations Verification ---")
+    import math
+
+    # Illustration 1
+    u1 = 0.5000
+    a1 = math.tanh(u1)
+    da_du1 = 1.0 - a1**2
+    assert np.isclose(a1, 0.462117, atol=1e-5)
+    assert np.isclose(da_du1, 0.786448, atol=1e-5)
+    print("  [Illustration 1] tanh squashing and Jacobian derivative verified.")
+
+    # Illustration 2
+    mu2 = 0.2000
+    sigma2 = 1.2000
+    eps2 = 0.5000
+    u2 = mu2 + sigma2 * eps2
+    a2 = math.tanh(u2)
+    log_mu2 = -0.5 * math.log(2 * math.pi) - math.log(sigma2) - ((u2 - mu2)**2) / (2 * sigma2**2)
+    log_jac2 = math.log(1.0 - a2**2)
+    log_pi2 = log_mu2 - log_jac2
+    assert np.isclose(u2, 0.8000, atol=1e-5)
+    assert np.isclose(a2, 0.664037, atol=1e-5)
+    assert np.isclose(log_mu2, -1.226260, atol=1e-5)
+    assert np.isclose(log_jac2, -0.581507, atol=1e-5)
+    assert np.isclose(log_pi2, -0.644753, atol=1e-5)
+    print("  [Illustration 2] Squashed Gaussian action forward pass and log-prob verified.")
+
+    # Illustration 3
+    r3 = 3.5000
+    gamma3 = 0.9500
+    alpha3 = 0.2000
+    s_prime3 = 1.5000
+    q1_3 = 3.0 * s_prime3 + 2.0 * a2
+    q2_3 = 2.5 * s_prime3 + 3.0 * a2
+    min_q3 = min(q1_3, q2_3)
+    v_soft3 = min_q3 - alpha3 * log_pi2
+    y3 = r3 + gamma3 * v_soft3
+    assert np.isclose(q1_3, 5.828074, atol=1e-5)
+    assert np.isclose(q2_3, 5.742111, atol=1e-5)
+    assert np.isclose(min_q3, 5.742111, atol=1e-5)
+    assert np.isclose(v_soft3, 5.871062, atol=1e-5)
+    assert np.isclose(y3, 9.077509, atol=1e-5)
+    print("  [Illustration 3] Soft Bellman target with twin critics and temperature verified.")
+
+    # Illustration 4
+    alpha4 = 0.2500
+    eta4 = 0.0500
+    H_bar4 = -1.0000
+    grad_alpha4 = - (log_pi2 + H_bar4)
+    alpha_new4 = alpha4 - eta4 * grad_alpha4
+    beta4 = math.log(alpha4)
+    grad_beta4 = alpha4 * grad_alpha4
+    beta_new4 = beta4 - eta4 * grad_beta4
+    alpha_from_beta4 = math.exp(beta_new4)
+    assert np.isclose(grad_alpha4, 1.644753, atol=1e-5)
+    assert np.isclose(alpha_new4, 0.167762, atol=1e-5)
+    assert np.isclose(beta4, -1.386294, atol=1e-5)
+    assert np.isclose(grad_beta4, 0.411188, atol=1e-5)
+    assert np.isclose(beta_new4, -1.406853, atol=1e-5)
+    assert np.isclose(alpha_from_beta4, 0.244913, atol=1e-5)
+    print("  [Illustration 4] Dual temperature update step and log parameterization verified.")
+
+    # Illustration 5
+    th_mu = torch.tensor([0.5000], dtype=torch.float64, requires_grad=True)
+    th_logstd = torch.tensor([0.2000], dtype=torch.float64, requires_grad=True)
+    eps5 = torch.tensor([0.4000], dtype=torch.float64)
+    s5 = torch.tensor([1.0000], dtype=torch.float64)
+    alpha5 = torch.tensor([0.2000], dtype=torch.float64)
+
+    sigma5 = torch.exp(th_logstd)
+    u5 = th_mu + sigma5 * eps5
+    a5 = torch.tanh(u5)
+    q5 = 2.0 * s5 + 3.0 * a5
+    log_mu5 = -0.5 * torch.log(torch.tensor(2 * math.pi, dtype=torch.float64)) - th_logstd - 0.5 * eps5**2
+    log_jac5 = torch.log(1.0 - a5**2)
+    log_pi5 = log_mu5 - log_jac5
+    loss5 = alpha5 * log_pi5 - q5
+    loss5.backward()
+
+    # Manual analytical derivatives:
+    dL_du = -3.0 * (1.0 - a5.item()**2) + 2.0 * alpha5.item() * a5.item()
+    manual_grad_mu = dL_du * 1.0
+    manual_grad_logstd = dL_du * (sigma5.item() * eps5.item()) - alpha5.item()
+
+    assert np.isclose(loss5.item(), -4.339993, atol=1e-5)
+    assert np.isclose(th_mu.grad.item(), manual_grad_mu, atol=1e-6)
+    assert np.isclose(th_logstd.grad.item(), manual_grad_logstd, atol=1e-6)
+    assert np.isclose(th_mu.grad.item(), -0.979298, atol=1e-5)
+    assert np.isclose(th_logstd.grad.item(), -0.678447, atol=1e-5)
+    print("  [Illustration 5] Reparameterized actor gradient trace and PyTorch autograd match (< 1e-6).\n")
+
+
 if __name__ == "__main__":
     print("=================================================================")
     print("STARTING MODULE 11.20 SOFT ACTOR-CRITIC (SAC) TEST SUITE")
@@ -211,6 +304,7 @@ if __name__ == "__main__":
     
     verify_part_5_hand_calculation()
     test_sac_continuous_control()
+    verify_section_6_illustrations()
     
     print("=================================================================")
     print("ALL MODULE 11.20 UNIT TESTS PASSED SUCCESSFULLY! (100% VERIFIED)")

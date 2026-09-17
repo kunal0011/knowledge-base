@@ -291,6 +291,177 @@ def verify_mpc_disturbance_rejection():
 
 
 # =====================================================================
+# 5. Section 6 Numerical Illustrations 2 - 5 Verifications
+# =====================================================================
+
+def verify_illustration2_lqr_backward():
+    print("=" * 70)
+    print("5. VERIFYING SECTION 6 ILLUSTRATION 2: 1D LQR BACKWARD RICCATI")
+    print("=" * 70)
+    A = 1.1
+    B = 0.5
+    Q = 1.0
+    R = 0.1
+    Qf = 2.0
+
+    # Step t = 2:
+    P2 = Qf
+    assert np.isclose(P2, 2.0, atol=1e-12)
+
+    # Step t = 1:
+    denom1 = R + (B**2) * P2  # 0.1 + 0.25 * 2.0 = 0.6
+    K1 = -(B * P2 * A) / denom1  # -1.1 / 0.6 = -11/6
+    P1 = Q + (A**2) * P2 + A * P2 * B * K1  # 1.0 + 2.42 - 1.1*(11/6) = 421/300
+    assert np.isclose(K1, -11.0 / 6.0, atol=1e-12)
+    assert np.isclose(P1, 421.0 / 300.0, atol=1e-12)
+
+    # Step t = 0:
+    denom0 = R + (B**2) * P1  # 0.1 + 0.25 * (421/300) = 541/1200
+    K0 = -(B * P1 * A) / denom0  # -(0.5 * 421/300 * 1.1) / (541/1200) = -4631/2705
+    P0 = Q + (A**2) * P1 + A * P1 * B * K0  # 186191 / 135250
+    assert np.isclose(K0, -4631.0 / 2705.0, atol=1e-12)
+    assert np.isclose(P0, 186191.0 / 135250.0, atol=1e-12)
+
+    print(f"P2 = {P2:.4f}")
+    print(f"Step t=1: K1 = {K1:.6f} (-11/6), P1 = {P1:.6f} (421/300)")
+    print(f"Step t=0: K0 = {K0:.6f} (-4631/2705), P0 = {P0:.6f} (186191/135250)")
+    print(">> SUCCESS: Illustration 2 exact Riccati fractions and decimals verified!\n")
+
+
+def verify_illustration3_pendulum_ilqr():
+    print("=" * 70)
+    print("6. VERIFYING SECTION 6 ILLUSTRATION 3: PENDULUM iLQR BACKWARD EXPANSION")
+    print("=" * 70)
+    dt = 0.1
+    g, l, m = 10.0, 1.0, 1.0
+    x_bar = np.array([np.pi / 6.0, 0.2])
+    u_bar = 0.0
+
+    fx = np.array([[1.0, dt], [-dt * (g / l) * np.cos(x_bar[0]), 1.0]])
+    fu = np.array([[0.0], [dt / (m * (l**2))]])
+    Q_pen = np.diag([2.0, 0.5])
+    R_pen = np.array([[0.2]])
+    Qf_pen = np.diag([5.0, 1.0])
+
+    x_next = np.array([
+        x_bar[0] + dt * x_bar[1],
+        x_bar[1] - dt * (g / l) * np.sin(x_bar[0]) + dt * (1.0 / (m * (l**2))) * u_bar
+    ])
+    Vx_prime = Qf_pen @ x_next
+    Vxx_prime = Qf_pen
+
+    lx = Q_pen @ x_bar
+    lu = R_pen @ np.array([u_bar])
+    lxx = Q_pen
+    luu = R_pen
+    lux = np.zeros((1, 2))
+
+    Qx = lx + fx.T @ Vx_prime
+    Qu = lu + fu.T @ Vx_prime
+    Qxx = lxx + fx.T @ Vxx_prime @ fx
+    Quu = luu + fu.T @ Vxx_prime @ fu
+    Qux = lux + fu.T @ Vxx_prime @ fx
+
+    Quu_inv = np.linalg.inv(Quu)
+    k = -Quu_inv @ Qu
+    K = -Quu_inv @ Qux
+
+    Vx = Qx + Qux.T @ k
+    Vxx = Qxx - K.T @ Quu @ K
+    dV = float(-0.5 * k.T @ Quu @ k)
+
+    assert np.isclose(k[0], 1.0 / 7.0, atol=1e-12)
+    assert np.isclose(Quu[0, 0], 0.21, atol=1e-12)
+    assert np.isclose(Qu[0], -0.03, atol=1e-12)
+    assert np.isclose(dV, -0.002142857142857142, atol=1e-12)
+
+    print(f"Nominal State: theta = {x_bar[0]:.4f} rad, omega = {x_bar[1]:.4f} rad/s")
+    print(f"Qu = {Qu[0]:.4f}, Quu = {Quu[0,0]:.4f}")
+    print(f"Feedforward k = {k[0]:.6f} (exact 1/7)")
+    print(f"Feedback K = [{K[0,0]:.6f}, {K[0,1]:.6f}]")
+    print(f"Expected cost improvement dV = {dV:.6f}")
+    print(">> SUCCESS: Illustration 3 pendulum iLQR expansion verified!\n")
+
+
+def verify_illustration4_cem_sampling():
+    print("=" * 70)
+    print("7. VERIFYING SECTION 6 ILLUSTRATION 4: CEM SAMPLING & ELITE UPDATE")
+    print("=" * 70)
+    s0 = 2.0
+    samples = np.array([
+        [-1.2, -0.6],  # 1
+        [-0.5, -0.2],  # 2
+        [-1.5, -0.4],  # 3
+        [-0.8, -1.0],  # 4
+        [-1.0, -0.8],  # 5
+        [-0.2, -0.5],  # 6
+        [-1.4, -0.5],  # 7
+        [-0.7, -0.3],  # 8
+        [-1.3, -0.5],  # 9
+        [-0.4, -0.8]   # 10
+    ])
+    costs = np.array([(s0 + u[0])**2 + u[0]**2 + 2.0 * (s0 + u[0] + u[1])**2 + u[1]**2 for u in samples])
+    elite_idx = np.argsort(costs)[:3]
+    assert np.array_equal(elite_idx, [8, 0, 6]), f"Expected elites [8, 0, 6] (1-based: 9, 1, 7), got {elite_idx}"
+
+    elites = samples[elite_idx]
+    mu_elite = np.mean(elites, axis=0)
+    sigma_elite = np.std(elites, axis=0)
+
+    assert np.isclose(mu_elite[0], -1.3, atol=1e-12)
+    assert np.isclose(mu_elite[1], -1.6 / 3.0, atol=1e-12)
+
+    beta = 0.7
+    mu_prior = np.array([0.0, 0.0])
+    sigma_prior = np.array([1.0, 1.0])
+    mu_new = beta * mu_elite + (1 - beta) * mu_prior
+    sigma_new = beta * sigma_elite + (1 - beta) * sigma_prior
+
+    assert np.isclose(mu_new[0], -0.91, atol=1e-12)
+    assert np.isclose(mu_new[1], -0.37333333333333335, atol=1e-12)
+
+    print(f"Top 3 Elite candidates: {elite_idx + 1} with costs {costs[elite_idx]}")
+    print(f"Elite mean: mu_elite = {mu_elite}")
+    print(f"Updated Gaussian params: mu = {mu_new}, sigma = {sigma_new}")
+    print(">> SUCCESS: Illustration 4 CEM trajectory elite selection and update verified!\n")
+
+
+def verify_illustration5_receding_horizon():
+    print("=" * 70)
+    print("8. VERIFYING SECTION 6 ILLUSTRATION 5: RECEDING HORIZON MPC VS OPEN-LOOP")
+    print("=" * 70)
+    a, b = 1.0, 1.0
+    q, r, qf = 2.0, 1.0, 4.0
+    K_mpc = -14.0 / 19.0
+    x0 = 10.0
+    u0_ol = K_mpc * x0
+    x1_nom = a * x0 + b * u0_ol
+    u1_ol = -0.8 * x1_nom
+    x2_nom = a * x1_nom + b * u1_ol
+    w = [2.0, 2.0]
+
+    # Open-loop execution under noise:
+    x1_ol = a * x0 + b * u0_ol + w[0]
+    x2_ol = a * x1_ol + b * u1_ol + w[1]
+    cost_ol = 0.5 * (q * (x0**2) + r * (u0_ol**2)) + 0.5 * (q * (x1_ol**2) + r * (u1_ol**2)) + 0.5 * qf * (x2_ol**2)
+
+    # Receding-horizon MPC execution under noise:
+    x1_mpc = a * x0 + b * u0_ol + w[0]
+    u1_mpc = K_mpc * x1_mpc
+    x2_mpc = a * x1_mpc + b * u1_mpc + w[1]
+    cost_mpc = 0.5 * (q * (x0**2) + r * (u0_ol**2)) + 0.5 * (q * (x1_mpc**2) + r * (u1_mpc**2)) + 0.5 * qf * (x2_mpc**2)
+
+    assert np.isclose(x2_ol, 4.526315789473684, atol=1e-12)
+    assert np.isclose(x2_mpc, 3.2188365650969527, atol=1e-12)
+    assert np.isclose(cost_ol, 191.78947368421055, atol=1e-12)
+    assert np.isclose(cost_mpc, 175.14361596767554, atol=1e-12)
+
+    print(f"Open-Loop:  Final x2 = {x2_ol:.4f}, Total Realized Cost = {cost_ol:.4f}")
+    print(f"Closed-Loop MPC: Final x2 = {x2_mpc:.4f}, Total Realized Cost = {cost_mpc:.4f}")
+    print(">> SUCCESS: Illustration 5 receding horizon closed-loop execution verified!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
@@ -299,6 +470,11 @@ if __name__ == "__main__":
     verify_multidimensional_lqr()
     verify_cem_optimizer()
     verify_mpc_disturbance_rejection()
+    verify_illustration2_lqr_backward()
+    verify_illustration3_pendulum_ilqr()
+    verify_illustration4_cem_sampling()
+    verify_illustration5_receding_horizon()
     print("=" * 70)
-    print("ALL MODULE 11 CHAPTER 22 (TRAJECTORY OPT & MPC) VERIFICATIONS PASSED!")
+    print("ALL MODULE 11 CHAPTER 22 VERIFICATIONS (INCLUDING ALL 5 ILLUSTRATIONS) PASSED!")
     print("=" * 70)
+

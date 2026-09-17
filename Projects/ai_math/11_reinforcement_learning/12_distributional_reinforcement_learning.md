@@ -113,7 +113,208 @@ QR-DQN provides rigorous theoretical guarantees minimizing the 1-Wasserstein dis
 
 ---
 
+### 2.5 First-Principles Mathematical Derivations
+
+#### Derivation 11.12.1: $\gamma$-Contraction of the Distributional Bellman Operator in the Wasserstein Metric
+
+```
+====================================================================================================
+DERIVATION 11.12.1: Wasserstein Contraction of the Distributional Bellman Operator
+====================================================================================================
+Problem Statement:
+Let 𝒯^π be the distributional Bellman evaluation operator acting on return distributions
+Z ∈ 𝒫(ℝ)^{|𝒮| × |𝒜|}:
+    𝒯^π Z(s, a) \stackrel{D}{=} R(s, a) + γ Z(S', A')
+where S' ~ P(· | s, a) and A' ~ π(· | S').
+Prove that for any p ≥ 1, 𝒯^π is a strict γ-contraction in the maximal p-Wasserstein metric:
+    𝒲_p(𝒯^π Z_1(s, a), 𝒯^π Z_2(s, a)) ≤ γ 𝔼_{S', A'} [ 𝒲_p(Z_1(S', A'), Z_2(S', A')) ]
+and consequently:
+    \bar{𝒲}_p(𝒯^π Z_1, 𝒯^π Z_2) ≤ γ \bar{𝒲}_p(Z_1, Z_2)
+where \bar{𝒲}_p(U, V) ≜ sup_{s, a} 𝒲_p(U(s, a), V(s, a)).
+====================================================================================================
+```
+
+**1. Explicit Assumptions:**
+1. **Discount Factor:** $0 \le \gamma < 1$.
+2. **Probability Space:** $Z(s, a)$ has finite $p$-th moment for some $p \ge 1$: $\mathbb{E}[|Z(s, a)|^p] < \infty$.
+3. **Wasserstein Metric Definition:**
+   $$\mathcal{W}_p(X, Y) \triangleq \left( \inf_{J \in \Pi(X, Y)} \mathbb{E}_{(U, V) \sim J} \left[ |U - V|^p \right] \right)^{1/p} = \left( \int_0^1 |F_X^{-1}(u) - F_Y^{-1}(u)|^p du \right)^{1/p}$$
+   where $\Pi(X, Y)$ is the set of all joint couplings with marginals $X$ and $Y$.
+
+**2. Underlying Intuition:**
+Adding a deterministic scalar reward $R$ simply translates both random variables by the exact same distance, leaving the difference $U - V$ unchanged (translation invariance of Earth Mover's distance). Multiplying by discount factor $\gamma < 1$ compresses the horizontal axis of the cumulative distribution function by factor $\gamma$. Because the horizontal distance between quantile curves is shrunk by $\gamma$, the Wasserstein distance shrinks by exactly $\gamma$.
+
+**3. End-to-End Algebraic Derivation:**
+
+*Step 1: Quantile function of an affine transformation.*
+Let $X$ be a real-valued random variable with cumulative distribution function $F_X(x) = \mathbb{P}(X \le x)$ and inverse CDF $F_X^{-1}(u) = \inf \{x \mid F_X(x) \ge u\}$ for $u \in (0, 1)$.
+Consider the affine transformation $Y = a + c X$ with $c > 0$:
+$$F_Y(y) = \mathbb{P}(a + c X \le y) = \mathbb{P}\left( X \le \frac{y - a}{c} \right) = F_X\left( \frac{y - a}{c} \right)$$
+Evaluate the quantile function $F_Y^{-1}(u)$:
+$$F_Y^{-1}(u) = \inf \left\{ y \;\middle|\; F_X\left( \frac{y - a}{c} \right) \ge u \right\} = a + c \cdot \inf \{ x \mid F_X(x) \ge u \} = a + c F_X^{-1}(u)$$
+
+*Step 2: Scaling and translation invariance of the Wasserstein metric.*
+Let $X_1, X_2$ be two random variables. For any constant $a \in \mathbb{R}$ and scale factor $c > 0$:
+$$\mathcal{W}_p(a + c X_1, a + c X_2) = \left( \int_0^1 \left| F_{a + c X_1}^{-1}(u) - F_{a + c X_2}^{-1}(u) \right|^p du \right)^{1/p}$$
+Using the affine quantile property from Step 1:
+$$= \left( \int_0^1 \left| (a + c F_{X_1}^{-1}(u)) - (a + c F_{X_2}^{-1}(u)) \right|^p du \right)^{1/p}$$
+Notice the constant translation $a$ cancels out completely:
+$$= \left( \int_0^1 \left| c \left( F_{X_1}^{-1}(u) - F_{X_2}^{-1}(u) \right) \right|^p du \right)^{1/p} = c \left( \int_0^1 \left| F_{X_1}^{-1}(u) - F_{X_2}^{-1}(u) \right|^p du \right)^{1/p} = c \, \mathcal{W}_p(X_1, X_2)$$
+
+*Step 3: Evaluating the Distributional Bellman Operator difference.*
+For a fixed state-action pair $(s, a)$, let $R \sim \mathcal{R}(\cdot \mid s, a)$, $S' \sim \mathcal{P}(\cdot \mid s, a)$, and $A' \sim \pi(\cdot \mid S')$.
+By definition of the optimal coupling over conditioned next-state transitions:
+$$\mathcal{W}_p^p(\mathcal{T}^\pi Z_1(s, a), \mathcal{T}^\pi Z_2(s, a)) \le \mathbb{E}_{R, S', A'} \left[ \mathcal{W}_p^p(R + \gamma Z_1(S', A'), R + \gamma Z_2(S', A')) \right]$$
+Applying the affine scaling identity from Step 2 with $a = R$ and $c = \gamma$:
+$$= \mathbb{E}_{S', A'} \left[ \gamma^p \mathcal{W}_p^p(Z_1(S', A'), Z_2(S', A')) \right] = \gamma^p \mathbb{E}_{S', A'} \left[ \mathcal{W}_p^p(Z_1(S', A'), Z_2(S', A')) \right]$$
+Taking the $p$-th root on both sides:
+$$\mathcal{W}_p(\mathcal{T}^\pi Z_1(s, a), \mathcal{T}^\pi Z_2(s, a)) \le \gamma \left( \mathbb{E}_{S', A'} \left[ \mathcal{W}_p^p(Z_1(S', A'), Z_2(S', A')) \right] \right)^{1/p}$$
+
+*Step 4: Bounding by the maximal supremum norm.*
+Since $\mathcal{W}_p(Z_1(s', a'), Z_2(s', a')) \le \sup_{(s'', a'')} \mathcal{W}_p(Z_1(s'', a''), Z_2(s'', a'')) = \bar{\mathcal{W}}_p(Z_1, Z_2)$ for all $s', a'$:
+$$\left( \mathbb{E}_{S', A'} \left[ \mathcal{W}_p^p(Z_1(S', A'), Z_2(S', A')) \right] \right)^{1/p} \le \bar{\mathcal{W}}_p(Z_1, Z_2)$$
+Taking the supremum over all $(s, a) \in \mathcal{S} \times \mathcal{A}$ on the left-hand side:
+$$\bar{\mathcal{W}}_p(\mathcal{T}^\pi Z_1, \mathcal{T}^\pi Z_2) \le \gamma \bar{\mathcal{W}}_p(Z_1, Z_2)$$
+Because $\gamma < 1$, $\mathcal{T}^\pi$ is a strict $\gamma$-contraction in $\bar{\mathcal{W}}_p$.
+By the Banach Fixed-Point Theorem, there exists a **unique fixed-point distribution** $Z^\pi$ such that $\mathcal{T}^\pi Z^\pi = Z^\pi$. $\blacksquare$
+
+---
+
+#### Derivation 11.12.2: First-Principles Derivation of the C51 Categorical Cramer Projection
+
+```
+====================================================================================================
+DERIVATION 11.12.2: The C51 Categorical Cramer Projection Operator
+====================================================================================================
+Problem Statement:
+Let a point mass of probability p_j be located at continuous coordinate y = r + γ z_j, where
+y lies between two consecutive support atoms z_l and z_u (with z_u - z_l = Δz):
+    z_l ≤ y ≤ z_u
+Prove that the Cramer projection of this point mass onto the categorical support {z_l, z_u}:
+    m_l = p_j · (z_u - y) / Δz
+    m_u = p_j · (y - z_l) / Δz
+is the unique projection that simultaneously:
+1. Conserves total probability mass: m_l + m_u = p_j
+2. Exactly preserves the expected return: z_l m_l + z_u m_u = y p_j
+3. Minimizes the Cramer distance ℓ_2(F_y, F_m) = ∫ (F_y(x) - F_m(x))^2 dx
+====================================================================================================
+```
+
+**1. Explicit Assumptions:**
+1. **Discretized Grid:** Atoms are ordered and equidistant: $z_i = V_{\min} + i \Delta z$.
+2. **Local Support:** The point mass coordinate $y \in [z_l, z_u]$, where $u = l + 1$ and $\Delta z = z_u - z_l > 0$.
+3. **Probability Conservation:** $m_l, m_u \ge 0$ with $m_l + m_u = p_j$.
+
+**2. Underlying Intuition:**
+When projecting a probability distribution onto a fixed grid, one cannot simply round to the nearest atom because doing so shifts the mean of the distribution, corrupting value estimates. A valid projection must preserve both the zeroth moment (total mass $= 1$) and the first moment (expected value). These two linear constraints form a system of 2 equations in 2 unknowns, whose unique solution is precisely the linear interpolation weights.
+
+**3. End-to-End Algebraic Derivation:**
+
+*Step 1: Setting up the moment preservation linear system.*
+We wish to find non-negative weights $m_l, m_u$ assigned to atoms $z_l$ and $z_u$ such that:
+1. **Zeroth Moment (Total Probability):**
+   $$m_l + m_u = p_j \quad \text{(Equation 1)}$$
+2. **First Moment (Mean Preservation):**
+   $$z_l m_l + z_u m_u = p_j y \quad \text{(Equation 2)}$$
+
+*Step 2: Solving the linear system algebraically.*
+From Equation 1, express $m_l$ in terms of $m_u$:
+$$m_l = p_j - m_u$$
+Substitute $m_l$ into Equation 2:
+$$z_l (p_j - m_u) + z_u m_u = p_j y$$
+$$z_l p_j - z_l m_u + z_u m_u = p_j y$$
+$$(z_u - z_l) m_u = p_j (y - z_l)$$
+Recall that $\Delta z = z_u - z_l$. Dividing by $\Delta z$:
+$$m_u = p_j \frac{y - z_l}{\Delta z}$$
+Now substitute $m_u$ back to find $m_l$:
+$$m_l = p_j - p_j \frac{y - z_l}{\Delta z} = p_j \left( 1 - \frac{y - z_l}{\Delta z} \right) = p_j \left( \frac{\Delta z - (y - z_l)}{\Delta z} \right)$$
+Since $\Delta z = z_u - z_l$, the numerator is $(z_u - z_l) - (y - z_l) = z_u - y$:
+$$m_l = p_j \frac{z_u - y}{\Delta z}$$
+
+*Step 3: Rewriting in normalized index coordinate notation.*
+Define the continuous index coordinate $b \triangleq \frac{y - V_{\min}}{\Delta z}$.
+Since $z_l = V_{\min} + l \Delta z$ and $z_u = V_{\min} + u \Delta z$:
+$$\frac{y - z_l}{\Delta z} = \frac{y - (V_{\min} + l \Delta z)}{\Delta z} = b - l$$
+$$\frac{z_u - y}{\Delta z} = \frac{(V_{\min} + u \Delta z) - y}{\Delta z} = u - b$$
+Thus:
+$$m_l = p_j (u - b), \quad m_u = p_j (b - l) \quad \blacksquare$$
+
+*Step 4: Minimization of the Cramer Distance.*
+The Cramer distance between cumulative distributions $F_y(x) = p_j \mathbb{I}(x \ge y)$ and $F_m(x) = m_l \mathbb{I}(x \ge z_l) + (m_l + m_u) \mathbb{I}(x \ge z_u)$ is:
+$$\ell_2^2(F_y, F_m) = \int_{-\infty}^\infty (F_y(x) - F_m(x))^2 dx$$
+On $(-\infty, z_l)$ and $[z_u, \infty)$, $F_y(x) \equiv F_m(x)$.
+On $[z_l, y)$: $F_y(x) = 0$ and $F_m(x) = m_l$.
+On $[y, z_u)$: $F_y(x) = p_j$ and $F_m(x) = m_l$.
+$$\ell_2^2 = \int_{z_l}^y (0 - m_l)^2 dx + \int_y^{z_u} (p_j - m_l)^2 dx = m_l^2 (y - z_l) + (p_j - m_l)^2 (z_u - y)$$
+Differentiating with respect to $m_l$ and setting to zero:
+$$\frac{d}{dm_l} \ell_2^2 = 2 m_l (y - z_l) - 2(p_j - m_l)(z_u - y) = 0$$
+$$m_l (y - z_l) + m_l (z_u - y) = p_j (z_u - y)$$
+$$m_l (z_u - z_l) = p_j (z_u - y) \implies m_l = p_j \frac{z_u - y}{\Delta z}$$
+The moment-preserving projection is **identically the optimal minimizer of the $L_2$ Cramer metric**! $\blacksquare$
+
+---
+
+#### Derivation 11.12.3: Quantile Regression and the Asymmetric Pinball Loss for QR-DQN
+
+```
+====================================================================================================
+DERIVATION 11.12.3: Derivation of the Quantile Pinball Loss Minimizer
+====================================================================================================
+Problem Statement:
+Let Y be a continuous random variable with cumulative distribution function F_Y(y) and density f_Y(y) > 0.
+For any target quantile probability τ ∈ (0, 1), define the asymmetric pinball loss:
+    ρ_τ(u) ≜ u (τ - 𝕀(u < 0)) = { τ u          if u ≥ 0
+                                 { (τ - 1) u      if u < 0
+Prove that the parameter θ* that minimizes the expected pinball loss:
+    θ* = \arg\min_θ 𝔼_Y [ ρ_τ(Y - θ) ]
+is identically the true τ-quantile of Y:
+    θ* = F_Y^{-1}(τ)
+====================================================================================================
+```
+
+**1. Explicit Assumptions:**
+1. **Continuous Random Variable:** $Y$ admits a strictly positive probability density function $f_Y(y) > 0$ on its support, so $F_Y(y)$ is strictly monotonically increasing and invertible.
+2. **Quantile Level:** $\tau \in (0, 1)$.
+3. **Objective:** $\mathcal{J}(\theta) \triangleq \mathbb{E}_Y [ \rho_\tau(Y - \theta) ]$.
+
+**2. Underlying Intuition:**
+Mean squared error $\mathbb{E}[(Y - \theta)^2]$ penalizes positive and negative deviations symmetrically, causing the optimal estimate to settle at the mean $\mathbb{E}[Y]$. The pinball loss weights positive errors $(Y > \theta)$ by $\tau$ and negative errors $(Y < \theta)$ by $1 - \tau$. Balancing these opposing asymmetric penalties forces the probability mass below $\theta$ to equal exactly $\tau$.
+
+**3. End-to-End Algebraic Derivation:**
+
+*Step 1: Expanding the expected loss integral.*
+Let $u = Y - \theta$. The piecewise pinball loss is:
+$$\rho_\tau(Y - \theta) = \begin{cases} \tau (Y - \theta) & \text{if } Y \ge \theta \\ (1 - \tau) (\theta - Y) & \text{if } Y < \theta \end{cases}$$
+The expected loss is:
+$$\mathcal{J}(\theta) = \int_{-\infty}^\infty \rho_\tau(y - \theta) f_Y(y) \, dy = (1 - \tau) \int_{-\infty}^\theta (\theta - y) f_Y(y) \, dy + \tau \int_\theta^\infty (y - \theta) f_Y(y) \, dy$$
+
+*Step 2: Differentiating $\mathcal{J}(\theta)$ using the Leibniz Integral Rule.*
+Recall the Leibniz rule: $\frac{d}{d\theta} \int_{a(\theta)}^{b(\theta)} g(y, \theta) dy = g(b(\theta), \theta) b'(\theta) - g(a(\theta), \theta) a'(\theta) + \int_{a(\theta)}^{b(\theta)} \frac{\partial g}{\partial \theta} dy$.
+Differentiating the first integral:
+$$\frac{d}{d\theta} \left[ (1 - \tau) \int_{-\infty}^\theta (\theta - y) f_Y(y) \, dy \right] = (1 - \tau) \left[ (\theta - \theta) f_Y(\theta) \cdot (1) + \int_{-\infty}^\theta (1) f_Y(y) \, dy \right]$$
+$$= (1 - \tau) \int_{-\infty}^\theta f_Y(y) \, dy = (1 - \tau) F_Y(\theta)$$
+Differentiating the second integral:
+$$\frac{d}{d\theta} \left[ \tau \int_\theta^\infty (y - \theta) f_Y(y) \, dy \right] = \tau \left[ - (\theta - \theta) f_Y(\theta) \cdot (1) + \int_\theta^\infty (-1) f_Y(y) \, dy \right]$$
+$$= -\tau \int_\theta^\infty f_Y(y) \, dy = -\tau (1 - F_Y(\theta))$$
+
+*Step 3: Combining terms and finding the first-order critical point.*
+$$\frac{d}{d\theta} \mathcal{J}(\theta) = (1 - \tau) F_Y(\theta) - \tau (1 - F_Y(\theta))$$
+Expanding:
+$$\frac{d}{d\theta} \mathcal{J}(\theta) = F_Y(\theta) - \tau F_Y(\theta) - \tau + \tau F_Y(\theta) = F_Y(\theta) - \tau$$
+Setting the derivative to zero:
+$$F_Y(\theta^*) - \tau = 0 \implies F_Y(\theta^*) = \tau$$
+Since $F_Y$ is strictly increasing, invert $F_Y$:
+$$\theta^* = F_Y^{-1}(\tau) \quad \blacksquare$$
+
+*Step 4: Verification of strict convexity (Second derivative).*
+$$\frac{d^2}{d\theta^2} \mathcal{J}(\theta) = \frac{d}{d\theta} \left[ F_Y(\theta) - \tau \right] = f_Y(\theta)$$
+Since $f_Y(\theta) > 0$ everywhere, $\frac{d^2}{d\theta^2} \mathcal{J}(\theta) > 0$.
+The objective is strictly convex, and $\theta^* = F_Y^{-1}(\tau)$ is the **unique global minimum**. In QR-DQN, setting $\tau_i = \frac{2i - 1}{2N}$ mathematically guarantees that SGD converges to the true quantiles of the return distribution! $\blacksquare$
+
+---
+
 ## 3. Geometric & Physical Interpretation
+
 
 ### The "Bucket Pouring" Projection Geometry
 Imagine the support atoms as $N$ buckets placed along a line at positions $z_0, z_1, \dots, z_{N-1}$.
@@ -287,12 +488,206 @@ Compare the target representation learned by:
 
 ---
 
+### Illustration 2: 5-Atom C51 Projection on Out-of-Bounds Transitions (Boundary Clipping)
+
+**Problem:**
+Consider a C51 agent configured with a 5-atom support:
+$$V_{\min} = 0.0000, \quad V_{\max} = 10.0000, \quad N = 5 \implies \Delta z = \frac{10.0 - 0.0}{5 - 1} = \mathbf{2.5000}$$
+Fixed atoms: $\mathbf{z} = [0.0000, 2.5000, 5.0000, 7.5000, 10.0000]^\top$.
+The agent encounters a high-reward transition:
+$$r = 4.0000, \quad \gamma = 0.9000$$
+The next-state target distribution is concentrated in upper atoms:
+$$\mathbf{p}' = [0.0000, 0.0000, 0.0000, 0.4000, 0.6000]^\top$$
+1. Compute the shifted locations $\hat{T} z_j$ for atoms $3$ and $4$.
+2. Demonstrate how support boundary clipping operates.
+3. Compute the final projected target distribution $\mathbf{m} \in \mathbb{R}^5$ and its expected return $\mathbb{E}[\mathbf{m}]$.
+
+**Solution:**
+
+*Step 1: Compute shifted atom coordinates.*
+- **Atom 3 ($z_3 = 7.5000, p_3' = 0.4000$):**
+  $$\hat{T} z_3 = r + \gamma z_3 = 4.0000 + 0.9000 \times 7.5000 = 4.0000 + 6.7500 = \mathbf{10.7500}$$
+- **Atom 4 ($z_4 = 10.0000, p_4' = 0.6000$):**
+  $$\hat{T} z_4 = r + \gamma z_4 = 4.0000 + 0.9000 \times 10.0000 = 4.0000 + 9.0000 = \mathbf{13.0000}$$
+
+*Step 2: Apply support clipping to $[V_{\min}, V_{\max}] = [0.0, 10.0]$.*
+Because both shifted coordinates exceed $V_{\max} = 10.0000$:
+$$\hat{z}_3 = \operatorname{clip}(10.7500, 0.0, 10.0) = \mathbf{10.0000}$$
+$$\hat{z}_4 = \operatorname{clip}(13.0000, 0.0, 10.0) = \mathbf{10.0000}$$
+
+Fractional indices:
+$$b_3 = \frac{\hat{z}_3 - V_{\min}}{\Delta z} = \frac{10.0000 - 0.0}{2.5000} = \mathbf{4.0000} \implies l_3 = 4, u_3 = 4$$
+$$b_4 = \frac{\hat{z}_4 - V_{\min}}{\Delta z} = \frac{10.0000 - 0.0}{2.5000} = \mathbf{4.0000} \implies l_4 = 4, u_4 = 4$$
+
+*Step 3: Distribute probability mass into target vector $\mathbf{m}$.*
+Since $l_3 = u_3 = 4$ and $l_4 = u_4 = 4$, all probability mass from both atoms collapses into the final boundary atom $z_4 = 10.0000$:
+- From atom 3: $\Delta m_4 = 0.4000$
+- From atom 4: $\Delta m_4 = 0.6000$
+Total target vector:
+$$\mathbf{m} = \begin{bmatrix} 0.0000 \\ 0.0000 \\ 0.0000 \\ 0.0000 \\ 0.4000 + 0.6000 \end{bmatrix} = \begin{bmatrix} 0.0000 \\ 0.0000 \\ 0.0000 \\ 0.0000 \\ \mathbf{1.0000} \end{bmatrix}$$
+
+*Step 4: Expected value comparison.*
+- Unclipped true target return:
+  $$\mathbb{E}[\text{unclipped}] = r + \gamma \mathbb{E}[\mathbf{p}'] = 4.0 + 0.90(7.5 \times 0.4 + 10.0 \times 0.6) = 4.0 + 0.90(3.0 + 6.0) = 4.0 + 8.10 = \mathbf{12.1000}$$
+- Clipped projected return:
+  $$\mathbb{E}[\mathbf{m}] = 10.0000 \times 1.0000 = \mathbf{10.0000}$$
+When returns exceed $[V_{\min}, V_{\max}]$, C51 truncates the tail at $V_{\max}$. This highlights why setting an appropriate support range $[V_{\min}, V_{\max}]$ is crucial in categorical algorithms. $\blacksquare$
+
+---
+
+### Illustration 3: QR-DQN 4-Quantile Forward and Backward Pass with Quantile Huber Loss
+
+**Problem:**
+A QR-DQN agent uses $N = 4$ quantiles to model returns.
+Target cumulative probabilities are:
+$$\tau_i = \frac{2i - 1}{2N} \implies \boldsymbol{\tau} = [0.1250, \ 0.3750, \ 0.6250, \ 0.8750]^\top$$
+The current online network estimates quantile locations:
+$$\boldsymbol{\theta} = [\theta_1 = 1.0000, \quad \theta_2 = 3.0000, \quad \theta_3 = 5.0000, \quad \theta_4 = 7.0000]^\top$$
+A transition yields target return sample $Y = 4.0000$.
+Let the Huber threshold be $\kappa = 1.0000$, and learning rate $\alpha = 0.5000$.
+1. Compute the TD error residues $u_i = Y - \theta_i$.
+2. Compute the Quantile Huber loss $\rho_{\tau_i}^\kappa(u_i)$ for each quantile.
+3. Compute the parameter gradients $\nabla_{\theta_i} \mathcal{L}$ and the updated quantile positions $\boldsymbol{\theta}_{\text{new}}$.
+
+**Solution:**
+
+*Step 1: Compute error residues.*
+$$u_1 = Y - \theta_1 = 4.0000 - 1.0000 = \mathbf{+3.0000}$$
+$$u_2 = Y - \theta_2 = 4.0000 - 3.0000 = \mathbf{+1.0000}$$
+$$u_3 = Y - \theta_3 = 4.0000 - 5.0000 = \mathbf{-1.0000}$$
+$$u_4 = Y - \theta_4 = 4.0000 - 7.0000 = \mathbf{-3.0000}$$
+
+*Step 2: Compute Huber Loss $\mathcal{L}_\kappa(u)$.*
+With $\kappa = 1.0000$:
+- For $u_1 = 3.0$ ($|u| > 1$): $\mathcal{L}_\kappa(u_1) = |3.0| - 0.5 = \mathbf{2.5000}$
+- For $u_2 = 1.0$ ($|u| \le 1$): $\mathcal{L}_\kappa(u_2) = 0.5(1.0)^2 = \mathbf{0.5000}$
+- For $u_3 = -1.0$ ($|u| \le 1$): $\mathcal{L}_\kappa(u_3) = 0.5(-1.0)^2 = \mathbf{0.5000}$
+- For $u_4 = -3.0$ ($|u| > 1$): $\mathcal{L}_\kappa(u_4) = |-3.0| - 0.5 = \mathbf{2.5000}$
+
+*Step 3: Asymmetric quantile weights $w_i = |\tau_i - \mathbb{I}(u_i < 0)|$.*
+- For $i = 1$ ($u_1 = +3.0 \ge 0$): $w_1 = |\tau_1 - 0| = |0.1250 - 0| = \mathbf{0.1250}$
+- For $i = 2$ ($u_2 = +1.0 \ge 0$): $w_2 = |\tau_2 - 0| = |0.3750 - 0| = \mathbf{0.3750}$
+- For $i = 3$ ($u_3 = -1.0 < 0$): $w_3 = |\tau_3 - 1| = |0.6250 - 1| = \mathbf{0.3750}$
+- For $i = 4$ ($u_4 = -3.0 < 0$): $w_4 = |\tau_4 - 1| = |0.8750 - 1| = \mathbf{0.1250}$
+
+*Step 4: Compute Quantile Huber Loss $\rho_{\tau_i}^\kappa = w_i \mathcal{L}_\kappa(u_i)$.*
+- $\rho_1 = 0.1250 \times 2.5000 = \mathbf{0.3125}$
+- $\rho_2 = 0.3750 \times 0.5000 = \mathbf{0.1875}$
+- $\rho_3 = 0.3750 \times 0.5000 = \mathbf{0.1875}$
+- $\rho_4 = 0.1250 \times 2.5000 = \mathbf{0.3125}$
+Mean loss:
+$$\mathcal{L} = \frac{0.3125 + 0.1875 + 0.1875 + 0.3125}{4} = \frac{1.0000}{4} = \mathbf{0.2500}$$
+
+*Step 5: Gradient calculation and parameter update.*
+Derivative with respect to parameter $\theta_i$:
+$$\frac{\partial \rho_{\tau_i}^\kappa}{\partial \theta_i} = - w_i \nabla_u \mathcal{L}_\kappa(u_i) = - w_i \operatorname{clip}(u_i, -1, 1)$$
+- For $\theta_1$: $\frac{\partial \rho}{\partial \theta_1} = -0.1250 \times \operatorname{clip}(3.0, -1, 1) = -0.1250(1.0) = \mathbf{-0.1250}$
+- For $\theta_2$: $\frac{\partial \rho}{\partial \theta_2} = -0.3750 \times \operatorname{clip}(1.0, -1, 1) = -0.3750(1.0) = \mathbf{-0.3750}$
+- For $\theta_3$: $\frac{\partial \rho}{\partial \theta_3} = -0.3750 \times \operatorname{clip}(-1.0, -1, 1) = -0.3750(-1.0) = \mathbf{+0.3750}$
+- For $\theta_4$: $\frac{\partial \rho}{\partial \theta_4} = -0.1250 \times \operatorname{clip}(-3.0, -1, 1) = -0.1250(-1.0) = \mathbf{+0.1250}$
+
+Parameter updates ($\theta \leftarrow \theta - \alpha \nabla_\theta \rho$ with $\alpha = 0.50$):
+$$\theta_{1, \text{new}} = 1.0000 - 0.50(-0.1250) = 1.0000 + 0.0625 = \mathbf{1.0625}$$
+$$\theta_{2, \text{new}} = 3.0000 - 0.50(-0.3750) = 3.0000 + 0.1875 = \mathbf{3.1875}$$
+$$\theta_{3, \text{new}} = 5.0000 - 0.50(+0.3750) = 5.0000 - 0.1875 = \mathbf{4.8125}$$
+$$\theta_{4, \text{new}} = 7.0000 - 0.50(+0.1250) = 7.0000 - 0.0625 = \mathbf{6.9375}$$
+Notice that quantiles below $Y = 4.0$ ($\theta_1, \theta_2$) are pulled upward, while quantiles above $Y = 4.0$ ($\theta_3, \theta_4$) are pulled downward, contractively squeezing around the target return! $\blacksquare$
+
+---
+
+### Illustration 4: 1-Wasserstein Distance (Earth Mover's Distance) Computation
+
+**Problem:**
+Let return distributions $P$ and $Q$ be supported on discrete atoms $\{0.0, 2.0, 4.0, 6.0\}$:
+$$\mathbf{p} = [0.4000, 0.1000, 0.3000, 0.2000]^\top$$
+$$\mathbf{q} = [0.1000, 0.4000, 0.2000, 0.3000]^\top$$
+1. Construct the Cumulative Distribution Functions $F_P(x)$ and $F_Q(x)$.
+2. Calculate the 1-Wasserstein distance $\mathcal{W}_1(P, Q) = \int_0^6 |F_P(x) - F_Q(x)| \, dx$ by hand.
+
+**Solution:**
+
+*Step 1: Construct CDFs.*
+The CDFs are piecewise constant step functions:
+- On $[0.0, 2.0)$:
+  $$F_P(x) = p_0 = \mathbf{0.4000}, \quad F_Q(x) = q_0 = \mathbf{0.1000}$$
+- On $[2.0, 4.0)$:
+  $$F_P(x) = p_0 + p_1 = 0.40 + 0.10 = \mathbf{0.5000}, \quad F_Q(x) = q_0 + q_1 = 0.10 + 0.40 = \mathbf{0.5000}$$
+- On $[4.0, 6.0)$:
+  $$F_P(x) = 0.50 + 0.30 = \mathbf{0.8000}, \quad F_Q(x) = 0.50 + 0.20 = \mathbf{0.7000}$$
+- For $x \ge 6.0$:
+  $$F_P(x) = 1.0000, \quad F_Q(x) = 1.0000$$
+
+*Step 2: Compute the integral over each sub-interval.*
+$$\mathcal{W}_1(P, Q) = \int_0^2 |F_P(x) - F_Q(x)| \, dx + \int_2^4 |F_P(x) - F_Q(x)| \, dx + \int_4^6 |F_P(x) - F_Q(x)| \, dx$$
+- **Interval 1 ($[0, 2]$, width $\Delta x = 2.0$):**
+  $$|F_P - F_Q| = |0.4000 - 0.1000| = 0.3000 \implies I_1 = 0.3000 \times 2.0 = \mathbf{0.6000}$$
+- **Interval 2 ($[2, 4]$, width $\Delta x = 2.0$):**
+  $$|F_P - F_Q| = |0.5000 - 0.5000| = 0.0000 \implies I_2 = 0.0000 \times 2.0 = \mathbf{0.0000}$$
+- **Interval 3 ($[4, 6]$, width $\Delta x = 2.0$):**
+  $$|F_P - F_Q| = |0.8000 - 0.7000| = 0.1000 \implies I_3 = 0.1000 \times 2.0 = \mathbf{0.2000}$$
+
+*Step 3: Total Wasserstein Distance.*
+$$\mathcal{W}_1(P, Q) = I_1 + I_2 + I_3 = 0.6000 + 0.0000 + 0.2000 = \mathbf{0.8000}$$
+The minimum work required to transport probability mass from distribution $P$ to distribution $Q$ is exactly $0.8000$. $\blacksquare$
+
+---
+
+### Illustration 5: Risk-Sensitive Decision Making via Conditional Value-at-Risk (CVaR)
+
+**Problem:**
+An autonomous vehicle faces an intersection and evaluates two candidate actions:
+- **Action A (Wait safely for clear gap):**
+  Yields returns $\{4.0, 5.0, 6.0\}$ with probabilities $\mathbf{p}_A = [0.20, 0.60, 0.20]^\top$.
+- **Action B (Aggressive unprotected turn):**
+  Yields returns $\{-10.0, 6.0, 10.0\}$ with probabilities $\mathbf{p}_B = [0.10, 0.50, 0.40]^\top$, where $-10.0$ represents a catastrophic near-collision event.
+1. Compute the expected value $\mathbb{E}[Z]$ for both actions. Which action is chosen by a standard risk-neutral DQN agent?
+2. Compute the Value at Risk $\operatorname{VaR}_{0.10}$ and Conditional Value at Risk $\operatorname{CVaR}_{0.10}$ (expected value of the worst $10\%$ outcomes) for both actions.
+3. Determine which action is selected by a risk-averse safety agent maximizing $\operatorname{CVaR}_{0.10}$.
+
+**Solution:**
+
+*Step 1: Risk-Neutral Expected Value.*
+- **Action A:**
+  $$\mathbb{E}[Z_A] = 0.20(4.0) + 0.60(5.0) + 0.20(6.0) = 0.80 + 3.00 + 1.20 = \mathbf{5.0000}$$
+- **Action B:**
+  $$\mathbb{E}[Z_B] = 0.10(-10.0) + 0.50(6.0) + 0.40(10.0) = -1.00 + 3.00 + 4.00 = \mathbf{6.0000}$$
+**Risk-Neutral Decision:** Standard DQN only optimizes expected return:
+$$\mathbb{E}[Z_B] = 6.0000 > \mathbb{E}[Z_A] = 5.0000 \implies \text{Chooses Action B (Dangerous!)}$$
+
+*Step 2: Risk-Averse Evaluation via $\operatorname{CVaR}_\alpha$.*
+The Conditional Value at Risk at level $\alpha \in (0, 1]$ is:
+$$\operatorname{CVaR}_\alpha(Z) \triangleq \frac{1}{\alpha} \int_0^\alpha F_Z^{-1}(u) \, du$$
+For $\alpha = 0.10$:
+- **For Action A:**
+  The lowest atom $z = 4.0000$ carries probability $p_0 = 0.20 \ge 0.10$.
+  For all $u \in [0, 0.10]$, $F_{Z_A}^{-1}(u) = 4.0000$.
+  $$\operatorname{CVaR}_{0.10}(Z_A) = \frac{1}{0.10} \int_0^{0.10} 4.0000 \, du = \mathbf{+4.0000}$$
+- **For Action B:**
+  The lowest atom $z = -10.0000$ carries probability $p_0 = 0.10$, exactly occupying the lowest $10\%$ quantile interval $[0, 0.10]$.
+  For all $u \in [0, 0.10]$, $F_{Z_B}^{-1}(u) = -10.0000$.
+  $$\operatorname{CVaR}_{0.10}(Z_B) = \frac{1}{0.10} \int_0^{0.10} (-10.0000) \, du = \mathbf{-10.0000}$$
+
+*Step 3: Risk-Averse Decision.*
+$$\operatorname{CVaR}_{0.10}(Z_A) = \mathbf{+4.0000} \gg \operatorname{CVaR}_{0.10}(Z_B) = \mathbf{-10.0000}$$
+The risk-averse distributional agent decisively rejects Action B and chooses **Action A**, eliminating the risk of catastrophic collision! $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
-Distributional RL is now a core pillar of production-grade RL systems:
-1. **Atari 57 Super-Human Agents (Agent57 - Badia et al., Nature 2020):** Used transformed Bellman operators with QR-DQN.
-2. **Autonomous Driving & Robotics:** Waymo and autonomous drone controllers use distributional RL to evaluate **Value at Risk (VaR)**, explicitly planning trajectories that keep the 99th percentile catastrophic collision probability below safety thresholds.
-3. **DeepSeek-Math & Reasoning:** Value baselines in reasoning LLMs leverage distributional returns to distinguish consistent moderate chain-of-thought solutions from high-variance fluke tokens.
+### 1. Agent57 & Atari Super-Human Benchmarks (Badia et al., Nature 2020)
+QR-DQN distributional returns were a critical component in achieving the first super-human agent across all 57 Atari games:
+- **Transformed Bellman Operators:** Agent57 applies the elementwise transform $h(z) = \text{sign}(z)(\sqrt{|z| + 1} - 1) + \epsilon z$ to compress the unbounded return distribution, enabling stable value learning across games with vastly different reward scales (from Pong's $\pm 1$ to Montezuma's Revenge's thousands).
+- **Per-Game Exploration:** A bandit meta-controller selects per-game $(\epsilon, \beta)$ exploration parameters, directing QR-DQN to learn game-specific value distributions without manual tuning.
+
+### 2. Autonomous Driving & Robotics: Risk-Sensitive Control
+Distributional RL uniquely enables **risk-sensitive decision-making**, going beyond expected value:
+- **Waymo & Autonomous Drones:** Planning algorithms evaluate the **Conditional Value at Risk (CVaR$_\alpha$)**—the expected return in the worst $\alpha$-fraction of outcomes. Setting $\alpha = 0.05$ ensures the controller explicitly minimizes rare catastrophic collision events that would be averaged away under standard $\mathbb{E}[Q]$ optimization.
+- **Medical Robotics (Surgical Robots):** Distributional critics evaluate the full distribution of tissue damage risk, enforcing that both the median and 95th-percentile force estimates remain below safe thresholds during autonomous suturing.
+
+### 3. LLM Reasoning: Distributional Value Estimation for Chain-of-Thought
+- **DeepSeek-Math & Process Reward Models:** Token-level critics in mathematical reasoning models maintain distributional value estimates across chain-of-thought token sequences. Instead of scalar $V(s)$, they learn $Z(s)$—the full distribution of final-answer correctness given partial solutions—allowing the rollout controller to distinguish between a reliably correct partial proof and a high-variance lucky guess.
+- **OpenAI o1 Inference Scaling:** Distributional estimates of reasoning path quality guide best-of-N sampling strategies, weighting candidate solutions by their variance-adjusted expected correctness rather than raw predicted reward.
 
 ---
 

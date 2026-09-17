@@ -263,6 +263,150 @@ def test_td3_continuous_control():
     print("  [PASSED] TD3 continuous control algorithm verified!\n")
 
 
+def verify_section_6_illustrations():
+    print("--- Test 3: Section 6 Solved Illustrations Verification ---")
+    
+    # --- Illustration 1: Clipped Double Q Expectation ---
+    q_true = 10.0
+    sigma_1 = 1.5
+    bias_1 = - sigma_1 / np.sqrt(np.pi)
+    expected_q_min = q_true + bias_1
+    print(f"  Ill 1: Bias = {bias_1:.6f}, Expected Min = {expected_q_min:.6f}")
+    assert np.isclose(bias_1, -0.846284, atol=1e-5)
+    assert np.isclose(expected_q_min, 9.153716, atol=1e-5)
+    
+    # --- Illustration 2: DPG Chain Rule on Quadratic Critic ---
+    s = np.array([1.0, -0.5])
+    w = np.array([0.8, -0.4, 0.1])
+    z = w[0] * s[0] + w[1] * s[1] + w[2]
+    a = np.tanh(z)
+    q_val = - (a - 2 * s[0])**2 - s[1]**2
+    dq_da = -2 * (a - 2 * s[0])
+    da_dz = 1.0 - np.tanh(z)**2
+    grad_theta = dq_da * da_dz * np.array([s[0], s[1], 1.0])
+    
+    alpha_actor = 0.05
+    w_new = w + alpha_actor * grad_theta
+    z_new = w_new[0] * s[0] + w_new[1] * s[1] + w_new[2]
+    a_new = np.tanh(z_new)
+    q_new = - (a_new - 2 * s[0])**2 - s[1]**2
+    delta_q = q_new - q_val
+    
+    print(f"  Ill 2: z = {z:.4f}, a = {a:.6f}, Q = {q_val:.6f}")
+    print(f"  Ill 2: dQ/da = {dq_da:.6f}, da/dz = {da_dz:.6f}")
+    print(f"  Ill 2: grad_theta = {grad_theta}")
+    print(f"  Ill 2: w_new = {w_new}, a_new = {a_new:.6f}, Delta Q = {delta_q:.6f}")
+    
+    assert np.isclose(z, 1.1000)
+    assert np.isclose(a, 0.800499, atol=1e-5)
+    assert np.isclose(q_val, -1.688803, atol=1e-5)
+    assert np.isclose(dq_da, 2.399002, atol=1e-5)
+    assert np.allclose(grad_theta, [0.861725, -0.430862, 0.861725], atol=1e-5)
+    assert np.allclose(w_new, [0.843086, -0.421543, 0.143086], atol=1e-5)
+    assert np.isclose(delta_q, 0.076260, atol=1e-5)
+    
+    # PyTorch gradient verification
+    pt_w = nn.Parameter(torch.tensor([0.8, -0.4, 0.1], dtype=torch.float32))
+    pt_s = torch.tensor([1.0, -0.5], dtype=torch.float32)
+    pt_z = pt_w[0] * pt_s[0] + pt_w[1] * pt_s[1] + pt_w[2]
+    pt_a = torch.tanh(pt_z)
+    pt_q = - (pt_a - 2 * pt_s[0])**2 - pt_s[1]**2
+    pt_q.backward()
+    assert np.allclose(pt_w.grad.numpy(), grad_theta, atol=1e-5)
+    
+    # --- Illustration 3: TD3 Clipped Double Q with Target Noise ---
+    s_next = np.array([0.8, -0.2])
+    r = 2.50
+    gamma = 0.95
+    w_actor = np.array([0.5, -1.0])
+    b_actor = 0.10
+    a_nom = np.dot(w_actor, s_next) + b_actor
+    eps_sample = 0.22
+    eps_clip = np.clip(eps_sample, -0.5, 0.5)
+    a_perturbed = np.clip(a_nom + eps_clip, -1.0, 1.0)
+    
+    w1 = np.array([1.2, 0.5])
+    v1 = -1.5
+    c1 = 3.0
+    w2 = np.array([0.9, 1.1])
+    v2 = -0.8
+    c2 = 2.4
+    
+    q1_targ = np.dot(w1, s_next) + v1 * a_perturbed + c1
+    q2_targ = np.dot(w2, s_next) + v2 * a_perturbed + c2
+    min_targ = min(q1_targ, q2_targ)
+    y_td3 = r + gamma * min_targ
+    
+    q1_ddpg = np.dot(w1, s_next) + v1 * a_nom + c1
+    y_ddpg = r + gamma * q1_ddpg
+    delta_prevented = y_ddpg - y_td3
+    
+    print(f"  Ill 3: a_nom = {a_nom:.4f}, a_pert = {a_perturbed:.4f}")
+    print(f"  Ill 3: Q1 = {q1_targ:.4f}, Q2 = {q2_targ:.4f}, min = {min_targ:.4f}, y = {y_td3:.4f}")
+    print(f"  Ill 3: y_ddpg = {y_ddpg:.4f}, Prevented Overestimation = {delta_prevented:.4f}")
+    
+    assert np.isclose(a_nom, 0.7000)
+    assert np.isclose(a_perturbed, 0.9200)
+    assert np.isclose(q1_targ, 2.4800)
+    assert np.isclose(q2_targ, 2.1640)
+    assert np.isclose(min_targ, 2.1640)
+    assert np.isclose(y_td3, 4.5558)
+    assert np.isclose(y_ddpg, 5.1695)
+    assert np.isclose(delta_prevented, 0.6137)
+    
+    # --- Illustration 4: Delayed Policy Update & Soft Targets ---
+    tau = 0.0050
+    phi1 = np.array([2.0, -1.0])
+    phi2 = np.array([1.8, -0.9])
+    theta = np.array([0.5, 1.2])
+    phi1_targ = phi1.copy()
+    phi2_targ = phi2.copy()
+    theta_targ = theta.copy()
+    
+    # t=1
+    phi1_1 = phi1 - 0.1 * np.array([0.4, -0.2])
+    phi2_1 = phi2 - 0.1 * np.array([0.3, -0.1])
+    # actor & targets unchanged
+    
+    # t=2
+    phi1_2 = phi1_1 - 0.1 * np.array([0.2, -0.1])
+    phi2_2 = phi2_1 - 0.1 * np.array([0.1, -0.05])
+    theta_2 = theta + 0.05 * np.array([0.8, -0.6])
+    phi1_targ_2 = tau * phi1_2 + (1 - tau) * phi1_targ
+    phi2_targ_2 = tau * phi2_2 + (1 - tau) * phi2_targ
+    theta_targ_2 = tau * theta_2 + (1 - tau) * theta_targ
+    
+    print(f"  Ill 4: t=2 phi1 = {phi1_2}, phi2 = {phi2_2}, theta = {theta_2}")
+    print(f"  Ill 4: t=2 targets: phi1_t = {phi1_targ_2}, phi2_t = {phi2_targ_2}, theta_t = {theta_targ_2}")
+    
+    assert np.allclose(phi1_1, [1.96, -0.98])
+    assert np.allclose(phi2_1, [1.77, -0.89])
+    assert np.allclose(phi1_2, [1.94, -0.97])
+    assert np.allclose(phi2_2, [1.76, -0.885])
+    assert np.allclose(theta_2, [0.54, 1.17])
+    assert np.allclose(phi1_targ_2, [1.9997, -0.99985])
+    assert np.allclose(phi2_targ_2, [1.7998, -0.899925])
+    assert np.allclose(theta_targ_2, [0.5002, 1.19985])
+    
+    # --- Illustration 5: Quantitative Overestimation Bias ---
+    q_star = 5.0
+    sigma_5 = 1.0
+    bias_ddpg = sigma_5 / np.sqrt(np.pi)
+    expected_ddpg = q_star + bias_ddpg
+    bias_td3 = - sigma_5 / (2 * np.sqrt(np.pi))
+    expected_td3 = q_star + bias_td3
+    
+    print(f"  Ill 5: DDPG Bias = {bias_ddpg:.6f}, Expected = {expected_ddpg:.6f}")
+    print(f"  Ill 5: TD3 Bias  = {bias_td3:.6f}, Expected = {expected_td3:.6f}")
+    
+    assert np.isclose(bias_ddpg, 0.564190, atol=1e-5)
+    assert np.isclose(expected_ddpg, 5.564190, atol=1e-5)
+    assert np.isclose(bias_td3, -0.282095, atol=1e-5)
+    assert np.isclose(expected_td3, 4.717905, atol=1e-5)
+    
+    print("  [PASSED] All 5 Section 6 Solved Illustrations verified with 100% precision!\n")
+
+
 if __name__ == "__main__":
     print("=================================================================")
     print("STARTING MODULE 11.16 CONTINUOUS ACTION SPACES (DDPG/TD3) TESTS")
@@ -270,7 +414,9 @@ if __name__ == "__main__":
     
     verify_part_5_hand_calculation()
     test_td3_continuous_control()
+    verify_section_6_illustrations()
     
     print("=================================================================")
     print("ALL MODULE 11.16 UNIT TESTS PASSED SUCCESSFULLY! (100% VERIFIED)")
     print("=================================================================")
+

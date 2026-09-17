@@ -16,6 +16,7 @@ This script verifies:
 """
 
 import numpy as np
+import scipy.stats as stats
 import torch
 import torch.nn as nn
 import torch.distributions as dist
@@ -227,6 +228,106 @@ def verify_imagination_rollout():
 
 
 # =====================================================================
+# 4. Section 6 Solved Illustrations Verification
+# =====================================================================
+
+def verify_section6_illustrations():
+    print("=" * 70)
+    print("4. VERIFYING SECTION 6 SOLVED NUMERICAL ILLUSTRATIONS")
+    print("=" * 70)
+
+    # --- Illustration 1: Mode Averaging in Gaussian vs Categorical ---
+    mu_true, sigma_true = 0.0, 3.0
+    p_collision_gaussian = stats.norm.cdf(1.0, mu_true, sigma_true) - stats.norm.cdf(-1.0, mu_true, sigma_true)
+    print(f"Ill 1: Gaussian Obstacle Collision Probability: {p_collision_gaussian * 100:.2f}% (Expected: 26.11%)")
+    assert np.isclose(p_collision_gaussian, 0.261117, atol=1e-5)
+    print(">> SUCCESS: Illustration 1 mode-averaging collision probability verified!")
+
+    # --- Illustration 2: RSSM Forward Roll & Gaussian KL ---
+    h_prev = np.array([0.50, -0.20])
+    z_prev = np.array([0.10, 0.40])
+    a_prev = np.array([1.00, 0.00])
+    W_hh = np.array([[0.60, -0.10], [0.20, 0.50]])
+    W_hz = np.array([[0.30, 0.20], [-0.40, 0.10]])
+    W_ha = np.array([[0.50, 0.00], [0.10, 0.30]])
+    b_h = np.array([0.10, -0.10])
+
+    u_t = W_hh @ h_prev + W_hz @ z_prev + W_ha @ a_prev + b_h
+    h_t = np.tanh(u_t)
+    assert np.allclose(h_t, [0.773908, 0.000000], atol=1e-5)
+
+    W_mu_p = np.array([[0.80, -0.40], [0.10, 0.60]])
+    b_mu_p = np.array([0.00, 0.20])
+    mu_p = W_mu_p @ h_t + b_mu_p
+    W_sig_p = np.array([[0.20, 0.10], [-0.10, 0.30]])
+    b_sig_p = np.array([0.00, 0.10])
+    sig_p = np.log(1.0 + np.exp(W_sig_p @ h_t + b_sig_p))
+
+    e_t = np.array([0.80, -0.50])
+    f_t = np.concatenate([h_t, e_t])
+    W_mu_q = np.array([[0.50, -0.20, 0.60, 0.10], [0.20, 0.40, -0.30, 0.50]])
+    b_mu_q = np.array([0.10, 0.00])
+    mu_q = W_mu_q @ f_t + b_mu_q
+    W_sig_q = np.array([[0.10, 0.00, 0.20, -0.10], [0.00, 0.20, 0.10, 0.20]])
+    b_sig_q = np.array([-0.20, -0.10])
+    sig_q = np.log(1.0 + np.exp(W_sig_q @ f_t + b_sig_q))
+
+    kl_coords = np.log(sig_p / sig_q) + (sig_q**2 + (mu_q - mu_p)**2) / (2.0 * sig_p**2) - 0.5
+    total_kl = np.sum(kl_coords)
+    print(f"Ill 2: RSSM Coordinate KL: [{kl_coords[0]:.6f}, {kl_coords[1]:.6f}], Total: {total_kl:.6f}")
+    assert np.isclose(kl_coords[0], 0.076290, atol=1e-5)
+    assert np.isclose(kl_coords[1], 0.388154, atol=1e-5)
+    assert np.isclose(total_kl, 0.464444, atol=1e-5)
+    print(">> SUCCESS: Illustration 2 RSSM forward roll and analytical KL verified!")
+
+    # --- Illustration 3: H=4 Imagined Lambda-Return Rollout ---
+    r = [1.000000, 0.500000, 2.000000, 1.500000]
+    v = [10.000000, 12.000000, 11.000000, 15.000000, 14.000000]
+    gamma, lam = 0.990000, 0.950000
+    V_lam = [0.0] * 5
+    V_lam[4] = v[4]  # 14.000000
+    for t in range(3, -1, -1):
+        V_lam[t] = r[t] + gamma * ((1.0 - lam) * v[t+1] + lam * V_lam[t+1])
+    print(f"Ill 3: Computed V_lambda: {[round(x, 6) for x in V_lam]}")
+    expected_V = [17.780343, 17.210359, 17.188580, 15.360000, 14.000000]
+    assert np.allclose(V_lam, expected_V, atol=1e-5)
+    print(">> SUCCESS: Illustration 3 H=4 lambda-return backward recursion verified!")
+
+    # --- Illustration 4: Symlog Transformation, Derivatives, and Two-Hot Target ---
+    def symlog(x): return np.sign(x) * np.log(np.abs(x) + 1.0)
+    def symexp(y): return np.sign(y) * (np.exp(np.abs(y)) - 1.0)
+
+    test_Rs = [0.001, 1.0, 100.0, 10000.0, -100.0]
+    for R in test_Rs:
+        y_val = symlog(R)
+        recon_R = symexp(y_val)
+        assert np.isclose(recon_R, R, atol=1e-5)
+    y_target = symlog(100.0)  # 4.615121
+    b_k, b_next = 4.0, 5.0
+    p_k = (b_next - y_target) / (b_next - b_k)
+    p_next = (y_target - b_k) / (b_next - b_k)
+    assert np.isclose(p_k, 0.384879, atol=1e-5)
+    assert np.isclose(p_next, 0.615121, atol=1e-5)
+    assert np.isclose(p_k * b_k + p_next * b_next, y_target, atol=1e-6)
+    print(">> SUCCESS: Illustration 4 symlog, symexp, and two-hot target distribution verified!")
+
+    # --- Illustration 5: Straight-Through Policy Gradient through Categorical Latent ---
+    logits = np.array([2.0, 1.0, 0.0])
+    probs = np.exp(logits) / np.sum(np.exp(logits))
+    w_vals = np.array([5.0, 2.0, -1.0])
+    E_w = np.dot(probs, w_vals)
+    grad_logits = probs * (w_vals - E_w)
+    assert np.isclose(np.sum(grad_logits), 0.0, atol=1e-12)
+    assert np.allclose(grad_logits, [0.847762, -0.422311, -0.425451], atol=1e-5)
+
+    W_theta = np.array([1.5, 0.5, -0.5])
+    dV_da = np.dot(grad_logits, W_theta)
+    assert np.isclose(dV_da, 1.273214, atol=1e-5)
+    print(f"Ill 5: dV/da Policy Action Gradient: {dV_da:.6f} (Expected: 1.273214)")
+    print(">> SUCCESS: Illustration 5 straight-through actor gradient verified!\n")
+
+
+# =====================================================================
 # Main Execution
 # =====================================================================
 
@@ -234,6 +335,7 @@ if __name__ == "__main__":
     verify_part5_hand_calculation()
     verify_rssm_module()
     verify_imagination_rollout()
+    verify_section6_illustrations()
     print("=" * 70)
     print("ALL MODULE 11 CHAPTER 24 (WORLD MODELS & DREAMER) VERIFICATIONS PASSED!")
     print("=" * 70)

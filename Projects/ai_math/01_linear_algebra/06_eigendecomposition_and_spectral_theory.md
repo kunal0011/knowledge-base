@@ -221,7 +221,7 @@ where:
 | $h_0$ | $[2 \times 1]$ | Initial vector | Initial hidden state at timestep $0$ | $\begin{bmatrix} 2 \\ 1 \end{bmatrix}$ |
 | $\lambda_1, \lambda_2$ | Scalars | Eigenvalues of $W$ | Growth/decay rates per sequence step | To be solved |
 | $q_1, q_2$ | $[2 \times 1]$ | Orthonormal eigenvectors | Independent temporal memory channels | To be solved |
-| $\rho(W)$ | Scalar | Spectral radius $\max |\lambda_i|$ | Global recurrent stability indicator | To be computed |
+| $\rho(W)$ | Scalar | Spectral radius $\max \vert \lambda_i \vert$ | Global recurrent stability indicator | To be computed |
 
 ---
 

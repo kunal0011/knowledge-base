@@ -656,7 +656,7 @@ We will compute:
 | $u$ | Unsquashed Action | $\mu + \sigma \epsilon = 0.5 + 1.0(0.5) = 1.0000$ |
 | $a'$ | Squashed Action | $\tanh(u) = \tanh(1.0) \approx 0.76159$ |
 | $\log \mu(u)$ | Base Gaussian Log-Likelihood | $-\frac{1}{2} \ln(2\pi) - \frac{(u - \mu)^2}{2\sigma^2}$ |
-| $\left| \frac{da}{du} \right|$ | Jacobian Determinant | $1 - \tanh^2(u) = 1 - a'^2$ |
+| $\left\vert \frac{da}{du} \right\vert$ | Jacobian Determinant | $1 - \tanh^2(u) = 1 - a'^2$ |
 | $\log \pi(a')$ | Corrected Policy Log-Likelihood | $\log \mu(u) - \ln(1 - a'^2)$ |
 | $y$ | Soft Bellman Target | $r + \gamma (\min(Q_1^-, Q_2^-) - \alpha \log \pi(a'))$ |
 

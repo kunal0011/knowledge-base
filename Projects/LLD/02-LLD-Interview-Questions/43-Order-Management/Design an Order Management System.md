@@ -69,7 +69,6 @@ sequenceDiagram
     autonumber
     actor Customer as Shopper
     participant OS as OrderService
-    participant O as Order (ORD-8910)
     participant Obs as OrderStatusObserver (Warehouse & Push)
     actor Warehouse as Fulfillment Center
 

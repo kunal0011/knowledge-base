@@ -81,7 +81,7 @@ sequenceDiagram
 
     Note over CB: State = OPEN (Fast-Fail Window)
     Client->>CB: execute(callRemote, fallback)
-    Note over CB: Circuit is OPEN; Bypass Downstream!
+    Note over CB: Circuit is OPEN - Bypass Downstream!
     CB->>FB: executeFallback(CircuitBreakerOpenException)
     FB-->>Client: Cached/Degraded Fallback
 

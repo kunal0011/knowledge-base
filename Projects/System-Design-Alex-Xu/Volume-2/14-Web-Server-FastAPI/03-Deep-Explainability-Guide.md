@@ -55,7 +55,7 @@ System design mathematics is not about memorizing arbitrary numbers; it is about
     $$\text{RAM} = 10,000 \times 8\text{ MB} = 80\text{ Gigabytes RAM (Catastrophic OOM!)}$$
   - **Asynchronous Event Loop (`epoll`)**:
     Only requires an in-memory socket descriptor ($4\text{ KB}$):
-    $$\text{RAM} = 10,000 \times 4\text{ KB} = 40\text{ Megabytes RAM (\mathbf{99.95\%}\text{ savings!})}$$
+    $$\text{RAM} = 10,000 \times 4\text{ KB} = 40\text{ Megabytes RAM } (\textbf{99.95\% savings!})$$
 - **Event Loop Batch Processing**:
   `uvloop` wraps `libuv` with C-extensions. Under 100k QPS, system calls are batched via `epoll_wait()`, processing up to 512 events per single kernel transition.
 

@@ -62,7 +62,6 @@ sequenceDiagram
     autonumber
     actor User
     participant Editor as TextEditor
-    participant Cmd as InsertCommand
     participant UndoStack as Undo Deque
     participant RedoStack as Redo Deque
 

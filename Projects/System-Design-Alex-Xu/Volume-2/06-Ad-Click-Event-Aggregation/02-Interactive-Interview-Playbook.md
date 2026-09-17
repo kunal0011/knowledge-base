@@ -1,7 +1,7 @@
 # Chapter 6: Design Ad Click Event Aggregation — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design Ad Click Event Aggregation.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20Ad%20Click%20Event%20Aggregation.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Stream Aggregator Lab: [`ad_aggregation_engine.py`](ad_aggregation_engine.py) (Event-Time Tumbling Windows, Watermark Progression, In-Stream Fraud Detection, Key Salting Hotspot Mitigation, and Idempotent 2PC OLAP Sink)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

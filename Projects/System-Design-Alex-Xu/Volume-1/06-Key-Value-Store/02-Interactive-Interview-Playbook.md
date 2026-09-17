@@ -1,7 +1,7 @@
 # Chapter 6: Distributed Key-Value Store (Dynamo & Cassandra) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design a Key-Value Store.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20a%20Key-Value%20Store.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production LSM Engine & Quorum Node: [`lsm_kv_engine.py`](lsm_kv_engine.py)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)

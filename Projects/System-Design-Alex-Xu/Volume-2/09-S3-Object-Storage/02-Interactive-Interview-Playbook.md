@@ -1,7 +1,7 @@
 # Chapter 9: Design S3-like Object Storage — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design S3-like Object Storage.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20S3-like%20Object%20Storage.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Storage Lab: [`object_storage_engine.py`](object_storage_engine.py) (Bitcask / Haystack Volume Append, Pure Galois Field GF(2^8) Reed-Solomon RS(4, 2) Erasure Coding, Multipart Upload Lifecycle, and Strong Consistency)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

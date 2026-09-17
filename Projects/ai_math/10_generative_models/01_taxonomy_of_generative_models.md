@@ -385,7 +385,7 @@ Let us trace a complete 1D Change of Variables and probability density transform
 | $x = f(z)$ | Forward Mapping | Scalar $\in [0, 4]$ | Non-linear quadratic expansion $f(z) = z^2$ |
 | $z = f^{-1}(x)$ | Inverse Mapping | Scalar | $f^{-1}(x) = \sqrt{x}$ |
 | $\frac{d f^{-1}(x)}{dx}$ | Inverse Jacobian Derivative | Scalar | Rate of volume change $\frac{1}{2\sqrt{x}}$ |
-| $p_x(x)$ | Transformed Probability Density | Scalar | $p_z(f^{-1}(x)) \cdot \left| \frac{d f^{-1}}{dx} \right| = \frac{1}{4\sqrt{x}}$ |
+| $p_x(x)$ | Transformed Probability Density | Scalar | $p_z(f^{-1}(x)) \cdot \left\vert \frac{d f^{-1}}{dx} \right\vert = \frac{1}{4\sqrt{x}}$ |
 
 ---
 

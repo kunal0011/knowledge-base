@@ -103,10 +103,10 @@ i=3, num=1:
 
 | Test Case | `nums` | `k` | Duplicate Indices | Distance | Output |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Example 1** | `[1, 2, 3, 1]` | `3` | `i=0, j=3` | $|3 - 0| = 3 \le 3$ | `true` |
-| **Example 2** | `[1, 0, 1, 1]` | `1` | `i=2, j=3` | $|3 - 2| = 1 \le 1$ | `true` |
-| **Example 3** | `[1, 2, 3, 1, 2, 3]` | `2` | `i=0, j=3` | $|3 - 0| = 3 > 2$ | `false` |
-| **k == 0** | `[1, 2, 1]` | `0` | $i$ and $j$ must be distinct ($|i - j| \ge 1$) | $|i - j| > 0$ always | `false` |
+| **Example 1** | `[1, 2, 3, 1]` | `3` | `i=0, j=3` | $\vert 3 - 0 \vert = 3 \le 3$ | `true` |
+| **Example 2** | `[1, 0, 1, 1]` | `1` | `i=2, j=3` | $\vert 3 - 2 \vert = 1 \le 1$ | `true` |
+| **Example 3** | `[1, 2, 3, 1, 2, 3]` | `2` | `i=0, j=3` | $\vert 3 - 0 \vert = 3 > 2$ | `false` |
+| **k == 0** | `[1, 2, 1]` | `0` | $i$ and $j$ must be distinct ($\vert i - j \vert \ge 1$) | $\vert i - j \vert > 0$ always | `false` |
 
 ---
 

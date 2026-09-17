@@ -1,7 +1,7 @@
 # Chapter 4: Scalable URL Shortener & Clickstream Analytics — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design a URL Shortener.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20a%20URL%20Shortener.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Microservice & Engine: [`url_shortener_service.py`](url_shortener_service.py)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)

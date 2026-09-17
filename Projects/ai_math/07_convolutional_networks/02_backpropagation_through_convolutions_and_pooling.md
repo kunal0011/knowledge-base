@@ -301,8 +301,7 @@ where $p_{\text{out}} \in \{0, 1, \dots, s-1\}$ is the output padding parameter 
 Consider a 1D transposed convolution with stride $s$ and kernel size $K$. Each output coordinate $n$ receives contributions from all input locations $m$ whose receptive fields cover $n$:
 $$x_n = \sum_{m} y_m \, K_{n - m \cdot s} \cdot \mathbf{1}_{\{0 \le n - m \cdot s < K\}}$$
 
-The number of nonzero kernel elements contributing to output pixel $n$ is the cardinality of the index set:
-$$\mathcal{N}(n) = \left\{ m \in \mathbb{Z} : 0 \le n - m \cdot s < K \right\} = \left\{ m \in \mathbb{Z} : \frac{n - K + 1}{s} \le m \le \frac{n}{s} \right}$$
+$$\mathcal{N}(n) = \left\{ m \in \mathbb{Z} : 0 \le n - m \cdot s < K \right\} = \left\{ m \in \mathbb{Z} : \frac{n - K + 1}{s} \le m \le \frac{n}{s} \right\}$$
 
 The effective weight magnitude (or "stamping overlap") received by pixel $n$ is:
 $$\Omega(n) = \sum_{m \in \mathcal{N}(n)} |K_{n - m \cdot s}|$$

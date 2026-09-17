@@ -380,7 +380,7 @@ Given document $D = [\text{"def add(a, b):"}, \text{"\n    return a + b"}, \text
    - $M = \text{"\n    return a + b"}$
    - $S = \text{"\n# End of function"}$
 2. Reorder with sentinels:
-   $$D_{\text{FIM}} = \text{"[PRE] def add(a, b): [SUF] \n# End of function [MID] \n    return a + b"}$$
+   $$D_{\text{FIM}} = \text{"[PRE] def add(a, b): [SUF] \textbackslash n\# End of function [MID] \textbackslash n    return a + b"}$$
 3. When fine-tuned or pre-trained on this sequence, the model learns to fill in the code body $M$ conditioned simultaneously on the function header $P$ and trailing comments $S$.
 
 ---

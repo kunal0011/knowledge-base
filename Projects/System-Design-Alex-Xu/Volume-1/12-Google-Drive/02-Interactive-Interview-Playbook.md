@@ -1,7 +1,7 @@
 # Chapter 12: Design Google Drive / Dropbox (Cloud Storage & Sync) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design Google Drive.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20Google%20Drive.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Sync Microservice: [`cloud_storage_engine.py`](cloud_storage_engine.py) (FastCDC Chunking, Merkle Tree Delta Sync, CAS Global Deduplication, and Inode Moves)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)

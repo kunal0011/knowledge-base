@@ -122,11 +122,11 @@ Result: dp[2] = 1 (Cut after 'aa': ["aa", "b"]).
 
 | Input String $s$ | Entire String Palindrome? | Optimal Cuts Breakdown | Minimum Cuts |
 |---|---|---|---|
-| `"aab"` | No | `"aa" | "b"` | `1` |
+| `"aab"` | No | `"aa" \| "b"` | `1` |
 | `"a"` | Yes | Single character | `0` |
-| `"ab"` | No | `"a" | "b"` | `1` |
+| `"ab"` | No | `"a" \| "b"` | `1` |
 | `"racecar"` | Yes | No cuts needed | `0` |
-| `"ababbbabbababa"` | No | Substrings: `"a" | "b" | "abbba" | "bb" | "ababa"` | `3` |
+| `"ababbbabbababa"` | No | Substrings: `"a" \| "b" \| "abbba" \| "bb" \| "ababa"` | `3` |
 
 ---
 

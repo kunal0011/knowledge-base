@@ -35,7 +35,7 @@ flowchart LR
     
     L -.->|vᵀ = ∇_y L| BackY["Loss Gradient at y"]
     BackY -.->|vᵀ J_f = ∇_u L| BackU["Loss Gradient at u"]
-    BackU -.->|(vᵀ J_f) J_g = ∇_x L| BackX["Loss Gradient at x"]
+    BackU -.->|"(vᵀ J_f) J_g = ∇_x L"| BackX["Loss Gradient at x"]
 ```
 
 ---

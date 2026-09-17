@@ -125,7 +125,7 @@ At hyperscale ($500\text{M+ Daily Active Users}$), a news feed system is among t
 - **Timeline Cache DRAM Sizing (Active Users Only)**:
   - Storing 800 items for all 500M users requires $500\text{M} \times 800 \times 8\text{ bytes} \approx 3.2\text{ TB DRAM}$.
   - **Optimized Tiered Model**: Only store the **top 200 post IDs** in Redis for **Active Users** (users active in last 72 hours $\approx 250\text{M users}$):
-    $$\text{Timeline DRAM} = 250\text{M} \times 200\text{ items} \times 8\text{ bytes (post_id)} \approx \mathbf{400\text{ GB RAM}}$$
+    $$\text{Timeline DRAM} = 250\text{M} \times 200\text{ items} \times 8\text{ bytes (post\_id)} \approx \mathbf{400\text{ GB RAM}}$$
   - With Redis Sorted Set overhead ($+50\%$ for pointer structures and ziplists): $\approx \mathbf{600\text{ GB RAM}}$ (comfortably fits on a 10-node Redis Cluster).
 
 ---

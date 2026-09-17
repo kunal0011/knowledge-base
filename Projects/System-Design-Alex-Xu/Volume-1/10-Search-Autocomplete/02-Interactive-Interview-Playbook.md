@@ -1,7 +1,7 @@
 # Chapter 10: Design Search Autocomplete (Trie / Typeahead) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design Search Autocomplete.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20Search%20Autocomplete.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Microservice Lab: [`autocomplete_engine.py`](autocomplete_engine.py) (Compact Prefix Trie, Node-Level Top-K Cache, RCU Atomic Swap, Velocity Overlay, and Dynamic Moderation)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)
@@ -121,7 +121,7 @@ Write these calculations directly on the whiteboard:
 
 $$\text{Active Users} = 50,000,000\text{ DAU} \quad | \quad \text{Searches / Day} = 10 \implies 500,000,000\text{ searches / day}$$
 $$\text{Keystrokes / Search} = 20 \implies 10,000,000,000\text{ raw keystrokes / day}$$
-$$\text{With 40% Client Debouncing} \implies 6,000,000,000\text{ requests / day} \implies \text{Avg QPS} \approx 69,444 \quad (\text{Peak: } 175,000 - 290,000\text{ QPS})$$
+$$\text{With 40\% Client Debouncing} \implies 6,000,000,000\text{ requests / day} \implies \text{Avg QPS} \approx 69,444 \quad (\text{Peak: } 175,000 - 290,000\text{ QPS})$$
 
 #### Server Fleet Math:
 - Each server running our optimized C++/Go/Rust Trie handles $25,000\text{ QPS}$ at $< 2\text{ms}$ latency.

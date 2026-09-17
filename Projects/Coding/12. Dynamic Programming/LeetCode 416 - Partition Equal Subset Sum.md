@@ -120,7 +120,7 @@ Subsets: [11] and [1, 5, 5] both sum to 11.
 ### Solved Examples with Multiple Inputs
 
 | Case | `nums` | Sum $S$ | Target $S/2$ | Achievable Subsets | Result | Explanation |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | **Standard Equal** | `[1, 5, 11, 5]` | `22` | `11` | `{1, 5, 5}` & `{11}` | `true` | Equal partition found |
 | **Odd Total Sum** | `[1, 2, 3, 5]` | `11` | N/A | Impossible to split odd into equal ints | `false` | Immediate parity check exit |
 | **Even Sum But No Split** | `[1, 2, 5]` | `8` | `4` | Achievable sums: `{0,1,2,3,5,6,7,8}` | `false` | Sum 4 cannot be formed |

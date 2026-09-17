@@ -371,8 +371,8 @@ $$\mathbf{W}^- = \begin{bmatrix} 0.4000 & 0.1000 \\ -0.1000 & 0.6000 \end{bmatri
 | $s'$ | Successor State Input Vector | $2 \times 1$ column vector |
 | $Y$ | Bootstrapped Target | $r + (1 - d) \gamma \max_{a'} Q(s', a'; \mathbf{W}^-)$ |
 | $u$ | TD Error Residue | $Y - Q(s, a; \mathbf{W})$ |
-| $\ell_\delta(u)$ | Huber Loss | Quadratic if $|u| \le 1$, Linear if $|u| > 1$ |
-| $g_u$ | Huber Gradient $\nabla_u \ell_\delta$ | $u$ if $|u| \le 1$, else $\operatorname{sgn}(u)$ |
+| $\ell_\delta(u)$ | Huber Loss | Quadratic if $\vert u \vert \le 1$, Linear if $\vert u \vert > 1$ |
+| $g_u$ | Huber Gradient $\nabla_u \ell_\delta$ | $u$ if $\vert u \vert \le 1$, else $\operatorname{sgn}(u)$ |
 | $\nabla_\mathbf{W} \mathcal{L}$ | Weight Gradient Tensor | Matrix of partial derivatives $\frac{\partial \mathcal{L}}{\partial W_{ij}}$ |
 
 ---

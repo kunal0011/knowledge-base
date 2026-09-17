@@ -76,7 +76,6 @@ sequenceDiagram
     autonumber
     actor User
     participant List as TodoList
-    participant Cmd as CompleteTaskCommand
     participant T as Task ("Buy Groceries")
     participant UndoStack as Deque (Undo Stack)
 

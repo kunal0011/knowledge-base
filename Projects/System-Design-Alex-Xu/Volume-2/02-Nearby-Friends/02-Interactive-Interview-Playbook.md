@@ -1,7 +1,7 @@
 # Chapter 2: Design Nearby Friends — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design Nearby Friends.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20Nearby%20Friends.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Microservice Lab: [`nearby_friends_engine.py`](nearby_friends_engine.py) (RFC 6455 WebSockets, DRAM Ephemeral Leases, Dead-Reckoning Suppression, Differential Privacy Fuzzing, and Mutual Opt-in Filtering)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

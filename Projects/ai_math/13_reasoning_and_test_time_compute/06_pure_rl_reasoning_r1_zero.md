@@ -61,7 +61,7 @@ $$R_{\text{accuracy}}(q, o) = \begin{cases} 1.0 & \text{if } \operatorname{Verif
 #### 2. Format Reward ($R_{\text{format}}$):
 Enforces that the model strictly demarcates its intermediate thinking from its final response:
 
-$$R_{\text{format}}(o) = \begin{cases} 0.1 & \text{if } o \text{ matches the regex } \texttt{"^<think>.*?</think><answer>.*?</answer>\$"} \\ 0.0 & \text{otherwise} \end{cases}$$
+$$R_{\text{format}}(o) = \begin{cases} 0.1 & \text{if } o \text{ matches the regex } \texttt{"\textasciicircum <think>.*?</think><answer>.*?</answer>\$"} \\ 0.0 & \text{otherwise} \end{cases}$$
 
 Total reward spans $R \in [0.0, 1.1]$.
 

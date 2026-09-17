@@ -349,7 +349,7 @@ $$x = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$$
 | $\det(\Sigma)$ | $\mathbb{R}$ | Covariance determinant | Generalized variance / volume factor | $3.0$ |
 | $\Sigma^{-1}$ | $\mathbb{R}^{2 \times 2}$ | Precision matrix | Inverse covariance metric tensor | $\frac{1}{3} \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}$ |
 | $\Delta^2$ | $\mathbb{R}$ | Squared Mahalanobis distance | Scaled distance penalty | $2/3 \approx 0.666667$ |
-| $Z_{\text{norm}}$ | $\mathbb{R}$ | Normalizing constant | $(2\pi)^{D/2} |\det\Sigma|^{1/2}$ | $2\pi\sqrt{3} \approx 10.882796$ |
+| $Z_{\text{norm}}$ | $\mathbb{R}$ | Normalizing constant | $(2\pi)^{D/2} \vert \det\Sigma \vert^{1/2}$ | $2\pi\sqrt{3} \approx 10.882796$ |
 | $p(x)$ | $\mathbb{R}$ | Continuous probability density | Likelihood $p_\theta(z)$ | $\approx 0.065841$ |
 | $\log p(x)$ | $\mathbb{R}$ | Log-likelihood | Reconstruction / Energy term | $\approx -2.720480$ |
 

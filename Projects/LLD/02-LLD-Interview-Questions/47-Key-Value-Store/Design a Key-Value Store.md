@@ -47,7 +47,6 @@ sequenceDiagram
     autonumber
     actor Client as Caller
     participant KV as KeyValueStore
-    participant E as CacheEntry ("session:101")
     participant Sweep as Background Janitor Daemon
 
     Client->>KV: set("session:101", "userData", ttl=10s)

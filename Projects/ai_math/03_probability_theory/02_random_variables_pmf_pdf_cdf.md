@@ -250,7 +250,7 @@ We will:
 | $F_X(x)$ | Cumulative Distribution Function (CDF) | Cumulative quantile | Piecewise quadratic curve |
 | $P(0.5 < X \le 1.5)$ | Interval probability | Mass within confidence region | $0.750$ ($75\%$) |
 | $Y = g(X) = 2X + 1$ | Transformed random variable | Layer forward mapping $y = W x + b$ | Support: $[1, 5]$ |
-| $\left| \frac{dx}{dy} \right|$ | 1D Jacobian determinant | Layer volume contraction factor | $\left| \frac{1}{2} \right| = 0.5$ |
+| $\left\vert \frac{dx}{dy} \right\vert$ | 1D Jacobian determinant | Layer volume contraction factor | $\left\vert \frac{1}{2} \right\vert = 0.5$ |
 | $f_Y(3.0)$ | Transformed density | Normalizing flow output density | $0.500000$ |
 
 ---

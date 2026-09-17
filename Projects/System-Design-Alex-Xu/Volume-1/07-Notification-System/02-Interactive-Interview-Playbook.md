@@ -1,7 +1,7 @@
 # Chapter 7: Multi-Channel Notification Platform — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design a Notification System.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20a%20Notification%20System.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Notification Engine & Daemon: [`notification_service.py`](notification_service.py)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)

@@ -1,7 +1,7 @@
 # Chapter 1: Design a Proximity Service (Yelp & Google Places) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design a Proximity Service.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20a%20Proximity%20Service.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Microservice Lab: [`proximity_service.py`](proximity_service.py) (Geohash Base32, 8-Neighbor Bounding, Spatial Grid, Haversine Distance, and Multi-Factor Ranking)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

@@ -1,7 +1,7 @@
 # Chapter 11: Design YouTube / Netflix (Video Streaming at Scale) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-1/Design YouTube.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-1/Design%20YouTube.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Streaming Microservice: [`video_streaming_engine.py`](video_streaming_engine.py) (Resumable Uploads, GOP Slicing, ABR HLS/DASH Manifests, and 30s View Deduplication)
 > - Chapter Hub: [`README.md`](README.md)
 > - Deep Explainability Guide: [`03-Deep-Explainability-Guide.md`](03-Deep-Explainability-Guide.md)
@@ -12,7 +12,7 @@
 
 A planetary video streaming platform (YouTube, Netflix, TikTok) operates at physical infrastructure limits: ingesting **500 hours of video every minute** ($720,000\text{ hours/day}$), storing **10+ Petabytes of new video daily**, and streaming **5 Billion video views per day** with peak global egress exceeding **100+ Terabits per second (Tbps)**.
 
-A junior engineer treats video upload as a simple HTTP multipart POST and transcoding as a single monolithic `ffmpeg -i video.mp4` process. A 2-hour 4K movie uploaded this way will fail over flaky Wi-Fi and take 4 hours to transcode sequentially on a single server, blowing all turnaround SLAs. Furthermore, paying standard public cloud egress rates for 100 Tbps ($0.08/\text{GB}$) costs **over $75 Million per month in egress alone**!
+A junior engineer treats video upload as a simple HTTP multipart POST and transcoding as a single monolithic `ffmpeg -i video.mp4` process. A 2-hour 4K movie uploaded this way will fail over flaky Wi-Fi and take 4 hours to transcode sequentially on a single server, blowing all turnaround SLAs. Furthermore, paying standard public cloud egress rates for 100 Tbps (\$0.08/GB) costs **over \$75 Million per month in egress alone**!
 
 A **Staff/Principal Engineer** designs a **Tus-Compatible Resumable Chunked Upload Gateway, a Distributed GOP-Level (Group of Pictures) Split-and-Stitch Transcoding Grid, CMAF fMP4 Single-Storage Multi-Protocol Packaging (HLS + DASH), Multi-Tiered ISP Edge Caching (Google Global Cache / Open Connect), and a Monetization-Grade Audited View Count Pipeline**.
 

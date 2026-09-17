@@ -1,7 +1,7 @@
 # Chapter 3: Design Google Maps & Planetary Navigation Platforms — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design Google Maps.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20Google%20Maps.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Navigation Lab: [`maps_routing_engine.py`](maps_routing_engine.py) (Bidirectional Dijkstra, Dynamic Traffic Customization, Web Mercator Slippy Tiles & Quadkeys, Bearing Turn-by-Turn Guidance)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

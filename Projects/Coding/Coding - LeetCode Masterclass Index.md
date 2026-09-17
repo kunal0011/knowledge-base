@@ -340,22 +340,22 @@ tags:
 | **LC 207** | Course Schedule | `-` | [LeetCode 207 - Course Schedule](11.%20Graphs/LeetCode%20207%20-%20Course%20Schedule.md) |
 | **LC 210** | Course Schedule II | `Amazon Top #1 Graph Question, Google, Meta, Microsoft` | [LeetCode 210 - Course Schedule II](11.%20Graphs/LeetCode%20210%20-%20Course%20Schedule%20II.md) |
 | **LC 269** | Alien Dictionary | `-` | [LeetCode 269 - Alien Dictionary](11.%20Graphs/LeetCode%20269%20-%20Alien%20Dictionary.md) |
-| **LC 317** | Shortest Distance from All Buildings | `Google Top #1 Hard Classic, Amazon |` | [LeetCode 317 - Shortest Distance from All Buildings](11.%20Graphs/LeetCode%20317%20-%20Shortest%20Distance%20from%20All%20Buildings.md) |
+| **LC 317** | Shortest Distance from All Buildings | `Google Top #1 Hard Classic, Amazon` | [LeetCode 317 - Shortest Distance from All Buildings](11.%20Graphs/LeetCode%20317%20-%20Shortest%20Distance%20from%20All%20Buildings.md) |
 | **LC 329** | Longest Increasing Path in a Matrix | `Google Signature Hard, Amazon` | [LeetCode 329 - Longest Increasing Path in a Matrix](11.%20Graphs/LeetCode%20329%20-%20Longest%20Increasing%20Path%20in%20a%20Matrix.md) |
-| **LC 332** | Reconstruct Itinerary | `Google Top Asked Hard, Amazon |` | [LeetCode 332 - Reconstruct Itinerary](11.%20Graphs/LeetCode%20332%20-%20Reconstruct%20Itinerary.md) |
+| **LC 332** | Reconstruct Itinerary | `Google Top Asked Hard, Amazon` | [LeetCode 332 - Reconstruct Itinerary](11.%20Graphs/LeetCode%20332%20-%20Reconstruct%20Itinerary.md) |
 | **LC 399** | Evaluate Division | `-` | [LeetCode 399 - Evaluate Division](11.%20Graphs/LeetCode%20399%20-%20Evaluate%20Division.md) |
 | **LC 417** | Pacific Atlantic Water Flow | `-` | [LeetCode 417 - Pacific Atlantic Water Flow](11.%20Graphs/LeetCode%20417%20-%20Pacific%20Atlantic%20Water%20Flow.md) |
 | **LC 684** | Redundant Connection | `-` | [LeetCode 684 - Redundant Connection](11.%20Graphs/LeetCode%20684%20-%20Redundant%20Connection.md) |
 | **LC 743** | Network Delay Time | `-` | [LeetCode 743 - Network Delay Time](11.%20Graphs/LeetCode%20743%20-%20Network%20Delay%20Time.md) |
-| **LC 785** | Is Graph Bipartite? | `Amazon, Google, Meta |` | [LeetCode 785 - Is Graph Bipartite](11.%20Graphs/LeetCode%20785%20-%20Is%20Graph%20Bipartite.md) |
+| **LC 785** | Is Graph Bipartite? | `Amazon, Google, Meta` | [LeetCode 785 - Is Graph Bipartite](11.%20Graphs/LeetCode%20785%20-%20Is%20Graph%20Bipartite.md) |
 | **LC 787** | Cheapest Flights Within K Stops | `-` | [LeetCode 787 - Cheapest Flights Within K Stops](11.%20Graphs/LeetCode%20787%20-%20Cheapest%20Flights%20Within%20K%20Stops.md) |
 | **LC 815** | Bus Routes | `Google Signature Hard, Amazon` | [LeetCode 815 - Bus Routes](11.%20Graphs/LeetCode%20815%20-%20Bus%20Routes.md) |
-| **LC 864** | Shortest Path to Get All Keys | `Google Top Signature Hard, Amazon |` | [LeetCode 864 - Shortest Path to Get All Keys](11.%20Graphs/LeetCode%20864%20-%20Shortest%20Path%20to%20Get%20All%20Keys.md) |
+| **LC 864** | Shortest Path to Get All Keys | `Google Top Signature Hard, Amazon` | [LeetCode 864 - Shortest Path to Get All Keys](11.%20Graphs/LeetCode%20864%20-%20Shortest%20Path%20to%20Get%20All%20Keys.md) |
 | **LC 994** | Rotting Oranges | `-` | [LeetCode 994 - Rotting Oranges](11.%20Graphs/LeetCode%20994%20-%20Rotting%20Oranges.md) |
-| **LC 1192** | Critical Connections in a Network | `Amazon Signature Hard, Google |` | [LeetCode 1192 - Critical Connections in a Network](11.%20Graphs/LeetCode%201192%20-%20Critical%20Connections%20in%20a%20Network.md) |
-| **LC 1334** | Find the City With the Smallest Number of Neighbors at a Threshold Distance | `Amazon, Google, Microsoft |` | [LeetCode 1334 - Find the City With the Smallest Number of Neighbors at a Threshold Distance](11.%20Graphs/LeetCode%201334%20-%20Find%20the%20City%20With%20the%20Smallest%20Number%20of%20Neighbors%20at%20a%20Threshold%20Distance.md) |
-| **LC 1584** | Min Cost to Connect All Points | `Amazon, Google, Microsoft |` | [LeetCode 1584 - Min Cost to Connect All Points](11.%20Graphs/LeetCode%201584%20-%20Min%20Cost%20to%20Connect%20All%20Points.md) |
-| **LC 2290** | Minimum Obstacle Removal to Reach Corner | `Google Hard, Amazon |` | [LeetCode 2290 - Minimum Obstacle Removal to Reach Corner](11.%20Graphs/LeetCode%202290%20-%20Minimum%20Obstacle%20Removal%20to%20Reach%20Corner.md) |
+| **LC 1192** | Critical Connections in a Network | `Amazon Signature Hard, Google` | [LeetCode 1192 - Critical Connections in a Network](11.%20Graphs/LeetCode%201192%20-%20Critical%20Connections%20in%20a%20Network.md) |
+| **LC 1334** | Find the City With the Smallest Number of Neighbors at a Threshold Distance | `Amazon, Google, Microsoft` | [LeetCode 1334 - Find the City With the Smallest Number of Neighbors at a Threshold Distance](11.%20Graphs/LeetCode%201334%20-%20Find%20the%20City%20With%20the%20Smallest%20Number%20of%20Neighbors%20at%20a%20Threshold%20Distance.md) |
+| **LC 1584** | Min Cost to Connect All Points | `Amazon, Google, Microsoft` | [LeetCode 1584 - Min Cost to Connect All Points](11.%20Graphs/LeetCode%201584%20-%20Min%20Cost%20to%20Connect%20All%20Points.md) |
+| **LC 2290** | Minimum Obstacle Removal to Reach Corner | `Google Hard, Amazon` | [LeetCode 2290 - Minimum Obstacle Removal to Reach Corner](11.%20Graphs/LeetCode%202290%20-%20Minimum%20Obstacle%20Removal%20to%20Reach%20Corner.md) |
 
 ---
 
@@ -398,7 +398,6 @@ tags:
 | **LC 140** | Word Break II | `-` | [LeetCode 140 - Word Break II](12.%20Dynamic%20Programming/LeetCode%20140%20-%20Word%20Break%20II.md) |
 | **LC 152** | Maximum Product Subarray | `-` | [LeetCode 152 - Maximum Product Subarray](12.%20Dynamic%20Programming/LeetCode%20152%20-%20Maximum%20Product%20Subarray.md) |
 | **LC 174** | Dungeon Game | `-` | [LeetCode 174 - Dungeon Game](12.%20Dynamic%20Programming/LeetCode%20174%20-%20Dungeon%20Game.md) |
-| **LC 188** | Best Time to Buy and Sell Stock IV | `-` | [LeetCode 188 - Best Time to Buy and Sell Stock IV (2)](12.%20Dynamic%20Programming/LeetCode%20188%20-%20Best%20Time%20to%20Buy%20and%20Sell%20Stock%20IV%20%282%29.md) |
 | **LC 188** | Best Time to Buy and Sell Stock IV | `-` | [LeetCode 188 - Best Time to Buy and Sell Stock IV](12.%20Dynamic%20Programming/LeetCode%20188%20-%20Best%20Time%20to%20Buy%20and%20Sell%20Stock%20IV.md) |
 | **LC 198** | House Robber | `-` | [LeetCode 198 - House Robber](12.%20Dynamic%20Programming/LeetCode%20198%20-%20House%20Robber.md) |
 | **LC 213** | House Robber II | `-` | [LeetCode 213 - House Robber II](12.%20Dynamic%20Programming/LeetCode%20213%20-%20House%20Robber%20II.md) |
@@ -431,7 +430,6 @@ tags:
 | **LC 518** | Coin Change II | `-` | [LeetCode 518 - Coin Change II](12.%20Dynamic%20Programming/LeetCode%20518%20-%20Coin%20Change%20II.md) |
 | **LC 542** | 01 Matrix | `-` | [LeetCode 542 - 01 Matrix](12.%20Dynamic%20Programming/LeetCode%20542%20-%2001%20Matrix.md) |
 | **LC 553** | Optimal Division | `-` | [LeetCode 553 - Optimal Division](12.%20Dynamic%20Programming/LeetCode%20553%20-%20Optimal%20Division.md) |
-| **LC 638** | Shopping Offers | `-` | [LeetCode 638 - Shopping Offers (2)](12.%20Dynamic%20Programming/LeetCode%20638%20-%20Shopping%20Offers%20%282%29.md) |
 | **LC 638** | Shopping Offers | `-` | [LeetCode 638 - Shopping Offers](12.%20Dynamic%20Programming/LeetCode%20638%20-%20Shopping%20Offers.md) |
 | **LC 646** | Maximum Length of Pair Chain | `-` | [LeetCode 646 - Maximum Length of Pair Chain](12.%20Dynamic%20Programming/LeetCode%20646%20-%20Maximum%20Length%20of%20Pair%20Chain.md) |
 | **LC 1143** | Longest Common Subsequence | `Amazon, Google, Microsoft` | [LeetCode 1143 - Longest Common Subsequence](12.%20Dynamic%20Programming/LeetCode%201143%20-%20Longest%20Common%20Subsequence.md) |

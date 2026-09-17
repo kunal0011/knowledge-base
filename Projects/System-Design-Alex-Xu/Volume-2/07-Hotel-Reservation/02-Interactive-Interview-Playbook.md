@@ -1,7 +1,7 @@
 # Chapter 7: Design a Hotel Reservation System — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design a Hotel Reservation System.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20a%20Hotel%20Reservation%20System.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Reservation Lab: [`hotel_reservation_engine.py`](hotel_reservation_engine.py) (Multi-Date Atomic Inventory Ledger, Deadlock-Free Sorted Locking, Ephemeral 10-Minute Cart Holds, Saga Orchestration, and Dynamic Overbooking)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

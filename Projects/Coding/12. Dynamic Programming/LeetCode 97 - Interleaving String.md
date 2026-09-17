@@ -150,7 +150,7 @@ Trace for Cell `dp[5][5]` ($i=5, j=5 \to s_3[9] = 'c'$):
 | `"aabcc"` | `"dbbca"` | `"aadbbbaccc"` | `False` | Cannot preserve ordering of character counts |
 | `""` | `""` | `""` | `True` | Base case: all empty strings match |
 | `""` | `"abc"` | `"abc"` | `True` | One empty string reduces to identical string matching |
-| `"a"` | `"b"` | `"a"` | `False` | $|s_1| + |s_2| = 2 \ne |s_3| = 1$, early exit |
+| `"a"` | `"b"` | `"a"` | `False` | $\vert s_1 \vert + \vert s_2 \vert = 2 \ne \vert s_3 \vert = 1$, early exit |
 | `"ab"` | `"bc"` | `"babc"` | `True` | Interleaved: `s2[0]` ('b') + `s1[0..1]` ("ab") + `s2[1]` ('c') |
 
 ---

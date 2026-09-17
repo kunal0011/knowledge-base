@@ -143,10 +143,10 @@ No pair satisfies both conditions -> Return False.
 
 | Test Case | `nums` | `indexDiff` | `valueDiff` | Result | Reason |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Example 1** | `[1, 2, 3, 1]` | `3` | `0` | `true` | `nums[0] == nums[3] == 1`, $|3 - 0| \le 3$ |
+| **Example 1** | `[1, 2, 3, 1]` | `3` | `0` | `true` | `nums[0] == nums[3] == 1`, $\vert 3 - 0 \vert \le 3$ |
 | **Example 2** | `[1, 5, 9, 1, 5, 9]` | `2` | `3` | `false` | Differences are at least 4 |
-| **Close Values** | `[1, 10, 15, 3]` | `3` | `2` | `true` | `|nums[0] - nums[3]| = |1 - 3| = 2 \le 2` |
-| **Negative Numbers** | `[-3, 3, -6]` | `2` | `3` | `true` | `|-3 - (-6)| = 3 \le 3` |
+| **Close Values** | `[1, 10, 15, 3]` | `3` | `2` | `true` | $\vert \text{nums}[0] - \text{nums}[3] \vert = \vert 1 - 3 \vert = 2 \le 2$ |
+| **Negative Numbers** | `[-3, 3, -6]` | `2` | `3` | `true` | $\vert -3 - (-6) \vert = 3 \le 3$ |
 
 ---
 

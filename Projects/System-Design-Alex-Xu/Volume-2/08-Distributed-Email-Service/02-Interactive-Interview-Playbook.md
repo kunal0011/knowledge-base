@@ -1,7 +1,7 @@
 # Chapter 8: Design a Distributed Email Service (Gmail/Outlook) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design a Distributed Email Service.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20a%20Distributed%20Email%20Service.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & JMAP Mail Lab: [`email_platform_engine.py`](email_platform_engine.py) (JMAP Stateless Protocol, RFC 5322 MIME Parser, JWZ Conversation Threading, SHA-256 CAS Attachment Deduplication, and Full-Text Inverted Index)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

@@ -54,7 +54,7 @@ A **norm** on a vector space $V$ is a function $\|\cdot\| : V \to \mathbb{R}_{\g
 | Axiom | Name | Mathematical Statement | Physical Meaning |
 | :--- | :--- | :--- | :--- |
 | **N1** | **Positive Definiteness** | $\|v\| \ge 0$, and $\|v\| = 0 \iff v = \mathbf{0}$ | Only the null vector has zero length. |
-| **N2** | **Absolute Homogeneity** | $\|\alpha v\| = |\alpha| \|v\|$ | Scaling a vector by $\alpha$ scales its length by $|\alpha|$. |
+| **N2** | **Absolute Homogeneity** | $\|\alpha v\| = \vert \alpha \vert \|v\|$ | Scaling a vector by $\alpha$ scales its length by $\vert \alpha \vert$. |
 | **N3** | **Subadditivity (Triangle Inequality)**| $\|u + v\| \le \|u\| + \|v\|$ | The shortest path between two points is a straight line. |
 
 Every inner product naturally induces a valid norm:

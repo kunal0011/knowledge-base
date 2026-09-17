@@ -868,7 +868,7 @@ $$\text{Bound}_\infty = \frac{\gamma \epsilon_m R_{\max}}{(1 - \gamma)^2} = \fra
 
 *Summary Comparison Table:*
 
-| Rollout Horizon $H$ | Step TV Drift $\|d_H - \hat{d}_H\|_{\text{TV}}$ | Cumulative TV Drift $\sum \|d_t - \hat{d}_t\|_{\text{TV}}$ | Discounted Value Error $|J_H - \hat{J}_H|$ | Practical Reliability |
+| Rollout Horizon $H$ | Step TV Drift $\|d_H - \hat{d}_H\|_{\text{TV}}$ | Cumulative TV Drift $\sum \|d_t - \hat{d}_t\|_{\text{TV}}$ | Discounted Value Error $\vert J_H - \hat{J}_H \vert$ | Practical Reliability |
 | :---: | :---: | :---: | :---: | :--- |
 | **$H = 1$ (Dyna-Q)** | $\mathbf{0.0500}$ | $\mathbf{0.0500}$ | $\mathbf{0.0500}$ | **Extremely high:** Negligible bias |
 | **$H = 5$** | $\mathbf{0.2500}$ | $\mathbf{0.7500}$ | $\mathbf{0.6555}$ | **Moderate:** Useful for short plans |

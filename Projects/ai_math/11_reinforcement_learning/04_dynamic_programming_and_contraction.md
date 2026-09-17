@@ -153,7 +153,7 @@ By the Banach Fixed-Point Theorem, $V_k \to V^*$ at geometric rate $\mathcal{O}(
 | :--- | :--- | :--- |
 | **Inner Loop** | Exact or multi-step evaluation ($\mathcal{T}^\pi$) | Single optimality sweep ($\mathcal{T}^*$) |
 | **Outer Iterations** | Very few ($3-10$ iterations typically) | More iterations ($\sim \frac{\log \epsilon}{\log \gamma}$) |
-| **Cost per Step** | High ($\mathcal{O}(|\mathcal{S}|^3)$ or $\mathcal{O}(m |\mathcal{S}|^2 |\mathcal{A}|)$) | Fast ($\mathcal{O}(|\mathcal{S}|^2 |\mathcal{A}|)$) |
+| **Cost per Step** | High ($\mathcal{O}(\vert \mathcal{S} \vert^3)$ or $\mathcal{O}(m \vert \mathcal{S} \vert^2 \vert \mathcal{A} \vert)$) | Fast ($\mathcal{O}(\vert \mathcal{S} \vert^2 \vert \mathcal{A} \vert)$) |
 | **Monotonicity** | Strictly monotonic $V^{\pi_{k+1}} \ge V^{\pi_k}$ | Monotonic contraction toward $V^*$ |
 | **Guarantees** | Finite termination to exact $\pi^*$ | Asymptotic geometric convergence to $V^*$ |
 
@@ -384,7 +384,7 @@ Let us trace 3 full iterations of Value Iteration on a concrete 3-state MDP by h
 | $\mathbf{V}_k$ | State-Value Vector at Step $k$ | $(3,)$ | Estimated value vector at iteration $k$ |
 | $Q_k(s, a)$ | Candidate Action-Values | $(3, 2)$ | $\mathcal{R}(s, a) + \gamma \sum_{s'} \mathcal{P}(s' \mid s, a) V_k(s')$ |
 | $\mathbf{V}_{k+1}$ | Updated Value Vector | $(3,)$ | New value vector $\max_a Q_k(s, a)$ |
-| $\|\Delta_k\|_\infty$ | Step Infinity Norm Difference | Scalar | $\|V_{k+1} - V_k\|_\infty = \max_s |V_{k+1}(s) - V_k(s)|$ |
+| $\|\Delta_k\|_\infty$ | Step Infinity Norm Difference | Scalar | $\|V_{k+1} - V_k\|_\infty = \max_s \vert V_{k+1}(s) - V_k(s) \vert$ |
 | $\pi^*(s)$ | Greedy Extracted Policy | $(3,)$ | $\operatorname{argmax}_a Q(s, a)$ |
 
 ---

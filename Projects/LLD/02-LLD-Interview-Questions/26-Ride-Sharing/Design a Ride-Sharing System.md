@@ -50,7 +50,6 @@ classDiagram
         REQUESTED, MATCHED, EN_ROUTE, IN_PROGRESS, COMPLETED, CANCELLED
     }
 
-```mermaid
     RideService --> Ride
     RideService --> MatchingStrategy
     RideService --> FareStrategy

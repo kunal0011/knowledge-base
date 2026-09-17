@@ -46,7 +46,7 @@ RLHF harnesses this asymmetry by converting human preferences into a mathematica
 
     *   **Setup:** We formulate the text generation process as a Markov Decision Process (MDP). The environment provides no intermediate rewards; the only reward comes at the end of generation from the frozen Reward Model.
 
-    *   **Optimization:** We train an Actor model $\pi_	heta$ (initialized from the SFT model) to maximize the expected reward using Proximal Policy Optimization (PPO).
+    *   **Optimization:** We train an Actor model $\pi_\theta$ (initialized from the SFT model) to maximize the expected reward using Proximal Policy Optimization (PPO).
 
     *   **Regularization:** To prevent the Actor from exploiting the Reward Model (reward hacking), we heavily penalize deviations from the original SFT model using a per-token Kullback-Leibler (KL) divergence penalty.
 
@@ -146,11 +146,7 @@ In Phase 2, we train a Reward Model $r_{\psi}$ parameterised by weights $\psi$ t
 
 To map scalar rewards into a probability distribution over preferences, we use the **Bradley-Terry (BT) model**:
 
-$$P(y_w \succ y_l \mid x) = 
-
-
-
-rac{\exp(r_{\psi}(x, y_w))}{\exp(r_{\psi}(x, y_w)) + \exp(r_{\psi}(x, y_l))}$$
+$$P(y_w \succ y_l \mid x) = \frac{\exp(r_{\psi}(x, y_w))}{\exp(r_{\psi}(x, y_w)) + \exp(r_{\psi}(x, y_l))}$$
 
 
 
@@ -170,25 +166,21 @@ This formulation elegantly connects arbitrary scalar reward values to a bounded 
 
 
 
-Once the Reward Model $r_{\psi}$ is frozen, we enter Phase 3. Our goal is to find an optimal policy $\pi_{	heta}$ that maximizes the expected reward while remaining close to the original SFT model (Reference Policy $\pi_{	ext{ref}}$) to prevent degenerate outputs.
+Once the Reward Model $r_{\psi}$ is frozen, we enter Phase 3. Our goal is to find an optimal policy $\pi_{\theta}$ that maximizes the expected reward while remaining close to the original SFT model (Reference Policy $\pi_{\text{ref}}$) to prevent degenerate outputs.
 
 
 
-The unconstrained reward objective would be $\max_{	heta} \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{	heta}(\cdot \mid x)} [r_{\psi}(x, y)]$.
+The unconstrained reward objective would be $\max_{\theta} \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{\theta}(\cdot \mid x)} [r_{\psi}(x, y)]$.
 
-However, optimizing this directly leads to **reward hacking**—the LLM outputs gibberish that exploits blind spots in the reward model. We regularize this using a KL-divergence penalty with coefficient $eta$:
-
-
-
-$$\max_{	heta} J(	heta) = \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{	heta}(\cdot \mid x)} \left[ r_{\psi}(x, y) - eta \mathbb{D}_{	ext{KL}}(\pi_{	heta}(\cdot \mid x) \parallel \pi_{	ext{ref}}(\cdot \mid x)) 
+However, optimizing this directly leads to **reward hacking**—the LLM outputs gibberish that exploits blind spots in the reward model. We regularize this using a KL-divergence penalty with coefficient $\beta$:
 
 
 
-ight]$$
+$$\max_{\theta} J(\theta) = \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{\theta}(\cdot \mid x)} \left[ r_{\psi}(x, y) - \beta \mathbb{D}_{\text{KL}}(\pi_{\theta}(\cdot \mid x) \parallel \pi_{\text{ref}}(\cdot \mid x)) \right]$$
 
 
 
-The coefficient $eta$ dictates the strength of the regularization. A very high $eta$ forces the Actor to perfectly mimic the Reference Model, ignoring the reward. A very low $eta$ allows the Actor to maximize the reward at the cost of generating incoherent text.
+The coefficient $\beta$ dictates the strength of the regularization. A very high $\beta$ forces the Actor to perfectly mimic the Reference Model, ignoring the reward. A very low $\beta$ allows the Actor to maximize the reward at the cost of generating incoherent text.
 
 
 
@@ -200,11 +192,11 @@ While $r_{\psi}(x, y)$ is only computed at the *end* of the sequence (t=T), the 
 
 For a sequence $y = (y_1, \dots, y_T)$, the KL divergence expands via the chain rule of probability.
 
-We define the token-level KL penalty as $\delta_t = \log \pi_{	heta}(y_t \mid \dots) - \log \pi_{	ext{ref}}(y_t \mid \dots)$.
+We define the token-level KL penalty as $\delta_t = \log \pi_{\theta}(y_t \mid \dots) - \log \pi_{\text{ref}}(y_t \mid \dots)$.
 
-The augmented per-token reward $	ilde{r}_t$ becomes:
+The augmented per-token reward $\tilde{r}_t$ becomes:
 
-$$	ilde{r}_t = egin{cases} - eta \delta_t & 	ext{if } t < T \ r_{\psi}(x, y) - eta \delta_T & 	ext{if } t = T \end{cases}$$
+$$\tilde{r}_t = \begin{cases} - \beta \delta_t & \text{if } t < T \ r_{\psi}(x, y) - \beta \delta_T & \text{if } t = T \end{cases}$$
 
 
 
@@ -218,11 +210,11 @@ This transforms the problem from a single-step bandit problem into a sequential 
 
 
 
-With the per-token augmented rewards $	ilde{r}_t$, we train a Critic network $V_{\phi}(x, y_{<t})$ to estimate the expected future return.
+With the per-token augmented rewards $\tilde{r}_t$, we train a Critic network $V_{\phi}(x, y_{<t})$ to estimate the expected future return.
 
 We compute the Generalized Advantage Estimation (GAE) at each token $t$:
 
-$$\delta_t^V = 	ilde{r}_t + \gamma V_{\phi}(x, y_{\le t}) - V_{\phi}(x, y_{<t})$$
+$$\delta_t^V = \tilde{r}_t + \gamma V_{\phi}(x, y_{\le t}) - V_{\phi}(x, y_{<t})$$
 
 
 
@@ -232,21 +224,9 @@ $$\hat{A}_t = \sum_{k=0}^{T-t} (\gamma \lambda)^k \delta_{t+k}^V$$
 
 
 
-We then apply the standard PPO clipped surrogate objective to update the Actor parameters $	heta$:
+We then apply the standard PPO clipped surrogate objective to update the Actor parameters $\theta$:
 
-$$L^{	ext{CLIP}}(	heta) = \mathbb{E} \left[ \min\left( 
-
-
-
-rac{\pi_{	heta}}{\pi_{	heta_{	ext{old}}}} \hat{A}_t, 	ext{clip}\left(
-
-rac{\pi_{	heta}}{\pi_{	heta_{	ext{old}}}}, 1-\epsilon, 1+\epsilon
-
-ight) \hat{A}_t 
-
-ight) 
-
-ight]$$
+$$L^{\text{CLIP}}(\theta) = \mathbb{E} \left[ \min\left( \frac{\pi_{\theta}}{\pi_{\theta_{\text{old}}}} \hat{A}_t, \text{clip}\left( \frac{\pi_{\theta}}{\pi_{\theta_{\text{old}}}}, 1-\epsilon, 1+\epsilon \right) \hat{A}_t \right) \right]$$
 
 
 
@@ -262,27 +242,27 @@ In the RLHF setting, the state $s_t$ at time $t$ encapsulates the prompt $x$ and
 
 Let $G_t$ be the exact discounted return from timestep $t$:
 
-$$ G_t = \sum_{k=0}^{T-t} \gamma^k 	ilde{r}_{t+k} $$
+$$ G_t = \sum_{k=0}^{T-t} \gamma^k \tilde{r}_{t+k} $$
 
 
 
 The unclipped value function loss is simply the MSE:
 
-$$ L^{	ext{VF}}_{	ext{unclipped}}(\phi) = \mathbb{E} \left[ rac{1}{2} (V_{\phi}(s_t) - G_t)^2 ight] $$
+$$ L^{\text{VF}}_{\text{unclipped}}(\phi) = \mathbb{E} \left[ \frac{1}{2} (V_{\phi}(s_t) - G_t)^2 \right] $$
 
 
 
 However, standard PPO implementations (such as the one utilized in OpenAI's InstructGPT) often apply a clipping mechanism to the value function update as well, to prevent the Critic from taking steps that are too large, which could destabilize the GAE calculation for the Actor.
 
-Let $V_{\phi_{	ext{old}}}(s_t)$ be the value prediction from the previous epoch. The clipped value prediction is:
+Let $V_{\phi_{\text{old}}}(s_t)$ be the value prediction from the previous epoch. The clipped value prediction is:
 
-$$ V_{	ext{clipped}}(s_t) = V_{\phi_{	ext{old}}}(s_t) + 	ext{clip}\left( V_{\phi}(s_t) - V_{\phi_{	ext{old}}}(s_t), -\epsilon, \epsilon ight) $$
+$$ V_{\text{clipped}}(s_t) = V_{\phi_{\text{old}}}(s_t) + \text{clip}\left( V_{\phi}(s_t) - V_{\phi_{\text{old}}}(s_t), -\epsilon, \epsilon \right) $$
 
 
 
 The clipped value function loss then becomes the maximum of the unclipped and clipped MSE:
 
-$$ L^{	ext{VF}}(\phi) = \mathbb{E} \left[ \max \left( rac{1}{2} (V_{\phi}(s_t) - G_t)^2, rac{1}{2} (V_{	ext{clipped}}(s_t) - G_t)^2 ight) ight] $$
+$$ L^{\text{VF}}(\phi) = \mathbb{E} \left[ \max \left( \frac{1}{2} (V_{\phi}(s_t) - G_t)^2, \frac{1}{2} (V_{\text{clipped}}(s_t) - G_t)^2 \right) \right] $$
 
 
 
@@ -296,13 +276,13 @@ To encourage exploration and prevent the Actor policy from prematurely collapsin
 
 The Shannon entropy of the policy distribution at step $t$ is:
 
-$$ \mathcal{H}(\pi_{	heta}(\cdot \mid s_t)) = - \sum_{y_t \in \mathcal{V}} \pi_{	heta}(y_t \mid s_t) \log \pi_{	heta}(y_t \mid s_t) $$
+$$ \mathcal{H}(\pi_{\theta}(\cdot \mid s_t)) = - \sum_{y_t \in \mathcal{V}} \pi_{\theta}(y_t \mid s_t) \log \pi_{\theta}(y_t \mid s_t) $$
 
 where $\mathcal{V}$ is the vocabulary size.
 
 The total PPO objective maximized by Adam is thus:
 
-$$ \mathcal{L}^{	ext{PPO}}(	heta, \phi) = \mathbb{E} \left[ L^{	ext{CLIP}}(	heta) - c_1 L^{	ext{VF}}(\phi) + c_2 \mathcal{H}(\pi_{	heta}(\cdot \mid s_t)) ight] $$
+$$ \mathcal{L}^{\text{PPO}}(\theta, \phi) = \mathbb{E} \left[ L^{\text{CLIP}}(\theta) - c_1 L^{\text{VF}}(\phi) + c_2 \mathcal{H}(\pi_{\theta}(\cdot \mid s_t)) \right] $$
 
 where $c_1$ is the value coefficient (typically $0.5$) and $c_2$ is the entropy coefficient (typically $0.01$).
 
@@ -320,35 +300,29 @@ where $c_1$ is the value coefficient (typically $0.5$) and $c_2$ is the entropy 
 
 In addition to the primary derivations above, it is crucial to understand the Fisher Information Matrix (FIM) implications of the KL penalty.
 
-When we constrain the policy update using $\mathbb{D}_{	ext{KL}}(\pi_{	heta} \parallel \pi_{	ext{ref}})$, we are effectively transforming the Euclidean gradient descent into Natural Gradient Descent (NGD).
+When we constrain the policy update using $\mathbb{D}_{\text{KL}}(\pi_{\theta} \parallel \pi_{\text{ref}})$, we are effectively transforming the Euclidean gradient descent into Natural Gradient Descent (NGD).
 
-The KL divergence can be Taylor-expanded around the current policy parameters $	heta$:
+The KL divergence can be Taylor-expanded around the current policy parameters $\theta$:
 
-$$ \mathbb{D}_{	ext{KL}}(\pi_{	heta} \parallel \pi_{	heta + \Delta 	heta}) pprox 
+$$ \mathbb{D}_{\text{KL}}(\pi_{\theta} \parallel \pi_{\theta + \Delta \theta}) \approx \frac{1}{2} \Delta \theta^	op \mathbf{F}(\theta) \Delta \theta $$
 
+where $\mathbf{F}(\theta)$ is the Fisher Information Matrix:
 
-
-rac{1}{2} \Delta 	heta^	op \mathbf{F}(	heta) \Delta 	heta $$
-
-where $\mathbf{F}(	heta)$ is the Fisher Information Matrix:
-
-$$ \mathbf{F}(	heta) = \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{	heta}} \left[ 
+$$ \mathbf{F}(\theta) = \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_{\theta}} \left[ 
 
 
 
-abla_{	heta} \log \pi_{	heta}(y \mid x) 
+abla_{\theta} \log \pi_{\theta}(y \mid x) 
 
-abla_{	heta} \log \pi_{	heta}(y \mid x)^	op 
-
-ight] $$
+abla_{\theta} \log \pi_{\theta}(y \mid x)^	op \right] $$
 
 By regularizing against the reference model, PPO implicitly approximates this natural gradient trust region. This ensures that a small step in parameter space does not cause a catastrophic shift in the actual probability distribution of the text generated.
 
-If $eta$ is too small, the Fisher Information constraint is weak, and the model takes steps that are too large in the distribution space, destroying the linguistic coherence learned during SFT.
+If $\beta$ is too small, the Fisher Information constraint is weak, and the model takes steps that are too large in the distribution space, destroying the linguistic coherence learned during SFT.
 
-If $eta$ is too large, the constraint is overwhelmingly strong, and the model cannot update its parameters enough to maximize the reward.
+If $\beta$ is too large, the constraint is overwhelmingly strong, and the model cannot update its parameters enough to maximize the reward.
 
-This is why adaptive $eta$ scaling (or using the clipped surrogate objective of PPO instead of a pure penalty) is favored in modern RLHF systems.
+This is why adaptive $\beta$ scaling (or using the clipped surrogate objective of PPO instead of a pure penalty) is favored in modern RLHF systems.
 
 
 
@@ -392,21 +366,11 @@ Step 1: Formulate the Negative Log-Likelihood (BCE Loss)
 
 The likelihood of the observed preference dataset $\mathcal{D}$ under our parameterized model is the product of individual probabilities. To ensure numerical stability and transform the product into a sum, we take the negative logarithm, yielding the Binary Cross-Entropy (BCE) loss:
 
-$$L_{	ext{RM}}(\psi) = - \mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log P(y_w \succ y_l \mid x) 
-
-
-
-ight]$$
+$$L_{\text{RM}}(\psi) = - \mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log P(y_w \succ y_l \mid x) \right]$$
 
 Substitute the Bradley-Terry probability model into the objective:
 
-$$L_{	ext{RM}}(\psi) = - \mathbb{E} \left[ \log \left( \sigma(r_{\psi}(x, y_w) - r_{\psi}(x, y_l)) 
-
-
-
-ight) 
-
-ight]$$
+$$L_{\text{RM}}(\psi) = - \mathbb{E} \left[ \log \left( \sigma(r_{\psi}(x, y_w) - r_{\psi}(x, y_l)) \right) \right]$$
 
 
 
@@ -420,7 +384,7 @@ $$\Delta r = r_{\psi}(x, y_w) - r_{\psi}(x, y_l)$$
 
 The loss function for a single training sample gracefully simplifies to:
 
-$$L_{	ext{RM}} = - \log \sigma(\Delta r)$$
+$$L_{\text{RM}} = - \log \sigma(\Delta r)$$
 
 
 
@@ -432,37 +396,15 @@ We require the derivative of the logarithm of the logistic sigmoid function.
 
 Recall the fundamental derivative property of $\sigma(z)$:
 
-$$
-
-
-
-rac{d \sigma(z)}{dz} = \sigma(z)(1 - \sigma(z))$$
+$$ \frac{d \sigma(z)}{dz} = \sigma(z)(1 - \sigma(z))$$
 
 Therefore, applying the chain rule to the natural logarithm:
 
-$$
-
-
-
-rac{d}{dz} \log \sigma(z) = 
-
-rac{1}{\sigma(z)} 
-
-rac{d \sigma(z)}{dz} = 
-
-rac{1}{\sigma(z)} \left[ \sigma(z)(1 - \sigma(z)) 
-
-ight] = 1 - \sigma(z)$$
+$$ \frac{d}{dz} \log \sigma(z) = \frac{1}{\sigma(z)} \frac{d \sigma(z)}{dz} = \frac{1}{\sigma(z)} \left[ \sigma(z)(1 - \sigma(z)) \right] = 1 - \sigma(z)$$
 
 Applying this identity to our loss function:
 
-$$
-
-
-
-rac{\partial L_{	ext{RM}}}{\partial \Delta r} = 
-
-rac{\partial}{\partial \Delta r} (- \log \sigma(\Delta r)) = - (1 - \sigma(\Delta r))$$
+$$ \frac{\partial L_{\text{RM}}}{\partial \Delta r} = \frac{\partial}{\partial \Delta r} (- \log \sigma(\Delta r)) = - (1 - \sigma(\Delta r))$$
 
 
 
@@ -472,31 +414,15 @@ Let $r_w = r_{\psi}(x, y_w)$. We want to evaluate how the loss changes when the 
 
 First, compute the partial derivative of the margin with respect to $r_w$:
 
-$$
-
-
-
-rac{\partial \Delta r}{\partial r_w} = 
-
-rac{\partial}{\partial r_w} (r_w - r_l) = 1$$
+$$ \frac{\partial \Delta r}{\partial r_w} = \frac{\partial}{\partial r_w} (r_w - r_l) = 1$$
 
 Next, employ the chain rule to find the gradient of the loss:
 
-$$
-
-
-
-rac{\partial L_{	ext{RM}}}{\partial r_w} = 
-
-rac{\partial L_{	ext{RM}}}{\partial \Delta r} 
-
-rac{\partial \Delta r}{\partial r_w} = - (1 - \sigma(\Delta r)) \cdot 1 = - (1 - \sigma(\Delta r))$$
+$$ \frac{\partial L_{\text{RM}}}{\partial r_w} = \frac{\partial L_{\text{RM}}}{\partial \Delta r} \frac{\partial \Delta r}{\partial r_w} = - (1 - \sigma(\Delta r)) \cdot 1 = - (1 - \sigma(\Delta r))$$
 
 Because the output of the sigmoid function $\sigma(\Delta r)$ is strictly bounded in $(0, 1)$, the term $(1 - \sigma(\Delta r))$ is always strictly positive. Consequently, the gradient is strictly negative.
 
-During gradient descent, we update the parameters by subtracting a fraction of the gradient: $\psi \leftarrow \psi - lpha 
-
-abla L$. Subtracting a negative number means we ADD to $r_w$. Thus, the optimization correctly pushes the score of the winning response UP.
+During gradient descent, we update the parameters by subtracting a fraction of the gradient: $\psi \leftarrow \psi - \alpha \nabla L$. Subtracting a negative number means we ADD to $r_w$. Thus, the optimization correctly pushes the score of the winning response UP.
 
 
 
@@ -504,25 +430,11 @@ Step 5: Gradient with respect to the Losing Response $r_l$
 
 Let $r_l = r_{\psi}(x, y_l)$. Evaluate the partial derivative of the margin:
 
-$$
-
-
-
-rac{\partial \Delta r}{\partial r_l} = 
-
-rac{\partial}{\partial r_l} (r_w - r_l) = -1$$
+$$ \frac{\partial \Delta r}{\partial r_l} = \frac{\partial}{\partial r_l} (r_w - r_l) = -1$$
 
 Employ the chain rule:
 
-$$
-
-
-
-rac{\partial L_{	ext{RM}}}{\partial r_l} = 
-
-rac{\partial L_{	ext{RM}}}{\partial \Delta r} 
-
-rac{\partial \Delta r}{\partial r_l} = - (1 - \sigma(\Delta r)) \cdot (-1) = + (1 - \sigma(\Delta r))$$
+$$ \frac{\partial L_{\text{RM}}}{\partial r_l} = \frac{\partial L_{\text{RM}}}{\partial \Delta r} \frac{\partial \Delta r}{\partial r_l} = - (1 - \sigma(\Delta r)) \cdot (-1) = + (1 - \sigma(\Delta r))$$
 
 This gradient is strictly positive. During gradient descent, subtracting a positive gradient means we SUBTRACT from $r_l$. Thus, the optimization correctly pushes the score of the losing response DOWN.
 
@@ -532,17 +444,11 @@ Step 6: Analysis of Symmetry and Logistic Saturation
 
 Observe that the gradients are perfectly equal in magnitude and precisely opposite in sign:
 
-$$
-
-
-
-rac{\partial L_{	ext{RM}}}{\partial r_w} = - 
-
-rac{\partial L_{	ext{RM}}}{\partial r_l}$$
+$$ \frac{\partial L_{\text{RM}}}{\partial r_w} = - \frac{\partial L_{\text{RM}}}{\partial r_l}$$
 
 This establishes that the reward model operates symmetrically: for every unit it pushes the winning score up, it pushes the losing score down by the exact same amount.
 
-Furthermore, analyze the asymptotic behavior. As the margin $\Delta r 	o \infty$ (meaning the model is highly confident in its correct prediction), $\sigma(\Delta r) 	o 1$. Consequently, the gradient magnitude $(1 - \sigma(\Delta r)) 	o 0$. This logistic saturation is a critical safety mechanism: it prevents the model from endlessly increasing the magnitude of its weights (exploding gradients) once a clear, decisive margin has been established.
+Furthermore, analyze the asymptotic behavior. As the margin $\Delta r \to \infty$ (meaning the model is highly confident in its correct prediction), $\sigma(\Delta r) \to 1$. Consequently, the gradient magnitude $(1 - \sigma(\Delta r)) \to 0$. This logistic saturation is a critical safety mechanism: it prevents the model from endlessly increasing the magnitude of its weights (exploding gradients) once a clear, decisive margin has been established.
 
 ====================================================================================================
 
@@ -560,13 +466,7 @@ Problem Statement:
 
 Find the globally optimal policy $\pi^*$ that maximizes the regularized RLHF objective analytically.
 
-$$\max_{\pi} \mathbb{E}_{y \sim \pi} \left[ r(x, y) - eta \log 
-
-
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} 
-
-ight]$$
+$$\max_{\pi} \mathbb{E}_{y \sim \pi} \left[ r(x, y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \right]$$
 
 subject to the valid probability distribution constraint $\sum_y \pi(y \mid x) = 1$.
 
@@ -578,15 +478,7 @@ Step 1: Formulate the Constrained Optimization Lagrangian
 
 To optimize a functional subject to an equality constraint, we rely on the method of Lagrange multipliers. We introduce a multiplier $\lambda$ corresponding to the requirement that the probabilities must sum to 1.
 
-$$L(\pi, \lambda) = \sum_y \pi(y \mid x) \left[ r(x, y) - eta \log 
-
-
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} 
-
-ight] + \lambda \left( 1 - \sum_y \pi(y \mid x) 
-
-ight)$$
+$$L(\pi, \lambda) = \sum_y \pi(y \mid x) \left[ r(x, y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \right] + \lambda \left( 1 - \sum_y \pi(y \mid x) \right)$$
 
 Here, we have explicitly expanded the expectation $\mathbb{E}_{y \sim \pi}$ into a sum over all possible sequences $y$.
 
@@ -598,47 +490,19 @@ We take the partial derivative of the Lagrangian with respect to the probability
 
 We will require the product rule and chain rule for the derivative of $x \log x$:
 
-$$
-
-
-
-rac{d}{dx} (x \log x) = \log x + x \cdot 
-
-rac{1}{x} = \log x + 1$$
+$$ \frac{d}{dx} (x \log x) = \log x + x \cdot \frac{1}{x} = \log x + 1$$
 
 Applying this to our Lagrangian:
 
-$$
-
-
-
-rac{\partial L}{\partial \pi(y \mid x)} = r(x, y) - eta \log 
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} - eta \pi(y \mid x) \left( 
-
-rac{\pi_{	ext{ref}}(y \mid x)}{\pi(y \mid x)} 
-
-ight) \left( 
-
-rac{1}{\pi_{	ext{ref}}(y \mid x)} 
-
-ight) - \lambda = 0$$
+$$ \frac{\partial L}{\partial \pi(y \mid x)} = r(x, y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} - \beta \pi(y \mid x) \left( \frac{\pi_{\text{ref}}(y \mid x)}{\pi(y \mid x)} \right) \left( \frac{1}{\pi_{\text{ref}}(y \mid x)} \right) - \lambda = 0$$
 
 The complex third term elegantly simplifies:
 
-$$- eta \pi(y \mid x) \cdot 
-
-
-
-rac{1}{\pi(y \mid x)} = - eta$$
+$$- \beta \pi(y \mid x) \cdot \frac{1}{\pi(y \mid x)} = - \beta$$
 
 Substituting this back, we obtain the simplified stationarity condition:
 
-$$r(x, y) - eta \log 
-
-
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} - eta - \lambda = 0$$
+$$r(x, y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} - \beta - \lambda = 0$$
 
 
 
@@ -646,53 +510,19 @@ Step 3: Algebraic Isolation of the Optimal Policy Distribution
 
 We rearrange the stationarity condition to isolate the logarithm term:
 
-$$eta \log 
+$$\beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} = r(x, y) - \beta - \lambda$$
 
+Divide the entire equation by the regularization coefficient $\beta$:
 
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} = r(x, y) - eta - \lambda$$
-
-Divide the entire equation by the regularization coefficient $eta$:
-
-$$\log 
-
-
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} = 
-
-rac{r(x, y)}{eta} - 
-
-rac{eta + \lambda}{eta}$$
+$$\log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} = \frac{r(x, y)}{\beta} - \frac{\beta + \lambda}{\beta}$$
 
 Exponentiate both sides of the equation to eliminate the logarithm:
 
-$$
+$$ \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} = \exp\left( \frac{r(x, y)}{\beta} \right) \exp\left( - \frac{\beta + \lambda}{\beta} \right)$$
 
+Multiply by $\pi_{\text{ref}}(y \mid x)$ to solve for $\pi^*$:
 
-
-rac{\pi(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} = \exp\left( 
-
-rac{r(x, y)}{eta} 
-
-ight) \exp\left( - 
-
-rac{eta + \lambda}{eta} 
-
-ight)$$
-
-Multiply by $\pi_{	ext{ref}}(y \mid x)$ to solve for $\pi^*$:
-
-$$\pi^*(y \mid x) = \pi_{	ext{ref}}(y \mid x) \exp\left( 
-
-
-
-rac{r(x, y)}{eta} 
-
-ight) \exp\left( - 
-
-rac{eta + \lambda}{eta} 
-
-ight)$$
+$$\pi^*(y \mid x) = \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right) \exp\left( - \frac{\beta + \lambda}{\beta} \right)$$
 
 
 
@@ -702,61 +532,19 @@ We must ensure that our solution satisfies the initial constraint: $\sum_y \pi^*
 
 Summing our expression over all possible sequences $y$:
 
-$$1 = \sum_y \pi_{	ext{ref}}(y \mid x) \exp\left( 
+$$1 = \sum_y \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right) \exp\left( - \frac{\beta + \lambda}{\beta} \right)$$
 
+Crucially, the term $\exp\left( - \frac{\beta + \lambda}{\beta} \right)$ acts as a constant with respect to $y$, allowing us to factor it out of the summation:
 
-
-rac{r(x, y)}{eta} 
-
-ight) \exp\left( - 
-
-rac{eta + \lambda}{eta} 
-
-ight)$$
-
-Crucially, the term $\exp\left( - 
-
-rac{eta + \lambda}{eta} 
-
-ight)$ acts as a constant with respect to $y$, allowing us to factor it out of the summation:
-
-$$1 = \exp\left( - 
-
-
-
-rac{eta + \lambda}{eta} 
-
-ight) \sum_y \pi_{	ext{ref}}(y \mid x) \exp\left( 
-
-rac{r(x, y)}{eta} 
-
-ight)$$
+$$1 = \exp\left( - \frac{\beta + \lambda}{\beta} \right) \sum_y \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right)$$
 
 Let us define the partition function $Z(x)$ as the sum over all possible responses, weighted by their exponentially scaled reward under the reference model:
 
-$$Z(x) = \sum_y \pi_{	ext{ref}}(y \mid x) \exp\left( 
-
-
-
-rac{r(x, y)}{eta} 
-
-ight)$$
+$$Z(x) = \sum_y \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right)$$
 
 Substituting $Z(x)$ back into the normalization equation:
 
-$$1 = \exp\left( - 
-
-
-
-rac{eta + \lambda}{eta} 
-
-ight) Z(x) \implies \exp\left( - 
-
-rac{eta + \lambda}{eta} 
-
-ight) = 
-
-rac{1}{Z(x)}$$
+$$1 = \exp\left( - \frac{\beta + \lambda}{\beta} \right) Z(x) \implies \exp\left( - \frac{\beta + \lambda}{\beta} \right) = \frac{1}{Z(x)}$$
 
 
 
@@ -764,15 +552,7 @@ Step 5: The Final Form of the Optimal Policy
 
 Substitute the derived normalization constant back into the equation for $\pi^*$:
 
-$$\pi^*(y \mid x) = 
-
-
-
-rac{1}{Z(x)} \pi_{	ext{ref}}(y \mid x) \exp\left( 
-
-rac{r(x, y)}{eta} 
-
-ight)$$
+$$\pi^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right)$$
 
 This represents a profound theoretical result: the optimal RLHF policy is simply the original SFT reference policy, exponentially re-weighted by the reward landscape, and normalized by the partition function $Z(x)$.
 
@@ -782,47 +562,19 @@ Step 6: The Foundational Derivation of DPO
 
 We can invert the relationship derived above to express the reward $r(x,y)$ entirely as a function of policy probabilities.
 
-$$\exp\left( 
+$$\exp\left( \frac{r(x, y)}{\beta} \right) = \frac{\pi^*(y \mid x)}{\pi_{\text{ref}}(y \mid x)} Z(x)$$
 
+Taking the natural logarithm and multiplying by $\beta$:
 
-
-rac{r(x, y)}{eta} 
-
-ight) = 
-
-rac{\pi^*(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} Z(x)$$
-
-Taking the natural logarithm and multiplying by $eta$:
-
-$$r(x, y) = eta \log 
-
-
-
-rac{\pi^*(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} + eta \log Z(x)$$
+$$r(x, y) = \beta \log \frac{\pi^*(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)$$
 
 If we substitute this optimal implicit reward formulation into the Bradley-Terry preference loss $\sigma(r_w - r_l)$, we compute the reward margin:
 
-$$r_w - r_l = \left( eta \log 
-
-
-
-rac{\pi^*(y_w \mid x)}{\pi_{	ext{ref}}(y_w \mid x)} + eta \log Z(x) 
-
-ight) - \left( eta \log 
-
-rac{\pi^*(y_l \mid x)}{\pi_{	ext{ref}}(y_l \mid x)} + eta \log Z(x) 
-
-ight)$$
+$$r_w - r_l = \left( \beta \log \frac{\pi^*(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} + \beta \log Z(x) \right) - \left( \beta \log \frac{\pi^*(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)} + \beta \log Z(x) \right)$$
 
 The intractable partition function $Z(x)$, which is computationally impossible to evaluate directly as it requires a sum over all valid text sequences in the universe, perfectly cancels out!
 
-$$r_w - r_l = eta \log 
-
-
-
-rac{\pi^*(y_w \mid x)}{\pi_{	ext{ref}}(y_w \mid x)} - eta \log 
-
-rac{\pi^*(y_l \mid x)}{\pi_{	ext{ref}}(y_l \mid x)}$$
+$$r_w - r_l = \beta \log \frac{\pi^*(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \beta \log \frac{\pi^*(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}$$
 
 This beautiful cancellation forms the absolute bedrock of Direct Preference Optimization (DPO), allowing engineers to bypass the explicit reward model phase entirely and optimize the policy directly on human preferences.
 
@@ -840,7 +592,7 @@ This beautiful cancellation forms the absolute bedrock of Direct Preference Opti
 
 Problem Statement:
 
-Prove mathematically that the sequence-level KL divergence between the Actor $\pi_{	heta}$ and Reference $\pi_{	ext{ref}}$ can be decomposed into an exact sum of expected per-token log-probability ratios. Show how this integrates into an augmented reward MDP, enabling token-by-token reinforcement learning.
+Prove mathematically that the sequence-level KL divergence between the Actor $\pi_{\theta}$ and Reference $\pi_{\text{ref}}$ can be decomposed into an exact sum of expected per-token log-probability ratios. Show how this integrates into an augmented reward MDP, enabling token-by-token reinforcement learning.
 
 
 
@@ -850,13 +602,7 @@ Consider a full trajectory (a complete sequence of text) $y = (y_1, \dots, y_T)$
 
 By the standard definition of relative entropy, the KL divergence is the expectation over the policy distribution of the log-ratio of the probability distributions:
 
-$$\mathbb{D}_{	ext{KL}}(\pi_{	heta}(y \mid x) \parallel \pi_{	ext{ref}}(y \mid x)) = \mathbb{E}_{y \sim \pi_{	heta}} \left[ \log 
-
-
-
-rac{\pi_{	heta}(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} 
-
-ight]$$
+$$\mathbb{D}_{\text{KL}}(\pi_{\theta}(y \mid x) \parallel \pi_{\text{ref}}(y \mid x)) = \mathbb{E}_{y \sim \pi_{\theta}} \left[ \log \frac{\pi_{\theta}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \right]$$
 
 
 
@@ -866,13 +612,13 @@ Large language models generate text autoregressively, token by token. The joint 
 
 For the Actor policy:
 
-$$\pi_{	heta}(y \mid x) = \prod_{t=1}^T \pi_{	heta}(y_t \mid x, y_{<t})$$
+$$\pi_{\theta}(y \mid x) = \prod_{t=1}^T \pi_{\theta}(y_t \mid x, y_{<t})$$
 
 
 
 For the Reference policy:
 
-$$\pi_{	ext{ref}}(y \mid x) = \prod_{t=1}^T \pi_{	ext{ref}}(y_t \mid x, y_{<t})$$
+$$\pi_{\text{ref}}(y \mid x) = \prod_{t=1}^T \pi_{\text{ref}}(y_t \mid x, y_{<t})$$
 
 
 
@@ -882,25 +628,11 @@ Step 3: Substitute the Factorizations into the Log-Ratio
 
 We replace the sequence-level probabilities with their token-level autoregressive products:
 
-$$\log 
-
-
-
-rac{\pi_{	heta}(y \mid x)}{\pi_{	ext{ref}}(y \mid x)} = \log \left( 
-
-rac{\prod_{t=1}^T \pi_{	heta}(y_t \mid x, y_{<t})}{\prod_{t=1}^T \pi_{	ext{ref}}(y_t \mid x, y_{<t})} 
-
-ight)$$
+$$\log \frac{\pi_{\theta}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} = \log \left( \frac{\prod_{t=1}^T \pi_{\theta}(y_t \mid x, y_{<t})}{\prod_{t=1}^T \pi_{\text{ref}}(y_t \mid x, y_{<t})} \right)$$
 
 Group the products into a single product of ratios:
 
-$$= \log \left( \prod_{t=1}^T 
-
-
-
-rac{\pi_{	heta}(y_t \mid x, y_{<t})}{\pi_{	ext{ref}}(y_t \mid x, y_{<t})} 
-
-ight)$$
+$$= \log \left( \prod_{t=1}^T \frac{\pi_{\theta}(y_t \mid x, y_{<t})}{\pi_{\text{ref}}(y_t \mid x, y_{<t})} \right)$$
 
 
 
@@ -910,15 +642,7 @@ A core property of logarithms is that the logarithm of a product is exactly equi
 
 Applying this to our sequence:
 
-$$\log \left( \prod_{t=1}^T 
-
-
-
-rac{\pi_{	heta}(y_t \mid x, y_{<t})}{\pi_{	ext{ref}}(y_t \mid x, y_{<t})} 
-
-ight) = \sum_{t=1}^T \log 
-
-rac{\pi_{	heta}(y_t \mid x, y_{<t})}{\pi_{	ext{ref}}(y_t \mid x, y_{<t})}$$
+$$\log \left( \prod_{t=1}^T \frac{\pi_{\theta}(y_t \mid x, y_{<t})}{\pi_{\text{ref}}(y_t \mid x, y_{<t})} \right) = \sum_{t=1}^T \log \frac{\pi_{\theta}(y_t \mid x, y_{<t})}{\pi_{\text{ref}}(y_t \mid x, y_{<t})}$$
 
 
 
@@ -926,35 +650,31 @@ Step 5: Formulate the Token-Level KL Penalty
 
 Let us define $\delta_t$ to represent the precise per-token logarithmic deviation of the Actor from the Reference model.
 
-$$\delta_t = \log \pi_{	heta}(y_t \mid x, y_{<t}) - \log \pi_{	ext{ref}}(y_t \mid x, y_{<t})$$
+$$\delta_t = \log \pi_{\theta}(y_t \mid x, y_{<t}) - \log \pi_{\text{ref}}(y_t \mid x, y_{<t})$$
 
 
 
 Substituting this definition back into our expectation, we conclude that the full sequence KL divergence is simply the expectation over the sum of these individual $\delta_t$ terms:
 
-$$\mathbb{D}_{	ext{KL}}(\pi_{	heta} \parallel \pi_{	ext{ref}}) = \mathbb{E}_{y \sim \pi_{	heta}} \left[ \sum_{t=1}^T \delta_t 
-
-
-
-ight]$$
+$$\mathbb{D}_{\text{KL}}(\pi_{\theta} \parallel \pi_{\text{ref}}) = \mathbb{E}_{y \sim \pi_{\theta}} \left[ \sum_{t=1}^T \delta_t \right]$$
 
 
 
 Step 6: Construction of the Augmented Reward MDP
 
-In reinforcement learning, the agent receives an environmental reward $r_t^{	ext{env}}$. In standard RLHF, this environmental reward is entirely sparse: it is $0$ for all intermediate tokens $t < T$, and is equal to the Bradley-Terry Reward Model score $r_{\psi}(x, y)$ only at the terminal token $t = T$.
+In reinforcement learning, the agent receives an environmental reward $r_t^{\text{env}}$. In standard RLHF, this environmental reward is entirely sparse: it is $0$ for all intermediate tokens $t < T$, and is equal to the Bradley-Terry Reward Model score $r_{\psi}(x, y)$ only at the terminal token $t = T$.
 
 However, optimizing a sparse reward is highly inefficient and prone to reward hacking. To rectify this, we integrate the token-level KL penalty $\delta_t$ directly into a dense, step-by-step **augmented reward** signal:
 
-$$	ilde{r}_t = r_t^{	ext{env}} - eta \delta_t$$
+$$\tilde{r}_t = r_t^{\text{env}} - \beta \delta_t$$
 
 
 
 Explicitly evaluating this for different timesteps:
 
-For intermediate tokens $t < T$: $	ilde{r}_t = 0 - eta \delta_t = - eta \delta_t$
+For intermediate tokens $t < T$: $\tilde{r}_t = 0 - \beta \delta_t = - \beta \delta_t$
 
-For the terminal token $t = T$: $	ilde{r}_t = r_{\psi}(x, y) - eta \delta_T$
+For the terminal token $t = T$: $\tilde{r}_t = r_{\psi}(x, y) - \beta \delta_T$
 
 
 
@@ -978,9 +698,9 @@ Imagine a highly complex, rugged mountain landscape where the elevation represen
 
 - **Unconstrained RL:** Without a Reference Model (no KL penalty), the LLM will strap on a jetpack and blast off towards bizarre, alien coordinates far off the map. This is "reward hacking." The neural network finds inputs that mathematically yield infinite reward due to adversarial artifacts, but these inputs are actually complete gibberish text in reality.
 
-- **The Anchor (Reference Policy):** The SFT Reference Policy $\pi_{	ext{ref}}$ acts like a heavy anchor permanently bolted to a known safe basecamp (the manifold of human-readable text).
+- **The Anchor (Reference Policy):** The SFT Reference Policy $\pi_{\text{ref}}$ acts like a heavy anchor permanently bolted to a known safe basecamp (the manifold of human-readable text).
 
-- **The Bungee Cord (KL Penalty):** The KL Penalty coefficient $eta$ acts as a massive elastic bungee cord connecting the Actor to the anchor.
+- **The Bungee Cord (KL Penalty):** The KL Penalty coefficient $\beta$ acts as a massive elastic bungee cord connecting the Actor to the anchor.
 
 - **Physical Equilibrium:** The optimization process seeks a physical equilibrium. The Actor hikes uphill, pulled by the upward force of the reward gradient. However, as it moves further away from the basecamp, the elastic tension of the KL bungee cord increases. The Actor will eventually stop at a point where the upward pull of the reward exactly balances the downward snap of the bungee cord.
 
@@ -1072,13 +792,9 @@ For Pair 1:
 
 - Margin $\Delta r = 2.3 - (-0.8) = 3.1$
 
-- $\sigma(\Delta r) = \sigma(3.1) = 
+- $\sigma(\Delta r) = \sigma(3.1) = \frac{1}{1 + \exp(-3.1)} = \frac{1}{1 + 0.0450} \approx 0.9569$
 
-rac{1}{1 + \exp(-3.1)} = 
-
-rac{1}{1 + 0.0450} pprox 0.9569$
-
-- Loss $= -\log(0.9569) pprox 0.0441$
+- Loss $= -\log(0.9569) \approx 0.0441$
 
 - Grad multiplier for $r_w$: $-(1 - 0.9569) = -0.0431$ (push up slightly)
 
@@ -1090,13 +806,9 @@ For Pair 2 (Model predicts incorrectly):
 
 - Margin $\Delta r = 1.1 - 1.5 = -0.4$
 
-- $\sigma(-0.4) = 
+- $\sigma(-0.4) = \frac{1}{1 + \exp(0.4)} = \frac{1}{1 + 1.4918} \approx 0.4013$
 
-rac{1}{1 + \exp(0.4)} = 
-
-rac{1}{1 + 1.4918} pprox 0.4013$
-
-- Loss $= -\log(0.4013) pprox 0.9130$
+- Loss $= -\log(0.4013) \approx 0.9130$
 
 - Grad multiplier for $r_w$: $-(1 - 0.4013) = -0.5987$ (push up strongly)
 
@@ -1108,11 +820,9 @@ For Pair 3:
 
 - Margin $\Delta r = 0.5 - 0.4 = 0.1$
 
-- $\sigma(0.1) = 
+- $\sigma(0.1) = \frac{1}{1 + \exp(-0.1)} \approx 0.5250$
 
-rac{1}{1 + \exp(-0.1)} pprox 0.5250$
-
-- Loss $= -\log(0.5250) pprox 0.6444$
+- Loss $= -\log(0.5250) \approx 0.6444$
 
 - Grad multiplier for $r_w$: $-(1 - 0.5250) = -0.4750$
 
@@ -1156,45 +866,45 @@ Prompt: "What is the capital of France?"
 
 The Actor generates 4 tokens: `["The", "capital", "is", "Paris"]`.
 
-We have a KL penalty coefficient $eta = 0.1$.
+We have a KL penalty coefficient $\beta = 0.1$.
 
 Let's compute the token-level KL penalties, the augmented rewards, and the PPO probability ratios.
 
 
 
-Assume the Actor $\pi_{	heta}$ and Ref Model $\pi_{	ext{ref}}$ assign the following log-probabilities to the generated tokens during the rollout:
+Assume the Actor $\pi_{\theta}$ and Ref Model $\pi_{\text{ref}}$ assign the following log-probabilities to the generated tokens during the rollout:
 
-- Token 1 ("The"): Actor $\log \pi_{	heta} = -0.2$, Ref $\log \pi_{	ext{ref}} = -0.5$
+- Token 1 ("The"): Actor $\log \pi_{\theta} = -0.2$, Ref $\log \pi_{\text{ref}} = -0.5$
 
-- Token 2 ("capital"): Actor $\log \pi_{	heta} = -0.1$, Ref $\log \pi_{	ext{ref}} = -0.1$
+- Token 2 ("capital"): Actor $\log \pi_{\theta} = -0.1$, Ref $\log \pi_{\text{ref}} = -0.1$
 
-- Token 3 ("is"): Actor $\log \pi_{	heta} = -0.4$, Ref $\log \pi_{	ext{ref}} = -0.2$
+- Token 3 ("is"): Actor $\log \pi_{\theta} = -0.4$, Ref $\log \pi_{\text{ref}} = -0.2$
 
-- Token 4 ("Paris"): Actor $\log \pi_{	heta} = -0.1$, Ref $\log \pi_{	ext{ref}} = -0.8$
-
-
-
-At the end of the sequence, the frozen Reward Model gives a scalar score: $r_{	ext{RM}} = 5.0$.
+- Token 4 ("Paris"): Actor $\log \pi_{\theta} = -0.1$, Ref $\log \pi_{\text{ref}} = -0.8$
 
 
 
-**KL Penalty ($\delta_t = \log \pi_{	heta} - \log \pi_{	ext{ref}}$) and Augmented Reward ($	ilde{r}_t = r_t^{	ext{env}} - eta \delta_t$):**
+At the end of the sequence, the frozen Reward Model gives a scalar score: $r_{\text{RM}} = 5.0$.
+
+
+
+**KL Penalty ($\delta_t = \log \pi_{\theta} - \log \pi_{\text{ref}}$) and Augmented Reward ($\tilde{r}_t = r_t^{\text{env}} - \beta \delta_t$):**
 
 - t=1 ("The"): $\delta_1 = -0.2 - (-0.5) = 0.3$. 
 
-  $	ilde{r}_1 = 0 - 0.1(0.3) = -0.03$
+  $\tilde{r}_1 = 0 - 0.1(0.3) = -0.03$
 
 - t=2 ("capital"): $\delta_2 = -0.1 - (-0.1) = 0.0$. 
 
-  $	ilde{r}_2 = 0 - 0.1(0.0) = 0.00$
+  $\tilde{r}_2 = 0 - 0.1(0.0) = 0.00$
 
 - t=3 ("is"): $\delta_3 = -0.4 - (-0.2) = -0.2$. 
 
-  $	ilde{r}_3 = 0 - 0.1(-0.2) = +0.02$
+  $\tilde{r}_3 = 0 - 0.1(-0.2) = +0.02$
 
 - t=4 ("Paris"): $\delta_4 = -0.1 - (-0.8) = 0.7$. 
 
-  $	ilde{r}_4 = 5.0 - 0.1(0.7) = 5.0 - 0.07 = 4.93$
+  $\tilde{r}_4 = 5.0 - 0.1(0.7) = 5.0 - 0.07 = 4.93$
 
 
 
@@ -1246,23 +956,19 @@ In all the numerical illustrations above, we used raw scalar outputs from the ne
 
 1. **Reward Normalization:** Before passing the Reward Model score $r_{\psi}(x, y)$ to the PPO algorithm, it is standard practice to maintain a running mean $\mu_R$ and variance $\sigma_R^2$ of the rewards, and normalize them:
 
-   $$ r_{	ext{norm}} = 
-
-rac{r - \mu_R}{\sqrt{\sigma_R^2 + \epsilon}} $$
+   $$ r_{\text{norm}} = \frac{r - \mu_R}{\sqrt{\sigma_R^2 + \epsilon}} $$
 
    This ensures that the environmental reward remains on a consistent scale (usually unit variance) regardless of the prompt difficulty, preventing the PPO gradients from exploding.
 
 2. **Advantage Normalization:** Similarly, the GAE advantages $\hat{A}_t$ computed in Illustration 5 are normalized across the mini-batch before the PPO clip objective is applied.
 
-   $$ \hat{A}_t^{	ext{norm}} = 
-
-rac{\hat{A}_t - \mu_A}{\sigma_A} $$
+   $$ \hat{A}_t^{\text{norm}} = \frac{\hat{A}_t - \mu_A}{\sigma_A} $$
 
    This mini-batch normalization provides a consistent learning rate scale and improves the condition number of the optimization landscape.
 
-3. **KL Penalty Clipping:** The KL penalty $\delta_t = \log \pi_{	heta} - \log \pi_{	ext{ref}}$ can occasionally become massively positive or negative. To prevent a single catastrophic token prediction from dominating the augmented reward, production implementations often clip the KL penalty:
+3. **KL Penalty Clipping:** The KL penalty $\delta_t = \log \pi_{\theta} - \log \pi_{\text{ref}}$ can occasionally become massively positive or negative. To prevent a single catastrophic token prediction from dominating the augmented reward, production implementations often clip the KL penalty:
 
-   $$ \delta_t^{	ext{clipped}} = 	ext{clip}(\delta_t, -10.0, 10.0) $$
+   $$ \delta_t^{\text{clipped}} = \text{clip}(\delta_t, -10.0, 10.0) $$
 
    This acts as an additional layer of defensive regularization.
 
@@ -1274,9 +980,7 @@ By meticulously handling these numerical scaling factors, engineers bridge the g
 
 A Reward Model with a single scalar weight $w = 2.0$ maps input features $x$ to scalar rewards via the simple linear transformation $r = w \cdot x$. We have collected one preference pair from our human feedback dataset: the human preferred the winning feature $x_w = 1.5$ over the losing feature $x_l = 0.5$.
 
-Your task is to compute the forward pass loss, evaluate the exact analytical gradient $
-
-rac{\partial L}{\partial w}$, and explicitly calculate the new weight $w'$ after one step of Stochastic Gradient Descent (SGD) with learning rate $\eta = 0.5$. Show all intermediate arithmetic steps clearly and verify that the weight update aligns with the human preference.
+Your task is to compute the forward pass loss, evaluate the exact analytical gradient $ \frac{\partial L}{\partial w}$, and explicitly calculate the new weight $w'$ after one step of Stochastic Gradient Descent (SGD) with learning rate $\eta = 0.5$. Show all intermediate arithmetic steps clearly and verify that the weight update aligns with the human preference.
 
 
 
@@ -1286,15 +990,7 @@ rac{\partial L}{\partial w}$, and explicitly calculate the new weight $w'$ after
 
    For the winning response: $r_w = w \cdot x_w = 2.0 \cdot 1.5 = \mathbf{3.0}$
 
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
    For the losing response: $r_l = w \cdot x_l = 2.0 \cdot 0.5 = \mathbf{1.0}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
 
 2. Compute the reward margin $\Delta r$, which represents the raw scalar difference in scores:
 
@@ -1302,17 +998,11 @@ rac{\partial L}{\partial w}$, and explicitly calculate the new weight $w'$ after
 
 3. Map this scalar margin to a normalized probability using the Bradley-Terry logistic sigmoid function:
 
-   $\sigma(\Delta r) = 
+   $\sigma(\Delta r) = \frac{1}{1 + \exp(-2.0)}$
 
-rac{1}{1 + \exp(-2.0)}$
+   Calculate the exponential: $\exp(-2.0) \approx 0.135335$
 
-   Calculate the exponential: $\exp(-2.0) pprox 0.135335$
-
-   Calculate the sigmoid probability: $\sigma(2.0) = 
-
-rac{1}{1 + 0.135335} = 
-
-rac{1}{1.135335} pprox \mathbf{0.880797}$
+   Calculate the sigmoid probability: $\sigma(2.0) = \frac{1}{1 + 0.135335} = \frac{1}{1.135335} \approx \mathbf{0.880797}$
 
    The model currently possesses an 88.08% confidence that $x_w$ is superior to $x_l$.
 
@@ -1320,55 +1010,37 @@ rac{1}{1.135335} pprox \mathbf{0.880797}$
 
    $L = - \log(P(w \succ l)) = - \log(0.880797)$
 
-   Evaluate the natural logarithm: $L pprox \mathbf{0.126928}$
+   Evaluate the natural logarithm: $L \approx \mathbf{0.126928}$
 
 5. Compute the gradient of the loss with respect to the reward margin:
 
    As derived in Section 2, the gradient of the log-sigmoid loss is strictly:
 
-   $
+   $ \frac{\partial L}{\partial \Delta r} = - (1 - \sigma(\Delta r))$
 
-rac{\partial L}{\partial \Delta r} = - (1 - \sigma(\Delta r))$
-
-   $
-
-rac{\partial L}{\partial \Delta r} = - (1 - 0.880797) = \mathbf{-0.119203}$
+   $ \frac{\partial L}{\partial \Delta r} = - (1 - 0.880797) = \mathbf{-0.119203}$
 
 6. Apply the multivariate chain rule to find the gradient with respect to the underlying model weight $w$:
 
    First, establish the margin function: $\Delta r = w \cdot x_w - w \cdot x_l = w(x_w - x_l)$
 
-   Compute the local derivative: $
+   Compute the local derivative: $\frac{\partial \Delta r}{\partial w} = x_w - x_l = 1.5 - 0.5 = \mathbf{1.0}$
 
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-rac{\partial \Delta r}{\partial w} = x_w - x_l = 1.5 - 0.5 = \mathbf{1.0}$
-
-   Multiply using the chain rule: $
-
-rac{\partial L}{\partial w} = 
-
-rac{\partial L}{\partial \Delta r} \cdot 
-
-rac{\partial \Delta r}{\partial w} = -0.119203 \cdot 1.0 = \mathbf{-0.119203}$
+   Multiply using the chain rule: $ \frac{\partial L}{\partial w} = \frac{\partial L}{\partial \Delta r} \cdot \frac{\partial \Delta r}{\partial w} = -0.119203 \cdot 1.0 = \mathbf{-0.119203}$
 
 7. Execute the SGD weight update step to modify the neural network parameters:
 
-   The update rule is: $w' = w - \eta 
-
-rac{\partial L}{\partial w}$
+   The update rule is: $w' = w - \eta \frac{\partial L}{\partial w}$
 
    Substitute the values: $w' = 2.0 - (0.5) \cdot (-0.119203)$
 
    Perform the multiplication: $w' = 2.0 + 0.0596015$
 
-   Final updated weight: $w' pprox \mathbf{2.0596}$
+   Final updated weight: $w' \approx \mathbf{2.0596}$
 
 Conclusion: The model's weight increased from 2.0 to 2.0596. Because the winning feature $x_w = 1.5$ is strictly larger than the losing feature $x_l = 0.5$, increasing the weight $w$ will further amplify the margin $\Delta r$ in future forward passes. This mathematically confirms that the gradient descent step has correctly aligned the model's internal representation with the human annotator's preference.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1398,31 +1070,11 @@ Your task is to compute the precise Bradley-Terry loss and the gradient multipli
 
    Compute margin: $\Delta r = r_w - r_l = 5.0 - 4.9 = \mathbf{0.1}$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute probability: $\sigma(0.1) = \frac{1}{1 + \exp(-0.1)} = \frac{1}{1 + 0.904837} \approx \mathbf{0.524979}$
 
-
-
-   Compute probability: $\sigma(0.1) = 
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-rac{1}{1 + \exp(-0.1)} = 
-
-rac{1}{1 + 0.904837} pprox \mathbf{0.524979}$
-
-   Compute loss: $L_A = -\log(0.524979) pprox \mathbf{0.644400}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute loss: $L_A = -\log(0.524979) \approx \mathbf{0.644400}$
 
    Compute gradient multiplier magnitude: $|1 - \sigma| = 1 - 0.524979 = \mathbf{0.475021}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
 
    Interpretation: The model is barely better than a random coin flip (52.49% confidence). The gradient multiplier is massively large (~0.475), providing a very strong learning signal. The neural network will aggressively update its weights to separate these two indistinguishable responses further.
 
@@ -1432,31 +1084,11 @@ rac{1}{1 + 0.904837} pprox \mathbf{0.524979}$
 
    Compute margin: $\Delta r = r_w - r_l = 10.0 - 8.0 = \mathbf{2.0}$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute probability: $\sigma(2.0) = \frac{1}{1 + \exp(-2.0)} = \frac{1}{1 + 0.135335} \approx \mathbf{0.880797}$
 
-
-
-   Compute probability: $\sigma(2.0) = 
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-rac{1}{1 + \exp(-2.0)} = 
-
-rac{1}{1 + 0.135335} pprox \mathbf{0.880797}$
-
-   Compute loss: $L_B = -\log(0.880797) pprox \mathbf{0.126928}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute loss: $L_B = -\log(0.880797) \approx \mathbf{0.126928}$
 
    Compute gradient multiplier magnitude: $|1 - \sigma| = 1 - 0.880797 = \mathbf{0.119203}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
 
    Interpretation: The model exhibits a solid 88% confidence. The gradient magnitude drops significantly to ~0.119. It continues to learn, but with much less aggression than Pair A, refining the boundary rather than shifting it drastically.
 
@@ -1466,35 +1098,13 @@ rac{1}{1 + 0.135335} pprox \mathbf{0.880797}$
 
    Compute margin: $\Delta r = r_w - r_l = 20.0 - 10.0 = \mathbf{10.0}$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute exponential: $\exp(-10.0) \approx 0.0000453999$
 
+   Compute probability: $\sigma(10.0) = \frac{1}{1 + 0.0000453999} \approx \mathbf{0.99995460}$
 
-
-   Compute exponential: $\exp(-10.0) pprox 0.0000453999$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   Compute probability: $\sigma(10.0) = 
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-rac{1}{1 + 0.0000453999} pprox \mathbf{0.99995460}$
-
-   Compute loss: $L_C = -\log(0.99995460) pprox \mathbf{0.00004540}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute loss: $L_C = -\log(0.99995460) \approx \mathbf{0.00004540}$
 
    Compute gradient multiplier magnitude: $|1 - \sigma| = 1 - 0.99995460 = \mathbf{0.00004540}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
 
    Interpretation: The model is virtually 100% confident (99.995%). The corresponding gradient is microscopically close to zero (0.000045). 
 
@@ -1502,7 +1112,7 @@ rac{1}{1 + 0.0000453999} pprox \mathbf{0.99995460}$
 
 Conclusion: The model learns absolutely nothing from Pair C because it already perfectly ranks it. The vast majority of the strong learning signal in RLHF comes from hard, ambiguous pairs (Pair A) where the margin is near zero. This logistic saturation is a critical architectural feature, not a bug—it elegantly prevents the reward model from blowing up its parameter weights to infinity on trivial, easy examples, maintaining stable convergence.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1514,7 +1124,7 @@ $lacksquare$
 
 **Problem:**
 
-A response generated by the Actor model during a PPO rollout consists of exactly 3 tokens. The KL regularization penalty coefficient is strictly set to $eta = 0.2$.
+A response generated by the Actor model during a PPO rollout consists of exactly 3 tokens. The KL regularization penalty coefficient is strictly set to $\beta = 0.2$.
 
 During generation, the Actor and Reference models assign the following raw, un-logged probabilities to the sequentially generated tokens:
 
@@ -1526,7 +1136,7 @@ During generation, the Actor and Reference models assign the following raw, un-l
 
 Upon sequence completion, the final sequence receives a global score from the frozen Reward Model of $10.0$.
 
-Your task is to compute the augmented per-token rewards $	ilde{r}_t$ for the entire sequence, explicitly calculating the per-token KL divergence penalties along the way.
+Your task is to compute the augmented per-token rewards $\tilde{r}_t$ for the entire sequence, explicitly calculating the per-token KL divergence penalties along the way.
 
 
 
@@ -1534,31 +1144,15 @@ Your task is to compute the augmented per-token rewards $	ilde{r}_t$ for the ent
 
 1. **Analyze Token 1 (No deviation):**
 
-   Compute Actor log-prob: $\log \pi_	heta(y_1) = \log(0.8) pprox -0.223143$
+   Compute Actor log-prob: $\log \pi_\theta(y_1) = \log(0.8) \approx -0.223143$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute Ref log-prob: $\log \pi_{\text{ref}}(y_1) = \log(0.8) \approx -0.223143$
 
-
-
-   Compute Ref log-prob: $\log \pi_{	ext{ref}}(y_1) = \log(0.8) pprox -0.223143$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   Compute local KL penalty: $\delta_1 = \log \pi_	heta(y_1) - \log \pi_{	ext{ref}}(y_1) = -0.223143 - (-0.223143) = \mathbf{0.0}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute local KL penalty: $\delta_1 = \log \pi_\theta(y_1) - \log \pi_{\text{ref}}(y_1) = -0.223143 - (-0.223143) = \mathbf{0.0}$
 
    Since $t=1 < T$, the environmental reward is 0.
 
-   Compute augmented reward: $	ilde{r}_1 = 0 - eta \delta_1 = 0 - 0.2 \cdot 0.0 = \mathbf{0.0}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute augmented reward: $\tilde{r}_1 = 0 - \beta \delta_1 = 0 - 0.2 \cdot 0.0 = \mathbf{0.0}$
 
    Interpretation: The actor perfectly mimics the reference model, so it suffers absolutely no penalty.
 
@@ -1566,31 +1160,15 @@ Your task is to compute the augmented per-token rewards $	ilde{r}_t$ for the ent
 
 2. **Analyze Token 2 (Massive overconfidence deviation):**
 
-   Compute Actor log-prob: $\log \pi_	heta(y_2) = \log(0.9) pprox -0.105360$
+   Compute Actor log-prob: $\log \pi_\theta(y_2) = \log(0.9) \approx -0.105360$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute Ref log-prob: $\log \pi_{\text{ref}}(y_2) = \log(0.1) \approx -2.302585$
 
-
-
-   Compute Ref log-prob: $\log \pi_{	ext{ref}}(y_2) = \log(0.1) pprox -2.302585$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   Compute local KL penalty: $\delta_2 = \log \pi_	heta(y_2) - \log \pi_{	ext{ref}}(y_2) = -0.105360 - (-2.302585) = \mathbf{2.197225}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute local KL penalty: $\delta_2 = \log \pi_\theta(y_2) - \log \pi_{\text{ref}}(y_2) = -0.105360 - (-2.302585) = \mathbf{2.197225}$
 
    Since $t=2 < T$, the environmental reward is 0.
 
-   Compute augmented reward: $	ilde{r}_2 = 0 - eta \delta_2 = 0 - 0.2 \cdot 2.197225 = \mathbf{-0.439445}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute augmented reward: $\tilde{r}_2 = 0 - \beta \delta_2 = 0 - 0.2 \cdot 2.197225 = \mathbf{-0.439445}$
 
    Interpretation: The actor heavily over-indexes on this token (90%) compared to the reference model (10%). This massive deviation triggers a significant negative penalty (-0.439), actively discouraging the model from reward-hacking at this token.
 
@@ -1598,37 +1176,21 @@ Your task is to compute the augmented per-token rewards $	ilde{r}_t$ for the ent
 
 3. **Analyze Token 3 (Underconfidence deviation & Terminal Final Reward):**
 
-   Compute Actor log-prob: $\log \pi_	heta(y_3) = \log(0.1) pprox -2.302585$
+   Compute Actor log-prob: $\log \pi_\theta(y_3) = \log(0.1) \approx -2.302585$
 
-   *This operation explicitly computes the necessary intermediate value.*
+   Compute Ref log-prob: $\log \pi_{\text{ref}}(y_3) = \log(0.5) \approx -0.693147$
 
-
-
-   Compute Ref log-prob: $\log \pi_{	ext{ref}}(y_3) = \log(0.5) pprox -0.693147$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   Compute local KL penalty: $\delta_3 = \log \pi_	heta(y_3) - \log \pi_{	ext{ref}}(y_3) = -2.302585 - (-0.693147) = \mathbf{-1.609438}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute local KL penalty: $\delta_3 = \log \pi_\theta(y_3) - \log \pi_{\text{ref}}(y_3) = -2.302585 - (-0.693147) = \mathbf{-1.609438}$
 
    Since $t=3 = T$, this is the terminal state. The environmental reward is the RM score $10.0$.
 
-   Compute augmented reward: $	ilde{r}_3 = 10.0 - eta \delta_3 = 10.0 - 0.2 \cdot (-1.609438) = 10.0 + 0.321887 = \mathbf{10.321887}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute augmented reward: $\tilde{r}_3 = 10.0 - \beta \delta_3 = 10.0 - 0.2 \cdot (-1.609438) = 10.0 + 0.321887 = \mathbf{10.321887}$
 
    Interpretation: The actor is significantly under-confident compared to the reference model. Because $\delta_3$ is negative, the KL "penalty" actually functions as a small positive bonus (+0.321). This bonus is added directly to the terminal Reward Model score of 10.0, yielding a final massive reward step.
 
 Conclusion: The terminal token absorbs the massive scalar RM reward, but intermediate generative tokens face continuous, dense, and rigorously evaluated penalties or bonuses depending precisely on how far they stray from the reference policy distribution.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1642,49 +1204,27 @@ $lacksquare$
 
 A language model prompt possesses exactly 3 valid candidate complete responses: $y_1, y_2, y_3$.
 
-The frozen SFT Reference Model assigns the following normalized probabilities to these responses: $\pi_{	ext{ref}}(y_1) = 0.5, \pi_{	ext{ref}}(y_2) = 0.3, \pi_{	ext{ref}}(y_3) = 0.2$.
+The frozen SFT Reference Model assigns the following normalized probabilities to these responses: $\pi_{\text{ref}}(y_1) = 0.5, \pi_{\text{ref}}(y_2) = 0.3, \pi_{\text{ref}}(y_3) = 0.2$.
 
 The Bradley-Terry Reward Model assigns the following scalar scores to each response: $r(y_1) = 1.0, r(y_2) = 5.0, r(y_3) = 2.0$.
 
-Given a strict KL penalty regularization coefficient $eta = 2.0$, you must compute the exact analytical optimal policy distribution $\pi^*(y)$. Afterwards, contrast this outcome with a purely greedy policy that solely maximizes reward.
+Given a strict KL penalty regularization coefficient $\beta = 2.0$, you must compute the exact analytical optimal policy distribution $\pi^*(y)$. Afterwards, contrast this outcome with a purely greedy policy that solely maximizes reward.
 
 
 
 **Step-by-Step Solution:**
 
-From Derivation 11.27.2, we established that the closed-form optimal policy takes the analytical form: $\pi^*(y) = 
+From Derivation 11.27.2, we established that the closed-form optimal policy takes the analytical form: $\pi^*(y) = \frac{1}{Z(x)} \pi_{\text{ref}}(y) \exp\left( \frac{r(y)}{\beta} \right)$.
 
-rac{1}{Z(x)} \pi_{	ext{ref}}(y) \exp\left(
+1. Compute the unnormalized exponential reward weights $\exp\left( \frac{r(y)}{\beta} \right)$ for each response:
 
-rac{r(y)}{eta}
+   For response $y_1$: $\exp(r(y_1) / \beta) = \exp(1.0 / 2.0) = \exp(0.5) \approx \mathbf{1.648721}$
 
-ight)$.
+   For response $y_2$: $\exp(r(y_2) / \beta) = \exp(5.0 / 2.0) = \exp(2.5) \approx \mathbf{12.182494}$
 
-1. Compute the unnormalized exponential reward weights $\exp\left(
+   For response $y_3$: $\exp(r(y_3) / \beta) = \exp(2.0 / 2.0) = \exp(1.0) \approx \mathbf{2.718281}$
 
-rac{r(y)}{eta}
-
-ight)$ for each response:
-
-   For response $y_1$: $\exp(r(y_1) / eta) = \exp(1.0 / 2.0) = \exp(0.5) pprox \mathbf{1.648721}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   For response $y_2$: $\exp(r(y_2) / eta) = \exp(5.0 / 2.0) = \exp(2.5) pprox \mathbf{12.182494}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-   For response $y_3$: $\exp(r(y_3) / eta) = \exp(2.0 / 2.0) = \exp(1.0) pprox \mathbf{2.718281}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
-
-2. Compute the composite unnormalized optimal weights $w(y) = \pi_{	ext{ref}}(y) \exp(r(y) / eta)$ by incorporating the reference priors:
+2. Compute the composite unnormalized optimal weights $w(y) = \pi_{\text{ref}}(y) \exp(r(y) / \beta)$ by incorporating the reference priors:
 
    Weight for $y_1$: $w(y_1) = 0.5 \cdot 1.648721 = \mathbf{0.824360}$
 
@@ -1698,21 +1238,21 @@ ight)$ for each response:
 
 4. Normalize the weights to obtain the final, exact optimal probability distribution $\pi^*(y) = w(y) / Z(x)$:
 
-   Optimal prob for $y_1$: $\pi^*(y_1) = 0.824360 / 5.022764 pprox \mathbf{0.164124}$ (or 16.41%)
+   Optimal prob for $y_1$: $\pi^*(y_1) = 0.824360 / 5.022764 \approx \mathbf{0.164124}$ (or 16.41%)
 
-   Optimal prob for $y_2$: $\pi^*(y_2) = 3.654748 / 5.022764 pprox \mathbf{0.727636}$ (or 72.76%)
+   Optimal prob for $y_2$: $\pi^*(y_2) = 3.654748 / 5.022764 \approx \mathbf{0.727636}$ (or 72.76%)
 
-   Optimal prob for $y_3$: $\pi^*(y_3) = 0.543656 / 5.022764 pprox \mathbf{0.108238}$ (or 10.82%)
+   Optimal prob for $y_3$: $\pi^*(y_3) = 0.543656 / 5.022764 \approx \mathbf{0.108238}$ (or 10.82%)
 
-   Verify constraint sum: $0.164124 + 0.727636 + 0.108238 = 0.999998 pprox 1.0$.
+   Verify constraint sum: $0.164124 + 0.727636 + 0.108238 = 0.999998 \approx 1.0$.
 
 5. Contrast analysis with Greedy Policy:
 
-   A purely greedy optimization policy (equivalent to removing the KL penalty, i.e., $eta 	o 0$) would assign 100% probability to response $y_2$ entirely because it possesses the highest absolute reward (5.0).
+   A purely greedy optimization policy (equivalent to removing the KL penalty, i.e., $\beta \to 0$) would assign 100% probability to response $y_2$ entirely because it possesses the highest absolute reward (5.0).
 
-   However, our optimal, regularized policy carefully assigns $\pi^*(y_2) = 72.76\%$. Its probability is heavily capped because the baseline reference model only gave it a 30% probability initially. The substantial KL penalty $eta = 2.0$ acts as a massive anchor, heavily penalizing moving too far away from the safe reference distribution. Astonishingly, the model retains a non-trivial 16.41% probability mass on response $y_1$. Although its reward is comparatively very low, it is considered exceptionally "safe" according to the reference model (50% prior probability).
+   However, our optimal, regularized policy carefully assigns $\pi^*(y_2) = 72.76\%$. Its probability is heavily capped because the baseline reference model only gave it a 30% probability initially. The substantial KL penalty $\beta = 2.0$ acts as a massive anchor, heavily penalizing moving too far away from the safe reference distribution. Astonishingly, the model retains a non-trivial 16.41% probability mass on response $y_1$. Although its reward is comparatively very low, it is considered exceptionally "safe" according to the reference model (50% prior probability).
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1726,15 +1266,15 @@ $lacksquare$
 
 At generation step $t=1$, we evaluate a specific prompt across the complex 4-model PPO architecture. The vocabulary space is tightly constrained to only two tokens: $[A, B]$.
 
-- **Actor (trainable $	heta$)** outputs raw logits: $[2.0, -1.0]$.
+- **Actor (trainable $\theta$)** outputs raw logits: $[2.0, -1.0]$.
 
 - **Ref (frozen)** outputs raw logits: $[1.0, 1.0]$.
 
 - **Critic (trainable $\phi$)** predicts the temporal state value $V(s_1) = 3.5$.
 
-The Actor stochastically samples token $A$. The environment transitions to step $t=2$, the sequence ends, and the Reward Model outputs a terminal score $r_{	ext{RM}} = 5.0$.
+The Actor stochastically samples token $A$. The environment transitions to step $t=2$, the sequence ends, and the Reward Model outputs a terminal score $r_{\text{RM}} = 5.0$.
 
-Your task is to compute the exact PPO surrogate advantage $\hat{A}_1$ for updating the Actor at step $t=1$. Assume a temporal discount factor of $\gamma=1.0$ and a KL penalty coefficient of $eta=0.1$.
+Your task is to compute the exact PPO surrogate advantage $\hat{A}_1$ for updating the Actor at step $t=1$. Assume a temporal discount factor of $\gamma=1.0$ and a KL penalty coefficient of $\beta=0.1$.
 
 
 
@@ -1744,45 +1284,37 @@ Your task is to compute the exact PPO surrogate advantage $\hat{A}_1$ for updati
 
    The unnormalized Actor logits are $[2.0, -1.0]$. We apply the standard softmax function to extract probabilities.
 
-   Calculate exponentials: $\exp(2.0) pprox 7.389056$, $\exp(-1.0) pprox 0.367879$
+   Calculate exponentials: $\exp(2.0) \approx 7.389056$, $\exp(-1.0) \approx 0.367879$
 
    Denominator sum: $7.389056 + 0.367879 = 7.756935$
 
-   Actor probability for A: $\pi_{	heta}(A) = 
+   Actor probability for A: $\pi_{\theta}(A) = \frac{7.389056}{7.756935} \approx \mathbf{0.952574}$
 
-rac{7.389056}{7.756935} pprox \mathbf{0.952574}$
-
-   Log-probability for A: $\log \pi_{	heta}(A) = \log(0.952574) pprox \mathbf{-0.048587}$
+   Log-probability for A: $\log \pi_{\theta}(A) = \log(0.952574) \approx \mathbf{-0.048587}$
 
 2. **Compute Reference Probabilities for Sampled Token A:**
 
    The unnormalized Ref logits are $[1.0, 1.0]$. Softmax makes this a perfectly uniform distribution.
 
-   Ref probability for A: $\pi_{	ext{ref}}(A) = 
+   Ref probability for A: $\pi_{\text{ref}}(A) = \frac{\exp(1.0)}{\exp(1.0) + \exp(1.0)} = \mathbf{0.500000}$
 
-rac{\exp(1.0)}{\exp(1.0) + \exp(1.0)} = \mathbf{0.500000}$
-
-   Log-probability for A: $\log \pi_{	ext{ref}}(A) = \log(0.5) pprox \mathbf{-0.693147}$
+   Log-probability for A: $\log \pi_{\text{ref}}(A) = \log(0.5) \approx \mathbf{-0.693147}$
 
 3. **Evaluate the Step 1 KL Penalty and Local Reward:**
 
-   Compute local KL penalty: $\delta_1 = \log \pi_{	heta}(A) - \log \pi_{	ext{ref}}(A) = -0.048587 - (-0.693147) = \mathbf{0.644560}$
-
-   *This operation explicitly computes the necessary intermediate value.*
-
-
+   Compute local KL penalty: $\delta_1 = \log \pi_{\theta}(A) - \log \pi_{\text{ref}}(A) = -0.048587 - (-0.693147) = \mathbf{0.644560}$
 
    The augmented step reward at $t=1$ is strictly the penalty, since intermediate environmental reward is 0:
 
-   Augmented reward $	ilde{r}_1 = -eta \delta_1 = -0.1 \cdot 0.644560 = \mathbf{-0.064456}$
+   Augmented reward $\tilde{r}_1 = -\beta \delta_1 = -0.1 \cdot 0.644560 = \mathbf{-0.064456}$
 
 4. **Compute the Final Trajectory Return $G_1$:**
 
-   Assume that at step $t=2$, the Actor outputs token B, the sequence deterministically ends, and after conducting identical mathematical operations for $t=2$, we extract a final augmented reward $	ilde{r}_2 = 4.9$. The Critic correctly evaluates the terminal state as $V(s_2) = 0$.
+   Assume that at step $t=2$, the Actor outputs token B, the sequence deterministically ends, and after conducting identical mathematical operations for $t=2$, we extract a final augmented reward $\tilde{r}_2 = 4.9$. The Critic correctly evaluates the terminal state as $V(s_2) = 0$.
 
    The true empirical return from step $t=1$ is the discounted sum of future rewards (with $\gamma=1.0$):
 
-   $G_1 = 	ilde{r}_1 + \gamma 	ilde{r}_2 = -0.064456 + (1.0 \cdot 4.9) = \mathbf{4.835544}$
+   $G_1 = \tilde{r}_1 + \gamma \tilde{r}_2 = -0.064456 + (1.0 \cdot 4.9) = \mathbf{4.835544}$
 
 5. **Advantage Calculation for the Actor Update:**
 
@@ -1792,11 +1324,11 @@ rac{\exp(1.0)}{\exp(1.0) + \exp(1.0)} = \mathbf{0.500000}$
 
 6. **Formulate the PPO Surrogate Objective:**
 
-   The Actor network will be updated using the clipped surrogate objective function: $L^{	ext{CLIP}} = \min(r_t(	heta)\cdot \hat{A}_1, \dots)$. 
+   The Actor network will be updated using the clipped surrogate objective function: $L^{\text{CLIP}} = \min(r_t(\theta)\cdot \hat{A}_1, \dots)$. 
 
    Since the computed advantage $\hat{A}_1 = 1.335544 > 0$ is highly positive, the gradient will dynamically attempt to push the logit for token A even higher during the backward pass, increasing its probability up to the strict PPO clip limit threshold. Concurrently, the Critic network will be updated using an MSE loss to shift its internal prediction $V(s_1) = 3.5$ much closer to the true empirical return of $4.835544$.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1812,13 +1344,13 @@ $lacksquare$
 
 At step $t=5$, the empirical discounted return from the environment is $G_5 = 12.0$.
 
-During the previous epoch, the old Critic network predicted $V_{\phi_{	ext{old}}}(s_5) = 10.0$.
+During the previous epoch, the old Critic network predicted $V_{\phi_{\text{old}}}(s_5) = 10.0$.
 
 During the current epoch, the updated Critic network predicts $V_{\phi}(s_5) = 11.5$.
 
 The PPO value clipping hyperparameter is $\epsilon = 0.5$.
 
-Compute the unclipped value loss, the clipped value prediction, the clipped value loss, and the final $L^{	ext{VF}}$. Determine if the clipping mechanism alters the gradient in this scenario.
+Compute the unclipped value loss, the clipped value prediction, the clipped value loss, and the final $L^{\text{VF}}$. Determine if the clipping mechanism alters the gradient in this scenario.
 
 
 
@@ -1826,39 +1358,39 @@ Compute the unclipped value loss, the clipped value prediction, the clipped valu
 
 1. **Compute Unclipped Loss:**
 
-   The error is: $e_{	ext{unclipped}} = V_{\phi}(s_5) - G_5 = 11.5 - 12.0 = \mathbf{-0.5}$
+   The error is: $e_{\text{unclipped}} = V_{\phi}(s_5) - G_5 = 11.5 - 12.0 = \mathbf{-0.5}$
 
-   The MSE loss is: $L_{	ext{unclipped}} = rac{1}{2} (-0.5)^2 = rac{1}{2} (0.25) = \mathbf{0.125}$
+   The MSE loss is: $L_{\text{unclipped}} = \frac{1}{2} (-0.5)^2 = \frac{1}{2} (0.25) = \mathbf{0.125}$
 
 2. **Compute Clipped Value Prediction:**
 
-   The parameter change is: $\Delta V = V_{\phi}(s_5) - V_{\phi_{	ext{old}}}(s_5) = 11.5 - 10.0 = \mathbf{1.5}$
+   The parameter change is: $\Delta V = V_{\phi}(s_5) - V_{\phi_{\text{old}}}(s_5) = 11.5 - 10.0 = \mathbf{1.5}$
 
-   We apply the clip function to this delta: $	ext{clip}(1.5, -0.5, 0.5) = \mathbf{0.5}$
+   We apply the clip function to this delta: $\text{clip}(1.5, -0.5, 0.5) = \mathbf{0.5}$
 
-   The clipped value prediction is: $V_{	ext{clipped}} = V_{\phi_{	ext{old}}}(s_5) + 0.5 = 10.0 + 0.5 = \mathbf{10.5}$
+   The clipped value prediction is: $V_{\text{clipped}} = V_{\phi_{\text{old}}}(s_5) + 0.5 = 10.0 + 0.5 = \mathbf{10.5}$
 
 3. **Compute Clipped Loss:**
 
-   The error using the clipped prediction is: $e_{	ext{clipped}} = V_{	ext{clipped}} - G_5 = 10.5 - 12.0 = \mathbf{-1.5}$
+   The error using the clipped prediction is: $e_{\text{clipped}} = V_{\text{clipped}} - G_5 = 10.5 - 12.0 = \mathbf{-1.5}$
 
-   The MSE loss is: $L_{	ext{clipped}} = rac{1}{2} (-1.5)^2 = rac{1}{2} (2.25) = \mathbf{1.125}$
+   The MSE loss is: $L_{\text{clipped}} = \frac{1}{2} (-1.5)^2 = \frac{1}{2} (2.25) = \mathbf{1.125}$
 
 4. **Determine Final Loss:**
 
    The final PPO value loss is the maximum of the unclipped and clipped losses.
 
-   $L^{	ext{VF}} = \max(L_{	ext{unclipped}}, L_{	ext{clipped}}) = \max(0.125, 1.125) = \mathbf{1.125}$
+   $L^{\text{VF}} = \max(L_{\text{unclipped}}, L_{\text{clipped}}) = \max(0.125, 1.125) = \mathbf{1.125}$
 
 5. **Gradient Analysis:**
 
    Because the clipped loss (1.125) is strictly greater than the unclipped loss (0.125), the maximum operator selects the clipped term.
 
-   The derivative of the clipped term with respect to the network weights $\phi$ involves the derivative of $V_{	ext{clipped}}$. However, because the prediction $V_{\phi}(s_5)$ was clipped, it lies in the flat region of the clip function, meaning its derivative with respect to $\phi$ is identically $\mathbf{0}$.
+   The derivative of the clipped term with respect to the network weights $\phi$ involves the derivative of $V_{\text{clipped}}$. However, because the prediction $V_{\phi}(s_5)$ was clipped, it lies in the flat region of the clip function, meaning its derivative with respect to $\phi$ is identically $\mathbf{0}$.
 
 Conclusion: The Critic network attempted to update its prediction from 10.0 to 11.5 in a single epoch, exceeding the allowed trust region of $\epsilon = 0.5$. Consequently, the PPO value clipping mechanism engaged, selecting the pessimistic upper bound on the loss, and effectively zeroed out the gradient to prevent further destabilization on this specific data point.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1870,13 +1402,13 @@ A language model vocabulary has been drastically simplified to $\mathcal{V} = 4$
 
 The Actor policy outputs the following probability distribution at step $t$:
 
-$\pi_{	heta}(A) = 0.70$
+$\pi_{\theta}(A) = 0.70$
 
-$\pi_{	heta}(B) = 0.15$
+$\pi_{\theta}(B) = 0.15$
 
-$\pi_{	heta}(C) = 0.10$
+$\pi_{\theta}(C) = 0.10$
 
-$\pi_{	heta}(D) = 0.05$
+$\pi_{\theta}(D) = 0.05$
 
 Compute the exact Shannon entropy $\mathcal{H}$ of this distribution, and calculate the gradient contribution to the logit of token A if the entropy bonus coefficient is $c_2 = 0.01$.
 
@@ -1886,13 +1418,13 @@ Compute the exact Shannon entropy $\mathcal{H}$ of this distribution, and calcul
 
 1. **Compute Log Probabilities:**
 
-   $\log(0.70) pprox \mathbf{-0.3567}$
+   $\log(0.70) \approx \mathbf{-0.3567}$
 
-   $\log(0.15) pprox \mathbf{-1.8971}$
+   $\log(0.15) \approx \mathbf{-1.8971}$
 
-   $\log(0.10) pprox \mathbf{-2.3026}$
+   $\log(0.10) \approx \mathbf{-2.3026}$
 
-   $\log(0.05) pprox \mathbf{-2.9957}$
+   $\log(0.05) \approx \mathbf{-2.9957}$
 
 2. **Compute Individual Entropy Terms ($p \log p$):**
 
@@ -1914,17 +1446,17 @@ Compute the exact Shannon entropy $\mathcal{H}$ of this distribution, and calcul
 
    The derivative of entropy with respect to the pre-softmax logit $z_A$ is given by the standard identity:
 
-   $rac{\partial \mathcal{H}}{\partial z_A} = - \pi_{	heta}(A) (\log \pi_{	heta}(A) + 1 - \mathcal{H})$
+   $\frac{\partial \mathcal{H}}{\partial z_A} = - \pi_{\theta}(A) (\log \pi_{\theta}(A) + 1 - \mathcal{H})$
 
    Let us plug in the values:
 
-   $\log \pi_{	heta}(A) = -0.3567$
+   $\log \pi_{\theta}(A) = -0.3567$
 
-   $\log \pi_{	heta}(A) + 1 - \mathcal{H} = -0.3567 + 1.0 - 0.9144 = \mathbf{-0.2711}$
+   $\log \pi_{\theta}(A) + 1 - \mathcal{H} = -0.3567 + 1.0 - 0.9144 = \mathbf{-0.2711}$
 
    Multiply by the probability and negate:
 
-   $rac{\partial \mathcal{H}}{\partial z_A} = - (0.70) \cdot (-0.2711) = \mathbf{0.1898}$
+   $\frac{\partial \mathcal{H}}{\partial z_A} = - (0.70) \cdot (-0.2711) = \mathbf{0.1898}$
 
 5. **Final Entropy Bonus Gradient:**
 
@@ -1934,7 +1466,7 @@ Compute the exact Shannon entropy $\mathcal{H}$ of this distribution, and calcul
 
 Conclusion: Because token A is highly dominant (70%), the entropy gradient is positive, gently pushing the logit of token A down (or rather, allowing other tokens to rise) in order to increase the uncertainty and diversity of the distribution, thereby preventing premature convergence to a deterministic policy.
 
-$lacksquare$
+$\blacksquare$
 
 
 
@@ -1970,4 +1502,4 @@ Gathering human preference data ($y_w \succ y_l$) is astronomically expensive an
 
 
 
-See companion code: [code/27_rlhf_ppo.py](file:///Users/kunalkumar/desktop/knowledge-base/Projects/ai_math/code/27_rlhf_ppo.py)
+See companion code: [code/27_rlhf_ppo.py](code/27_rlhf_ppo.py)

@@ -121,7 +121,7 @@ The 2 nice subarrays are:
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Standard** | `[1, 1, 2, 1, 1]` | `3` | 14 | 12 | `2` |
 | **No Nice Subarrays** | `[2, 4, 6]` | `1` | 0 | 0 | `0` |
-| **With Surrounding Evens** | `[2, 2, 2, 1, 2, 2, 1, 2, 2, 2]` | `2` | All variations of left and right even pads | `16` |
+| **With Surrounding Evens** | `[2, 2, 2, 1, 2, 2, 1, 2, 2, 2]` | `2` | 52 | 36 | `16` |
 | **All Odds** | `[1, 3, 5]` | `2` | 5 | 3 | `2` |
 
 ---

@@ -55,8 +55,10 @@ System design mathematics is not about memorizing arbitrary numbers; it is about
   1. **Tier 1 (Redis Hold)**: Atomic Lua script checks `available_count >= 1` across all 3 dates. Decrements counts and issues a 10-minute hold token:
      $$\text{TTL} = 600\text{ seconds}$$
   2. **Tier 2 (PostgreSQL Commit)**: Upon successful payment:
-     $$\text{UPDATE room_inventory SET total_reserved = total_reserved + 1}$$
-     $$\text{WHERE hotel_id = ? AND date IN (...) AND (total_inventory - total_reserved) >= 1}$$
+      ```sql
+      UPDATE room_inventory SET total_reserved = total_reserved + 1
+      WHERE hotel_id = ? AND date IN (...) AND (total_inventory - total_reserved) >= 1;
+      ```
 - **Binomial Overbooking Buffer Math**:
   A hotel with 100 rooms and historical $5\%$ cancellation probability ($p=0.05$) can safely sell **104 reservations** while maintaining a $99.2\%$ probability of zero walk-outs.
 

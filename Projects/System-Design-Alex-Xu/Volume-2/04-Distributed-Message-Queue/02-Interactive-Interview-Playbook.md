@@ -1,7 +1,7 @@
 # Chapter 4: Design a Distributed Message Queue (Kafka/Pulsar) — Staff/Principal Walkthrough Playbook
 
 > **Companion Links**:
-> - Core Architecture Blueprint: [`Volume-2/Design a Distributed Message Queue.md`](file:///Users/kunalkumar/Desktop/knowledge-base/Projects/System-Design-Alex-Xu/Volume-2/Design%20a%20Distributed%20Message%20Queue.md)
+> - Core Architecture Blueprint: [`01-Architectural-Blueprint.md`](01-Architectural-Blueprint.md)
 > - Production Engine & Microservice Lab: [`distributed_queue_engine.py`](distributed_queue_engine.py) (Binary Log Framing, CRC32 Bit-Rot Shield, Sparse Indexing, In-Sync Replicas, High Watermark, and Consumer Group Rebalancing)
 > - Master Roadmap: [`vol2_deep_walkthrough_plan.md`](file:///Users/kunalkumar/.gemini/antigravity-cli/brain/302bafa9-2982-410a-8fd4-25e93254bed9/vol2_deep_walkthrough_plan.md)
 

@@ -142,7 +142,7 @@ Assume an enterprise API gateway cluster terminating traffic for global mobile c
 $$\begin{array}{l|c|c|l}
 \textbf{Model} & \textbf{Memory Per Connection} & \textbf{Total RAM (1M Conns)} & \textbf{Production Feasibility} \\
 \hline
-\text{Thread-Per-Request (Apache/WSGI)} & 8.0\text{ MB (Default OS Stack)} & 8,000\text{ GB (8 TB)} & \textbf{Fatal Crash (OOM & Context Thrash)} \\
+\text{Thread-Per-Request (Apache/WSGI)} & 8.0\text{ MB (Default OS Stack)} & 8,000\text{ GB (8 TB)} & \textbf{Fatal Crash (OOM \& Context Thrash)} \\
 \text{Thread Pool Worker (4KB stack limit)} & 64.0\text{ KB} & 64\text{ GB} & \textbf{Marginal (High context-switch tax)} \\
 \textbf{Event Reactor (epoll + Non-Blocking)} & \mathbf{9.1\text{ KB}} & \mathbf{9.1\text{ GB}} & \textbf{Optimal (Easily fits 32/64 GB Server)} \\
 \end{array}$$

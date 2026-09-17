@@ -81,7 +81,7 @@ Passive listener analyzes enterprise channel context. Routine read actions execu
 At Staff and Principal levels, the difference between an acceptable design and an exceptional design lies in understanding the **underlying operating system, CPU cache, and network hardware**.
 
 ### Memory Layout & Kernel / Hardware Mechanics
-Ambient Passive Listener with Two-Phase Filtering: Processing every single Slack message across a 50,000-person enterprise through GPT-4 costs $100,000/day. The ambient gateway implements a Two-Phase Funnel: Phase 1 uses an ultra-fast local lightweight model (e.g. 0.5B parameter SLM or embedding similarity) in $< 5\text{ ms}$ to determine if the conversation requires coworker assistance. Only messages exceeding an $0.85$ relevance threshold trigger the full reasoning model.
+Ambient Passive Listener with Two-Phase Filtering: Processing every single Slack message across a 50,000-person enterprise through GPT-4 costs \$100,000/day. The ambient gateway implements a Two-Phase Funnel: Phase 1 uses an ultra-fast local lightweight model (e.g. 0.5B parameter SLM or embedding similarity) in $< 5\text{ ms}$ to determine if the conversation requires coworker assistance. Only messages exceeding an $0.85$ relevance threshold trigger the full reasoning model.
 
 ---
 

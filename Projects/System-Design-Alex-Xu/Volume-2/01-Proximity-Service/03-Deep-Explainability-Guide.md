@@ -55,7 +55,7 @@ System design mathematics is not about memorizing arbitrary numbers; it is about
   - Level 30: $\approx 1\text{ cm}$ precision.
 - **Search Query Sizing**:
   At 100,000 search QPS, evaluating 9 neighboring S2 cells requires querying a primary B-Tree clustered index:
-  $$\text{Query: } \text{WHERE s2_cell_id BETWEEN } \text{min_cell AND } \text{max_cell}$$
+  $$\text{Query: WHERE s2\_cell\_id BETWEEN min\_cell AND max\_cell}$$
   Executes in $< 1.5\text{ ms}$ via in-memory RocksDB or MySQL InnoDB buffer pool.
 
 ---

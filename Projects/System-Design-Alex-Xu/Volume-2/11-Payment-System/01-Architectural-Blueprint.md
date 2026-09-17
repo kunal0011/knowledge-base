@@ -593,7 +593,7 @@ Content-Type: application/json
 
 ### War Story 2: The Midnight FX Rate Flip & Negative Settlement Float
 
-**Context**: A multi-currency platform allowed European customers to purchase goods from US merchants in Euros (€), settling to merchants in US Dollars ($).
+**Context**: A multi-currency platform allowed European customers to purchase goods from US merchants in Euros (€), settling to merchants in US Dollars (\$).
 
 **Incident**: At 00:00:00 UTC, the daily automated Foreign Exchange (FX) rate feed updated the exchange rate table. A malformed CSV file from the financial provider swapped the base currency and quote currency columns, causing the EUR/USD exchange rate to invert from $1.08$ to $0.925$. Over the next 4 hours, the platform processed $\$8,500,000$ in international orders, undercharging buyers while guaranteeing full dollar payouts to merchants, creating an instantaneous **$\$1,200,000$ unhedged currency deficit**.
 

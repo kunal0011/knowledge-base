@@ -279,6 +279,88 @@ If the model hallucinates: *"In advanced modular arithmetic, $2+2=5$ because we 
 
 ---
 
+### Illustration 2: REINFORCE Gradient for a Rationalized Sample
+
+**Problem:**
+A problem $x = \text{'2+3=?'}$ is given. Rationale $z = \text{'2+3=5 because I count up 3 from 2: 3,4,5'}$. Answer $y = \text{'5'}$ (correct, $r=+1$). Policy parameters $\theta$.
+Token-level log-probs: $\log P(z|x) = -4.2$, $\log P(y|x,z) = -0.3$.
+Compute the REINFORCE update for this rationalized path versus direct answer prediction (where $\log P(y|x) = -2.8$), using a baseline $b = -5.0$.
+
+**Step-by-Step Solution:**
+1. **Compute Total Log Probability:**
+   Total $\log P(y, z | x) = \log P(z | x) + \log P(y | x, z) = -4.2 + (-0.3) = -4.5$.
+2. **REINFORCE Gradient Formulation:**
+   The gradient is $\nabla_\theta \log P(y, z | x) \times (R - b)$, where the return $R$ is the log probability of the correct answer trace ($R = -4.5$).
+3. **Compute the Advantage:**
+   Advantage $A = R - b = -4.5 - (-5.0) = \mathbf{0.5}$.
+4. **Update Direction:**
+   The REINFORCE update is $\nabla_\theta (-4.5) \times 0.5$. Since the advantage is positive, the gradient step *increases* the probability of this specific trace.
+5. **Comparison:**
+   Direct prediction has higher base probability ($-2.8 > -4.5$). The rationalized path has lower probability (it's harder to generate a long string of tokens). However, because the rationalized path produces the right answer and its return exceeds the baseline, REINFORCE successfully boosts its probability, reinforcing the reasoning behavior. $\blacksquare$
+
+---
+
+### Illustration 3: Quiet-STaR Mixture Weighting
+
+**Problem:**
+At token position $t$, the Quiet-STaR model produces two next-token distributions: $P_{\text{thought}}(w_t | x, \text{thought})$ and $P_{\text{no\_thought}}(w_t | x)$.
+The mixing weight $\alpha = 0.7$ favors the thought mode.
+For vocabulary $V=4$:
+$P_{\text{thought}} = [0.6, 0.1, 0.2, 0.1]$
+$P_{\text{no\_thought}} = [0.3, 0.4, 0.2, 0.1]$
+Compute the mixed probability distribution $P_{\text{mixed}}(w_t)$.
+
+**Step-by-Step Solution:**
+The mixture is defined as:
+$$P_{\text{mixed}}(w_t) = \alpha \times P_{\text{thought}} + (1 - \alpha) \times P_{\text{no\_thought}}$$
+With $\alpha = 0.7$, $(1 - \alpha) = 0.3$:
+1. **Token 1:** $0.7 \times 0.6 + 0.3 \times 0.3 = 0.42 + 0.09 = \mathbf{0.51}$
+2. **Token 2:** $0.7 \times 0.1 + 0.3 \times 0.4 = 0.07 + 0.12 = \mathbf{0.19}$
+3. **Token 3:** $0.7 \times 0.2 + 0.3 \times 0.2 = 0.14 + 0.06 = \mathbf{0.20}$
+4. **Token 4:** $0.7 \times 0.1 + 0.3 \times 0.1 = 0.07 + 0.03 = \mathbf{0.10}$
+
+**Result:**
+$P_{\text{mixed}} = [\mathbf{0.51}, \mathbf{0.19}, \mathbf{0.20}, \mathbf{0.10}]$.
+Verify sum: $0.51 + 0.19 + 0.20 + 0.10 = \mathbf{1.00}$.
+This learned mixture scalar allows the model to dynamically trade off latency (thought mode is computationally heavier) versus accuracy per token. $\blacksquare$
+
+---
+
+### Illustration 4: STaR Iterative Bootstrapping Convergence Rate
+
+**Problem:** STaR runs for $K$ iterations. At each iteration $k$, the model fine-tunes on the union of rationale datasets $\mathcal{D}_0 \cup \mathcal{D}_1 \cup \cdots \cup \mathcal{D}_k$. Suppose the base accuracy before any STaR training is $p_0 = 0.30$ (30% of problems solved without rationale). Each STaR iteration increases accuracy by adding newly rationalized problems. Model: $p_k = 1 - (1 - p_0)(1 - \alpha)^k$ where $\alpha = 0.25$ is the per-iteration improvement rate (fraction of previously unsolved problems now solved with rationale bootstrapping).
+
+**Solution:**
+
+Compute $p_k$ for $k = 0, 1, 2, 3, 4$:
+
+$$p_0 = 1 - 0.70 \cdot 1.0 = 0.300$$
+
+$$p_1 = 1 - 0.70 \cdot (0.75)^1 = 1 - 0.525 = 0.475$$
+
+$$p_2 = 1 - 0.70 \cdot (0.75)^2 = 1 - 0.70 \cdot 0.5625 = 1 - 0.394 = 0.606$$
+
+$$p_3 = 1 - 0.70 \cdot (0.75)^3 = 1 - 0.70 \cdot 0.4219 = 1 - 0.295 = 0.705$$
+
+$$p_4 = 1 - 0.70 \cdot (0.75)^4 = 1 - 0.70 \cdot 0.3164 = 1 - 0.221 = 0.779$$
+
+| Iteration $k$ | Accuracy $p_k$ | New Problems Unlocked | Cumulative Gain |
+|:-:|:-:|:-:|:-:|
+| 0 (base) | 0.300 | — | — |
+| 1 | 0.475 | +175 / 1000 | +17.5% |
+| 2 | 0.606 | +131 / 1000 | +13.1% |
+| 3 | 0.705 | +99 / 1000 | +9.9% |
+| 4 | 0.779 | +74 / 1000 | +7.4% |
+
+**Marginal gain per iteration:** Each subsequent iteration yields diminishing returns — $\Delta p_k = (1-p_0)(1-\alpha)^{k-1}\alpha = 0.70 \cdot 0.75^{k-1} \cdot 0.25$. At $k=1$: $\Delta = 0.175$; at $k=4$: $\Delta = 0.074$, approximately geometric decay with ratio $\alpha_{\text{decay}} = 0.75$.
+
+**Convergence bound:** As $k \to \infty$, $p_k \to 1.0$. The number of iterations to reach accuracy $p^*$ is:
+$$k^* = \frac{\ln\!\left(\frac{1 - p^*}{1 - p_0}\right)}{\ln(1 - \alpha)} = \frac{\ln(1-p^*) - \ln(0.70)}{\ln(0.75)}$$
+
+To reach $p^* = 0.90$: $k^* = (\ln(0.10) - \ln(0.70)) / \ln(0.75) = (-2.303 + 0.357) / (-0.288) = (-1.946) / (-0.288) \approx 6.75$, so **7 STaR iterations** suffice to reach 90% accuracy from a 30% base. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **DeepSeek-R1 Pipeline (Stage 1 & 2):** Uses a STaR-like rejection sampling methodology on 600K synthetic reasoning trajectories, filtering purely by Python test pass rates and SymPy equivalence before fine-tuning.

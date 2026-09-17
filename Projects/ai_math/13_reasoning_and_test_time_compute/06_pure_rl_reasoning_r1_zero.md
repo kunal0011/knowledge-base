@@ -142,6 +142,7 @@ Let us execute a complete, step-by-step numerical trace of:
 2. **Group Mean and Standard Deviation Calculations**
 3. **Normalized Advantage $A_i$ Derivation**
 4. **Policy Gradient Direction Analysis**
+5. **KL Regularization Penalty Update**
 
 ---
 
@@ -177,6 +178,7 @@ Let us execute a complete, step-by-step numerical trace of:
 | $\mu_R$ | `group_mean` | Average reward across group of $G = 4$ candidates |
 | $\sigma_R$ | `group_std` | Population standard deviation of group rewards |
 | $A_i$ | `advantage` | Normalized advantage $\frac{R_i - \mu_R}{\sigma_R}$ |
+| $\beta_{\text{KL}}$ | `kl_beta` | Penalty coefficient for diverging from reference policy |
 
 ---
 
@@ -227,7 +229,23 @@ Let us execute a complete, step-by-step numerical trace of:
 - **Rollout 1 ($A_1 = +1.0945$):** Receives the **strongest positive gradient**. It reinforces both the correct mathematical deduction and the explicit `<think>` tag format!
 - **Rollout 3 ($A_3 = +0.8955$):** Rewarded for mathematical correctness, but receives less gradient than Rollout 1 ($+0.8955 < +1.0945$) because it failed format compliance.
 - **Rollout 2 ($A_2 = -0.8955$):** Penalized despite having clean formatting, ensuring format compliance never supersedes arithmetic truth.
-- **Rollout 4 ($A_4 = -1.0945$):** Receives the **strongest negative penalty**, extinguishing unstructured hallucinations. $\blacksquare$
+- **Rollout 4 ($A_4 = -1.0945$):** Receives the **strongest negative penalty**, extinguishing unstructured hallucinations.
+
+---
+
+#### Step 5: KL Regularization Penalty Hand Calculation
+To ensure the policy does not collapse during GRPO, a KL penalty is computed per token. Let's compute this for a specific token generated in Rollout 1.
+- Reference policy log-probability: $\log \pi_{\text{ref}}(a_t|o_{<t}) = -2.5000$
+- Current policy log-probability: $\log \pi_\theta(a_t|o_{<t}) = -1.8000$
+- KL Coefficient: $\beta_{\text{KL}} = \mathbf{0.04}$
+
+1. **Compute Log Ratio (KL estimate):**
+   $$\text{KL}_{\text{est}} = \log \pi_\theta - \log \pi_{\text{ref}} = -1.8000 - (-2.5000) = \mathbf{+0.7000}$$
+2. **Compute KL Penalty:**
+   $$\text{Penalty} = \beta_{\text{KL}} \times \text{KL}_{\text{est}} = 0.04 \times 0.7000 = \mathbf{0.0280}$$
+3. **Compute Effective Reward:**
+   For Rollout 1, base reward was $1.1000$. The effective regularized reward becomes:
+   $$R_{\text{eff}} = 1.1000 - 0.0280 = \mathbf{1.0720}$$ $\blacksquare$
 
 ---
 
@@ -275,6 +293,108 @@ It never crosses the x-axis! Indeed, there are 0 real roots.
    If the model stopped at line 5 and emitted `<answer>2</answer>`, $R_{\text{accuracy}} = 0.0$.
    By continuing to generate thoughts and finding `<answer>0</answer>`, $R_{\text{accuracy}} = 1.0$.
    GRPO reinforced trajectories containing self-checking phrases (`"Wait"`, `"Let me double check"`), transforming hesitation words into functional search operators! $\blacksquare$
+
+---
+
+### Illustration 2: GRPO Group Relative Advantage Computation
+
+**Problem:**
+Compute the group relative advantage and policy gradient clipping in a GRPO setup.
+A model generates a group of $G=8$ rollouts for a math problem. The verified rewards (correct=1, wrong=0) are:
+$\mathbf{r} = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0]$
+
+For a correct sample $i$, calculate the policy gradient term $L_i$ where:
+$$L_i = \min\left(r_t A_i, \text{clip}(r_t, 0.8, 1.2) A_i\right)$$
+Assume the policy ratio $r_t = \frac{\pi_\theta(a_t|o_t)}{\pi_{\text{old}}(a_t|o_t)}$ is $1.1$ for a small policy step and $1.3$ for a large policy step. Show the clip in action.
+
+**Step-by-Step Solution:**
+
+**1. Calculate Group Statistics:**
+- Mean: $\mu = \frac{1 + 0 + 1 + 0 + 1 + 0 + 0 + 1}{8} = \frac{4}{8} = \mathbf{0.5000}$
+- Variance: $\sigma^2 = \frac{4 \times (1 - 0.5)^2 + 4 \times (0 - 0.5)^2}{8} = \frac{4(0.25) + 4(0.25)}{8} = \frac{2.0}{8} = \mathbf{0.2500}$
+- Std Dev: $\sigma = \sqrt{0.2500} = \mathbf{0.5000}$
+
+**2. Calculate Normalized Advantages $A_i$:**
+- For correct samples ($r_i = 1.0$): $A_i = \frac{1.0 - 0.5000}{0.5000} = \mathbf{+1.0000}$
+- For wrong samples ($r_i = 0.0$): $A_i = \frac{0.0 - 0.5000}{0.5000} = \mathbf{-1.0000}$
+
+**3. Policy Gradient Term with Clipping (Correct Sample, $A_i = 1.0$):**
+- **Case A: Small step ($r_t = 1.1$)**
+  $$L_i = \min(1.1 \times 1.0, \text{clip}(1.1, 0.8, 1.2) \times 1.0)$$
+  $$L_i = \min(1.1, 1.1) = \mathbf{1.1000}$$
+  (The step is unclipped, policy moves smoothly).
+
+- **Case B: Large step ($r_t = 1.3$)**
+  $$L_i = \min(1.3 \times 1.0, \text{clip}(1.3, 0.8, 1.2) \times 1.0)$$
+  $$L_i = \min(1.3, 1.2) = \mathbf{1.2000}$$
+  (The clip function activates at $1.2$, preventing the policy from stepping too far, stabilizing training). $\blacksquare$
+
+---
+
+### Illustration 3: Format Reward Function Assignment
+
+**Problem:**
+Evaluate three generated responses for format reward and correctness reward.
+- `format_reward = +0.1` if response has strictly valid `<think>` and `<answer>` tags.
+- `correctness_reward = +1.0` if the extracted answer evaluates to the expected ground truth `5`.
+
+**Responses:**
+1. `<think>Let me solve: x=5</think><answer>5</answer>`
+2. `The answer is 5`
+3. `<think>Let me think...</think>`
+
+**Step-by-Step Solution:**
+
+**Response 1:**
+- Has `<think>`? YES.
+- Has `</think>`? YES.
+- Has `<answer>`? YES.
+- Has `</answer>`? YES.
+- Format valid? YES. **$R_{\text{format}} = +0.1$**
+- Content between answer tags: `5`.
+- Matches expected? `5 == 5`. YES. **$R_{\text{correct}} = +1.0$**
+- Total Reward = $1.0 + 0.1 = \mathbf{1.1000}$
+
+**Response 2:**
+- Format valid? NO (Missing tags). **$R_{\text{format}} = 0.0$**
+- Extract answer fallback: Evaluates to `5`. Matches? YES. **$R_{\text{correct}} = +1.0$**
+- Total Reward = $1.0 + 0.0 = \mathbf{1.0000}$
+
+**Response 3:**
+- Format valid? NO (Missing `<answer>` tags). **$R_{\text{format}} = 0.0$**
+- Extract answer: Fails. Matches expected? NO. **$R_{\text{correct}} = 0.0$**
+- Total Reward = $0.0 + 0.0 = \mathbf{0.0000}$
+
+The reward function enforces strict format compliance as a continuous soft constraint (worth 0.1) without overriding the primary correctness goal (worth 1.0). $\blacksquare$
+
+---
+
+### Illustration 4: KL Regularization in GRPO
+
+**Problem:**
+GRPO relies on KL-divergence regularization to prevent the policy from deviating too far from the reference model.
+Given:
+- Reference policy log-prob: $\log \pi_{\text{ref}}(a_t|o_t) = -2.5$
+- Case A (Moved toward action): Current policy $\log \pi_\theta(a_t|o_t) = -1.8$
+- Case B (Moved away from action): Current policy $\log \pi_\theta(a_t|o_t) = -3.5$
+- Base correctness reward: $R = 1.0$
+- KL coefficient: $\beta_{\text{KL}} = 0.04$
+
+Compute the effective regularized reward for both cases using the per-token KL estimate: $\text{KL} = \log \pi_\theta - \log \pi_{\text{ref}}$.
+
+**Step-by-Step Solution:**
+
+**Case A (Policy moved toward action):**
+1. KL estimate: $-1.8 - (-2.5) = -1.8 + 2.5 = \mathbf{0.7000}$ nats.
+2. KL penalty: $\beta_{\text{KL}} \times \text{KL} = 0.04 \times 0.7000 = \mathbf{0.0280}$.
+3. Effective reward: $r_{\text{eff}} = 1.0 - 0.0280 = \mathbf{0.9720}$.
+*(The model is slightly penalized for increasing the probability of this action away from the reference).*
+
+**Case B (Policy moved away from action):**
+1. KL estimate: $-3.5 - (-2.5) = -3.5 + 2.5 = \mathbf{-1.0000}$ nats.
+2. KL penalty: $\beta_{\text{KL}} \times \text{KL} = 0.04 \times (-1.0000) = \mathbf{-0.0400}$.
+3. Effective reward: $r_{\text{eff}} = 1.0 - (-0.0400) = 1.0 + 0.0400 = \mathbf{1.0400}$.
+*(The model receives a slight bonus for staying nearer or falling behind the reference, heavily stabilizing the training trajectory).* $\blacksquare$
 
 ---
 

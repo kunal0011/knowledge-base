@@ -328,6 +328,69 @@ A laboratory has a budget of $C = 1.2 \times 10^{20}$ FLOPs.
    - In hours:
      $$t_{\text{hours}} = \frac{12,500}{3600} \approx \mathbf{3.47 \text{ hours}} \quad \blacksquare$$
 
+### Illustration 2: WSD (Warmup-Stable-Decay) Schedule
+**Problem:**
+A WSD learning rate schedule runs for a total of $T=100,000$ steps.
+- Warmup: $T_w = 1,000$ steps (linear ramp from 0 to $\eta_{\text{max}}$).
+- Stable: $T_s = 80,000$ steps (constant $\eta_{\text{max}} = 3 \times 10^{-4}$).
+- Decay: $T_d = 19,000$ steps (cosine decay from $\eta_{\text{max}}$ to $\eta_{\text{min}} = 3 \times 10^{-5}$).
+Compute the learning rate at $t=500$, $t=50,000$, and $t=95,000$.
+
+**Step-by-Step Solution:**
+1. **At $t=500$ (Warmup Phase):**
+   $\eta_{500} = \eta_{\text{max}} \times \frac{500}{1000} = 3 \times 10^{-4} \times 0.5 = \mathbf{1.5 \times 10^{-4}}$.
+2. **At $t=50,000$ (Stable Phase):**
+   $t$ is between 1,000 and 81,000.
+   $\eta_{50000} = \eta_{\text{max}} = \mathbf{3.0 \times 10^{-4}}$.
+3. **At $t=95,000$ (Decay Phase):**
+   The decay phase starts at $T_{\text{decay\_start}} = 1000 + 80000 = 81000$.
+   Decay progress: $\frac{95000 - 81000}{19000} = \frac{14000}{19000} \approx \mathbf{0.73684}$.
+   Angle in cosine: $\pi \times 0.73684 \approx 2.3148$ radians.
+   $\cos(2.3148) \approx \mathbf{-0.672}$.
+   $\eta_{95000} = \eta_{\text{min}} + 0.5 \times (\eta_{\text{max}} - \eta_{\text{min}}) \times (1 + \cos(2.3148))$
+   $= 3 \times 10^{-5} + 0.5 \times (3 \times 10^{-4} - 3 \times 10^{-5}) \times (1 - 0.672)$
+   $= 3 \times 10^{-5} + 0.5 \times 2.7 \times 10^{-4} \times 0.328$
+   $= 3 \times 10^{-5} + 1.35 \times 10^{-4} \times 0.328 = 3 \times 10^{-5} + 4.428 \times 10^{-5} = \mathbf{7.428 \times 10^{-5}}$. $\blacksquare$
+
+### Illustration 3: ZeRO Stage 3 Memory Savings for a 7B Model
+**Problem:**
+Calculate the static memory savings of ZeRO Stage 3 (FSDP) over Standard DDP for a 7-Billion parameter model distributed across 8 GPUs. Assume full FP32 (4 bytes per parameter) is used for weights, gradients, and optimizer states.
+
+**Step-by-Step Solution:**
+1. **Standard DDP (Per GPU):**
+   - Weights: $7 \times 10^9 \times 4\text{ bytes} = 28\text{ GB}$.
+   - Gradients: $7 \times 10^9 \times 4\text{ bytes} = 28\text{ GB}$.
+   - Adam Optimizer States (Momentum + Variance): $2 \times 7 \times 10^9 \times 4\text{ bytes} = 56\text{ GB}$.
+   - Total memory per GPU: $28 + 28 + 56 = \mathbf{112\text{ GB}}$.
+   *(This would OOM an 80GB GPU.)*
+2. **ZeRO Stage 3 (Per GPU):**
+   - Everything is sharded across $P=8$ GPUs.
+   - Sharded Weights: $28\text{ GB} / 8 = \mathbf{3.5\text{ GB}}$.
+   - Sharded Gradients: $28\text{ GB} / 8 = \mathbf{3.5\text{ GB}}$.
+   - Sharded Optimizer States: $56\text{ GB} / 8 = \mathbf{7.0\text{ GB}}$.
+   - Total memory per GPU: $3.5 + 3.5 + 7.0 = \mathbf{14.0\text{ GB}}$.
+3. **Savings Ratio:**
+   $\frac{112\text{ GB}}{14\text{ GB}} = \mathbf{8 \times \text{ smaller}}$. $\blacksquare$
+
+### Illustration 4: Muon Optimizer vs Adam & Newton-Schulz Orthogonalization
+**Problem:**
+The Muon optimizer applies Nesterov momentum and then orthogonalizes the update matrix $G$ using Newton-Schulz iterations. For a weight matrix $W \in \mathbb{R}^{512 \times 512}$, we first normalize $X = G / \|G\|_F$, then iterate $X \leftarrow 1.5 X - 0.5 X X^T X$.
+Verify that $\|O\|_F \approx \sqrt{512}$ after orthogonalization. Show the first Newton-Schulz step for a tiny $2 \times 2$ example where $X_0 = \begin{bmatrix} 0.8 & 0 \\ 0 & 0.6 \end{bmatrix}$.
+
+**Step-by-Step Solution:**
+1. **Frobenius Norm of Orthogonal Matrix:**
+   An orthogonal matrix $O \in \mathbb{R}^{d \times d}$ satisfies $O^T O = I$.
+   $\|O\|_F = \sqrt{\operatorname{Tr}(O^T O)} = \sqrt{\operatorname{Tr}(I_d)} = \sqrt{d}$.
+   For $d = 512$, $\|O\|_F = \sqrt{512} \approx \mathbf{22.627}$.
+2. **Newton-Schulz Tiny Example:**
+   Given $X_0 = \begin{bmatrix} 0.8 & 0 \\ 0 & 0.6 \end{bmatrix}$. (Notice singular values are 0.8 and 0.6, we want them to approach 1.0).
+   $X_0 X_0^T X_0 = \begin{bmatrix} 0.8 & 0 \\ 0 & 0.6 \end{bmatrix}^3 = \begin{bmatrix} 0.512 & 0 \\ 0 & 0.216 \end{bmatrix}$.
+   $X_1 = 1.5 X_0 - 0.5 (X_0 X_0^T X_0) = 1.5 \begin{bmatrix} 0.8 & 0 \\ 0 & 0.6 \end{bmatrix} - 0.5 \begin{bmatrix} 0.512 & 0 \\ 0 & 0.216 \end{bmatrix}$
+   $= \begin{bmatrix} 1.2 & 0 \\ 0 & 0.9 \end{bmatrix} - \begin{bmatrix} 0.256 & 0 \\ 0 & 0.108 \end{bmatrix} = \begin{bmatrix} 0.944 & 0 \\ 0 & 0.792 \end{bmatrix}$.
+3. **Convergence Check:**
+   The singular values moved from $(0.8, 0.6)$ to $(0.944, 0.792)$, significantly closer to $1.0$. Repeated steps will converge to $I$.
+   $\|X_1\|_F = \sqrt{0.944^2 + 0.792^2} = \sqrt{0.8911 + 0.6272} = \sqrt{1.5183} \approx \mathbf{1.232}$. $\blacksquare$
+
 ---
 
 ## 7. Deep Learning Connection & Modern Applications

@@ -265,6 +265,80 @@ Using a DiT with patch size $p = 2$:
 
 ---
 
+### Illustration 2: AdaLN Conditioning Computation
+**Problem:**
+Compute the Adaptive Layer Normalization parameters and modulated output.
+Given a class embedding $c = [1.5, -0.5]^T$, project it to a scale $\gamma$ and shift $\beta$ using:
+- $W_s = \begin{bmatrix} 2 & 1 \\ -1 & 3 \end{bmatrix}, b_s = \begin{bmatrix} 0.1 \\ -0.1 \end{bmatrix}$
+- $W_{sh} = \begin{bmatrix} 1 & -1 \\ 0.5 & 2 \end{bmatrix}, b_{sh} = \begin{bmatrix} -0.2 \\ 0.3 \end{bmatrix}$
+Apply the modulation: $\text{output} = \gamma \odot \text{RMSNorm}(x) + \beta$ for $x = [0.8, -0.3]^T$ (Assume RMSNorm gives $[0.936, -0.351]^T$).
+
+**Solution:**
+1. **Compute Scale $\gamma$:**
+   $$\gamma = W_s \cdot c + b_s = \begin{bmatrix} 2 & 1 \\ -1 & 3 \end{bmatrix} \begin{bmatrix} 1.5 \\ -0.5 \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.1 \end{bmatrix}$$
+   $$\gamma = \begin{bmatrix} 2(1.5) + 1(-0.5) \\ -1(1.5) + 3(-0.5) \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.1 \end{bmatrix} = \begin{bmatrix} 3 - 0.5 \\ -1.5 - 1.5 \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.1 \end{bmatrix} = \begin{bmatrix} 2.5 \\ -3.0 \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.1 \end{bmatrix} = \mathbf{\begin{bmatrix} 2.6 \\ -3.1 \end{bmatrix}}$$
+
+2. **Compute Shift $\beta$:**
+   $$\beta = W_{sh} \cdot c + b_{sh} = \begin{bmatrix} 1 & -1 \\ 0.5 & 2 \end{bmatrix} \begin{bmatrix} 1.5 \\ -0.5 \end{bmatrix} + \begin{bmatrix} -0.2 \\ 0.3 \end{bmatrix}$$
+   $$\beta = \begin{bmatrix} 1.5 - (-0.5) \\ 0.75 - 1.0 \end{bmatrix} + \begin{bmatrix} -0.2 \\ 0.3 \end{bmatrix} = \begin{bmatrix} 2.0 \\ -0.25 \end{bmatrix} + \begin{bmatrix} -0.2 \\ 0.3 \end{bmatrix} = \mathbf{\begin{bmatrix} 1.8 \\ 0.05 \end{bmatrix}}$$
+
+3. **Apply Modulation:**
+   $$\text{output} = \gamma \odot \text{RMSNorm}(x) + \beta = \begin{bmatrix} 2.6 \\ -3.1 \end{bmatrix} \odot \begin{bmatrix} 0.936 \\ -0.351 \end{bmatrix} + \begin{bmatrix} 1.8 \\ 0.05 \end{bmatrix}$$
+   $$\text{output} = \begin{bmatrix} 2.4336 \\ 1.0881 \end{bmatrix} + \begin{bmatrix} 1.8 \\ 0.05 \end{bmatrix} = \mathbf{\begin{bmatrix} 4.2336 \\ 1.1381 \end{bmatrix}} \quad \blacksquare$$
+
+---
+
+### Illustration 3: Forward Diffusion Process
+**Problem:**
+A 2D latent image $x_0 = [1.0, -1.0]^T$ is corrupted by a forward diffusion process. 
+The cumulative noise schedule is: $\bar{\alpha}_1 = 0.9, \bar{\alpha}_{10} = 0.5, \bar{\alpha}_{100} = 0.05$.
+Given sampled noise $\epsilon = [0.5, 0.7]^T$, compute $x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1 - \bar{\alpha}_t}\epsilon$ and the signal-to-noise ratio multiplier $\sqrt{\bar{\alpha}_t / (1 - \bar{\alpha}_t)}$ at each $t$.
+
+**Solution:**
+1. **At $t=1$:**
+   - $x_1 = \sqrt{0.9}[1, -1]^T + \sqrt{0.1}[0.5, 0.7]^T$
+   - $x_1 = 0.9487[1, -1]^T + 0.3162[0.5, 0.7]^T = [0.9487, -0.9487]^T + [0.1581, 0.2214]^T = \mathbf{[1.1068, -0.7273]^T}$
+   - $\text{SNR multiplier} = \sqrt{\frac{0.9}{0.1}} = \sqrt{9} = \mathbf{3.00}$ (Strong signal)
+
+2. **At $t=10$:**
+   - $x_{10} = \sqrt{0.5}[1, -1]^T + \sqrt{0.5}[0.5, 0.7]^T$
+   - $x_{10} = 0.7071[1, -1]^T + 0.7071[0.5, 0.7]^T = [0.7071, -0.7071]^T + [0.3536, 0.4950]^T = \mathbf{[1.0607, -0.2121]^T}$
+   - $\text{SNR multiplier} = \sqrt{\frac{0.5}{0.5}} = \sqrt{1} = \mathbf{1.00}$ (Equal signal and noise)
+
+3. **At $t=100$:**
+   - $x_{100} = \sqrt{0.05}[1, -1]^T + \sqrt{0.95}[0.5, 0.7]^T$
+   - $x_{100} = 0.2236[1, -1]^T + 0.9747[0.5, 0.7]^T = [0.2236, -0.2236]^T + [0.4873, 0.6823]^T = \mathbf{[0.7109, 0.4587]^T}$
+   - $\text{SNR multiplier} = \sqrt{\frac{0.05}{0.95}} = \sqrt{0.0526} = \mathbf{0.2294}$ (Signal destroyed) $\blacksquare$
+
+---
+
+### Illustration 4: DiT Parameter Count Breakdown
+**Problem:**
+Estimate the parameter budget for a **DiT-XL/2** model.
+Hyperparameters: patch\_size = 2, img\_size = 256, embedding\_dim $d = 1152$, depth = 28, n\_heads = 16. SwiGLU FFN expansion = $4 \times d = 4608$.
+
+**Solution:**
+1. **Input Tokens:**
+   - $\text{Patches} = (256/2)^2 = 128^2 = \mathbf{16,384 \text{ tokens}}$
+
+2. **Patch Embedding Layer:**
+   - $W_{\text{embed}} \in \mathbb{R}^{d_{\text{patch}} \times d}$, where $d_{\text{patch}} = 3 \times 2 \times 2 = 12$.
+   - Params = $12 \times 1152 = \mathbf{13,824}$
+
+3. **Per-Layer Parameters:**
+   - **Self-Attention:** 4 weight matrices ($W_Q, W_K, W_V, W_O$).
+     Params = $4 \times 1152^2 = \mathbf{5.31 \text{ M}}$
+   - **SwiGLU FFN:** 3 weight matrices ($W_1, W_2, W_3$ mapping $1152 \to 4608$ or vice versa).
+     Params = $3 \times 1152 \times 4608 = \mathbf{15.93 \text{ M}}$
+   - **Total per layer** $\approx 5.31 + 15.93 = \mathbf{21.24 \text{ M}}$
+
+4. **Total Core Transformer Budget:**
+   - For 28 layers: $28 \times 21.24\text{ M} \approx \mathbf{594.7 \text{ M parameters}}$
+
+*(Compared to SD 1.5's UNet at $\sim 860\text{M}$ params, DiT achieves vastly superior results with a highly structured, dense parameter allocation without convolutions).* $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **OpenAI Sora & LTX-Video:** Rather than 2D spatial patches, Sora uses **3D Space-Time Patches** ($p_t \times p_h \times p_w$). A video volume $C \times T \times H \times W$ is flattened into spatio-temporal tokens, allowing DiT to generate consistent physical motion over time.

@@ -246,6 +246,93 @@ A batch consists of 4 conversations with token lengths: $[128, 256, 512, 1024]$.
 
 ---
 
+### Illustration 2: SFT Cross-Entropy Loss Computation
+**Problem:**
+Compute the SFT cross-entropy loss on a 3-token target sequence. The vocabulary size $V=5$. The target token IDs are `[2, 4, 1]`. 
+The predicted logits matrix (3 rows, 5 columns) is:
+- Row 0: `[1.2, -0.5, 2.1, 0.3, -1.0]`
+- Row 1: `[0.8, 0.2, -0.3, 1.5, 0.9]`
+- Row 2: `[-0.2, 1.8, 0.4, -0.7, 0.1]`
+
+**Solution:**
+For each row, we apply softmax to convert logits to probabilities, then calculate the negative log-likelihood (NLL) for the target index.
+
+1. **Row 0 (Target = 2):**
+   - Exponentials: $e^{1.2}=3.320$, $e^{-0.5}=0.607$, $e^{2.1}=8.166$, $e^{0.3}=1.350$, $e^{-1.0}=0.368$
+   - Softmax denominator: $3.320 + 0.607 + 8.166 + 1.350 + 0.368 = 13.811$
+   - Probability of target 2: $P(2) = \frac{8.166}{13.811} = \mathbf{0.5913}$
+   - Loss 0: $-\ln(0.5913) = \mathbf{0.5254}$
+
+2. **Row 1 (Target = 4):**
+   - Exponentials: $e^{0.8}=2.226$, $e^{0.2}=1.221$, $e^{-0.3}=0.741$, $e^{1.5}=4.482$, $e^{0.9}=2.460$
+   - Softmax denominator: $2.226 + 1.221 + 0.741 + 4.482 + 2.460 = 11.130$
+   - Probability of target 4: $P(4) = \frac{2.460}{11.130} = \mathbf{0.2210}$
+   - Loss 1: $-\ln(0.2210) = \mathbf{1.5096}$
+
+3. **Row 2 (Target = 1):**
+   - Exponentials: $e^{-0.2}=0.819$, $e^{1.8}=6.050$, $e^{0.4}=1.492$, $e^{-0.7}=0.497$, $e^{0.1}=1.105$
+   - Softmax denominator: $0.819 + 6.050 + 1.492 + 0.497 + 1.105 = 9.963$
+   - Probability of target 1: $P(1) = \frac{6.050}{9.963} = \mathbf{0.6072}$
+   - Loss 2: $-\ln(0.6072) = \mathbf{0.4989}$
+
+**Mean SFT Loss:**
+$$\mathcal{L} = \frac{0.5254 + 1.5096 + 0.4989}{3} = \frac{2.5339}{3} = \mathbf{0.8446} \quad \blacksquare$$
+
+---
+
+### Illustration 3: Sequence Packing Efficiency 
+**Problem:**
+A dataset contains 4 training examples with token lengths `[512, 256, 128, 768]`. The model's max sequence length is $1024$. Calculate the padding waste percentage with and without sequence packing.
+
+**Solution:**
+1. **Without Packing (Standard Padding):**
+   - We create 4 sequences, each padded to 1024. Total positions = $4 \times 1024 = 4096$.
+   - Actual tokens = $512 + 256 + 128 + 768 = 1664$.
+   - Padding tokens = $4096 - 1664 = 2432$.
+   - Waste percentage = $\frac{2432}{4096} = \mathbf{59.4\%}$.
+
+2. **With Packing (Multipack):**
+   - We pack Sequence 1: $512 + 256 + 128 = 896 \le 1024$.
+   - We pack Sequence 2: $768 \le 1024$.
+   - Total positions required = $2 \times 1024 = 2048$.
+   - Actual tokens = $1664$.
+   - Padding tokens = $2048 - 1664 = 384$.
+   - Waste percentage = $\frac{384}{2048} = \mathbf{18.8\%}$.
+
+**Conclusion:** Packing reduces the padding waste from $59.4\%$ down to $18.8\%$, an efficiency gain that drastically reduces training time. $\blacksquare$
+
+---
+
+### Illustration 4: Chat Template Tokenization & Masking
+**Problem:**
+Walk through the ChatML formatting for a 3-turn conversation.
+- System: `"You are helpful."` (3 tokens)
+- User: `"What is 2+2?"` (5 tokens)
+- Assistant: `"4."` (2 tokens)
+
+Identify the special tokens, the total sequence length, and which tokens receive the loss gradients.
+
+**Solution:**
+1. **Full Sequence String:**
+   ```
+   <|im_start|>system\nYou are helpful.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\n4.<|im_end|>
+   ```
+
+2. **Token Accounting:**
+   - **System:** `<|im_start|>` (1) + `system\n` (1) + `You are helpful.` (3) + `<|im_end|>\n` (2) = **7 tokens**
+   - **User:** `<|im_start|>` (1) + `user\n` (1) + `What is 2+2?` (5) + `<|im_end|>\n` (2) = **9 tokens**
+   - **Assistant:** `<|im_start|>` (1) + `assistant\n` (1) + `4.` (2) + `<|im_end|>` (1) = **5 tokens**
+   - **Total Length:** $7 + 9 + 5 = \mathbf{21 \text{ tokens}}$.
+
+3. **Loss Masking Strategy:**
+   - The system instructions and user query act as the **prompt**. These 16 tokens are masked (`target = -100`).
+   - The preamble `<|im_start|>assistant\n` (2 tokens) is also masked, because the model should not be penalized for being forced to generate its own name.
+   - Only the actual assistant response `"4."` (2 tokens) and the termination token `<|im_end|>` (1 token) have active targets.
+   
+**Result:** Loss is applied to only **3 out of 21** tokens in the context window. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **Axolotl & LLaMA-Factory:** Open-source LLM post-training harnesses rely on Multipack algorithms that bin-pack sequences into fixed context lengths (e.g. 8192) using the first-fit decreasing (FFD) algorithm.

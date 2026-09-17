@@ -130,6 +130,7 @@ Let us execute a complete, step-by-step numerical trace of:
 2. **External Python Execution & Error Signal**
 3. **Attention Weight Re-allocation during the "Wait" Backtrack**
 4. **Successful Grounded Correction**
+5. **Backtracking Entropy Reduction**
 
 ---
 
@@ -201,7 +202,7 @@ Conditioned on $A_{\text{error}}$ and $A_{\text{quest}}$:
 The model generates:
 `"Wait, 3 cubed is 3 * 3 * 3 = 27, not 16! 1 + 8 + 27 = 36. Answer: 36"`
 
-- Verification in Python: `assert 1**3 + 2**3 + 3**3 == 36` $\implies$ **PASS! (SUCCESS)** $\blacksquare$
+- Verification in Python: `assert 1**3 + 2**3 + 3**3 == 36` $\implies$ **PASS! (SUCCESS)**
 
 ---
 
@@ -213,6 +214,23 @@ The model generates:
 | **Flawed Token ("16")** | $-1.0000$ | $0.3679$ | **$0.49\%$** | **Efficacy Suppressed (Erased)** |
 | **Compiler ("expected 36")**| $+4.0000$ | $54.5982$ | **$72.75\%$** | **Dominant Focus (Grounded)** |
 | **Total** | — | $75.0516$ | **$100.00\%$** | Error corrected successfully |
+
+---
+
+### 5.5 Backtracking Entropy Reduction
+
+Before the external verification, the model has multiple hypotheses for the answer. Let's compute the Shannon entropy of the answer distribution before and after the external feedback.
+- **Prior Distribution $P_0$ (Ungrounded):**
+  $P(\text{ans}=25) = 0.60$, $P(\text{ans}=36) = 0.30$, $P(\text{ans}=16) = 0.10$.
+  Entropy $H(P_0) = - (0.6 \log_2 0.6 + 0.3 \log_2 0.3 + 0.1 \log_2 0.1)$.
+  $= - (0.6 \times -0.7370 + 0.3 \times -1.7370 + 0.1 \times -3.3219) = 0.4422 + 0.5211 + 0.3322 = \mathbf{1.2955}$ bits.
+- **Posterior Distribution $P_1$ (Grounded after `AssertionError: 36 != 25`):**
+  The sandbox explicitly reveals `36`. The model places near certainty on it:
+  $P(\text{ans}=25) = 0.01$, $P(\text{ans}=36) = 0.98$, $P(\text{ans}=16) = 0.01$.
+  Entropy $H(P_1) = - (0.01 \log_2 0.01 + 0.98 \log_2 0.98 + 0.01 \log_2 0.01)$.
+  $= - (0.01 \times -6.6439 \times 2 + 0.98 \times -0.0291) = 0.1329 + 0.0285 = \mathbf{0.1614}$ bits.
+- **Information Gain:**
+  The external sandbox provided an information gain of $1.2955 - 0.1614 = \mathbf{1.1341}$ bits, collapsing the model's uncertainty and forcing the correct derivation. $\blacksquare$
 
 ---
 
@@ -229,6 +247,93 @@ In RLHF fine-tuning datasets (e.g. Anthropic HH-RLHF), whenever a human user cor
 Consequently, the model learns a **sycophantic prior**:
 $$P(\text{User Disagrees} \implies \text{Assistant is Wrong}) \approx 0.95$$
 The model optimizes for conversational agreeableness rather than logical truth. External execution feedback (running Python) cures sycophancy because the Python interpreter cannot be persuaded by polite rhetoric! $\blacksquare$
+
+---
+
+### Illustration 2: Sequential Self-Refinement Probability Model
+
+**Problem:**
+At each round $k$ of self-correction, a model has probability $P_k$ of outputting a correct answer.
+Assume an initial accuracy of $P_0 = 0.40$. During each correction round, the model has a $\Delta = 0.25$ probability of successfully fixing a wrong answer.
+Compute the expected accuracy up to round 4. Compare the sequential refinement cost to Best-of-N (BoN) sampling where $N=5$.
+
+**Step-by-Step Solution:**
+
+**1. Sequential Refinement Updates:**
+Formula: $P_k = P_{k-1} + (1 - P_{k-1}) \times \Delta$
+- **Round 0:** $P_0 = \mathbf{0.4000}$
+- **Round 1:** $P_1 = 0.40 + (1 - 0.40) \times 0.25 = 0.40 + 0.15 = \mathbf{0.5500}$
+- **Round 2:** $P_2 = 0.55 + (0.45 \times 0.25) = 0.55 + 0.1125 = \mathbf{0.6625}$
+- **Round 3:** $P_3 = 0.6625 + (0.3375 \times 0.25) = 0.6625 + 0.0844 = \mathbf{0.7469}$
+- **Round 4:** $P_4 = 0.7469 + (0.2531 \times 0.25) = 0.7469 + 0.0633 = \mathbf{0.8102}$
+
+**2. Compare with BoN (Independent Calls):**
+Both methods use 5 model calls (1 initial + 4 refinements vs 5 independent samples).
+Best-of-N probability of at least one success: $1 - (1 - P_0)^5 = 1 - (1 - 0.40)^5 = 1 - (0.60)^5 = 1 - 0.07776 = \mathbf{0.9222}$.
+
+**Conclusion:** BoN reaches $92.2\%$ while sequential self-correction only reaches $81.0\%$. BoN wins when errors are independent; however, execution-grounded self-correction dominates when errors are systematic and the feedback provides novel path correction. $\blacksquare$
+
+---
+
+### Illustration 3: Code Execution Verification Pass@k
+
+**Problem:**
+A single model generates $N=5$ solutions for a coding problem.
+A sandbox runs unit tests (3 test cases per problem).
+Results:
+- Sol1: [Pass, Pass, Fail] = $2/3$
+- Sol2: [Pass, Fail, Pass] = $2/3$
+- Sol3: [Pass, Pass, Pass] = $3/3$
+- Sol4: [Fail, Pass, Pass] = $2/3$
+- Sol5: [Pass, Pass, Fail] = $2/3$
+
+If we select the best solution by test pass count, Sol3 is chosen. If the hidden ground truth test suite has 10 test cases and Sol3 passes 9/10, final accuracy is $90\%$.
+Compute the expected accuracy if we had randomly selected a solution instead, and quantify the gain from verifier-guided selection.
+
+**Step-by-Step Solution:**
+
+1. **Compute Expected Pass Rate of Random Selection:**
+   $$\mathbb{E}[\text{pass\_rate}] = \frac{(2/3) + (2/3) + (3/3) + (2/3) + (2/3)}{5} = \frac{11/3}{5} = \frac{11}{15} \approx \mathbf{0.7333}$$
+2. **Execution-Guided Selection Accuracy:**
+   The external verifier cleanly identified Sol3 ($3/3$ on public tests), which yields $90\%$ ($\mathbf{0.9000}$) on the hidden suite.
+3. **Quantify the Gain:**
+   $$0.9000 - 0.7333 = \mathbf{+0.1667 \quad (16.7\%)}$$
+Execution feedback provides a definitive ranking mechanism, directly recovering $+16.7\%$ performance without any additional model training. $\blacksquare$
+
+---
+
+### Illustration 4: Backtracking Overhead Analysis
+
+**Problem:**
+A reasoning tree has depth $D=4$ and a branching factor $b=2$ (total paths = $2^4 = 16$).
+A backtracking model has a probability $p_{\text{err}} = 0.3$ of taking a wrong branch at each node. If it takes a wrong branch, it explores and then backtracks.
+Compute the expected number of nodes visited before successfully finding the correct path. Compare this to a perfect non-backtracking model (4 nodes).
+
+**Step-by-Step Solution:**
+
+**1. Define Probabilities of Backtracking:**
+- $P(\text{no backtrack}) = (1 - 0.3)^4 = 0.7^4 = \mathbf{0.2401}$
+- $P(\text{backtrack at depth } 1) = \mathbf{0.3000}$
+- $P(\text{backtrack at depth } 2) = 0.7 \times 0.3 = \mathbf{0.2100}$
+- $P(\text{backtrack at depth } 3) = 0.7^2 \times 0.3 = \mathbf{0.1470}$
+- $P(\text{backtrack at depth } 4) = 0.7^3 \times 0.3 = \mathbf{0.1029}$
+
+**2. Define Nodes Visited in Each Case:**
+- Success without backtrack = $\mathbf{4}$ nodes
+- Backtrack at depth 1 = go down, backtrack = $\mathbf{2}$ nodes
+- Backtrack at depth 2 = $3$ down + $1$ back = $\mathbf{4}$ nodes
+- Backtrack at depth 3 = $5$ down + $2$ back + $1$ error node = $\mathbf{8}$ nodes
+- Backtrack at depth 4 = $\mathbf{12}$ nodes
+
+**3. Compute Expected Nodes Visited:**
+$$\mathbb{E}[\text{nodes}] = \sum P_k \times N_k$$
+$$\mathbb{E}[\text{nodes}] = (0.3 \times 2) + (0.21 \times 4) + (0.147 \times 8) + (0.103 \times 12) + (0.2401 \times 4)$$
+$$\mathbb{E}[\text{nodes}] = 0.600 + 0.840 + 1.176 + 1.236 + 0.9604 = \mathbf{4.8124} \text{ nodes}$$
+
+**4. Overhead Comparison:**
+- Ideal model visits $4$ nodes.
+- Overhead ratio = $4.8124 / 4 = \mathbf{1.2031}$
+The model spends roughly $\mathbf{20\%}$ extra compute on backtracking, but this overhead prevents complete failure in deep reasoning chains. $\blacksquare$
 
 ---
 

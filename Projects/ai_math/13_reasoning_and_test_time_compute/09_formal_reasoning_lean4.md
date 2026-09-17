@@ -147,6 +147,7 @@ Let us execute a complete, step-by-step trace of:
 1. **Curry-Howard Goal Formulation**
 2. **Step-by-Step Tactic State Transitions ($\Gamma \vdash G$)**
 3. **Closing Sub-Goals to Reach `no goals`**
+4. **MCTS Action Probability Calculation in AlphaProof**
 
 ---
 
@@ -203,7 +204,7 @@ Let us execute a complete, step-by-step trace of:
 The Lean 4 kernel type-checks the term:
 $$\operatorname{typeOf}(\langle hq, hp \rangle) = Q \land P \equiv G_2$$
 The goal is discharged!
-$$\text{Remaining Goals} = \emptyset \implies \mathbf{\texttt{goals accomplished}} \quad \blacksquare$$
+$$\text{Remaining Goals} = \emptyset \implies \mathbf{\texttt{goals accomplished}}$$
 
 ---
 
@@ -215,6 +216,26 @@ $$\text{Remaining Goals} = \emptyset \implies \mathbf{\texttt{goals accomplished
 | **$s_1$** | $h : P \land Q$ | `Q ∧ P` | `rcases h with ⟨hp, hq⟩` | Decomposed |
 | **$s_2$** | $hp : P, \; hq : Q$ | `Q ∧ P` | `exact ⟨hq, hp⟩` | Solved |
 | **$s_3$** | — | $\emptyset$ | — | **VERIFIED CERTIFIED** |
+
+---
+
+### 5.5 MCTS Action Probability Calculation
+
+In AlphaProof, tactic selection uses Monte Carlo Tree Search (MCTS) policy priors and Q-values.
+Given three candidate tactics proposed by the LLM:
+- **Tactic 1 (`linarith`):** Prior $P_1 = 0.50$, Action Value $Q_1 = 0.80$, Visit Count $N_1 = 10$.
+- **Tactic 2 (`ring`):** Prior $P_2 = 0.30$, Action Value $Q_2 = 0.10$, Visit Count $N_2 = 5$.
+- **Tactic 3 (`omega`):** Prior $P_3 = 0.20$, Action Value $Q_3 = 0.90$, Visit Count $N_3 = 2$.
+
+Total parent visits $N = 10 + 5 + 2 = 17$. $C_{\text{PUCT}} = 1.5$.
+1. **Compute UCB Score for Tactic 1:**
+   $$U_1 = Q_1 + C_{\text{PUCT}} \times P_1 \times \frac{\sqrt{N}}{1 + N_1} = 0.80 + 1.5 \times 0.50 \times \frac{\sqrt{17}}{1 + 10} = 0.80 + 0.75 \times \frac{4.1231}{11} = 0.80 + 0.2811 = \mathbf{1.0811}$$
+2. **Compute UCB Score for Tactic 2:**
+   $$U_2 = 0.10 + 1.5 \times 0.30 \times \frac{\sqrt{17}}{1 + 5} = 0.10 + 0.45 \times \frac{4.1231}{6} = 0.10 + 0.3092 = \mathbf{0.4092}$$
+3. **Compute UCB Score for Tactic 3:**
+   $$U_3 = 0.90 + 1.5 \times 0.20 \times \frac{\sqrt{17}}{1 + 2} = 0.90 + 0.30 \times \frac{4.1231}{3} = 0.90 + 0.4123 = \mathbf{1.3123}$$
+4. **Action Selection:**
+   Tactic 3 has the highest UCB score ($1.3123 > 1.0811 > 0.4092$). MCTS prioritizes its exploration and selects `omega` for the next simulation step. $\blacksquare$
 
 ---
 
@@ -236,6 +257,94 @@ Examine this human natural language prompt:
      linarith
    ```
    *(The automated tactic `linarith` solves linear arithmetic inequalities instantly using Fourier-Motzkin elimination).* $\blacksquare$
+
+---
+
+### Illustration 2: Lean 4 Type Theory Proof Term Construction
+
+**Problem:**
+Construct Curry-Howard proof terms for the following two theorems:
+1. Prove $P \to P$ (the identity function on propositions).
+2. Prove $A \to B \to A$ (the K combinator).
+
+**Step-by-Step Solution:**
+
+**1. Prove $P \to P$:**
+- **Lean 4 Tactic:** `theorem id_prop (P : Prop) : P → P := fun h => h`
+- **Type Derivation:**
+  (1) Introduce $P : \text{Prop}$.
+  (2) Introduce assumption $h : P$.
+  (3) Return $h : P$.
+- **Lambda Term:** This corresponds exactly to the $\lambda$-term $\lambda P. \lambda h:P. h$.
+- **Type Signature:** $\forall P : \text{Prop}, P \to P$.
+
+**2. Prove $A \to B \to A$:**
+- **Lean 4 Tactic:** `theorem k_prop (A B : Prop) : A → B → A := fun ha _ => ha`
+- **Type Derivation:**
+  (1) Introduce $A, B : \text{Prop}$.
+  (2) Introduce $ha : A$.
+  (3) Introduce \_ : $B$ (ignored).
+  (4) Return $ha : A$.
+- **Lambda Term:** $\lambda A. \lambda B. \lambda ha:A. \lambda \_:B. ha$.
+- **Type Signature:** $\forall A B : \text{Prop}, A \to B \to A$.
+
+The dependent type checker verifies these lambda expressions in $O(1)$ per term, proving the logic seamlessly! $\blacksquare$
+
+---
+
+### Illustration 3: AlphaProof Reward Signal Computation
+
+**Problem:**
+Demonstrate the severe sparsity of reward signals in formal theorem proving.
+A tactic proof attempt operates on a simplified IMO problem. Evaluate the reward $R$ given by the Lean kernel after multiple distinct tactic steps.
+
+**Step-by-Step Solution:**
+
+**Scenario A:**
+- **Proof state after 3 tactics:** Goal remaining: prove $n^2 + n + 1 > 0$ for all $n : \mathbb{Z}$.
+- **LLM action:** Proposes tactic `positivity`.
+- **Lean response:** Kernel applies tactic, succeeds. Remaining goals = $0$. State is `no goals` (QED).
+- **Reward:** $R = \mathbf{+1.0}$ (proof complete).
+
+**Scenario B:**
+- **Proof state after 3 different tactics:** Goal remaining: $\sum_{i \in \text{Finset.range } n} (i+1) = n(n+1)/2$.
+- **LLM action 1:** Proposes tactic `ring`.
+- **Lean response:** `ring` fails (goal is not purely algebraic).
+- **Reward:** $R = \mathbf{0.0}$ (not done).
+- **LLM action 2:** Proposes tactic `induction n`.
+- **Lean response:** Goal splits into 2 complex subgoals (base case and inductive step).
+- **Reward:** $R = \mathbf{0.0}$ (still not done).
+
+**Conclusion:** Only the final QED state yields $R=1.0$; everything else, even highly productive mathematical inductions, yields $R=0.0$. This extreme sparsity is exactly why pure gradient descent struggles, and why MCTS requires 800+ simulations per step to surface rare $R=1.0$ signals! $\blacksquare$
+
+---
+
+### Illustration 4: Autoformalization Accuracy Estimation
+
+**Problem:**
+Evaluate the autoformalization accuracy across statements of varying complexity.
+1. Translate "For all real $x$, $x^2 \ge 0$" into Lean 4 and verify.
+2. Translate "The sum of the first $n$ natural numbers is $n(n+1)/2$" into Lean 4 and manually check correctness for $n=4$.
+3. Compare LLM success rates vs AlphaProof's round-trip verification system.
+
+**Step-by-Step Solution:**
+
+**1. Natural Language Math 1:**
+- Statement: "For all real $x$, $x^2 \ge 0$"
+- Formal Lean 4: `∀ x : ℝ, x^2 ≥ 0`
+- Correctness: The `sq_nonneg x` tactic closes the goal immediately. Valid!
+
+**2. Natural Language Math 2:**
+- Statement: "The sum of the first $n$ natural numbers is $n(n+1)/2$"
+- Formal Lean 4: `∑ i in Finset.range (n+1), i = n*(n+1)/2`
+- Test for $n=4$:
+  LHS: $\sum_{i=0}^4 i = 0 + 1 + 2 + 3 + 4 = \mathbf{10}$.
+  RHS: $4 \times 5 / 2 = 20 / 2 = \mathbf{10}$.
+  $10 = 10 \checkmark$. Proven in Lean via mathematical induction.
+
+**3. Error Rate Comparison:**
+- **Standard GPT-4 on AMC/AIME:** $\approx 35\%$ produce syntactically valid Lean code but structurally *semantically wrong* formalizations (e.g., swapping `∃` and `∀`).
+- **AlphaProof System:** Leverages a 3-step loop: Formalize $\to$ Lean checker $\to$ Backtranslate to English $\to$ Match against original prompt. This drives the error rate down to **$<10\%$**, ensuring that the theorems being proven are actually the ones asked by the competition! $\blacksquare$
 
 ---
 

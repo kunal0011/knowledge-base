@@ -249,6 +249,81 @@ Which proof is selected under Product aggregation vs. Min aggregation?
 
 ---
 
+### Illustration 2: PRM Step Scoring on a 4-Step Chain
+
+**Problem:**
+A 4-step chain: $s_1$=`'Let x=2+3=5'`, $s_2$=`'Multiply by 4: 5×4=20'`, $s_3$=`'Add 7: 20+7=27'`, $s_4$=`'Answer: 27'`.
+PRM assigns step scores: $r_1=0.95$, $r_2=0.90$, $r_3=0.85$, $r_4=1.0$.
+Compute cumulative PRM score using Product and Min aggregation. Compare this to an ORM model score of $1.0$ (final answer correct).
+Then, re-evaluate if $s_2$ was $s_2^{\text{bad}}$=`'Multiply by 4: 5×4=22'` (wrong!) yielding $r_2^{\text{bad}}=0.15$. Show how PRM catches the mid-step error.
+
+**Step-by-Step Solution:**
+1. **Good Chain (Product and Min):**
+   - Product: $0.95 \times 0.90 \times 0.85 \times 1.0 = \mathbf{0.72675}$
+   - Min: $\min(0.95, 0.90, 0.85, 1.0) = \mathbf{0.85}$
+   - ORM Score: $\mathbf{1.0}$ (because final answer is correct).
+
+2. **Bad Chain with Mid-Step Error ($r_2=0.15$):**
+   - Assume final answer luckily matches target (e.g. via canceling errors). ORM Score: $\mathbf{1.0}$.
+   - PRM Product: $0.95 \times 0.15 \times 0.85 \times 1.0 = \mathbf{0.121125}$
+   - PRM Min: $\min(0.95, 0.15, 0.85, 1.0) = \mathbf{0.15}$
+   
+**Conclusion:** The ORM gives $1.0$ to the hallucinated chain. The PRM immediately pinpoints the failure at step 2 ($0.15$), giving the entire trajectory a near-zero score and preventing the model from learning flawed logic. $\blacksquare$
+
+---
+
+### Illustration 3: PRM Training: Binary Cross-Entropy on Step Annotations
+
+**Problem:**
+3 steps with labels: $y_1=1$ (correct), $y_2=0$ (incorrect), $y_3=1$ (correct).
+PRM predictions: $p_1=0.92$, $p_2=0.35$, $p_3=0.78$.
+Compute the per-step BCE loss and the mean BCE loss. Then compute the gradient magnitude with respect to the prediction probability $p$.
+
+**Step-by-Step Solution:**
+1. **BCE Per Step:**
+   - $L_1 = -\log(p_1) = -\log(0.92) = \mathbf{0.08338}$
+   - $L_2 = -\log(1 - p_2) = -\log(1 - 0.35) = -\log(0.65) = \mathbf{0.43078}$
+   - $L_3 = -\log(p_3) = -\log(0.78) = \mathbf{0.24846}$
+   - Mean BCE = $(0.08338 + 0.43078 + 0.24846) / 3 = 0.76262 / 3 = \mathbf{0.25421}$
+
+2. **Gradient Magnitude ($dL/dp_i$):**
+   - For $y_1=1$: $dL/dp_1 = -1/p_1 = -1 / 0.92 = \mathbf{-1.0870}$
+   - For $y_2=0$: $dL/dp_2 = 1/(1-p_2) = 1 / 0.65 = \mathbf{1.5385}$
+   - For $y_3=1$: $dL/dp_3 = -1/p_3 = -1 / 0.78 = \mathbf{-1.2821}$
+   
+**Conclusion:** The incorrect step 2 ($L_2$) produces the largest absolute gradient ($1.5385$), forcing the network to focus its learning on the exact point of failure (the error detection step). $\blacksquare$
+
+---
+
+### Illustration 4: PRM800K Annotation Statistics and Difficulty Calibration
+
+**Problem:**
+PRM800K dataset analyzes step-level correctness across grades:
+- Easy (Grade 1-4): 85% of steps correct, avg 3 steps.
+- Medium (Grade 5-8): 70% of steps correct, avg 4 steps.
+- Hard (Grade 9-12): 55% of steps correct, avg 6 steps.
+- AIME (Competition): 40% of steps correct, avg 8 steps.
+Compute the probability of an unguided generation getting the whole problem correct (cumulative product score).
+
+**Step-by-Step Solution:**
+1. **Cumulative Product Scores (Expected Zero-Shot Accuracy):**
+   - Easy: $(0.85)^3 = 0.85 \times 0.85 \times 0.85 = \mathbf{0.6141}$ ($61.4\%$)
+   - Medium: $(0.70)^4 = \mathbf{0.2401}$ ($24.0\%$)
+   - Hard: $(0.55)^6 \approx \mathbf{0.0277}$ ($2.8\%$)
+   - AIME: $(0.40)^8 = 0.16 \times 0.16 \times 0.16 \times 0.16 = \mathbf{0.000655}$ ($0.065\%$)
+
+2. **Analysis Table:**
+   | Difficulty | Step Accuracy | Length | Unguided Accuracy (Product) |
+   | :--- | :---: | :---: | :---: |
+   | Easy | $0.85$ | $3$ | **$0.614$** |
+   | Medium | $0.70$ | $4$ | **$0.240$** |
+   | Hard | $0.55$ | $6$ | **$0.028$** |
+   | AIME | $0.40$ | $8$ | **$0.00065$** |
+
+**Conclusion:** AIME problems are virtually impossible for a single unguided generation ($0.065\%$ success rate) because errors multiply. This perfectly illustrates why MCTS paired with PRM is required: by searching over millions of trajectories and pruning bad steps locally (rather than relying on 8 consecutive lucky steps), MCTS achieves pass@1 > 0.4 on AIME. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **OpenAI PRM800K:** Trained on 800,000 human step-level annotations on the MATH dataset, proving that process supervision beats outcome supervision by over 15% on competition problems.

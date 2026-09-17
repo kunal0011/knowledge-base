@@ -146,12 +146,12 @@ Imagine an accountant calculating the average transaction value of 10,000 receip
 
 ## 5. Prof. Tom Yeh "AI by Hand" Visual Grids
 
-Let us trace **Online Softmax across 2 distinct blocks** by hand on a concrete numerical sequence and prove that it matches the global 4-token softmax identically.
+Let us trace **Online Softmax across distinct blocks** by hand on a concrete numerical sequence and prove that it matches the global softmax identically.
 
----
+### 5.1 Hand-Calculation Walkthrough 1: Online Softmax 2-Block Merge
 
-### 5.1 System & Parameter Setup
-- Query vector: $q = [1.0, 1.0]^T$ ($d = 2 \implies \text{no scaling for clarity}$)
+**System & Parameter Setup**
+- Query vector: $q = [1.0, 1.0]^T$ ($d = 2$, scaling factor $\sqrt{d} = 1.4142$, but for simplicity we assume scaling is already applied or set to 1)
 - 4 Key-Value pairs split into two chunks of size 2:
 
 #### Chunk 1 (Tokens 1 and 2):
@@ -162,112 +162,65 @@ Let us trace **Online Softmax across 2 distinct blocks** by hand on a concrete n
 - $k_3 = [2.0, 0.0]^T, \quad v_3 = [1.0, 1.0]^T$
 - $k_4 = [1.0, 2.0]^T, \quad v_4 = [3.0, -1.0]^T$
 
----
+#### Step-by-Step Calculations: Chunk 1
+- Dot products: $s_1 = q \cdot k_1 = 1.0$, $s_2 = q \cdot k_2 = 1.0$
+- Local Max: $m_1 = \max(1.0, 1.0) = \mathbf{1.000000}$
+- Local Denom: $d_1 = e^{1.0 - 1.0} + e^{1.0 - 1.0} = 1.0 + 1.0 = \mathbf{2.000000}$
+- Local Output Vector $O^{(1)}$:
+  $$p_1^{(1)} = \frac{1.0}{2.0} = 0.500000, \quad p_2^{(1)} = 0.500000$$
+  $$O^{(1)} = 0.5 \begin{bmatrix} 2.0 \\ 0.0 \end{bmatrix} + 0.5 \begin{bmatrix} 0.0 \\ 4.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.000000} \\ \mathbf{2.000000} \end{bmatrix}$$
 
-### 5.2 What Refers to What: Legend Protocol Table
+#### Step-by-Step Calculations: Chunk 2
+- Dot products: $s_3 = q \cdot k_3 = 2.0$, $s_4 = q \cdot k_4 = 3.0$
+- Local Max: $m_2 = \max(2.0, 3.0) = \mathbf{3.000000}$
+- Local Denom: $d_2 = e^{2.0 - 3.0} + e^{3.0 - 3.0} = e^{-1} + 1.0 = 0.367879 + 1.0 = \mathbf{1.367879}$
+- Local Output Vector $O^{(2)}$:
+  $$p_3^{(2)} = \frac{0.367879}{1.367879} = 0.268941, \quad p_4^{(2)} = \frac{1.0}{1.367879} = 0.731059$$
+  $$O^{(2)} = 0.268941 \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} + 0.731059 \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{2.462118} \\ \mathbf{-0.462118} \end{bmatrix}$$
 
-| Mathematical Symbol | Computational Variable | Concrete Role in Hand Trace |
-| :--- | :--- | :--- |
-| $s_i$ | `dot_scores[i]` | Raw attention logit: $q \cdot k_i$ |
-| $m_1, m_2$ | `max_chunk1, max_chunk2` | Local maximum of scores in chunk 1 and chunk 2 |
-| $d_1, d_2$ | `sum_exp1, sum_exp2` | Local sum of exponentials for chunk 1 and chunk 2 |
-| $O^{(1)}, O^{(2)}$ | `out_chunk1, out_chunk2` | Local normalized attention output vectors |
-| $m_{\text{new}}$ | `global_max` | Updated global maximum: $\max(m_1, m_2)$ |
-| $d_{\text{new}}$ | `global_denom` | Rescaled global denominator: $d_1 e^{m_1 - m_{\text{new}}} + d_2 e^{m_2 - m_{\text{new}}}$ |
-| $O_{\text{new}}$ | `final_out` | Rescaled and combined global attention output |
+#### Online Merge Step
+- Global Max: $m_{\text{new}} = \max(1.0, 3.0) = \mathbf{3.000000}$
+- Rescaling Chunk 1: $e^{1.0 - 3.0} = e^{-2.0} = \mathbf{0.135335}$
+- Rescaling Chunk 2: $e^{3.0 - 3.0} = e^0 = \mathbf{1.000000}$
+- Global Denominator: $d_{\text{new}} = (2.0 \times 0.135335) + (1.367879 \times 1.0) = 0.270670 + 1.367879 = \mathbf{1.638549}$
+- Global Weights:
+  $w_1 = \frac{0.270670}{1.638549} = \mathbf{0.165189}$
+  $w_2 = \frac{1.367879}{1.638549} = \mathbf{0.834811}$
+- Combined Output Vector:
+  $$O_{\text{new}} = 0.165189 \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} + 0.834811 \begin{bmatrix} 2.462118 \\ -0.462118 \end{bmatrix} = \begin{bmatrix} \mathbf{2.220587} \\ \mathbf{-0.055403} \end{bmatrix}$$
 
----
-
-### 5.3 Step-by-Step Hand Calculations: Chunk 1
-
-#### Dot products for Chunk 1:
-$$s_1 = q \cdot k_1 = 1.0 \times 1.0 + 1.0 \times 0.0 = \mathbf{1.000000}$$
-$$s_2 = q \cdot k_2 = 1.0 \times 0.0 + 1.0 \times 1.0 = \mathbf{1.000000}$$
-
-#### Local Statistics:
-$$m_1 = \max(s_1, s_2) = \max(1.0, 1.0) = \mathbf{1.000000}$$
-$$d_1 = e^{s_1 - m_1} + e^{s_2 - m_1} = e^{1.0 - 1.0} + e^{1.0 - 1.0} = 1.0 + 1.0 = \mathbf{2.000000}$$
-
-#### Local Output Vector $O^{(1)}$:
-$$p_1^{(1)} = \frac{e^0}{d_1} = \frac{1.0}{2.0} = 0.500000, \quad p_2^{(1)} = \frac{e^0}{d_1} = 0.500000$$
-$$O^{(1)} = 0.5 \cdot v_1 + 0.5 \cdot v_2 = 0.5 \begin{bmatrix} 2.0 \\ 0.0 \end{bmatrix} + 0.5 \begin{bmatrix} 0.0 \\ 4.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.000000} \\ \mathbf{2.000000} \end{bmatrix}$$
-
----
-
-### 5.4 Step-by-Step Hand Calculations: Chunk 2
-
-#### Dot products for Chunk 2:
-$$s_3 = q \cdot k_3 = 1.0 \times 2.0 + 1.0 \times 0.0 = \mathbf{2.000000}$$
-$$s_4 = q \cdot k_4 = 1.0 \times 1.0 + 1.0 \times 2.0 = 1.0 + 2.0 = \mathbf{3.000000}$$
-
-#### Local Statistics:
-$$m_2 = \max(s_3, s_4) = \max(2.0, 3.0) = \mathbf{3.000000}$$
-$$d_2 = e^{s_3 - m_2} + e^{s_4 - m_2} = e^{2.0 - 3.0} + e^{3.0 - 3.0} = e^{-1} + 1.0 \approx 0.367879 + 1.0 = \mathbf{1.367879}$$
-
-#### Local Output Vector $O^{(2)}$:
-$$p_3^{(2)} = \frac{0.367879}{1.367879} \approx 0.268941, \quad p_4^{(2)} = \frac{1.0}{1.367879} \approx 0.731059$$
-$$O^{(2)} = 0.268941 \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} + 0.731059 \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix} = \begin{bmatrix} 0.268941 + 2.193177 \\ 0.268941 - 0.731059 \end{bmatrix} = \begin{bmatrix} \mathbf{2.462118} \\ \mathbf{-0.462118} \end{bmatrix}$$
-
----
-
-### 5.5 Step-by-Step Hand Calculations: Online Merge Step
-
-Now merge Chunk 1 into Chunk 2 without re-reading Tokens 1 and 2!
-
-1. **Update Global Maximum:**
-   $$m_{\text{new}} = \max(m_1, m_2) = \max(1.0, 3.0) = \mathbf{3.000000}$$
-
-2. **Compute Rescaling Factors:**
-   - For Chunk 1: $e^{m_1 - m_{\text{new}}} = e^{1.0 - 3.0} = e^{-2.0} \approx \mathbf{0.135335}$
-   - For Chunk 2: $e^{m_2 - m_{\text{new}}} = e^{3.0 - 3.0} = e^0 = \mathbf{1.000000}$
-
-3. **Update Global Denominator $d_{\text{new}}$:**
-   $$d_{\text{new}} = d_1 \cdot e^{-2.0} + d_2 \cdot e^0$$
-   $$= (2.000000 \times 0.135335) + (1.367879 \times 1.000000) = 0.270670 + 1.367879 = \mathbf{1.638549}$$
-
-4. **Compute Combined Output Vector $O_{\text{new}}$:**
-   $$O_{\text{new}} = \left( \frac{d_1 e^{-2.0}}{d_{\text{new}}} \right) O^{(1)} + \left( \frac{d_2 e^0}{d_{\text{new}}} \right) O^{(2)}$$
-   Weight for Chunk 1:
-   $$w_1 = \frac{0.270670}{1.638549} \approx \mathbf{0.165189}$$
-   Weight for Chunk 2:
-   $$w_2 = \frac{1.367879}{1.638549} \approx \mathbf{0.834811}$$
-
-   $$O_{\text{new}} = 0.165189 \begin{bmatrix} 1.000000 \\ 2.000000 \end{bmatrix} + 0.834811 \begin{bmatrix} 2.462118 \\ -0.462118 \end{bmatrix}$$
-   $$= \begin{bmatrix} 0.165189 \\ 0.330378 \end{bmatrix} + \begin{bmatrix} 2.055398 \\ -0.385781 \end{bmatrix} = \begin{bmatrix} \mathbf{2.220587} \\ \mathbf{-0.055403} \end{bmatrix}$$
-
----
-
-### 5.6 Global Exact Verification (Standard Multi-Pass Softmax)
-
-Let us verify by computing standard global attention over all 4 tokens at once:
+#### Exact Verification (Global Softmax)
 - Scores: $s = [1.0, 1.0, 2.0, 3.0]$
-- Global max: $m = 3.0$
-- Exponentials:
-  $$e^{1-3} = e^{-2} \approx 0.135335$$
-  $$e^{1-3} = e^{-2} \approx 0.135335$$
-  $$e^{2-3} = e^{-1} \approx 0.367879$$
-  $$e^{3-3} = e^0 = 1.000000$$
-- Total Sum:
-  $$d_{\text{global}} = 0.135335 + 0.135335 + 0.367879 + 1.000000 = \mathbf{1.638549} \equiv d_{\text{new}} \quad \checkmark$$
-- Normalized Softmax Weights:
-  $$p = [0.082594, \; 0.082594, \; 0.224515, \; 0.610296]$$
-- Output:
-  $$O_{\text{global}} = p_1 v_1 + p_2 v_2 + p_3 v_3 + p_4 v_4$$
-  $$= 0.082594 \begin{bmatrix} 2.0 \\ 0.0 \end{bmatrix} + 0.082594 \begin{bmatrix} 0.0 \\ 4.0 \end{bmatrix} + 0.224515 \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} + 0.610296 \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix}$$
-  $$= \begin{bmatrix} 0.165188 + 0.0 + 0.224515 + 1.830888 \\ 0.0 + 0.330376 + 0.224515 - 0.610296 \end{bmatrix} = \begin{bmatrix} \mathbf{2.220591} \\ \mathbf{-0.055405} \end{bmatrix}$$
+- $m = 3.0$
+- Sum: $d_{\text{global}} = e^{-2} + e^{-2} + e^{-1} + e^0 = 0.135335 + 0.135335 + 0.367879 + 1.0 = \mathbf{1.638549}$
+- Result is identical!
 
-$$\mathbf{O_{\text{new}} \equiv O_{\text{global}} = [2.22059, -0.05540]} \quad \text{(Exact Match to 5 decimal places!)}$$
+### 5.2 Hand-Calculation Walkthrough 2: Safe Softmax on a Tiny Vector
 
----
+**System & Parameter Setup**
+Let's compute safe softmax on $x = [5000.0, 5001.0, 4999.0]$. Standard softmax would compute $e^{5000}$, which overflows any standard float type.
+We apply the safe softmax trick.
 
-### 5.7 Summary Visual Grid: Online Softmax Block Merge Ledger
+#### Step-by-Step Calculations
+1. **Pass 1: Find Max**
+   $m = \max(5000.0, 5001.0, 4999.0) = \mathbf{5001.000000}$
+2. **Pass 2: Sum of Exponentials (shifted)**
+   $x_1 - m = 5000.0 - 5001.0 = \mathbf{-1.000000}$
+   $x_2 - m = 5001.0 - 5001.0 = \mathbf{0.000000}$
+   $x_3 - m = 4999.0 - 5001.0 = \mathbf{-2.000000}$
+   $d = e^{-1} + e^0 + e^{-2} = 0.367879 + 1.000000 + 0.135335 = \mathbf{1.503214}$
+3. **Pass 3: Normalize**
+   $p_1 = \frac{0.367879}{1.503214} = \mathbf{0.244728}$
+   $p_2 = \frac{1.000000}{1.503214} = \mathbf{0.665241}$
+   $p_3 = \frac{0.135335}{1.503214} = \mathbf{0.090031}$
+
+### 5.3 Summary Visual Grid: Online Softmax Block Merge Ledger
 
 | Stage | Processed Chunks | Max $m$ | Denominator $d$ | Rescaling Factor | Weighted Output Vector $O$ |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Chunk 1** | Tokens 1 & 2 | $m_1 = 1.0$ | $d_1 = 2.0000$ | $e^0 = 1.0$ | $O^{(1)} = [1.0000, 2.0000]$ |
 | **Chunk 2** | Tokens 3 & 4 | $m_2 = 3.0$ | $d_2 = 1.3679$ | $e^0 = 1.0$ | $O^{(2)} = [2.4621, -0.4621]$ |
 | **Online Merge**| Tokens 1 to 4 | $\mathbf{m_{\text{new}} = 3.0}$ | $\mathbf{d_{\text{new}} = 1.6385}$ | $e^{1-3} = 0.1353$ | $\mathbf{O_{\text{new}} = [2.22059, -0.05540]}$ |
-| **Standard Multi-Pass**| All 4 at once | $m_{\text{global}} = 3.0$ | $d_{\text{global}} = 1.6385$ | — | $\mathbf{O_{\text{global}} = [2.22059, -0.05540]}$ |
 
 ---
 
@@ -284,6 +237,106 @@ What were the critical engineering innovations that allowed FlashAttention-2 and
 2. **FlashAttention-3 (Dao et al., 2024 - NVIDIA Hopper H100):**
    - Exploits **TMA (Tensor Memory Accelerator)** for asynchronous memory transfers directly between HBM and SRAM, bypassing the register file entirely.
    - Uses **WGMMA (Warpgroup Matrix Multiply-Accumulate)** instructions to interleave FP8 tensor core math with asynchronous memory copies in a hardware ping-pong buffer, achieving over **$75\%$ of theoretical peak H100 FLOPs**! $\blacksquare$
+
+### Illustration 2: Online Softmax 4-Element Example (Streaming)
+**Problem:**
+Given attention scores $\mathbf{s} = [3.0, 1.0, 4.0, 1.5]$, run the online max-tracking algorithm token by token and verify the final softmax values.
+
+**Step-by-Step Solution:**
+Initialize $m = -\infty$, $d = 0$, $l = 0$.
+
+1. **Process $s_1 = 3.0$:**
+   - $m_{\text{new}} = \max(-\infty, 3.0) = \mathbf{3.000000}$
+   - Rescale existing $d$: $d_{\text{new}} = 0 \times e^{-\infty} + e^{3.0 - 3.0} = 0 + 1 = \mathbf{1.000000}$
+   - $m \leftarrow 3.0$, $d \leftarrow 1.0$
+
+2. **Process $s_2 = 1.0$:**
+   - $m_{\text{new}} = \max(3.0, 1.0) = \mathbf{3.000000}$
+   - Rescale existing $d$: $d_{\text{new}} = 1.0 \times e^{3.0 - 3.0} + e^{1.0 - 3.0} = 1.0 + e^{-2.0} = 1.0 + 0.135335 = \mathbf{1.135335}$
+   - $m \leftarrow 3.0$, $d \leftarrow 1.135335$
+
+3. **Process $s_3 = 4.0$:**
+   - $m_{\text{new}} = \max(3.0, 4.0) = \mathbf{4.000000}$
+   - Rescale existing $d$: $d_{\text{new}} = 1.135335 \times e^{3.0 - 4.0} + e^{4.0 - 4.0} = 1.135335 \times e^{-1.0} + 1 = 1.135335 \times 0.367879 + 1 = 0.417666 + 1 = \mathbf{1.417666}$
+   - $m \leftarrow 4.0$, $d \leftarrow 1.417666$
+
+4. **Process $s_4 = 1.5$:**
+   - $m_{\text{new}} = \max(4.0, 1.5) = \mathbf{4.000000}$
+   - Rescale existing $d$: $d_{\text{new}} = 1.417666 \times e^{4.0 - 4.0} + e^{1.5 - 4.0} = 1.417666 \times 1 + e^{-2.5} = 1.417666 + 0.082085 = \mathbf{1.499751}$
+   - $m \leftarrow 4.0$, $d \leftarrow 1.499751$
+
+**Final Output Computation:**
+For each $i$, $p_i = \frac{e^{s_i - m_{\text{final}}}}{d_{\text{final}}}$:
+- $p_1 = \frac{e^{3.0 - 4.0}}{1.499751} = \frac{0.367879}{1.499751} = \mathbf{0.245294}$
+- $p_2 = \frac{e^{1.0 - 4.0}}{1.499751} = \frac{0.049787}{1.499751} = \mathbf{0.033197}$
+- $p_3 = \frac{e^{4.0 - 4.0}}{1.499751} = \frac{1.000000}{1.499751} = \mathbf{0.666777}$
+- $p_4 = \frac{e^{1.5 - 4.0}}{1.499751} = \frac{0.082085}{1.499751} = \mathbf{0.054732}$
+
+Verify sum: $0.245294 + 0.033197 + 0.666777 + 0.054732 = \mathbf{1.000000}$. $\blacksquare$
+
+### Illustration 3: Memory Comparison (Standard vs. FlashAttention)
+**Problem:**
+Compare the memory footprint for an attention operation with $T=512$, $d_{\text{head}}=64$. Assume 4 bytes per element. How much smaller is FlashAttention's SRAM footprint using a block size $B=64$ compared to standard attention's HBM footprint? Do they have the same FLOPs?
+
+**Step-by-Step Solution:**
+
+1. **Standard Attention Memory (HBM):**
+   - Standard attention must materialize the entire $T \times T$ attention matrix $\mathbf{S}$.
+   - Elements: $512 \times 512 = 262,144$ elements.
+   - Memory in bytes: $262,144 \times 4\text{ bytes} = 1,048,576\text{ bytes} = \mathbf{1.0\text{ MB}}$.
+
+2. **FlashAttention Memory (SRAM):**
+   - FlashAttention computes block by block. A tile of query $\mathbf{Q}_i$ and key $\mathbf{K}_j$ resides in SRAM.
+   - With block size $B=64$, we need to store one block of $\mathbf{Q}$ ($64 \times 64$) and one block of $\mathbf{K}$ ($64 \times 64$) at a time in SRAM.
+   - Wait, SRAM also holds $\mathbf{V}_j$, $\mathbf{O}_i$, etc. For a strict tile comparison:
+   - Size per tile of $\mathbf{Q}$, $\mathbf{K}$ (or $\mathbf{O}$, $\mathbf{V}$): $B \times d = 64 \times 64 = 4,096$ elements.
+   - Two blocks (e.g. $\mathbf{Q}$ and $\mathbf{K}$ to compute local scores) require $2 \times 4096 = 8192$ elements.
+   - Memory in bytes: $8192 \times 4\text{ bytes} = 32,768\text{ bytes} = \mathbf{32.0\text{ KB}}$.
+
+3. **Comparison:**
+   - Ratio: $\frac{1\text{ MB}}{32\text{ KB}} = \frac{1024\text{ KB}}{32\text{ KB}} = \mathbf{32\times \text{ smaller}}$.
+
+4. **FLOPs Computation:**
+   - The number of multiply-accumulates for $\mathbf{Q} \mathbf{K}^T$ is $T \times T \times d$.
+   - The number of multiply-accumulates for $\mathbf{P} \mathbf{V}$ is $T \times T \times d$.
+   - Total MACs = $2 \times 512 \times 512 \times 64 = 33,554,432$.
+   - Total FLOPs (1 MAC = 2 FLOPs) = $\mathbf{67.1\text{ M FLOPs}}$.
+   - Both standard attention and FlashAttention execute identical FLOPs; only the order of memory access changes. $\blacksquare$
+
+### Illustration 4: FlashAttention-2 Block Computation Toy Example
+**Problem:**
+Compute FlashAttention block-by-block. Let $T=4$ tokens, block size $B=2$, $d=2$.
+Let $\mathbf{Q} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \\ 0 & 0 \end{bmatrix}$. Assume $\mathbf{K} = \mathbf{V} = \mathbf{Q}$.
+Show the complete calculation for the first query block processing both key-value blocks. (No scaling factor applied).
+
+**Step-by-Step Solution:**
+Partition into two blocks:
+Block 1 ($i=1, j=1$): $\mathbf{Q}_1 = \mathbf{K}_1 = \mathbf{V}_1 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$
+Block 2 ($i=1, j=2$): $\mathbf{K}_2 = \mathbf{V}_2 = \begin{bmatrix} 1 & 1 \\ 0 & 0 \end{bmatrix}$
+
+**Processing Block 1 (Tokens 0-1) against KV Block 1:**
+- $\mathbf{S}_{11} = \mathbf{Q}_1 \mathbf{K}_1^T = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}^T = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$
+- Local stats:
+  $m^{(1)} = [\max(1, 0), \max(0, 1)]^T = [\mathbf{1.0}, \mathbf{1.0}]^T$
+  $\mathbf{P}_{11} = \exp(\mathbf{S}_{11} - m^{(1)}) = \begin{bmatrix} e^0 & e^{-1} \\ e^{-1} & e^0 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.367879 \\ 0.367879 & 1.0 \end{bmatrix}$
+  $d^{(1)} = [1.367879, 1.367879]^T$
+- Local Output:
+  $\mathbf{O}_{11} = \operatorname{diag}(\frac{1}{d^{(1)}}) \mathbf{P}_{11} \mathbf{V}_1 = \begin{bmatrix} 0.731059 & 0.268941 \\ 0.268941 & 0.731059 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} \mathbf{0.731059} & \mathbf{0.268941} \\ \mathbf{0.268941} & \mathbf{0.731059} \end{bmatrix}$
+
+**Processing Block 1 against KV Block 2:**
+- $\mathbf{S}_{12} = \mathbf{Q}_1 \mathbf{K}_2^T = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1 & 1 \\ 0 & 0 \end{bmatrix}^T = \begin{bmatrix} 1 & 0 \\ 1 & 0 \end{bmatrix}$
+- Local stats:
+  $\tilde{m} = [\max(1, 0), \max(1, 0)]^T = [\mathbf{1.0}, \mathbf{1.0}]^T$
+- Update global stats:
+  $m_{\text{new}} = [\max(1.0, 1.0), \max(1.0, 1.0)]^T = [\mathbf{1.0}, \mathbf{1.0}]^T$
+  $\mathbf{P}_{12} = \exp(\mathbf{S}_{12} - m_{\text{new}}) = \begin{bmatrix} e^0 & e^{-1} \\ e^0 & e^{-1} \end{bmatrix} = \begin{bmatrix} 1.0 & 0.367879 \\ 1.0 & 0.367879 \end{bmatrix}$
+  $d_{\text{new}} = d^{(1)} \cdot e^{1.0 - 1.0} + \operatorname{rowsum}(\mathbf{P}_{12}) = 1.367879 + 1.367879 = \mathbf{2.735758}$
+- Update Output (with rescue trick):
+  $\mathbf{O}_{\text{new}} = \operatorname{diag}(\frac{d^{(1)} e^{0}}{d_{\text{new}}}) \mathbf{O}_{11} + \operatorname{diag}(\frac{1}{d_{\text{new}}}) \mathbf{P}_{12} \mathbf{V}_2$
+  $\mathbf{P}_{12} \mathbf{V}_2 = \begin{bmatrix} 1.0 & 0.367879 \\ 1.0 & 0.367879 \end{bmatrix} \begin{bmatrix} 1 & 1 \\ 0 & 0 \end{bmatrix} = \begin{bmatrix} 1.0 & 1.0 \\ 1.0 & 1.0 \end{bmatrix}$
+  $\mathbf{O}_{\text{new}} = 0.5 \begin{bmatrix} 0.731059 & 0.268941 \\ 0.268941 & 0.731059 \end{bmatrix} + \frac{1}{2.735758} \begin{bmatrix} 1.0 & 1.0 \\ 1.0 & 1.0 \end{bmatrix}$
+  $= \begin{bmatrix} 0.365530 & 0.134471 \\ 0.134471 & 0.365530 \end{bmatrix} + \begin{bmatrix} 0.365530 & 0.365530 \\ 0.365530 & 0.365530 \end{bmatrix} = \begin{bmatrix} \mathbf{0.731060} & \mathbf{0.500001} \\ \mathbf{0.500001} & \mathbf{0.731060} \end{bmatrix}$
+  $\blacksquare$
 
 ---
 

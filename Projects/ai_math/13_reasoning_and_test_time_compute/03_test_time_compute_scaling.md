@@ -244,6 +244,96 @@ Since $\ln(0.90) \approx -0.1053605$:
 
 ---
 
+### Illustration 2: Best-of-N Pass@k Calculation
+
+**Problem:**
+$N=8$ independent samples are generated, per-sample $P(\text{correct}) = p = 0.3$.
+Compute $\text{pass@1}$ and $\text{pass@8}$. Then compute $\text{pass@2}$. Tabulate for $k \in \{1, 2, 4, 8\}$.
+If inference budget is fixed at $B$ FLOPs and a single sample costs $C$ FLOPs ($N = B/C$), at what $N$ does $\text{pass@1}$ exceed $0.95$?
+
+**Step-by-Step Solution:**
+1. **Pass@1 and Pass@8:**
+   - $\text{pass@1} = p = \mathbf{0.3}$
+   - $\text{pass@8} = P(\text{at least 1 of 8 is correct}) = 1 - (1 - 0.3)^8 = 1 - 0.7^8 = 1 - 0.0576 = \mathbf{0.9424}$
+
+2. **Pass@k for $k \in \{1, 2, 4, 8\}$:**
+   - For selecting $k=2$ best: $\text{pass@2} = 1 - 0.7^2 = 1 - 0.49 = \mathbf{0.51}$
+   - For selecting $k=4$ best: $\text{pass@4} = 1 - 0.7^4 = 1 - 0.2401 = \mathbf{0.7599}$
+   - (Tabulated: $k=1 \rightarrow 0.30$, $k=2 \rightarrow 0.51$, $k=4 \rightarrow 0.7599$, $k=8 \rightarrow 0.9424$)
+
+3. **Budget Target for 95% Pass:**
+   Solve $1 - (1 - 0.3)^N \ge 0.95$
+   $0.7^N \le 0.05$
+   $N \ge \frac{\log(0.05)}{\log(0.7)} = \frac{-2.9957}{-0.3567} \approx 8.39$
+   So $N = \mathbf{9}$. $\blacksquare$
+
+---
+
+### Illustration 3: Beam Search Width and Pruning
+
+**Problem:**
+A beam search with width $B=3$ runs for 2 decoding steps. Vocabulary $V=4$ (tokens A, B, C, D).
+Start: $\log P(A)=-0.5$, $\log P(B)=-0.8$, $\log P(C)=-1.2$, $\log P(D)=-2.0$.
+Top-3 beams after step 1: A(-0.5), B(-0.8), C(-1.2).
+Step 2 expansion log-probs:
+- From A: $P(A|A)=-0.6$, $P(B|A)=-0.4$, $P(C|A)=-1.0$, $P(D|A)=-0.9$
+- From B: $P(A|B)=-0.3$, $P(B|B)=-0.7$, $P(C|B)=-0.8$, $P(D|B)=-1.5$
+- From C: $P(A|C)=-0.2$, $P(B|C)=-1.1$, $P(C|C)=-0.5$, $P(D|C)=-0.8$
+Compute cumulative scores for all hypotheses. Select the top-3 beams.
+
+**Step-by-Step Solution:**
+1. **Expand from A (-0.5):**
+   - AA: $-0.5 - 0.6 = -1.1$
+   - AB: $-0.5 - 0.4 = \mathbf{-0.9}$
+   - AC: $-0.5 - 1.0 = -1.5$
+   - AD: $-0.5 - 0.9 = -1.4$
+2. **Expand from B (-0.8):**
+   - BA: $-0.8 - 0.3 = -1.1$
+   - BB: $-0.8 - 0.7 = -1.5$
+   - BC: $-0.8 - 0.8 = -1.6$
+   - BD: $-0.8 - 1.5 = -2.3$
+3. **Expand from C (-1.2):**
+   - CA: $-1.2 - 0.2 = -1.4$
+   - CB: $-1.2 - 1.1 = -2.3$
+   - CC: $-1.2 - 0.5 = -1.7$
+   - CD: $-1.2 - 0.8 = -2.0$
+
+4. **Sort and Select Top-3:**
+   - 1st: **AB (-0.9)**
+   - 2nd (tie): **AA (-1.1)**
+   - 2nd (tie): **BA (-1.1)**
+   The top 3 beams after step 2 are AB, AA, and BA. $\blacksquare$
+
+---
+
+### Illustration 4: Sequential Refinement vs Parallel Best-of-N
+
+**Problem:**
+Fixed budget: 4 model calls.
+- Option A (parallel Best-of-4): sample 4 independent solutions, pick best by verifier.
+- Option B (sequential): 1 initial solution + 3 refinements. Model has $P(\text{correct}) = p = 0.4$.
+Assuming sequential attempts are independent, compare them. Then show why sequential refinement degrades if errors are correlated (e.g., conditioning on a previous mistake with correlation factor $\rho = 0.7$).
+
+**Step-by-Step Solution:**
+1. **Parallel Best-of-4:**
+   - $P(\text{correct}) = 1 - (1 - 0.4)^4 = 1 - 0.6^4 = 1 - 0.1296 = \mathbf{0.8704}$
+
+2. **Sequential Refinement (Independent Assumption):**
+   - $P(\text{correct by step 4}) = P(\text{correct at 1}) + P(\text{wrong} \rightarrow \text{correct at 2}) + \dots \approx 1 - (1 - 0.4)^4 = \mathbf{0.8704}$.
+   - Under perfect independence, they are mathematically identical in probability.
+
+3. **Sequential Refinement (Correlated Errors):**
+   - If the model conditions on its own mistaken context, the probability of correcting an error drops. Let $P(\text{correct} \mid \text{previous attempt wrong}) = p \times (1 - \rho) = 0.4 \times (1 - 0.7) = 0.12$.
+   - Step 1: $P(\text{correct}) = 0.4$
+   - Step 2: $P(\text{correct}) = 0.6 \times 0.12 = 0.072$
+   - Step 3: $P(\text{correct}) = 0.6 \times 0.88 \times 0.12 = 0.06336$
+   - Step 4: $P(\text{correct}) = 0.6 \times 0.88^2 \times 0.12 = 0.05576$
+   - Total sequential $P(\text{correct}) = 0.4 + 0.072 + 0.06336 + 0.05576 = \mathbf{0.59112}$.
+   
+**Conclusion:** Parallel Best-of-$N$ (0.8704) dramatically outperforms sequential refinement (0.5911) because independent sampling prevents the model from being trapped in its own correlated error chains. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **OpenAI o1 & o3 ("Strawberry"):** Users can select the reasoning effort: Low ($N \approx 1\text{--}4$), Medium ($N \approx 8\text{--}16$), High ($N \ge 32$). Compute is dynamically allocated based on problem difficulty.

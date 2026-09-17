@@ -245,6 +245,82 @@ By increasing the base from $10,000$ to $41,829$, low frequencies rotate slower,
 
 ---
 
+### Illustration 2: Full 4D RoPE Rotation Matrix Construction
+**Problem:**
+Construct the full 4D RoPE block-diagonal rotation matrix $\mathbf{R}_m$ for head dimension $d=4$, base $\theta = 10000$, and sequence position $t=3$. Apply it to query vector $q = [1, 0, 2, 1]^T$. Show all trigonometric values to 4 decimal places.
+**Step-by-Step Solution:**
+1. **Calculate Base Frequencies $\theta_i$:**
+   Since $d=4$, there are 2 rotation pairs ($i=0, 1$).
+   $\theta_0 = 10000^{-2(0)/4} = 10000^0 = \mathbf{1.0}$
+   $\theta_1 = 10000^{-2(1)/4} = 10000^{-0.5} = \frac{1}{\sqrt{10000}} = \mathbf{0.01}$
+
+2. **Calculate Rotation Angles for $t=3$:**
+   Angle for pair 0: $m \cdot \theta_0 = 3 \times 1.0 = \mathbf{3.0}$ rad.
+   Angle for pair 1: $m \cdot \theta_1 = 3 \times 0.01 = \mathbf{0.03}$ rad.
+
+3. **Construct Block Diagonal Matrix $\mathbf{R}_m$:**
+   $\cos(3.0) \approx -0.9900$, $\sin(3.0) \approx 0.1411$
+   $\cos(0.03) \approx 0.9996$, $\sin(0.03) \approx 0.0300$
+   
+   $$\mathbf{R}_3 = \begin{bmatrix} -0.9900 & -0.1411 & 0 & 0 \\ 0.1411 & -0.9900 & 0 & 0 \\ 0 & 0 & 0.9996 & -0.0300 \\ 0 & 0 & 0.0300 & 0.9996 \end{bmatrix}$$
+
+4. **Apply to Vector $q = [1, 0, 2, 1]^T$:**
+   $q'_1 = -0.9900(1) - 0.1411(0) = \mathbf{-0.9900}$
+   $q'_2 = 0.1411(1) - 0.9900(0) = \mathbf{0.1411}$
+   $q'_3 = 0.9996(2) - 0.0300(1) = 1.9992 - 0.0300 = \mathbf{1.9692}$
+   $q'_4 = 0.0300(2) + 0.9996(1) = 0.0600 + 0.9996 = \mathbf{1.0596}$
+   
+   $q' = \mathbf{[-0.9900, 0.1411, 1.9692, 1.0596]^T}$. $\blacksquare$
+
+---
+
+### Illustration 3: RoPE Translation Equivalence (2D Example)
+**Problem:**
+Let $d=2, \theta=\frac{\pi}{6}$. Query $q=[1, 0]^T$ is at position $m=2$, and Key $k=[0, 1]^T$ is at position $n=5$. Numerically prove that the dot product of their rotated embeddings $\langle \mathbf{R}_m q, \mathbf{R}_n k \rangle$ is equivalent to the relative formula that depends only on $(m-n)$.
+**Step-by-Step Solution:**
+1. **Absolute Rotation of $q$ at $m=2$:**
+   Angle $= 2 \times \frac{\pi}{6} = \frac{\pi}{3}$.
+   $\mathbf{R}_m = \begin{bmatrix} \cos(\pi/3) & -\sin(\pi/3) \\ \sin(\pi/3) & \cos(\pi/3) \end{bmatrix} = \begin{bmatrix} 1/2 & -\sqrt{3}/2 \\ \sqrt{3}/2 & 1/2 \end{bmatrix}$.
+   $q_{\text{rot}} = \mathbf{R}_m \begin{bmatrix} 1 \\ 0 \end{bmatrix} = \mathbf{\begin{bmatrix} 1/2 \\ \sqrt{3}/2 \end{bmatrix}}$.
+
+2. **Absolute Rotation of $k$ at $n=5$:**
+   Angle $= 5 \times \frac{\pi}{6} = \frac{5\pi}{6}$.
+   $\mathbf{R}_n = \begin{bmatrix} \cos(5\pi/6) & -\sin(5\pi/6) \\ \sin(5\pi/6) & \cos(5\pi/6) \end{bmatrix} = \begin{bmatrix} -\sqrt{3}/2 & -1/2 \\ 1/2 & -\sqrt{3}/2 \end{bmatrix}$.
+   $k_{\text{rot}} = \mathbf{R}_n \begin{bmatrix} 0 \\ 1 \end{bmatrix} = \mathbf{\begin{bmatrix} -1/2 \\ -\sqrt{3}/2 \end{bmatrix}}$.
+
+3. **Absolute Dot Product:**
+   $\langle q_{\text{rot}}, k_{\text{rot}} \rangle = (1/2)(-1/2) + (\sqrt{3}/2)(-\sqrt{3}/2) = -1/4 - 3/4 = \mathbf{-1.0}$.
+
+4. **Relative Formula Evaluation:**
+   Relative angle $= (m-n)\theta = (2-5)\frac{\pi}{6} = -\frac{3\pi}{6} = \mathbf{-\frac{\pi}{2}}$.
+   $\langle q_{\text{rot}}, k_{\text{rot}} \rangle = (q_1 k_1 + q_2 k_2)\cos(-\frac{\pi}{2}) + (q_1 k_2 - q_2 k_1)\sin(-\frac{\pi}{2})$.
+   $= (0 + 0)(0) + (1 - 0)(-1) = 1(-1) = \mathbf{-1.0}$.
+   Both methods yield precisely $-1.0$. $\blacksquare$
+
+---
+
+### Illustration 4: NTK-Aware Context Extension to 8192
+**Problem:**
+A model is pre-trained with context length $L = 2048$ and base frequency $b = 10000$. We want to extend it to $L' = 8192$. Scale factor $s=4$.
+With head dimension $d=128$, calculate the new NTK-scaled base. Show the effective wavelengths $\lambda_i = \frac{2\pi}{\theta_i}$ for $i=0, 1, 2$ before and after scaling to demonstrate frequency stretching.
+**Step-by-Step Solution:**
+1. **New NTK Base:**
+   $b' = b \times s^{d / (d-2)} = 10000 \times 4^{128 / 126} = 10000 \times 4^{1.015873} \approx 10000 \times 4.0898 = \mathbf{40898}$.
+
+2. **Wavelengths Before Scaling ($b = 10000$):**
+   - $i=0$: $\theta_0 = 10000^0 = 1.0 \implies \lambda_0 = 2\pi / 1.0 = \mathbf{6.2832}$.
+   - $i=1$: $\theta_1 = 10000^{-2/128} = 10000^{-1/64} \approx 0.86596 \implies \lambda_1 = 2\pi / 0.86596 = \mathbf{7.2557}$.
+   - $i=2$: $\theta_2 = 10000^{-4/128} \approx 0.74989 \implies \lambda_2 = 2\pi / 0.74989 = \mathbf{8.3788}$.
+
+3. **Wavelengths After Scaling ($b' = 40898$):**
+   - $i=0$: $\theta'_0 = 40898^0 = 1.0 \implies \lambda'_0 = 2\pi / 1.0 = \mathbf{6.2832}$. (High frequencies perfectly preserved!)
+   - $i=1$: $\theta'_1 = 40898^{-2/128} \approx 0.84365 \implies \lambda'_1 = 2\pi / 0.84365 = \mathbf{7.4476}$.
+   - $i=2$: $\theta'_2 = 40898^{-4/128} \approx 0.71174 \implies \lambda'_2 = 2\pi / 0.71174 = \mathbf{8.8279}$.
+
+The lowest frequencies (largest $i$) will experience the most stretching, enabling attention to seamlessly operate over $4\times$ longer sequences. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **LLaMA 3 / 3.1 128k Context:** Meta set the base frequency $\theta_{\text{base}} = 500,000$ (up from LLaMA 2's $10,000$), enabling the model to retain needle-in-a-haystack retrieval across 128,000 tokens with $100\%$ accuracy.

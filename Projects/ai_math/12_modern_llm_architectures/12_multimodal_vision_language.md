@@ -267,6 +267,84 @@ An input image has resolution $672 \times 672$ pixels.
 
 ---
 
+### Illustration 2: Patch Embedding for a $4 \times 4$ Image
+**Problem:**
+Consider a small RGB image $I \in \mathbb{R}^{4 \times 4 \times 3}$. Using a patch size $p=2$, the image yields 4 patches, each containing $2 \times 2 \times 3 = 12$ features.
+For the top-left patch (`patch_00`), the flattened 12-dimensional vector is:
+$$\text{patch}_{00} = [0.2, 0.8, 0.5, 0.1, 0.9, 0.3, 0.7, 0.4, 0.6, 0.3, 0.7, 0.2]$$
+We project this patch into a dimension $d=8$ using a linear embedding matrix $W_e \in \mathbb{R}^{12 \times 8}$. For simplicity, let $W_e$ be the first 8 columns of the $12 \times 12$ identity matrix ($I_{12 \times 8}$). Compute the resulting visual token $t_{00}$.
+
+**Solution:**
+1. **Understand the Projection:**
+   Multiplying a $1 \times 12$ vector by a $12 \times 8$ matrix that consists of the first 8 columns of an identity matrix simply truncates the vector to its first 8 elements.
+   
+2. **Compute $t_{00}$:**
+   $$t_{00} = \text{patch}_{00} \cdot W_e$$
+   $$t_{00} = [0.2, 0.8, 0.5, 0.1, 0.9, 0.3, 0.7, 0.4, 0.6, 0.3, 0.7, 0.2] \cdot I_{12 \times 8}$$
+   $$t_{00} = \mathbf{[0.2, 0.8, 0.5, 0.1, 0.9, 0.3, 0.7, 0.4]}$$
+   
+This token vector represents the spatial patch and is now ready for the Vision Transformer layers. $\blacksquare$
+
+---
+
+### Illustration 3: Cross-Attention Between Vision and Language Tokens
+**Problem:**
+A Perceiver Resampler uses cross-attention to compress vision tokens. 
+Let the vision tokens act as Keys and Values:
+$$K = V = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \\ -1 & 0 \end{bmatrix} \quad \text{(4 vision tokens, } d_k=2\text{)}$$
+Let the language queries be:
+$$Q = \begin{bmatrix} 0.5 & 0.5 \\ 1.0 & -0.5 \end{bmatrix} \quad \text{(2 query tokens, } d_k=2\text{)}$$
+Compute the scaled dot-product attention output.
+
+**Solution:**
+1. **Compute Scaled Scores ($Q K^T / \sqrt{d_k}$):**
+   $$Q K^T = \begin{bmatrix} 0.5 & 0.5 \\ 1.0 & -0.5 \end{bmatrix} \begin{bmatrix} 1 & 0 & 1 & -1 \\ 0 & 1 & 1 & 0 \end{bmatrix} = \begin{bmatrix} 0.5 & 0.5 & 1.0 & -0.5 \\ 1.0 & -0.5 & 0.5 & -1.0 \end{bmatrix}$$
+   Divide by $\sqrt{2} \approx 1.4142$:
+   $$\text{Scores} = \begin{bmatrix} 0.3536 & 0.3536 & 0.7071 & -0.3536 \\ 0.7071 & -0.3536 & 0.3536 & -0.7071 \end{bmatrix}$$
+
+2. **Compute Softmax Weights (per row):**
+   - **Row 1 Exponentials:** $e^{0.3536}=1.4242, e^{0.7071}=2.0281, e^{-0.3536}=0.7022$. Sum $= 5.5787$.
+     $$\text{Softmax}_1 = [0.2553, 0.2553, 0.3635, 0.1259]$$
+   - **Row 2 Exponentials:** Sum $= 2.0281 + 0.7022 + 1.4242 + 0.4931 = 4.6476$.
+     $$\text{Softmax}_2 = [0.4364, 0.1511, 0.3064, 0.1061]$$
+
+3. **Compute Final Output ($\text{Softmax} \times V$):**
+   - **Query 1 Output:**
+     $$0.2553[1,0] + 0.2553[0,1] + 0.3635[1,1] + 0.1259[-1,0] = \mathbf{[0.4929, 0.6188]}$$
+   - **Query 2 Output:**
+     $$0.4364[1,0] + 0.1511[0,1] + 0.3064[1,1] + 0.1061[-1,0] = \mathbf{[0.6367, 0.4575]}$$
+
+The 4 vision tokens have been successfully compressed into 2 token representations! $\blacksquare$
+
+---
+
+### Illustration 4: LLaVA-style MLP Projector Dimension Mapping
+**Problem:**
+Calculate the number of parameters in the visual MLP projector for a LLaVA-1.5 model.
+- Vision Encoder: CLIP ViT-L/14 (outputs $d_v = 1024$).
+- Language Model: Mistral-7B (input dimension $d_{\text{text}} = 4096$).
+- Projector: 2-layer MLP with GELU activation ($W_1, b_1, W_2, b_2$).
+What percentage of the full 7B model parameters does the projector represent?
+
+**Solution:**
+1. **Layer 1 ($W_1, b_1$):**
+   - $W_1 \in \mathbb{R}^{1024 \times 4096}$, $b_1 \in \mathbb{R}^{4096}$.
+   - Params = $(1024 \times 4096) + 4096 = 4,194,304 + 4096 = \mathbf{4,198,400}$.
+
+2. **Layer 2 ($W_2, b_2$):**
+   - $W_2 \in \mathbb{R}^{4096 \times 4096}$, $b_2 \in \mathbb{R}^{4096}$.
+   - Params = $(4096 \times 4096) + 4096 = 16,777,216 + 4096 = \mathbf{16,781,312}$.
+
+3. **Total Projector Parameters:**
+   - Total = $4,198,400 + 16,781,312 = \mathbf{20,979,712 \text{ params}}$ ($\approx 21\text{M}$).
+
+4. **Ratio to 7B Model:**
+   - Ratio = $\frac{20,979,712}{7,000,000,000} \approx 0.0030 = \mathbf{0.3\%}$.
+
+**Conclusion:** The cross-modal adapter is incredibly lightweight, requiring only 0.3% of the total parameter budget to endow a blind language model with full vision capabilities! $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **LLaVA-1.5 & LLaVA-NeXT:** Open-source standard demonstrating that a frozen CLIP ViT-L/14 coupled with a 2-layer MLP projector to Vicuna/LLaMA achieves state-of-the-art visual instruction following with under \$1,000 in compute training cost!

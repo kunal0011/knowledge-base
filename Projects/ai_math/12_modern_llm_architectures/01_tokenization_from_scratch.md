@@ -271,6 +271,86 @@ Final Tokenization: **`['lo', 'w', 'est_']`** (3 tokens instead of 7 characters!
 
 ---
 
+### Illustration 2: Byte-Level Encoding for UTF-8 Emojis and Accents
+**Problem:**
+A Byte-Level BPE tokenizer encodes the string `"café"`. The UTF-8 byte representation for this string is 5 bytes: `63 61 66 C3 A9` (where `C3 A9` represents the `é` character). Assume the base vocabulary consists of the 256 raw bytes. Apply two BPE merges: `(C3, A9) \to C3A9` and `(66, C3A9) \to 66C3A9`, and compute the final token sequence.
+
+**Step-by-Step Solution:**
+1. **Raw Byte Initialization:**
+   The base vocabulary $V_0$ contains all bytes `00` to `FF`. The string `"café"` is mapped to its raw hex bytes:
+   Sequence: `[63, 61, 66, C3, A9]`
+   Token count: $\mathbf{5}$ tokens.
+
+2. **First Merge:** `(C3, A9) \to C3A9`
+   The tokenizer has learned that the byte pair `(C3, A9)` frequently occurs together (as it is the UTF-8 encoding for `é`).
+   Applying this merge replaces the two bytes with a single token:
+   Sequence: `[63, 61, 66, C3A9]`
+   Token count: $\mathbf{4}$ tokens.
+
+3. **Second Merge:** `(66, C3A9) \to 66C3A9`
+   Next, the sequence `66` (`f`) and `C3A9` (`é`) is merged.
+   Sequence: `[63, 61, 66C3A9]`
+   Token count: $\mathbf{3}$ tokens.
+
+Final Tokenization translates to: `['c', 'a', 'fé']`. $\blacksquare$
+
+---
+
+### Illustration 3: Vocabulary Compression Ratio & Speedup Factor
+**Problem:**
+Given a corpus of $10,000$ characters using a 26-character alphabet, with an initial byte-level vocabulary of 256, the average number of characters per token is initially 1.0 (assuming 1 byte per char). After 1,000 BPE merges, the vocabulary grows to $1,256$ tokens, and the average tokens per word drops from $4.8$ to $1.7$.
+Calculate:
+(a) The compression ratio.
+(b) Total tokens before and after for the $10,000$-character corpus.
+(c) The inference speedup factor for a standard Transformer with $O(T^2)$ self-attention complexity.
+
+**Step-by-Step Solution:**
+1. **(a) Compression Ratio:**
+   Before BPE, 1 token = 1 character. 4.8 characters = 4.8 tokens per word.
+   After BPE, 4.8 characters = 1.7 tokens per word.
+   Ratio $\rho = \frac{\text{Tokens Before}}{\text{Tokens After}} = \frac{4.8}{1.7} \approx \mathbf{2.8235}$
+
+2. **(b) Total Tokens:**
+   Total words in corpus $= \frac{10000 \text{ chars}}{4.8 \text{ chars/word}} = \mathbf{2083.33}$ words.
+   Tokens before $= 2083.33 \times 4.8 = \mathbf{10000}$ tokens.
+   Tokens after $= 2083.33 \times 1.7 \approx \mathbf{3541.66}$ tokens.
+
+3. **(c) Speedup Factor for Attention:**
+   Attention compute scales as $O(T^2)$.
+   Compute Before $\propto 10000^2 = 100,000,000$ operations.
+   Compute After $\propto 3541.66^2 \approx 12,543,355.5$ operations.
+   Speedup Factor $= \frac{T_{\text{before}}^2}{T_{\text{after}}^2} = 2.8235^2 \approx \mathbf{7.9723\times}$
+
+A vocabulary increase of merely $1,000$ tokens yields an $\sim 8\times$ computational speedup in attention! $\blacksquare$
+
+---
+
+### Illustration 4: Tiktoken Regex Pre-Tokenization Boundaries
+**Problem:**
+Apply the GPT-4 regex pre-tokenization pattern to the string:
+`"don't stop me now, it's 123!"`
+Pattern: `(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+`
+Show the resulting isolated strings (pre-tokens) prior to BPE merging.
+
+**Step-by-Step Solution:**
+We process the string sequentially matching the regex pattern groups:
+1. `"don"`: Matches `[^\r\n\p{L}\p{N}]?\p{L}+` (letters).
+2. `"'t"`: Matches English contraction `(?i:'t)`.
+3. `" stop"`: Matches `[^\r\n\p{L}\p{N}]?\p{L}+` (optional space + letters).
+4. `" me"`: Matches `[^\r\n\p{L}\p{N}]?\p{L}+`.
+5. `" now"`: Matches `[^\r\n\p{L}\p{N}]?\p{L}+`.
+6. `","`: Matches ` ?[^\s\p{L}\p{N}]+` (optional space + punctuation).
+7. `" it"`: Matches `[^\r\n\p{L}\p{N}]?\p{L}+`.
+8. `"'s"`: Matches English contraction `(?i:'s)`.
+9. `" 123"`: Matches `\p{N}{1,3}` or ` ?\p{N}+` (optional space + digits).
+10. `"!"`: Matches ` ?[^\s\p{L}\p{N}]+` (punctuation).
+
+**Resulting Pre-Tokens:**
+`["don", "'t", " stop", " me", " now", ",", " it", "'s", " 123", "!"]`
+By enforcing these boundaries, BPE is explicitly forbidden from merging `"now"` and `","` or `"it"` and `"'s"`, preserving semantic structure. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **Why LLMs Struggle with "Strawberry":**

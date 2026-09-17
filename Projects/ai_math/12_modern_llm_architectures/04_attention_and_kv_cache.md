@@ -277,6 +277,86 @@ Calculate the exact KV cache memory requirement for a 70B parameter model servin
 
 ---
 
+### Illustration 2: KV Cache Memory Calculation for LLaMA-7B
+**Problem:**
+Calculate the KV cache memory size for LLaMA-7B during a single batch generation.
+Config: 32 layers, 32 heads, head_dim=128, seq_len=4096, batch_size=1, dtype=float16 (2 bytes).
+Compare the cache size against the total model weights (14 GB in FP16). What happens at a 32,768 context length?
+**Step-by-Step Solution:**
+1. **KV Cache Per Layer:**
+   $\text{Bytes per layer} = 2 \times L \times H_{kv} \times d_{\text{head}} \times \text{bytes}$
+   $= 2 \times 4096 \times 32 \times 128 \times 2 = \mathbf{67,108,864 \text{ bytes}}$.
+
+2. **Total KV Cache Memory:**
+   $\text{Total} = 67,108,864 \times 32 \text{ layers} = \mathbf{2,147,483,648 \text{ bytes}}$.
+   Converting to Gigabytes: $2,147,483,648 / 1024^3 = \mathbf{2.0 \text{ GiB}}$.
+   The cache consumes $\approx 14\%$ of the footprint of the model weights (14 GB).
+
+3. **Scaling to 32,768 Context (Llama-3 Length):**
+   The context length increases by a factor of 8 ($32768 / 4096 = 8$).
+   New Cache Size $= 2.0 \text{ GiB} \times 8 = \mathbf{16.0 \text{ GiB}}$.
+   At this length, the context cache strictly **exceeds** the size of the 7B model weights themselves! $\blacksquare$
+
+---
+
+### Illustration 3: GQA Grouping in LLaMA-3-8B
+**Problem:**
+LLaMA-3-8B has $H_q = 32$ query heads and $H_{kv} = 8$ KV heads. The head dimension is $d_{\text{head}} = 128$.
+For a single attention step:
+(a) Compute the number of KV parameters compared to standard MHA.
+(b) Show the dimensions and broadcast mechanics for a batch of queries from heads 0-3 sharing KV head 0.
+(c) Compute the exact KV cache memory savings ratio.
+**Step-by-Step Solution:**
+1. **(a) KV Parameters vs MHA:**
+   MHA requires $32 \times 128 = 4096$ output dims for Keys and Values. Total KV params $\propto 2 \times 4096 \times d$.
+   GQA requires $8 \times 128 = 1024$ output dims. Total KV params $\propto 2 \times 1024 \times d$.
+   GQA utilizes precisely $\mathbf{25\%}$ of the KV parameters of MHA, saving significant VRAM for model weights.
+
+2. **(b) Attention Computation Broadcasting:**
+   Group 0 consists of Query heads 0, 1, 2, and 3. Each produces a matrix $Q_i$ of shape $1 \times 128$.
+   They share a single Key matrix $K_0$ ($1 \times 128$) and Value matrix $V_0$ ($1 \times 128$).
+   Attention for all 4 heads is computed in parallel by duplicating $K_0$ four times:
+   $$S_0 = \frac{Q_0 K_0^T}{\sqrt{128}}, \quad S_1 = \frac{Q_1 K_0^T}{\sqrt{128}}, \quad S_2 = \frac{Q_2 K_0^T}{\sqrt{128}}, \quad S_3 = \frac{Q_3 K_0^T}{\sqrt{128}}$$
+   Each calculation is a dot product between a $1 \times 128$ and $128 \times 1$ vector.
+
+3. **(c) KV Cache Memory Savings Ratio:**
+   $\text{Savings Ratio} = \frac{H_{kv}}{H_q} = \frac{8}{32} = \mathbf{0.25 \text{ or } 25\%}$.
+   LLaMA-3-8B cuts its KV cache footprint by $75\%$ using this GQA configuration! $\blacksquare$
+
+---
+
+### Illustration 4: Multi-Head Attention on a 2-Token Sequence
+**Problem:**
+Compute exact self-attention scores and outputs for a 2-token sequence.
+Tokens $X$: $t_1=[1,0]$, $t_2=[0,1]$. Thus $d=2$.
+Assume 1 attention head, $d_k=2$, and identity projection matrices $W_Q=W_K=W_V=I$.
+Compute the unmasked attention output vector for both tokens.
+**Step-by-Step Solution:**
+1. **Projections:**
+   Since weights are identity, $Q = K = V = X = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$.
+
+2. **Dot Product Scores ($Q K^T$):**
+   $$Q K^T = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$$
+
+3. **Scaled Scores ($1 / \sqrt{d_k}$):**
+   Scale factor is $\sqrt{2} \approx 1.4142$.
+   $$\text{Scores} = \begin{bmatrix} \frac{1}{\sqrt{2}} & 0 \\ 0 & \frac{1}{\sqrt{2}} \end{bmatrix} \approx \begin{bmatrix} 0.7071 & 0 \\ 0 & 0.7071 \end{bmatrix}$$
+
+4. **Softmax Weights:**
+   Compute softmax over each row:
+   For Row 1 ($[0.7071, 0]$): $e^{0.7071} \approx 2.0281$, $e^0 = 1.0$.
+   Sum $= 3.0281$.
+   $w_{11} = \frac{2.0281}{3.0281} \approx \mathbf{0.6698}$
+   $w_{12} = \frac{1.0}{3.0281} \approx \mathbf{0.3302}$
+   By symmetry, Row 2 weights are $[0.3302, 0.6698]$.
+   $$\text{Softmax Matrix} = \begin{bmatrix} 0.6698 & 0.3302 \\ 0.3302 & 0.6698 \end{bmatrix}$$
+
+5. **Final Output (Softmax $\times V$):**
+   $$\text{Out} = \begin{bmatrix} 0.6698 & 0.3302 \\ 0.3302 & 0.6698 \end{bmatrix} \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} \mathbf{0.6698} & \mathbf{0.3302} \\ \mathbf{0.3302} & \mathbf{0.6698} \end{bmatrix}$$
+   Because $t_1$ and $t_2$ are orthogonal, they attend primarily to themselves ($0.67$), but still blend heavily with the other token ($0.33$) due to the low scalar magnitude! $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **LLaMA 3 (8B and 70B):** Both models standardize on $H_{kv} = 8$ heads, allowing LLaMA 3 to handle 128k context lengths during serving without out-of-memory crashes.

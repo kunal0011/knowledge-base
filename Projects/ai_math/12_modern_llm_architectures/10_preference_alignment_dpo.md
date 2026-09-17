@@ -280,6 +280,90 @@ With $\beta = 0.5$, which response does DPO prefer? Does SimPO fix it?
 
 ---
 
+### Illustration 2: DPO Loss Computation
+**Problem:**
+Given a chosen response $y_w$ and rejected response $y_l$, compute the DPO loss.
+The log probabilities are:
+- $\log \pi_\theta(y_w \mid x) = -2.3$
+- $\log \pi_\theta(y_l \mid x) = -3.8$
+- $\log \pi_{\text{ref}}(y_w \mid x) = -2.5$
+- $\log \pi_{\text{ref}}(y_l \mid x) = -3.2$
+Assume $\beta = 0.1$.
+
+**Solution:**
+1. **Compute Log Ratios:**
+   - $\log\text{ratio}_w = \log \pi_\theta(y_w) - \log \pi_{\text{ref}}(y_w) = -2.3 - (-2.5) = \mathbf{0.2}$
+   - $\log\text{ratio}_l = \log \pi_\theta(y_l) - \log \pi_{\text{ref}}(y_l) = -3.8 - (-3.2) = \mathbf{-0.6}$
+
+2. **Compute DPO Logit:**
+   - $\text{Logit} = \beta \times (\log\text{ratio}_w - \log\text{ratio}_l) = 0.1 \times (0.2 - (-0.6)) = 0.1 \times 0.8 = \mathbf{0.08}$
+
+3. **Compute DPO Loss:**
+   - $\sigma(0.08) = \frac{1}{1 + e^{-0.08}} = \frac{1}{1 + 0.9231} = \frac{1}{1.9231} = \mathbf{0.5200}$
+   - $\mathcal{L}_{\text{DPO}} = -\ln(\sigma(0.08)) = -\ln(0.5200) = \mathbf{0.6539} \quad \blacksquare$
+
+---
+
+### Illustration 3: ORPO Loss Combining NLL and Odds Ratio
+**Problem:**
+For the same sequence log probabilities as Illustration 2 (under $\pi_\theta$), compute the ORPO loss. 
+Assume the multiplier $\lambda = 1.0$.
+
+**Solution:**
+1. **Supervised NLL Loss on Chosen Response:**
+   - $\mathcal{L}_{\text{NLL}} = -\log \pi_\theta(y_w \mid x) = \mathbf{2.3}$
+
+2. **Compute Probabilities:**
+   - $\pi_\theta(y_w) = e^{-2.3} = \mathbf{0.1003}$
+   - $\pi_\theta(y_l) = e^{-3.8} = \mathbf{0.0224}$
+
+3. **Compute Odds Ratio (OR):**
+   - $\text{Odds}_w = \frac{\pi_\theta(y_w)}{1 - \pi_\theta(y_w)} = \frac{0.1003}{0.8997} = \mathbf{0.1115}$
+   - $\text{Odds}_l = \frac{\pi_\theta(y_l)}{1 - \pi_\theta(y_l)} = \frac{0.0224}{0.9776} = \mathbf{0.0229}$
+   - $OR = \frac{\text{Odds}_w}{\text{Odds}_l} = \frac{0.1115}{0.0229} = \mathbf{4.869}$
+   - $\log OR = \ln(4.869) = \mathbf{1.583}$
+
+4. **Compute ORPO Loss Component:**
+   - $\sigma(\log OR) = \frac{1}{1 + e^{-1.583}} = \frac{1}{1 + 0.205} = \frac{1}{1.205} = \mathbf{0.830}$
+   - $\mathcal{L}_{\text{OR}} = -\ln(0.830) = \mathbf{0.186}$
+
+5. **Total ORPO Loss:**
+   - $\mathcal{L}_{\text{ORPO}} = \mathcal{L}_{\text{NLL}} + \lambda \times \mathcal{L}_{\text{OR}} = 2.3 + 1.0 \times 0.186 = \mathbf{2.486} \quad \blacksquare$
+
+---
+
+### Illustration 4: Sensitivity Analysis for DPO $\beta$
+**Problem:**
+Using the same base log-ratio difference as Illustration 2 ($0.8$), evaluate the sensitivity of the DPO loss across different temperatures: $\beta \in \{0.01, 0.1, 0.5, 1.0\}$.
+
+**Solution:**
+We compute $\text{logit} = \beta \times 0.8$ and $\text{loss} = -\ln(\sigma(\text{logit}))$.
+
+1. **For $\beta = 0.01$:**
+   - $\text{Logit} = 0.01 \times 0.8 = 0.008$
+   - $\sigma(0.008) = \frac{1}{1 + e^{-0.008}} = 0.502$
+   - $\text{Loss} = -\ln(0.502) = \mathbf{0.689}$
+
+2. **For $\beta = 0.1$:**
+   - $\text{Logit} = 0.1 \times 0.8 = 0.08$
+   - $\sigma(0.08) = 0.520$
+   - $\text{Loss} = -\ln(0.520) = \mathbf{0.654}$
+
+3. **For $\beta = 0.5$:**
+   - $\text{Logit} = 0.5 \times 0.8 = 0.4$
+   - $\sigma(0.4) = \frac{1}{1 + e^{-0.4}} = \frac{1}{1 + 0.670} = 0.599$
+   - $\text{Loss} = -\ln(0.599) = \mathbf{0.512}$
+
+4. **For $\beta = 1.0$:**
+   - $\text{Logit} = 1.0 \times 0.8 = 0.8$
+   - $\sigma(0.8) = \frac{1}{1 + e^{-0.8}} = \frac{1}{1 + 0.449} = 0.690$
+   - $\text{Loss} = -\ln(0.690) = \mathbf{0.371}$
+
+**Conclusion:** 
+A higher $\beta$ creates a much sharper preference signal, yielding a lower loss when the correct ordering is maintained, but induces larger gradient steps that risk policy instability. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **TRL (Transformer Reinforcement Learning) `DPOTrainer`:** The standard implementation in the Hugging Face ecosystem, used to train Zephyr-7B, Starling-LM, and open frontier models.

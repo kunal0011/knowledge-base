@@ -276,6 +276,85 @@ Calculate the GPU memory required to fine-tune a 70-billion parameter model ($N 
    - Adapter parameters (BF16): $0.7 + 0.7 + 4.2 = 5.6\text{ GB}$
    - Total static VRAM: $38.5 + 5.6 = \mathbf{44.1\text{ GB}}$ *(Fits on a **single 48GB A6000 / A100** GPU!).* $\blacksquare$
 
+### Illustration 2: NF4 Quantization and Dequantization
+**Problem:**
+A QLoRA model stores base weights in 4-bit NormalFloat (NF4). The NF4 lookup table contains 16 values matching the quantiles of a standard normal distribution $\mathcal{N}(0, 1)$, normalized to $[-1.0, 1.0]$:
+NF4 = `[-1.000, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0911, 0.0, 0.0911, 0.1848, 0.2844, 0.3949, 0.5251, 0.6962, 1.000, 1.000]` (Note: simplified).
+Given an `absmax_scale = 0.89` for a block, dequantize three stored 4-bit codes: '0111' (decimal 7), '1010' (decimal 10), and '0011' (decimal 3).
+
+**Step-by-Step Solution:**
+1. **Dequantize '0111' (decimal 7):**
+   - Lookup value: `NF4[7] = 0.0`.
+   - Dequantized: $0.0 \times 0.89 = \mathbf{0.0000}$.
+2. **Dequantize '1010' (decimal 10):**
+   - Lookup value: `NF4[10] = 0.2844`.
+   - Dequantized: $0.2844 \times 0.89 = \mathbf{0.253116}$.
+3. **Dequantize '0011' (decimal 3):**
+   - Lookup value: `NF4[3] = -0.3949`.
+   - Dequantized: $-0.3949 \times 0.89 = \mathbf{-0.351461}$. $\blacksquare$
+
+### Illustration 3: LoRA Delta Weight Reconstruction
+**Problem:**
+A LoRA layer has $d_{\text{in}}=4$, $d_{\text{out}}=4$, rank $r=2$, and scaling $\alpha/r = 1.0$.
+After 100 steps, $B \in \mathbb{R}^{4 \times 2}$ is learned, while $A \in \mathbb{R}^{2 \times 4}$ has changed minimally from initialization:
+$B = \begin{bmatrix} 0.1 & 0.2 \\ -0.3 & 0.1 \\ 0.4 & -0.2 \\ 0.1 & 0.3 \end{bmatrix}, \quad A = \begin{bmatrix} 0.8 & -0.3 & 0.1 & 0.2 \\ 0.5 & 0.9 & -0.2 & 0.1 \end{bmatrix}$
+Compute $\Delta W = B A$. Assuming the frozen base weight $W_0$ has Frobenius norm $\|W_0\|_F = 2.0$, compute $\|\Delta W\|_F$ and the ratio $\|\Delta W\|_F / \|W_0\|_F$.
+
+**Step-by-Step Solution:**
+1. **Compute $\Delta W = B A$:**
+   Row 1 of $\Delta W$:
+   $0.1(0.8) + 0.2(0.5) = 0.08 + 0.10 = \mathbf{0.18}$
+   $0.1(-0.3) + 0.2(0.9) = -0.03 + 0.18 = \mathbf{0.15}$
+   $0.1(0.1) + 0.2(-0.2) = 0.01 - 0.04 = \mathbf{-0.03}$
+   $0.1(0.2) + 0.2(0.1) = 0.02 + 0.02 = \mathbf{0.04}$
+   Row 2 of $\Delta W$:
+   $-0.3(0.8) + 0.1(0.5) = -0.24 + 0.05 = \mathbf{-0.19}$
+   $-0.3(-0.3) + 0.1(0.9) = 0.09 + 0.09 = \mathbf{0.18}$
+   $-0.3(0.1) + 0.1(-0.2) = -0.03 - 0.02 = \mathbf{-0.05}$
+   $-0.3(0.2) + 0.1(0.1) = -0.06 + 0.01 = \mathbf{-0.05}$
+   Row 3 of $\Delta W$:
+   $0.4(0.8) - 0.2(0.5) = 0.32 - 0.10 = \mathbf{0.22}$
+   $0.4(-0.3) - 0.2(0.9) = -0.12 - 0.18 = \mathbf{-0.30}$
+   $0.4(0.1) - 0.2(-0.2) = 0.04 + 0.04 = \mathbf{0.08}$
+   $0.4(0.2) - 0.2(0.1) = 0.08 - 0.02 = \mathbf{0.06}$
+   Row 4 of $\Delta W$:
+   $0.1(0.8) + 0.3(0.5) = 0.08 + 0.15 = \mathbf{0.23}$
+   $0.1(-0.3) + 0.3(0.9) = -0.03 + 0.27 = \mathbf{0.24}$
+   $0.1(0.1) + 0.3(-0.2) = 0.01 - 0.06 = \mathbf{-0.05}$
+   $0.1(0.2) + 0.3(0.1) = 0.02 + 0.03 = \mathbf{0.05}$
+
+   $\Delta W = \begin{bmatrix} 0.18 & 0.15 & -0.03 & 0.04 \\ -0.19 & 0.18 & -0.05 & -0.05 \\ 0.22 & -0.30 & 0.08 & 0.06 \\ 0.23 & 0.24 & -0.05 & 0.05 \end{bmatrix}$
+2. **Compute $\|\Delta W\|_F$:**
+   Sum of squares:
+   R1: $0.0324 + 0.0225 + 0.0009 + 0.0016 = 0.0574$
+   R2: $0.0361 + 0.0324 + 0.0025 + 0.0025 = 0.0735$
+   R3: $0.0484 + 0.0900 + 0.0064 + 0.0036 = 0.1484$
+   R4: $0.0529 + 0.0576 + 0.0025 + 0.0025 = 0.1155$
+   Total = $0.0574 + 0.0735 + 0.1484 + 0.1155 = 0.3948$.
+   $\|\Delta W\|_F = \sqrt{0.3948} \approx \mathbf{0.6283}$.
+3. **Perturbation Ratio:**
+   $\|\Delta W\|_F / \|W_0\|_F = 0.6283 / 2.0 = \mathbf{0.314}$. LoRA adds a $\sim 31\%$ magnitude perturbation to the base weights. $\blacksquare$
+
+### Illustration 4: DoRA Decomposition
+**Problem:**
+A weight matrix column is $w=[0.6, -0.4, 0.8]^T$ ($d=3$).
+DoRA decomposes it into magnitude $m = \|w\|_2$ and direction $v = w/m$.
+During fine-tuning, DoRA learns a new magnitude $m' = 1.1$ and a directional update $\Delta V = [0.1, 0.05, -0.1]^T$ from a LoRA path.
+Compute the updated weight column $w_{\text{new}} = m' \frac{v + \Delta V}{\|v + \Delta V\|_2}$.
+
+**Step-by-Step Solution:**
+1. **Initial Decomposition:**
+   $m = \sqrt{0.6^2 + (-0.4)^2 + 0.8^2} = \sqrt{0.36 + 0.16 + 0.64} = \sqrt{1.16} \approx \mathbf{1.077033}$.
+   $v = w / m = \left[ \frac{0.6}{1.077033}, \frac{-0.4}{1.077033}, \frac{0.8}{1.077033} \right]^T \approx \mathbf{[0.557086, -0.371391, 0.742781]^T}$.
+2. **Apply Directional Update:**
+   $v + \Delta V = [0.557086 + 0.1, -0.371391 + 0.05, 0.742781 - 0.1]^T = \mathbf{[0.657086, -0.321391, 0.642781]^T}$.
+3. **Normalize New Direction:**
+   $\|v + \Delta V\|_2^2 = (0.657086)^2 + (-0.321391)^2 + (0.642781)^2 = 0.431762 + 0.103292 + 0.413167 = 0.948221$.
+   $\|v + \Delta V\|_2 = \sqrt{0.948221} \approx \mathbf{0.973766}$.
+   Normalized direction $v_{\text{new}} = \frac{v + \Delta V}{0.973766} \approx \mathbf{[0.674788, -0.330049, 0.660098]^T}$.
+4. **Scale by New Magnitude:**
+   $w_{\text{new}} = m' \cdot v_{\text{new}} = 1.1 \times [0.674788, -0.330049, 0.660098]^T \approx \mathbf{[0.742267, -0.363054, 0.726108]^T}$. $\blacksquare$
+
 ---
 
 ## 7. Deep Learning Connection & Modern Applications

@@ -261,6 +261,87 @@ $$\operatorname{Parity}(x) = \left( \sum_{i=1}^N b_i \right) \pmod 2$$
 
 ---
 
+### Illustration 2: Temperature Scaling for Diverse Reasoning Paths
+
+**Problem:**
+A policy $\pi_\theta$ produces logits over the next tokens at a branch point in reasoning.
+Logits: $[3.0, 1.5, 0.5, 2.5]$ for 4 possible next reasoning tokens.
+Compute the softmax probabilities at temperature $T=1.0$ (standard), $T=0.5$ (sharper), and $T=2.0$ (flatter). Why is diversity ($T > 0.7$) needed for reasoning?
+
+**Step-by-Step Solution:**
+1. **At $T = 1.0$:**
+   - Logits: $[3.0, 1.5, 0.5, 2.5]$
+   - Exponentials: $e^{3.0} \approx 20.0855$, $e^{1.5} \approx 4.4817$, $e^{0.5} \approx 1.6487$, $e^{2.5} \approx 12.1825$
+   - Sum: $20.0855 + 4.4817 + 1.6487 + 12.1825 = 38.3984$
+   - Probabilities: $P = [\mathbf{0.5231}, \mathbf{0.1167}, \mathbf{0.0429}, \mathbf{0.3173}]$
+
+2. **At $T = 0.5$ (Sharper):**
+   - Scaled logits ($z/T$): $[6.0, 3.0, 1.0, 5.0]$
+   - Exponentials: $e^{6} \approx 403.4288$, $e^{3} \approx 20.0855$, $e^{1} \approx 2.7183$, $e^{5} \approx 148.4132$
+   - Sum: $403.4288 + 20.0855 + 2.7183 + 148.4132 = 574.6458$
+   - Probabilities: $P = [\mathbf{0.7020}, \mathbf{0.0350}, \mathbf{0.0047}, \mathbf{0.2583}]$
+
+3. **At $T = 2.0$ (Flatter):**
+   - Scaled logits ($z/T$): $[1.5, 0.75, 0.25, 1.25]$
+   - Exponentials: $e^{1.5} \approx 4.4817$, $e^{0.75} \approx 2.1170$, $e^{0.25} \approx 1.2840$, $e^{1.25} \approx 3.4903$
+   - Sum: $4.4817 + 2.1170 + 1.2840 + 3.4903 = 11.3730$
+   - Probabilities: $P = [\mathbf{0.3941}, \mathbf{0.1861}, \mathbf{0.1129}, \mathbf{0.3069}]$
+
+**Discussion:**
+For hard reasoning problems, a single greedy path (approximated by low temperature $T=0.5$ where the argmax token gets $70.2\%$ probability) often gets stuck in a local minimum. Setting $T > 0.7$ flattens the distribution, allocating non-trivial probability to alternative tokens (e.g. $T=2.0$ gives the 2nd best token $30.7\%$ and 3rd best $18.6\%$), allowing the model to explore diverse, orthogonal proof paths essential for Self-Consistency or MCTS. $\blacksquare$
+
+---
+
+### Illustration 3: Self-Consistency Majority Vote Probability
+
+**Problem:**
+Each of $N=5$ independent samples answers correctly with probability $p=0.6$. A majority vote requires $\ge 3$ correct answers out of 5.
+Compute the exact probability that the majority vote is correct, and compare it to a single sample. Repeat for $N=9$ (requires $\ge 5$ correct).
+
+**Step-by-Step Solution:**
+Let $X \sim \operatorname{Binomial}(N, 0.6)$. We seek $P(X \ge N/2)$.
+
+1. **For $N = 5$ (Need $X \ge 3$):**
+   - $P(X = 3) = \binom{5}{3} (0.6)^3 (0.4)^2 = 10 \times 0.216 \times 0.16 = \mathbf{0.3456}$
+   - $P(X = 4) = \binom{5}{4} (0.6)^4 (0.4)^1 = 5 \times 0.1296 \times 0.4 = \mathbf{0.2592}$
+   - $P(X = 5) = \binom{5}{5} (0.6)^5 (0.4)^0 = 1 \times 0.07776 \times 1 = \mathbf{0.07776}$
+   - $P(\text{Majority Correct}) = 0.3456 + 0.2592 + 0.07776 = \mathbf{0.68256}$
+   - Gain over single sample: $0.68256 - 0.60 = \mathbf{+8.256\%}$
+
+2. **For $N = 9$ (Need $X \ge 5$):**
+   - $P(X = 5) = \binom{9}{5} (0.6)^5 (0.4)^4 = 126 \times 0.07776 \times 0.0256 = \mathbf{0.25082}$
+   - $P(X = 6) = \binom{9}{6} (0.6)^6 (0.4)^3 = 84 \times 0.046656 \times 0.064 = \mathbf{0.25082}$
+   - $P(X = 7) = \binom{9}{7} (0.6)^7 (0.4)^2 = 36 \times 0.0279936 \times 0.16 = \mathbf{0.16124}$
+   - $P(X = 8) = \binom{9}{8} (0.6)^8 (0.4)^1 = 9 \times 0.01679616 \times 0.4 = \mathbf{0.06047}$
+   - $P(X = 9) = \binom{9}{9} (0.6)^9 (0.4)^0 = 1 \times 0.0100777 \times 1 = \mathbf{0.01008}$
+   - $P(\text{Majority Correct}) = 0.25082 + 0.25082 + 0.16124 + 0.06047 + 0.01008 = \mathbf{0.73343}$
+   - Gain over single sample: $0.73343 - 0.60 = \mathbf{+13.343\%}$ $\blacksquare$
+
+---
+
+### Illustration 4: CoT Token Budget for $N$-Digit Multiplication
+
+**Problem:**
+Estimate the probability of generating a direct correct answer vs. using a Chain-of-Thought scratchpad for a $3 \times 3$ multiplication: $432 \times 567$. Show how $O(N)$ tokens convert an $O(1)$ depth failure into an $O(N)$ depth success.
+
+**Step-by-Step Solution:**
+1. **Direct Generation Failure:**
+   To output the 6-digit answer `244944` directly in a single pass, the Transformer must perfectly align all carrying operations within a constant depth $L$. Probability of doing this correctly is practically $\approx 0.05$.
+   
+2. **CoT Scratchpad Generation:**
+   The model externalizes compute by emitting intermediate products.
+   - Step 1: $432 \times 7 = \mathbf{3024}$ (Takes $\sim 2$ tokens)
+   - Step 2: $432 \times 60 = \mathbf{25920}$ (Takes $\sim 2$ tokens)
+   - Step 3: $432 \times 500 = \mathbf{216000}$ (Takes $\sim 2$ tokens)
+   - Step 4 (Addition): $3024 + 25920 + 216000 = \mathbf{244944}$ (Takes $\sim 3$ tokens)
+   
+3. **Complexity Analysis:**
+   - Total reasoning tokens: $2 + 2 + 2 + 3 = \mathbf{9 \text{ tokens}}$.
+   - For an $N$-digit number, the multiplication requires $O(N)$ partial products. Each partial product is an $O(1)$ constant-depth operation (multiplying a single digit against the multiplicand).
+   - Thus, by expending $O(N)$ CoT reasoning tokens, the model essentially dynamically unrolls its computational graph into depth $O(N \times L)$, successfully overcoming the theoretical constant-depth bottleneck of standard Transformers. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **OpenAI o1 & o3 ("Strawberry"):** The seminal frontier models proving that inference-time compute scaling is a third scaling axis (alongside pre-training compute and dataset size).

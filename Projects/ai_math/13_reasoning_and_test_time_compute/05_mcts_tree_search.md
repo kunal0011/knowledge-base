@@ -265,6 +265,96 @@ $$0.50 \, c_{\text{puct}} > 1.0 + 0.25 \, c_{\text{puct}} \implies 0.25 \, c_{\t
 
 ---
 
+### Illustration 2: PUCT Score Computation for 4 Child Nodes
+
+**Problem:**
+Parent visit count $N=100$. Children stats:
+- Node A: $Q=0.72$, $N_a=45$, $P=0.4$
+- Node B: $Q=0.58$, $N_b=30$, $P=0.3$
+- Node C: $Q=0.81$, $N_c=15$, $P=0.2$
+- Node D: $Q=0.35$, $N_d=10$, $P=0.1$
+Compute PUCT $U(s, a) = Q(s, a) + c_{\text{puct}} \cdot P(s, a) \cdot \frac{\sqrt{N}}{1 + N_a}$ with $c_{\text{puct}} = 1.5$. Which node is selected?
+
+**Step-by-Step Solution:**
+1. **Node A:**
+   $$U_A = 0.72 + 1.5 \times 0.4 \times \frac{\sqrt{100}}{1 + 45} = 0.72 + 0.6 \times \frac{10}{46} = 0.72 + 0.1304 = \mathbf{0.8504}$$
+2. **Node B:**
+   $$U_B = 0.58 + 1.5 \times 0.3 \times \frac{10}{1 + 30} = 0.58 + 0.45 \times \frac{10}{31} = 0.58 + 0.1452 = \mathbf{0.7252}$$
+3. **Node C:**
+   $$U_C = 0.81 + 1.5 \times 0.2 \times \frac{10}{1 + 15} = 0.81 + 0.3 \times \frac{10}{16} = 0.81 + 0.1875 = \mathbf{0.9975}$$
+4. **Node D:**
+   $$U_D = 0.35 + 1.5 \times 0.1 \times \frac{10}{1 + 10} = 0.35 + 0.15 \times \frac{10}{11} = 0.35 + 0.1364 = \mathbf{0.4864}$$
+
+**Result Table:**
+| Node | $Q$ | $U_{\text{bonus}}$ | $\text{PUCT}$ |
+| :--- | :--- | :--- | :--- |
+| A | $0.72$ | $0.1304$ | $0.8504$ |
+| B | $0.58$ | $0.1452$ | $0.7252$ |
+| C | $0.81$ | $0.1875$ | **$0.9975$** |
+| D | $0.35$ | $0.1364$ | $0.4864$ |
+
+**Select max:** Node C wins (0.9975). $\blacksquare$
+
+---
+
+### Illustration 3: MCTS Backup Phase
+
+**Problem:**
+A simulation from Node C reaches terminal state with reward $R = 1.0$ (correct answer).
+Backup path: C $\rightarrow$ parent P1 $\rightarrow$ root R.
+Before update:
+- $N_C=15, W_C=8.1$ (so $Q_C=8.1/15=0.54$)
+- $N_{\text{P1}}=60, W_{\text{P1}}=33$ (so $Q_{\text{P1}}=33/60=0.55$)
+- $N_{\text{root}}=100, W_{\text{root}}=55$ (so $Q_{\text{root}}=55/100=0.55$)
+Compute the updated statistics for each node.
+
+**Step-by-Step Solution:**
+1. **Node C Update:**
+   - $N_C \leftarrow 15 + 1 = \mathbf{16}$
+   - $W_C \leftarrow 8.1 + 1.0 = \mathbf{9.1}$
+   - $Q_C = 9.1 / 16 = \mathbf{0.56875}$
+
+2. **Parent P1 Update:**
+   - $N_{\text{P1}} \leftarrow 60 + 1 = \mathbf{61}$
+   - $W_{\text{P1}} \leftarrow 33 + 1.0 = \mathbf{34}$
+   - $Q_{\text{P1}} = 34 / 61 \approx \mathbf{0.55738}$
+
+3. **Root Update:**
+   - $N_{\text{root}} \leftarrow 100 + 1 = \mathbf{101}$
+   - $W_{\text{root}} \leftarrow 55 + 1.0 = \mathbf{56}$
+   - $Q_{\text{root}} = 56 / 101 \approx \mathbf{0.55446}$
+
+**Conclusion:** The reward of $1.0$ is backpropagated up the tree, raising the average action-value ($Q$) for every node along the winning path. $\blacksquare$
+
+---
+
+### Illustration 4: Tree of Thoughts Branching Analysis
+
+**Problem:**
+A Tree of Thoughts has depth $d=3$ and branching factor $b=3$.
+Compute the total number of nodes in the tree.
+If each node costs $C=1$ LLM call, what is the ToT budget vs. a Best-of-1 budget?
+Assuming each node has $P(\text{correct} \mid \text{partial}) = 0.4$, compute the pass@1 improvement of searching the tree versus standard sequential generation.
+
+**Step-by-Step Solution:**
+1. **Total Nodes:**
+   Total nodes = $1 + b + b^2 + b^3 = 1 + 3 + 9 + 27 = \mathbf{40}$.
+   ToT budget = **40C**, Best-of-1 budget = **1C**.
+
+2. **Tree of Thoughts Pass@1 (Probability of at least 1 correct leaf):**
+   - The tree explores $b^3 = 27$ independent leaf paths.
+   - $P(\text{at least 1 correct leaf}) = 1 - (1 - 0.4)^{27} = 1 - 0.6^{27}$.
+   - $0.6^{27} \approx 1.11 \times 10^{-6}$.
+   - $P \approx 1 - 1.11 \times 10^{-6} \approx \mathbf{1.0}$ (near certainty).
+
+3. **Sequential Best-of-1:**
+   - Without tree search, the model commits to a single path.
+   - $P = \mathbf{0.4}$.
+
+**Conclusion:** At a compute multiplier of $40\times$, Tree of Thoughts transforms a $40\%$ unreliable process into a near-$100\%$ reliable reasoning engine by thoroughly exploring the solution space geometry. $\blacksquare$
+
+---
+
 ## 7. Deep Learning Connection & Modern Applications
 
 - **DeepSeek-Prover & AlphaProof:** Combines Monte Carlo Tree Search with formal Lean 4 interactive theorem provers, using policy LLMs to suggest formal tactics and state verification to update search trees.

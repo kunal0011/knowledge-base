@@ -224,7 +224,22 @@ Let us execute a complete, cell-by-cell numerical trace of:
    $$\mathbb{D}_{\text{KL}} = \mathbf{0.638944}$$
 
 5. **Total Scaled KD Loss ($T^2 \cdot \mathbb{D}_{\text{KL}}$):**
-   $$\mathcal{L}_{\text{KD}} = 2.0^2 \times 0.638944 = 4.0 \times 0.638944 = \mathbf{2.555776} \quad \blacksquare$$
+   $$\mathcal{L}_{\text{KD}} = 2.0^2 \times 0.638944 = 4.0 \times 0.638944 = \mathbf{2.555776}$$
+
+---
+
+#### Part C: Soft-Target Knowledge Distillation without Temperature Scaling ($T_{\text{temp}} = 1.0$)
+
+1. **Unscaled Soft Student Probabilities $P_S$:**
+   $P_S = [0.785597, 0.175290, 0.039113]$
+
+2. **Compute KL Divergence $\mathbb{D}_{\text{KL}}(P_T \,\|\, P_S)$:**
+   - Component 1: $0.10 \ln\left(\frac{0.10}{0.785597}\right) = 0.10 \times (-2.061298) \approx \mathbf{-0.206130}$
+   - Component 2: $0.80 \ln\left(\frac{0.80}{0.175290}\right) = 0.80 \times (1.518155) \approx \mathbf{+1.214524}$
+   - Component 3: $0.10 \ln\left(\frac{0.10}{0.039113}\right) = 0.10 \times (0.938722) \approx \mathbf{+0.093872}$
+
+3. **Total $\mathbb{D}_{\text{KL}}$:**
+   $$\mathbb{D}_{\text{KL}} = -0.206130 + 1.214524 + 0.093872 = \mathbf{1.102266}$$ $\blacksquare$
 
 ---
 
@@ -254,6 +269,91 @@ A math derivation requires a sequence of $L = 50$ consecutive reasoning tokens t
 2. **Probability of At Least One Success in Group $G = 16$:**
    $$P(\ge 1 \text{ success}) = 1 - (1 - 0.005154)^{16} = 1 - (0.994846)^{16} \approx 1 - 0.9206 = \mathbf{0.0794 \quad (7.94\%)}$$
 *(Analysis: In over **92% of training batches**, every single rollout fails! GRPO receives zero advantage signal across 92% of steps, causing the small model to collapse or stall completely).* $\blacksquare$
+
+---
+
+### Illustration 2: KL Divergence Distillation Loss Computation
+
+**Problem:**
+Compute the token-level KL divergence distillation loss for a student model predicting a vocabulary of $V=5$ tokens.
+Given:
+- Teacher probability distribution: $P = [0.70, 0.15, 0.08, 0.05, 0.02]$
+- Student probability distribution: $Q = [0.50, 0.25, 0.12, 0.08, 0.05]$
+
+Compute $\mathbb{D}_{\text{KL}}(P || Q)$ and compare it to the standard SFT hard-label cross-entropy loss (where the label is the teacher's argmax token).
+
+**Step-by-Step Solution:**
+
+**1. Compute KL Divergence $\sum P_i \log(P_i / Q_i)$:**
+- **Term 0:** $0.70 \times \log(0.70 / 0.50) = 0.70 \times \log(1.40) = 0.70 \times 0.336472 = \mathbf{0.235530}$
+- **Term 1:** $0.15 \times \log(0.15 / 0.25) = 0.15 \times \log(0.60) = 0.15 \times (-0.510826) = \mathbf{-0.076624}$
+- **Term 2:** $0.08 \times \log(0.08 / 0.12) = 0.08 \times \log(0.6667) = 0.08 \times (-0.405465) = \mathbf{-0.032437}$
+- **Term 3:** $0.05 \times \log(0.05 / 0.08) = 0.05 \times \log(0.625) = 0.05 \times (-0.470004) = \mathbf{-0.023500}$
+- **Term 4:** $0.02 \times \log(0.02 / 0.05) = 0.02 \times \log(0.40) = 0.02 \times (-0.916291) = \mathbf{-0.018326}$
+
+Total KL $= 0.235530 - 0.076624 - 0.032437 - 0.023500 - 0.018326 = \mathbf{0.084643}$ nats.
+
+**2. Compute SFT Hard-Label Loss:**
+- The teacher's highest probability token is index 0 ($0.70$).
+- Hard-label cross-entropy $= -\log(Q[\text{argmax} P]) = -\log(Q[0]) = -\log(0.50) = \mathbf{0.693147}$ nats.
+
+**Conclusion:**
+The KL distillation loss ($0.0846$ nats) is over 8 times smaller than the hard-label SFT loss ($0.6931$ nats). Distillation preserves the soft structural distribution of the teacher, penalizing the student far less harshly and allowing for more efficient parameter updates. $\blacksquare$
+
+---
+
+### Illustration 3: Cold-Start Curriculum Expected Chain Length
+
+**Problem:**
+Track the expansion of reasoning length across the DeepSeek-R1 multi-stage curriculum. 
+- Stage 1 (Cold-Start): 1,000 examples, mean reasoning tokens $= 500$.
+- Stage 2 (GRPO Iteration 1): 10,000 prompts, mean reasoning tokens $= 850$.
+- Stage 3 (GRPO Iteration 5): 10,000 prompts, mean reasoning tokens $= 1,800$.
+- Stage 4 (Final GRPO): 20,000 prompts, mean reasoning tokens $= 3,200$.
+
+Compute the total reasoning tokens consumed (the "curriculum budget").
+
+**Step-by-Step Solution:**
+
+1. **Stage 1 Total Tokens:**
+   $$1,000 \text{ examples} \times 500 \text{ tokens/example} = \mathbf{500,000} \text{ tokens}$$
+2. **Stage 2 Total Tokens:**
+   $$10,000 \text{ examples} \times 850 \text{ tokens/example} = \mathbf{8,500,000} \text{ tokens}$$
+3. **Stage 3 Total Tokens:**
+   $$10,000 \text{ examples} \times 1,800 \text{ tokens/example} = \mathbf{18,000,000} \text{ tokens}$$
+4. **Stage 4 Total Tokens:**
+   $$20,000 \text{ examples} \times 3,200 \text{ tokens/example} = \mathbf{64,000,000} \text{ tokens}$$
+
+**Total Curriculum Budget:**
+$$\text{Total} = 0.5\text{M} + 8.5\text{M} + 18.0\text{M} + 64.0\text{M} = \mathbf{91,000,000} \text{ reasoning tokens}$$
+
+This progression demonstrates how formatting rewards initially push toward structure (Stage 2), before the model independently discovers that extended reflection and verification chains (Stage 4) maximize success, reaching an "aha moment" behavior at 3,200 tokens per prompt. $\blacksquare$
+
+---
+
+### Illustration 4: Rejection Sampling Distillation Filtering Rate
+
+**Problem:**
+A massive 671B teacher model achieves $79.8\%$ pass@1 on the AIME 2024 benchmark. We wish to distill this capability into a 7B student model via rejection sampling.
+- We generate $N = 32$ rollouts per problem and keep ONLY correct solutions.
+- The dataset consists of 1,000 math problems.
+
+Compute the expected yield of correct training pairs and analyze the compute-efficiency tradeoff if the 7B student subsequently achieves a $55.5\%$ pass@1 rate on the same benchmark.
+
+**Step-by-Step Solution:**
+
+**1. Calculate Yield Per Problem:**
+Expected correct rollouts per problem $= N \times \text{pass@1}$
+$$32 \times 0.798 = \mathbf{25.536}$$ correct solutions per problem.
+
+**2. Calculate Total Yield Across Dataset:**
+- Total generated rollouts $= 1,000 \times 32 = \mathbf{32,000}$ inference calls.
+- Total expected correct rollouts kept $= 1,000 \times 25.536 = \mathbf{25,536}$ training pairs.
+
+**3. Compute-Efficiency ROI Analysis:**
+- We expended $32,000$ costly inference calls on the 671B teacher to synthesize the dataset.
+- The student (7B) is trained on the $25,536$ verified $(s, r_{\text{correct}}, a_{\text{correct}})$ pairs.
+- **ROI Result:** The resulting 7B student achieves $55.5\%$ accuracy. Running the 7B model costs roughly $8 \times$ to $10 \times$ less memory and compute than the 671B model. The rejection sampling dataset acts as a high-density knowledge transfer, giving edge-deployable models frontier-level math reasoning without any reinforcement learning. $\blacksquare$
 
 ---
 

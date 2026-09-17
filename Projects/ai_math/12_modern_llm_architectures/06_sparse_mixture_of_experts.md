@@ -144,9 +144,9 @@ Consider a patient seeking healthcare:
 
 Let us trace a complete numerical forward pass of **Sparse MoE Top-$K$ Routing ($K = 2, E = 4$) with a Shared Expert** by hand.
 
----
+### 5.1 Hand-Calculation Walkthrough 1: Top-2 Routing with Shared Expert
 
-### 5.1 System & Parameter Setup
+**System & Parameter Setup**
 - Input token: $x = [2.0, 1.0]^T \in \mathbb{R}^2$ ($d = 2$)
 - Total routed experts: $E = 4$
 - Active routed experts per token: $K = 2$
@@ -160,73 +160,48 @@ Let us trace a complete numerical forward pass of **Sparse MoE Top-$K$ Routing (
 - Shared Expert output on input $x$:
   - $\operatorname{Expert}_{\text{shared}}(x) = [0.5, 1.0]^T$
 
----
-
-### 5.2 What Refers to What: Legend Protocol Table
-
-| Mathematical Symbol | Computational Variable | Concrete Role in Hand Trace |
-| :--- | :--- | :--- |
-| $H_i$ | `router_logits[i]` | Dot product $x \cdot W_{g, i}$ for candidate expert $i$ |
-| $\operatorname{TopK}$ | `top_indices` | The indices of the $K = 2$ highest router logits |
-| $g_i$ | `gating_weight[i]` | Softmax normalized weight over active experts ($g_1 + g_3 = 1.0$) |
-| $y_{\text{routed}}$ | `routed_output` | Weighted sum of active routed experts: $\sum g_i E_i(x)$ |
-| $E_{\text{shared}}$ | `shared_output` | Output from always-active shared expert |
-| $y_{\text{total}}$ | `final_moe_output` | Combined MoE layer output: $E_{\text{shared}} + y_{\text{routed}}$ |
-
----
-
-### 5.3 Step-by-Step Hand Calculations
-
-#### Step 1: Compute Router Logits $H = x W_g$
-$$H_1 = (2.0 \times 1.0) + (1.0 \times 0.0) = 2.0 + 0.0 = \mathbf{2.000000}$$
-$$H_2 = (2.0 \times -1.0) + (1.0 \times 2.0) = -2.0 + 2.0 = \mathbf{0.000000}$$
-$$H_3 = (2.0 \times 2.0) + (1.0 \times -1.0) = 4.0 - 1.0 = \mathbf{3.000000}$$
-$$H_4 = (2.0 \times 0.0) + (1.0 \times 1.0) = 0.0 + 1.0 = \mathbf{1.000000}$$
-
+**Step 1: Compute Router Logits $H = x W_g$**
+$$H_1 = (2.0 \times 1.0) + (1.0 \times 0.0) = \mathbf{2.000000}$$
+$$H_2 = (2.0 \times -1.0) + (1.0 \times 2.0) = \mathbf{0.000000}$$
+$$H_3 = (2.0 \times 2.0) + (1.0 \times -1.0) = \mathbf{3.000000}$$
+$$H_4 = (2.0 \times 0.0) + (1.0 \times 1.0) = \mathbf{1.000000}$$
 Router Logits: $H = [2.0, 0.0, 3.0, 1.0]$.
 
----
-
-#### Step 2: Select Top-$K$ Experts ($K = 2$)
+**Step 2: Select Top-$K$ Experts ($K = 2$)**
 Ranking the logits:
 1. Rank 1: $H_3 = 3.0$ (**Expert 3**)
 2. Rank 2: $H_1 = 2.0$ (**Expert 1**)
-3. Rank 3: $H_4 = 1.0$ (Expert 4 — Inactive)
-4. Rank 4: $H_2 = 0.0$ (Expert 2 — Inactive)
-
 Active Experts: **$\operatorname{TopK} = \{ \text{Expert 3}, \text{Expert 1} \}$**.
 
----
-
-#### Step 3: Compute Softmax Gating Weights over Top-2
-Mask out inactive experts:
-$$e^{H_1} = e^{2.0} \approx \mathbf{7.389056}$$
-$$e^{H_3} = e^{3.0} \approx \mathbf{20.085537}$$
+**Step 3: Compute Softmax Gating Weights over Top-2**
+$$e^{H_1} = e^{2.0} \approx \mathbf{7.389056}, \quad e^{H_3} = e^{3.0} \approx \mathbf{20.085537}$$
 $$\sum = 7.389056 + 20.085537 = \mathbf{27.474593}$$
+$$g_1 = \frac{7.389056}{27.474593} \approx \mathbf{0.268941}, \quad g_3 = \frac{20.085537}{27.474593} \approx \mathbf{0.731059}$$
 
-$$g_1 = \frac{7.389056}{27.474593} \approx \mathbf{0.268941}$$
-$$g_3 = \frac{20.085537}{27.474593} \approx \mathbf{0.731059}$$
-*(Notice $g_1 + g_3 = 0.268941 + 0.731059 = 1.000000$).*
-Inactive weights: $g_2 = 0.0, g_4 = 0.0$.
-
----
-
-#### Step 4: Compute Routed Mixture Output $y_{\text{routed}}$
+**Step 4: Compute Routed Mixture Output $y_{\text{routed}}$**
 $$y_{\text{routed}} = g_1 E_1(x) + g_3 E_3(x)$$
-$$= 0.268941 \begin{bmatrix} 1.0 \\ 4.0 \end{bmatrix} + 0.731059 \begin{bmatrix} 3.0 \\ -2.0 \end{bmatrix}$$
-$$= \begin{bmatrix} 0.268941 \\ 1.075764 \end{bmatrix} + \begin{bmatrix} 2.193177 \\ -1.462118 \end{bmatrix} = \begin{bmatrix} \mathbf{2.462118} \\ \mathbf{-0.386354} \end{bmatrix}$$
+$$= 0.268941 \begin{bmatrix} 1.0 \\ 4.0 \end{bmatrix} + 0.731059 \begin{bmatrix} 3.0 \\ -2.0 \end{bmatrix} = \begin{bmatrix} 0.268941 \\ 1.075764 \end{bmatrix} + \begin{bmatrix} 2.193177 \\ -1.462118 \end{bmatrix} = \begin{bmatrix} \mathbf{2.462118} \\ \mathbf{-0.386354} \end{bmatrix}$$
 
----
+**Step 5: Add Dedicated Shared Expert Output**
+$$y_{\text{total}} = \begin{bmatrix} 0.5 \\ 1.0 \end{bmatrix} + \begin{bmatrix} 2.462118 \\ -0.386354 \end{bmatrix} = \begin{bmatrix} \mathbf{2.962118} \\ \mathbf{0.613646} \end{bmatrix}$$
 
-#### Step 5: Add Dedicated Shared Expert Output
-$$\operatorname{Expert}_{\text{shared}}(x) = \begin{bmatrix} 0.500000 \\ 1.000000 \end{bmatrix}$$
+### 5.2 Hand-Calculation Walkthrough 2: Routing with Extreme Logits
 
-$$y_{\text{total}} = \operatorname{Expert}_{\text{shared}}(x) + y_{\text{routed}}$$
-$$= \begin{bmatrix} 0.500000 \\ 1.000000 \end{bmatrix} + \begin{bmatrix} 2.462118 \\ -0.386354 \end{bmatrix} = \begin{bmatrix} \mathbf{2.962118} \\ \mathbf{0.613646} \end{bmatrix}$$
+**System & Parameter Setup**
+- Token $z$: Router logits $H = [10.0, 10.1, -5.0, 2.0]$
+- $K = 2$ experts, $E = 4$ total experts.
+- Let $E_1(z) = 10, E_2(z) = 20, E_3(z) = 30, E_4(z) = 40$ (scalar outputs for simplicity).
 
----
+**Step-by-Step Selection**
+- Top-2 logits are $H_2 = 10.1$ and $H_1 = 10.0$.
+- Softmax weights:
+  $e^{10.1} \approx 24343.0, \quad e^{10.0} \approx 22026.5$
+  Sum $= 46369.5$
+  $g_2 = \frac{24343.0}{46369.5} = \mathbf{0.524979}$
+  $g_1 = \frac{22026.5}{46369.5} = \mathbf{0.475021}$
+- Output: $y = g_2 E_2(z) + g_1 E_1(z) = 0.524979 \times 20 + 0.475021 \times 10 = 10.49958 + 4.75021 = \mathbf{15.24979}$.
 
-### 5.4 Summary Visual Grid: MoE Routing Ledger
+### 5.3 Summary Visual Grid: MoE Routing Ledger
 
 | Component | Logit $H_i$ | Top-2 Rank | Gating Weight $g_i$ | Status | Expert Output $E_i(x)$ | Weighted Contribution |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -257,6 +232,81 @@ Calculate the auxiliary load balancing loss with $\alpha = 0.01$.
 3. **Balancing Loss:**
    $$\mathcal{L}_{\text{balance}} = \alpha \cdot E \sum_{i=1}^E f_i P_i = 0.01 \times 2 \times (1.0 \times 0.70 + 0.0 \times 0.30) = 0.02 \times 0.70 = \mathbf{0.0140}$$
    *(If perfectly balanced $f_1=f_2=0.5, P_1=P_2=0.5$, loss would be $0.02 \times (0.25 + 0.25) = \mathbf{0.0100}$, so the collapse is penalized by $+40\%$).* $\blacksquare$
+
+### Illustration 2: Top-2 Routing on 4-Expert Network
+**Problem:**
+A token's hidden state is $h = [0.5, -0.2, 0.8, 0.1]$. Router weight matrix $W_r \in \mathbb{R}^{4 \times 4}$ is the identity matrix, meaning router logits $g = h W_r^T = h$.
+Find the Top-2 experts, compute their softmax weights, and state the final output expression.
+
+**Step-by-Step Solution:**
+1. **Compute Logits:**
+   $g = [0.5, -0.2, 0.8, 0.1]$.
+2. **Top-2 Selection:**
+   - Highest logit: $g_2 = 0.8$ (Expert 2, 0-indexed).
+   - The top two logits are $g_2 = 0.8$ and $g_0 = 0.5$.
+3. **Compute Softmax Weights for Active Experts:**
+   - $e^{g_2} = e^{0.8} = \mathbf{2.225541}$
+   - $e^{g_0} = e^{0.5} = \mathbf{1.648721}$
+   - Sum $= 2.225541 + 1.648721 = \mathbf{3.874262}$
+   - Normalized Weights:
+     $w_2 = \frac{2.225541}{3.874262} = \mathbf{0.574443}$
+     $w_0 = \frac{1.648721}{3.874262} = \mathbf{0.425557}$
+     (Check sum: $0.574443 + 0.425557 = 1.000000$).
+4. **Final Output:**
+   $y = w_0 E_0(h) + w_2 E_2(h) = \mathbf{0.425557} E_0(h) + \mathbf{0.574443} E_2(h)$. $\blacksquare$
+
+### Illustration 3: Load Balancing Auxiliary Loss
+**Problem:**
+In a network with $E=4$ experts, a batch of 8 tokens routes to experts such that the token count per expert is: E0: 3, E1: 1, E2: 3, E3: 1.
+The average router probability (after softmax) over the batch for each expert is $P = [0.35, 0.15, 0.35, 0.15]$.
+Compute the auxiliary loss $L_{\text{aux}} = E \sum_{i=1}^E f_i P_i$. Compare it to the ideal balanced loss.
+
+**Step-by-Step Solution:**
+1. **Fraction of tokens $f_i$:**
+   $f_0 = 3/8 = \mathbf{0.375}$
+   $f_1 = 1/8 = \mathbf{0.125}$
+   $f_2 = 3/8 = \mathbf{0.375}$
+   $f_3 = 1/8 = \mathbf{0.125}$
+2. **Given $P_i$:**
+   $P_0 = 0.35, \quad P_1 = 0.15, \quad P_2 = 0.35, \quad P_3 = 0.15$.
+3. **Compute Loss:**
+   $L_{\text{aux}} = 4 \times (f_0 P_0 + f_1 P_1 + f_2 P_2 + f_3 P_3)$
+   $f_0 P_0 = 0.375 \times 0.35 = \mathbf{0.13125}$
+   $f_1 P_1 = 0.125 \times 0.15 = \mathbf{0.01875}$
+   $f_2 P_2 = 0.375 \times 0.35 = \mathbf{0.13125}$
+   $f_3 P_3 = 0.125 \times 0.15 = \mathbf{0.01875}$
+   Sum $= 0.13125 + 0.01875 + 0.13125 + 0.01875 = \mathbf{0.30000}$
+   $L_{\text{aux}} = 4 \times 0.30000 = \mathbf{1.20000}$
+4. **Ideal Balanced Loss:**
+   If perfectly balanced, $f_i = 1/4 = 0.25$ and $P_i = 0.25$.
+   $L_{\text{ideal}} = 4 \times (4 \times (0.25 \times 0.25)) = 4 \times 4 \times 0.0625 = 4 \times 0.25 = \mathbf{1.00000}$.
+   The imbalance results in a $20\%$ penalty. $\blacksquare$
+
+### Illustration 4: MoE vs. Dense Parameter Calculation
+**Problem:**
+Compare active parameters per token for a dense vs. MoE model.
+**Dense Model:** $d=4096$, intermediate FFN dim $d_{\text{ffn}}=11008$, $L=32$ layers.
+**MoE Model:** Same total parameters per layer, but uses $E=8$ experts, routing to $K=2$ experts per token.
+Calculate FFN active parameters per token for each model layer.
+
+**Step-by-Step Solution:**
+1. **Dense Model FFN Size:**
+   - A standard FFN has three weight matrices (e.g. SwiGLU: up, gate, down).
+   - Parameters per layer = $3 \times d \times d_{\text{ffn}} = 3 \times 4096 \times 11008 = \mathbf{135,266,304}$ ($\approx 135.3$M).
+   - All $135.3$M parameters are active for every token.
+
+2. **MoE Model Setup:**
+   - To keep total parameters the same, each of the 8 experts must have an intermediate dimension of $11008 / 8 = \mathbf{1376}$.
+   - Params per expert = $3 \times 4096 \times 1376 = \mathbf{16,908,288}$ ($\approx 16.9$M).
+   - Total FFN params per layer = $8 \times 16,908,288 = \mathbf{135,266,304}$ (same as dense).
+
+3. **Active Parameters in MoE:**
+   - Since each token routes to only $K=2$ experts, active params per token per layer:
+   - $2 \times 16,908,288 = \mathbf{33,816,576}$ ($\approx 33.8$M).
+
+4. **Comparison:**
+   - Ratio: $\frac{33,816,576}{135,266,304} = \mathbf{0.25}$.
+   - The MoE model uses the same memory footprint but achieves a $4\times$ reduction in FLOPs per token (only $25\%$ active parameters)! $\blacksquare$
 
 ---
 

@@ -30,7 +30,8 @@ Projects/Production-Android-and-Flutter-Development/Part 2 - Deep Dart & Flutter
 ├── 09. Dart FFI (Foreign Function Interface) & High-Performance C-Interop.md
 ├── 10. Background Execution, Workmanager & Native OS Services.md
 ├── 11. Security Hardening, Obfuscation & Binary Reverse Engineering Defense.md
-└── 12. Profiling, Frame Budgets, Jank Elimination & CI-CD Pipelines.md
+├── 12. Profiling, Frame Budgets, Jank Elimination & CI-CD Pipelines.md
+└── 13. Production Flutter Architecture & Enterprise Project Structure.md
 ```
 
 ### Module Breakdown

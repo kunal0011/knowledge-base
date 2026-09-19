@@ -26,6 +26,7 @@ This document is the definitive master bibliography and canonical reading syllab
 16. [Cross-Platform Mobile Engineering (React Native & Expo)](#16-cross-platform-mobile-engineering-react-native--expo)
 17. [Modern Web Architecture (React 19 & Next.js 15)](#17-modern-web-architecture-react-19--nextjs-15)
 18. [Low-Level Design (LLD), Object-Oriented Design & Clean Code](#18-low-level-design-lld-object-oriented-design--clean-code)
+19. [Multimodal Large Language Models (MLLMs), Video Deep Learning & Real-Time Live Systems](#19-multimodal-large-language-models-mllms-video-deep-learning--real-time-live-systems)
 
 ---
 
@@ -312,3 +313,39 @@ This document is the definitive master bibliography and canonical reading syllab
 6. **Working Effectively with Legacy Code** — Michael C. Feathers (Prentice Hall)
 7. **Cracking the Coding Interview (6th Edition)** — Gayle Laakmann McDowell (CareerCup)
 8. **Introduction to Algorithms (CLRS, 4th Edition)** — Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, Clifford Stein (MIT Press)
+
+---
+
+## 19. Multimodal Large Language Models (MLLMs), Video Deep Learning & Real-Time Live Systems
+*Anchors: `Projects/Multimodal-Deep-Learning-and-Production-MLLM-Systems/`*
+
+### Foundational Textbooks & Monographs
+1. **Deep Learning: Foundations and Concepts** — Christopher M. Bishop & Hugh Bishop (Springer, 2024, Ch. 19 & 20)
+2. **Speech and Language Processing (3rd Edition Draft)** — Dan Jurafsky & James H. Martin (Stanford University, 2024, Ch. 26 "Dialogue Systems and Chatbots")
+3. **Computer Vision: Algorithms and Applications (2nd Edition)** — Richard Szeliski (Springer)
+
+### Vision-Language Alignment & Dynamic Resolution
+4. **Visual Instruction Tuning (LLaVA)** — Haotian Liu, Chunyuan Li, Qingyang Wu, Yong Jae Lee (*NeurIPS 2023*)
+5. **Improved Baselines with Visual Instruction Tuning (LLaVA-NeXT)** — Haotian Liu, Chunyuan Li, Yuheng Li, Bo Li, Yong Jae Lee (CVPR 2024)
+6. **Flamingo: a Visual Language Model for Few-Shot Learning** — Jean-Baptiste Alayrac et al. (*Google DeepMind, NeurIPS 2022*)
+7. **BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models** — Junnan Li, Dongxu Li, Silvio Savarese, Steven C.H. Hoi (*Salesforce Research, ICML 2023*)
+8. **SigLIP: Sigmoid Loss for Language Image Pre-Training** — Xiaohua Zhai, Basil Mustafa, Alexander Kolesnikov, Lucas Beyer (*Google DeepMind, ICCV 2023*)
+9. **NaViT: Native Resolution ViT** — Mostafa Dehghani, Basil Mustafa et al. (*Google DeepMind, NeurIPS 2023*)
+10. **InternVL: Scaling up Vision Foundation Models and Aligning for Generic Visual-Linguistic Tasks** — Zhe Chen et al. (*OpenGVLab, CVPR 2024*)
+
+### Video Deep Learning, 3D RoPE & Long-Context Architectures
+11. **Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution** — Qwen Team (*Alibaba, 2024*)
+12. **Gemini 1.5: Unlocking Multimodal Understanding Across Millions of Tokens of Context** — Gemini Team (*Google DeepMind, 2024*)
+13. **Video-LLaVA: Learning United Visual Representation by Alignment Before Projection** — Bin Lin et al. (*CVPR 2024*)
+14. **Video-ChatGPT: Towards Detailed Video Understanding via Large Vision and Language Models** — Muhammad Maaz et al. (*ACL 2024*)
+15. **RingAttention with Blockwise Transformers for Near-Infinite Context** — Hao Liu, Matei Zaharia, Pieter Abbeel (*ICLR 2024*)
+
+### Real-Time Live Streaming, Neural Audio Codecs & WebSockets/WebRTC
+16. **Gemini 2.0 Multimodal Live API Protocol & Systems Architecture** — Google DeepMind (2024–2025)
+17. **OpenAI Realtime API Architecture & System Card** — OpenAI (2024)
+18. **SoundStream: An End-to-End Neural Audio Codec** — Neil Zeghidour et al. (*Google Research, IEEE/ACM TASLP 2021*)
+19. **High-Fidelity Audio Compression with Neural Networks (EnCodec)** — Alexandre Défossez et al. (*Meta AI, 2022*)
+20. **Mimi: Streaming Neural Audio Codec with 12.5 Hz Framerate** — Kyutai Labs (2024)
+21. **RFC 8825: Overview: Real-Time Communication in Browsers (WebRTC)** — IETF (2021)
+22. **RFC 6455: The WebSocket Protocol** — IETF (2011)
+

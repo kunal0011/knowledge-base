@@ -115,6 +115,13 @@ knowledge-base/
 │   │   ├── Part 1 - Deep React Internals/     # React 19 Fiber, Lanes, Hooks, RSC & Compiler
 │   │   └── Part 2 - Deep Nextjs Architecture/ # Next.js 15 App Router, Streaming, Caching & Edge
 │   │
+│   ├── Multimodal-Deep-Learning-and-Production-MLLM-Systems/ # MLLMs, Video 3D RoPE & Real-Time Live APIs
+│   │   ├── README.md                          # Master Portal, Comparison Matrix & Systems Syllabus
+│   │   ├── 01. Multimodal LLM Architecture, Dynamic Patching & Cross-Modal Alignment.md
+│   │   ├── 02. Video Deep Learning, Spatiotemporal 3D RoPE & Long-Context Pipelines.md
+│   │   ├── 03. Real-Time Multimodal Live APIs, WebSockets-WebRTC & Low-Latency Streaming.md
+│   │   └── code/                              # AnyRes Slicing & Real-Time Full-Duplex Engine
+│   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
 │

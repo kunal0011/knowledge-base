@@ -30,7 +30,8 @@ Projects/Production-Android-and-Flutter-Development/Part 1 - Deep Kotlin & Andro
 ├── 09. WorkManager, IPC (Binder/AIDL) & Background Services.md
 ├── 10. Native NDK, JNI Interop & C++ Integration.md
 ├── 11. Security Hardening, Hardware Keystore, StrongBox & Cryptography.md
-└── 12. Profiling, Memory Leaks, Baseline Profiles & R8 Optimization.md
+├── 12. Profiling, Memory Leaks, Baseline Profiles & R8 Optimization.md
+└── 13. Production Android Architecture & Multi-Module Project Structure.md
 ```
 
 ### Module Breakdown

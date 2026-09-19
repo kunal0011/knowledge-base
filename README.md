@@ -102,8 +102,12 @@ knowledge-base/
 │   │
 │   ├── Production-Android-and-Flutter-Development/ # Production Android (Kotlin) & Cross-Platform (Flutter)
 │   │   ├── README.md                          # Master Portal, Comparison Matrix & Master Sitemap
-│   │   ├── Part 1 - Deep Kotlin & Android Internals/ # Native Android Track (12 In-Depth Chapters)
+│   │   ├── Part 1 - Deep Kotlin & Android Internals/ # Native Android Track (13 In-Depth Chapters)
 │   │   └── Part 2 - Deep Dart & Flutter Internals/   # Cross-Platform Flutter Track (12 In-Depth Chapters)
+│   │
+│   ├── Production-iOS-Development-Swift-and-SwiftUI/ # Production iOS Engineering (Swift 6 & SwiftUI)
+│   │   ├── README.md                          # Master Portal, Architecture Matrix & Syllabus
+│   │   └── 01-10. Core Language to Multi-Package SPM Architecture
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute

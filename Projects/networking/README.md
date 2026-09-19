@@ -1,155 +1,102 @@
-# Computer Networking & Systems Architecture: Master Portal
+# Computer Networking & Modern Internet Systems — Complete Technical Reference
 
-> "The Internet is a distributed system of staggering scale, composed of billions of connected computing devices, millions of communication links, and hundreds of thousands of interconnected networks. To understand how packets travel across the globe in milliseconds, one must peel back the abstraction layers from applications down to physical signals."  
-> — *James F. Kurose & Keith W. Ross, Computer Networking: A Top-Down Approach*
+> **An exhaustive, production-grade deep dive into computer networking theory, Internet protocol internals, transport layer state machines, global routing algorithms, and modern cloud-native networking paradigms.**  
+> Structured across the 5-layer Internet architecture alongside modern hyper-scale data center fabrics, kernel-bypass technologies, and AI networking infrastructure.
 
 ---
 
-## 🌐 Executive Architecture: The Protocol Stack & Packet Encapsulation
+## 🏛️ Comprehensive Protocol Stack & Concept Map
 
-Modern networking is built upon the principle of **layered protocol abstraction**. Each layer provides services to the layer above while hiding the implementation details of the layers below.
+```mermaid
+flowchart TD
+    subgraph Layer_5__Application_172 ["Layer 5: Application Layer"]
+        L5_Web["02. Application Protocols<br/>HTTP/1.1 -> HTTP/2 (Multiplexing) -> HTTP/3 (QUIC / UDP)<br/>DNS (Iterative/Recursive, DNSSEC, DoH), WebSockets, WebRTC"]
+    end
 
-```text
-===================================================================================================
-                             THE PACKET ENCAPSULATION & DECAPSULATION TIMELINE
-===================================================================================================
+    subgraph Layer_4__Transport_L_173 ["Layer 4: Transport Layer"]
+        L4_Base["03. Transport Foundations<br/>Multiplexing (Ports), UDP Checksums, RDT 1.0-3.0, Stop-and-Wait, Pipelining (GBN, SR)"]
+        L4_TCP["04. TCP Deep Dive<br/>Connection Lifecycle (3-Way Handshake, TIME_WAIT, SYN Cookies)<br/>Flow Control (rwnd, Nagle), Congestion Control (AIMD, Cubic, BBR, DCTCP)"]
+    end
 
-  [ Source Host ]                                                           [ Destination Host ]
-  
-  Application Layer (HTTP/3, DNS, SSH)                                      Application Layer
-  ┌──────────────────────────────────────────────┐                          ┌──────────────────┐
-  │ Application Data Payload                     │                          │ Application Data │
-  └──────────────────────┬───────────────────────┘                          └────────▲─────────┘
-                         │                                                           │
-  Transport Layer (TCP / UDP / QUIC)                                        Transport Layer
-  ┌──────────┬───────────▼───────────────────────┐                          ┌────────┴─────────┐
-  │ TCP Hdr  │ Application Data Payload          │                          │ TCP Segment Data │
-  └──────────┴───────────┬───────────────────────┘                          └────────▲─────────┘
-                         │                                                           │
-  Network Layer (IPv4 / IPv6)                                               Network Layer
-  ┌──────────┬───────────▼───────────────────────┐                          ┌────────┴─────────┐
-  │  IP Hdr  │ TCP Hdr | Application Data        │                          │ IP Datagram Data │
-  └──────────┴───────────┬───────────────────────┘                          └────────▲─────────┘
-                         │                                                           │
-  Link Layer (Ethernet 802.3 / Wi-Fi 802.11)                                Link Layer
-  ┌──────────┬───────────▼───────────────────────┬──────────┐               ┌────────┴─────────┐
-  │ Eth Hdr  │ IP Hdr | TCP Hdr | App Data       │ Eth FCS  │               │ Ethernet Payload │
-  └──────────┴───────────┬───────────────────────┴──────────┘               └────────▲─────────┘
-                         │                                                           │
-  Physical Layer (Bits on Fiber / Copper / Radio)                           Physical Layer
-  ═══════════════════════▼═══════════════════════════════════════════════════════════╧══════════
-  01101001 01101110 01110100 01100101 01110010 01101110 01100101 01110100 (Physical Media)
-===================================================================================================
+    subgraph Layer_3__Network_Lay_174 ["Layer 3: Network Layer"]
+        L3_Data["05. Network Data Plane<br/>Router Hardware (TCAMs, Crossbars), IPv4 Header & PMTUD, CIDR / LPM, NAT, IPv6 Architecture"]
+        L3_Ctrl["06. Network Control Plane<br/>Graph Theory, Link-State (Dijkstra, OSPF Areas, DR/BDR), Distance-Vector (Bellman-Ford, Count-to-Infinity)<br/>Inter-Domain BGP-4 (Path-Vector, AS-PATH, Valley-Free Routing, RPKI)"]
+    end
+
+    subgraph Layer_2___1__Link_175 ["Layer 2 & 1: Link & Physical Layers"]
+        L2_LAN["07. Link Layer & LANs<br/>Framing, MAC Addressing, CSMA/CD & Exponential Backoff, ARP, Self-Learning Switches, STP (802.1D), VLANs (802.1Q)"]
+        L2_Wire["08. Wireless & Cellular<br/>Signal Physics (Path Loss, Fading, SNR), Wi-Fi (CSMA/CA, RTS/CTS, Wi-Fi 6/7 OFDMA), 5G NR (gNodeB, SBA Core, Slicing, uRLLC)"]
+    end
+
+    subgraph Modern_Cloud___AI_Ne_176 ["Modern Cloud & AI Networking"]
+        L_Modern["10. Modern Networking Paradigms<br/>SDN (OpenFlow, P4), Clos / Leaf-Spine Fabrics (ECMP, VXLAN EVPN)<br/>AI Networking (RDMA, RoCE v2, Lossless PFC), eBPF XDP Line-Rate Filtering, BGP Anycast CDNs"]
+        L_Sec["09. Network Security<br/>TLS 1.2 vs TLS 1.3 (1-RTT, 0-RTT, Forward Secrecy), IPsec (Tunnel/Transport, ESP), Stateful Firewalls, Zero Trust (mTLS)"]
+    end
+
+    L5_Web ==> L4_Base & L4_TCP
+    L4_TCP ==> L3_Data & L3_Ctrl
+    L3_Data ==> L2_LAN & L2_Wire
+    L2_LAN ==> L_Modern & L_Sec
 ```
 
-### Protocol Layering Models: OSI 7-Layer vs. Modern TCP/IP 5-Layer Stack
-
-| OSI 7-Layer Model | TCP/IP 5-Layer Stack | Protocol Data Unit (PDU) | Primary Protocols & Hardware | Core Functionality |
-| :--- | :--- | :--- | :--- | :--- |
-| **7. Application** | **5. Application** | **Message** | HTTP/1.1, HTTP/2, HTTP/3, DNS, SSH, gRPC, BGP | Network process-to-process communication. |
-| **6. Presentation** | *(Merged in App)* | Data representation | TLS/SSL, ASCII, UTF-8, JSON, Protobuf | Syntax, encryption, data compression. |
-| **5. Session** | *(Merged in App)* | Dialog tokens | Sockets, RPC, NetBIOS | Session checkpointing, recovery, synchronization. |
-| **4. Transport** | **4. Transport** | **Segment** (TCP) / **Datagram** (UDP) | TCP, UDP, QUIC, SCTP | End-to-end process multiplexing, reliability, flow/congestion control. |
-| **3. Network** | **3. Network** | **Datagram / Packet** | IPv4, IPv6, ICMP, OSPF, BGP | Host-to-host routing, logical addressing, forwarding across subnets. |
-| **2. Data Link** | **2. Data Link** | **Frame** | Ethernet (802.3), Wi-Fi (802.11), ARP, VLAN | Node-to-node hop delivery, media access (MAC), framing, CRC error detection. |
-| **1. Physical** | **1. Physical** | **Bit** | 100GBASE-LR4, Cat6a, Fiber Optic, Radio Waves | Transmission of raw electrical/optical/RF bitstreams over physical media. |
-
 ---
 
-## ⏱️ Mathematical Foundations: The 4 Sources of Packet Delay
+## 📚 Core Academic & Industry Textbooks Referenced
 
-When a packet travels from a source host to a destination router across a link, it experiences a total nodal delay ($d_{\text{nodal}}$):
-$$d_{\text{nodal}} = d_{\text{proc}} + d_{\text{queue}} + d_{\text{trans}} + d_{\text{prop}}$$
-
-```text
-===================================================================================================
-                                      FOUR SOURCES OF NODAL DELAY
-===================================================================================================
-
-       Router Ingress                                                   Router Egress
-    ──────────────────► [ Inbound Buffer ]                                      │
-                               │                                                │
-                               ▼                                                │
-                 ┌───────────────────────────┐                                  │
-                 │ 1. Processing Delay       │                                  │
-                 │    (d_proc: Check CRC,    │                                  │
-                 │     examine IP header,    │                                  │
-                 │     lookup routing table) │                                  │
-                 └─────────────┬─────────────┘                                  │
-                               │                                                │
-                               ▼                                                │
-                 ┌───────────────────────────┐                                  │
-                 │ 2. Queueing Delay         │                                  │
-                 │    (d_queue: Waiting in   │                                  │
-                 │     buffer for link to    │                                  │
-                 │     become available)     │                                  │
-                 └─────────────┬─────────────┘                                  │
-                               │                                                │
-                               ▼                                                │
-                 ┌───────────────────────────┐                                  ▼
-                 │ 3. Transmission Delay     ├──────────────────────────► Outbound Link
-                 │    (d_trans = L / R)      │                            Physical Wire / Fiber
-                 └───────────────────────────┘                                  │
-                                                                                │
-                                                              4. Propagation    │
-                                                                 Delay          │
-                                                                 (d_prop = d / s│
-                                                                                ▼
-                                                                        Next Hop Node
-```
-
-1. **Nodal Processing Delay ($d_{\text{proc}}$):** The time required to examine the packet’s header, verify CRC error checksums, and determine the output interface via routing table lookups (typically $< 1\ \mu\text{s}$ on modern hardware ASICs).
-2. **Queueing Delay ($d_{\text{queue}}$):** The time a packet spends waiting in the queue buffer until the link becomes free. Depends entirely on network congestion and traffic intensity:
-   $$I = \frac{L \cdot a}{R}$$
-   where $L$ is packet length in bits, $a$ is average packet arrival rate (packets/sec), and $R$ is transmission rate (bits/sec). If $I \to 1$, queueing delay explodes asymptotically toward infinity!
-3. **Transmission Delay ($d_{\text{trans}}$):** The time required to push all packet bits onto the wire:
-   $$d_{\text{trans}} = \frac{L}{R} \quad (\text{Packet Length } L \text{ bits},\ \text{Link Bandwidth } R \text{ bps})$$
-4. **Propagation Delay ($d_{\text{prop}}$):** The time required for a physical signal to travel through the physical medium from one router to the next:
-   $$d_{\text{prop}} = \frac{d}{s} \quad (\text{Distance } d \text{ meters},\ \text{Propagation Speed } s \approx 2 \times 10^8\text{ m/s in glass fiber})$$
-
-> [!IMPORTANT]
-> **Transmission vs. Propagation Delay:** A common conceptual pitfall:
-> * Transmission delay ($L/R$) is the time the router takes to **serialize the bits onto the wire** (dependent on packet size and NIC speed).
-> * Propagation delay ($d/s$) is the time the electromagnetic wave takes to **physically travel the geographical distance** (governed by the speed of light in fiber).
-
----
-
-## 📚 Master Curriculum Index: Computer Networking
-
-This 10-chapter pedagogical curriculum mirrors the top-down methodology of Kurose & Ross, supplemented with Stevens' packet internals and modern cloud infrastructure:
-
-| Module | Chapter Title | Core Theoretical & Practical Engineering Foundations |
+| Textbook | Authors | Primary Focus Areas |
 | :--- | :--- | :--- |
-| **01** | [Foundations & Network Core - Delays, Loss & Protocol Stacks](./01.%20Foundations%20%26%20Network%20Core%20-%20Delays%2C%20Loss%20%26%20Protocol%20Stacks.md) | Circuit switching vs packet switching, statistical multiplexing, the 4 nodal delay equations, Bandwidth-Delay Product (BDP), packet loss, and OSI vs TCP/IP reference architectures. |
-| **02** | [Application Layer - HTTP Evolution, DNS & Socket Programming](./02.%20Application%20Layer%20-%20HTTP%20Evolution%2C%20DNS%20%26%20Socket%20Programming.md) | Client-server vs P2P, HTTP/1.1 vs HTTP/2 multiplexing vs HTTP/3 QUIC, DNS resolution hierarchy, caching, DNSSEC, and POSIX BSD socket programming in C/Python. |
-| **03** | [Transport Layer Foundations - UDP, TCP & Reliable Data Transfer](./03.%20Transport%20Layer%20Foundations%20-%20UDP%2C%20TCP%20%26%20Reliable%20Data%20Transfer%20(RDT).md) | Port multiplexing, connectionless UDP, Reliable Data Transfer state machines (RDT 1.0 $\to$ 3.0), pipelining, Go-Back-N vs Selective Repeat sliding window math. |
-| **04** | [TCP Deep Dive - Connection Lifecycle, Flow & Congestion Control](./04.%20TCP%20Deep%20Dive%20-%20Connection%20Lifecycle%2C%20Flow%20Control%20%26%20Congestion%20Control.md) | 3-way handshake (`SYN`), 4-way teardown (`TIME_WAIT` $2\text{MSL}$), Sequence/Ack numbers, sliding window flow control (`rwnd`), Nagle's algorithm, Congestion Control (Slow Start, Tahoe, Reno, CUBIC, Google BBR). |
-| **05** | [Network Layer - Data Plane & IP Addressing (IPv4, IPv6, NAT, CIDR)](./05.%20Network%20Layer%20-%20Data%20Plane%20%26%20IP%20Addressing%20(IPv4%2C%20IPv6%2C%20NAT%2C%20CIDR).md) | Router hardware architecture (crossbar switching fabrics, HOL blocking), IPv4 headers, CIDR subnetting math, Longest Prefix Match (LPM) via Radix Tries, NAT traversal (STUN/TURN), and IPv6 headers. |
-| **06** | [Network Layer - Control Plane & Routing Algorithms (OSPF, BGP)](./06.%20Network%20Layer%20-%20Control%20Plane%20%26%20Routing%20Algorithms%20(OSPF%2C%20BGP).md) | Link-State routing (Dijkstra's Shortest Path, OSPF areas, LSA flooding), Distance-Vector routing (Bellman-Ford, Count-to-Infinity, Poison Reverse), and Inter-AS routing with BGP-4 (AS-Path, peering vs transit). |
-| **07** | [Link Layer & LANs - Ethernet, ARP, Switches & VLANs](./07.%20Link%20Layer%20%26%20Local%20Area%20Networks%20-%20Ethernet%2C%20ARP%2C%20Switches%20%26%20VLANs.md) | Framing, CRC polynomial division, CSMA/CD exponential backoff, MAC addresses, ARP protocol, Self-learning Ethernet switches, Spanning Tree Protocol (STP), and 802.1Q VLAN trunking. |
-| **08** | [Wireless & Mobile Networks - Wi-Fi, Cellular (4G-5G) & Mobility](./08.%20Wireless%20%26%20Mobile%20Networks%20-%20Wi-Fi%20(802.11)%2C%20Cellular%20(4G-5G)%20%26%20Mobility.md) | Wireless physics (multipath fading, SNR vs BER), 802.11 Wi-Fi (CSMA/CA, RTS/CTS, Hidden Terminal Problem), Cellular core architecture (4G EPC vs 5G Service-Based Architecture, network slicing), and mobility handovers. |
-| **09** | [Network Security & Cryptography - TLS, IPSec & Firewalls](./09.%20Network%20Security%20%26%20Cryptographic%20Protocols%20-%20TLS%2C%20IPSec%2C%20SSH%20%26%20Firewalls.md) | Symmetric vs asymmetric cryptography, PKI and X.509 certs, TLS 1.2 vs TLS 1.3 0-RTT handshakes, Diffie-Hellman Ephemeral (DHE), IPSec (AH/ESP, Transport vs Tunnel mode), and stateful packet filtering. |
-| **10** | [Modern Paradigms - SDN, eBPF XDP, Data Center Fabrics & CDN](./10.%20Modern%20Networking%20Paradigms%20-%20SDN%2C%20eBPF%20XDP%2C%20Data%20Center%20Fabrics%20%26%20CDN.md) | Software-Defined Networking (SDN control/data plane split), Linux kernel bypass with eBPF XDP, Leaf-Spine Clos data center topologies, ECMP routing, RDMA / RoCEv2, and Content Delivery Networks (Anycast, GeoDNS). |
+| **Computer Networking: A Top-Down Approach (8th Ed)** | James F. Kurose & Keith W. Ross | The definitive pedagogical framework: Application $\to$ Transport $\to$ Network Data/Control $\to$ Link $\to$ Wireless $\to$ Security. |
+| **TCP/IP Illustrated, Volume 1: The Protocols (2nd Ed)** | W. Richard Stevens & Kevin R. Fall | Authoritative packet formats, TCP state machines, timer calculations (Jacobson RTO), ARP, IP, and socket internals. |
+| **High Performance Browser Networking** | Ilya Grigorik | Modern web protocols: HTTP/1.1 vs HTTP/2 vs HTTP/3, QUIC, TLS 1.3 handshakes, BBR congestion control, WebSockets, WebRTC. |
+| **Computer Networks (5th/6th Ed)** | Andrew S. Tanenbaum & David J. Wetherall | Mathematical foundations, queuing theory, statistical multiplexing proofs, medium access control, routing graph algorithms. |
+| **Interconnections: Bridges, Routers, Switches, and Protocols (2nd Ed)** | Radia Perlman | The definitive authority on Spanning Tree Protocol (STP), link-state vs distance-vector routing, bridge and switch architectures. |
+| **Internetworking with TCP/IP, Volume 1 (6th Ed)** | Douglas E. Comer | IP addressing, CIDR, subnetting masks, fragmentation, routing architecture. |
+| **BPF Performance Tools / Systems Performance** | Brendan Gregg | Extended Berkeley Packet Filter (eBPF), eXpress Data Path (XDP) kernel-bypass networking, packet filtering, and socket tracing. |
 
 ---
 
-## ⚡ Fundamental Architectural Comparison: Circuit Switching vs. Packet Switching
+## 📑 Complete Chapter Index
 
-```text
-===================================================================================================
-                   CIRCUIT SWITCHING VS. PACKET SWITCHING (STATISTICAL MULTIPLEXING)
-===================================================================================================
+### Part I: Foundations, Application Layer & Transport Layer
 
-  [ Circuit Switching (Legacy Telephony) ]          [ Packet Switching (The Modern Internet) ]
-  Dedicated End-to-End Reserved Bandwidth           On-Demand Statistical Multiplexing
-  
-  ┌──────┐    Dedicated 10 Mbps Circuit    ┌──────┐ ┌──────┐    Shared 10 Mbps Pipe        ┌──────┐
-  │User A├────────────────────────────────►│User B│ │User A├──► [Packet 1]                │User B│
-  └──────┘                                 └──────┘ └──────┘    [Packet 2] ───────────────►└──────┘
-  ┌──────┐    Dedicated 10 Mbps Circuit    ┌──────┐ ┌──────┐    [Packet 3]
-  │User C├────────────────────────────────►│User D│ │User C├──► (Packets interleave
-  └──────┘                                 └──────┘ └──────┘     dynamically as needed!)
-  - Guarantees 100% constant throughput.            - High efficiency: idle users consume 0 bandwidth.
-  - Horrendous waste: idle capacity cannot          - Packets experience queueing delays and jitter.
-    be shared by other active users!                - Massive scalability: accommodates 10x more users!
+| Chapter | Title | Key Theoretical & Architectural Concepts | Deep Dives & Protocols |
+| :--- | :--- | :--- | :--- |
+| **01** | [**Foundations & Network Core**](./01.%20Foundations%20%26%20Network%20Core%20-%20Delays,%20Loss%20%26%20Protocol%20Stacks.md) | Edge vs Core, Circuit vs Packet Switching, Statistical Multiplexing proof, Nodal Delays ($d_{\text{proc}}, d_{\text{queue}}, d_{\text{trans}}, d_{\text{prop}}$), Bandwidth-Delay Product (BDP) | OSI 7-Layer vs TCP/IP 5-Layer Model, Encapsulation & Decapsulation walk-through, Traffic Intensity ($La/R$) and queuing delay |
+| **02** | [**Application Layer**](./02.%20Application%20Layer%20-%20HTTP%20Evolution,%20DNS%20%26%20Socket%20Programming.md) | DNS Hierarchical Architecture, Recursive vs Iterative resolution, Resource Records, DNSSEC & DoH, BSD Sockets API | **HTTP Evolution**: HTTP/1.1 (Keep-Alive, HoL) $\to$ HTTP/2 (Binary Framing, HPACK, Streams) $\to$ **HTTP/3 & QUIC** (0-RTT, Connection IDs, zero HoL blocking), WebSockets, WebRTC |
+| **03** | [**Transport Layer Foundations**](./03.%20Transport%20Layer%20Foundations%20-%20UDP,%20TCP%20%26%20Reliable%20Data%20Transfer%20%28RDT%29.md) | Process-to-process demultiplexing, Port ranges, UDP 8-byte header & 1's complement checksum | **RDT Protocol Evolution** (rdt 1.0 to 3.0 Alternating-Bit), Stop-and-Wait utilization failure ($U \approx 0.027\%$), **Go-Back-N (GBN) vs Selective Repeat (SR)** |
+| **04** | [**TCP Deep Dive**](./04.%20TCP%20Deep%20Dive%20-%20Connection%20Lifecycle,%20Flow%20Control%20%26%20Congestion%20Control.md) | TCP Header structure, 3-Way Handshake (ISN randomization, SYN Cookies), 4-Way Close (`TIME_WAIT` $2 \times \text{MSL}$), Flow Control (`rwnd`, Nagle) | Jacobson's RTT/RTO EWMA math, AIMD convergence proof, Classic Tahoe/Reno, **TCP Cubic** (polynomial window growth), **TCP BBR** (model-based, eliminating bufferbloat), **DCTCP** |
+
+---
+
+### Part II: Network Layer (Data & Control Planes) & Link Layer
+
+| Chapter | Title | Key Theoretical & Architectural Concepts | Deep Dives & Protocols |
+| :--- | :--- | :--- | :--- |
+| **05** | [**Network Layer: Data Plane**](./05.%20Network%20Layer%20-%20Data%20Plane%20%26%20IP%20Addressing%20%28IPv4,%20IPv6,%20NAT,%20CIDR%29.md) | Forwarding vs Routing, Router architecture (Input/Output ports, Crossbar fabric, TCAM hardware lookup), IPv4 Header & PMTUD | **CIDR Subnetting & Longest Prefix Match (LPM)**, NAT translation table mechanics, **IPv6 Architecture** (40B fixed header, no fragmentation, extension headers) |
+| **06** | [**Network Layer: Control Plane**](./06.%20Network%20Layer%20-%20Control%20Plane%20%26%20Routing%20Algorithms%20%28OSPF,%20BGP%29.md) | Graph routing model $G=(V,E)$, Link-State vs Distance-Vector, Per-router vs Centralized SDN | **Dijkstra's Algorithm & OSPF** (Areas, DR/BDR), **Bellman-Ford & Count-to-Infinity** (Poisoned Reverse), **Inter-Domain BGP-4** (`AS-PATH`, Valley-Free routing, RPKI against hijacking) |
+| **07** | [**Link Layer & LANs**](./07.%20Link%20Layer%20%26%20Local%20Area%20Networks%20-%20Ethernet,%20ARP,%20Switches%20%26%20VLANs.md) | Framing, 48-bit MAC addresses (OUI), CSMA/CD Binary Exponential Backoff & 64-byte min frame math, ARP protocol | Self-learning Switches (CAM tables), **Spanning Tree Protocol (STP - 802.1D)** loop prevention, **VLANs (802.1Q 4-byte tags & trunking)** |
+| **08** | [**Wireless & Mobile Networks**](./08.%20Wireless%20%26%20Mobile%20Networks%20-%20Wi-Fi%20%28802.11%29,%20Cellular%20%284G-5G%29%20%26%20Mobility.md) | Path loss, Multipath fading, SNR vs BER, Hidden Terminal Problem, CSMA/CA (DIFS, SIFS, RTS/CTS handshakes) | **Wi-Fi Generations** (Wi-Fi 4 to Wi-Fi 7 MLO & 320MHz), **4G LTE EPC vs 5G Standalone (SA) Core** (gNodeB, AMF, UPF), **5G Pillars** (eMBB, uRLLC < 1ms, mMTC, Network Slicing) |
+
+---
+
+### Part III: Security & Modern Cloud/AI Networking Paradigms
+
+| Chapter | Title | Key Theoretical & Architectural Concepts | Deep Dives & Protocols |
+| :--- | :--- | :--- | :--- |
+| **09** | [**Network Security & Cryptography**](./09.%20Network%20Security%20%26%20Cryptographic%20Protocols%20-%20TLS,%20IPSec,%20SSH%20%26%20Firewalls.md) | Symmetric AEAD (AES-GCM), Asymmetric ECDHE, SHA-256, PKI X.509 Certificate chains & OCSP Stapling | **TLS 1.2 vs TLS 1.3** (1 RTT handshake, 0-RTT early data, forward secrecy), **IPsec** (Tunnel vs Transport, ESP/AH), Stateful firewalls (`conntrack`), Zero Trust Architecture (mTLS) |
+| **10** | [**Modern Networking Paradigms**](./10.%20Modern%20Networking%20Paradigms%20-%20SDN,%20eBPF%20XDP,%20Data%20Center%20Fabrics%20%26%20CDN.md) | Software-Defined Networking (OpenFlow, P4), Content Delivery Networks (CDNs) & BGP Anycast routing | **Clos / Leaf-Spine Data Center Fabrics** (ECMP, VXLAN EVPN), **High-Performance AI Networking** (**RDMA / RoCE v2**, Lossless PFC, GPU All-Reduce), **eBPF XDP line-rate kernel bypass** |
+
+---
+
+## 🎯 Cross-Cutting Networking Design Principles
+
+```mermaid
+flowchart LR
+    A["The End-to-End Argument<br/>(Saltzer, Reed, Clark 1984:<br/>Functions placed at endpoints)"] --- B["Statistical Multiplexing<br/>(On-demand packet sharing<br/>beats reserved circuits)"]
+    B --- C["Layering & Encapsulation<br/>(Modularity & separation of concerns<br/>via standardized headers)"]
+    C --- D["Fate Sharing<br/>(State kept at endpoints,<br/>network survives core crashes)"]
 ```
+
+1. **The End-to-End Argument (Saltzer, Reed, Clark, 1984)**: Functions (such as error checking, reliability, encryption, and deduplication) can only be completely and correctly implemented with the knowledge and help of the endpoint application. Intermediate network components should remain as simple, stateless, and fast as possible.
+2. **Fate Sharing**: State critical to maintaining an active session is maintained directly at the endpoints (the hosts). If intermediate routers crash and reboot, the communication session survives without losing connection state.
+3. **Decoupling Transport from Media**: IP operates over any link layer (Ethernet, Wi-Fi, 5G, Optical), and any application protocol (HTTP, DNS, SSH) operates over any transport protocol (TCP, UDP, QUIC), realizing the famous **"Hourglass Architecture"** of the Internet.

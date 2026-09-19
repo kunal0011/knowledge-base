@@ -1,95 +1,125 @@
-# Designing Data-Intensive Applications (DDIA) Master Portal
+# Designing Data-Intensive Applications (DDIA) — Complete Engineering Reference
 
-> "Data is at the center of many challenges in system design today. Difficult issues need to be figured out, such as scalability, consistency, reliability, efficiency, and maintainability. In addition, we have an overwhelming variety of tools to choose from... We need to figure out what each tool is good for, and how to combine them to form a cohesive system."  
-> — *Martin Kleppmann, Designing Data-Intensive Applications (O'Reilly)*
-
----
-
-## 🏛️ Curriculum Architecture & Systems Map
-
-This section is an authoritative, publication-grade deep-dive into the foundational principles, data models, distributed algorithms, and consensus protocols expounded in Martin Kleppmann's seminal work: **"Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems"**.
-
-```
-Projects/Designing-Data-Intensive-Applications/
-├── README.md                                                 # Master Portal & Cross-Paradigm Architectural Matrix
-│
-├── Part-1-Foundations-of-Data-Systems/                       # Single-Node Storage, Formats & Foundational Bounds
-│   ├── 01. Reliability, Scalability & Maintainability.md     # Faults vs Failures, Percentiles, SLOs, Operability
-│   ├── 02. Data Models & Query Languages.md                  # Relational vs Document vs Graph (Cypher, SPARQL)
-│   ├── 03. Storage & Retrieval - Engines, Indexes & Compaction.md # LSM-Trees, B-Trees, OLTP vs OLAP, Columnar
-│   └── 04. Encoding & Evolution - Formats & Protocols.md     # Avro, Protobuf, Thrift, Schema Evolution, RPC
-│
-├── Part-2-Distributed-Data/                                  # Distributed Systems, Replication, Transactions & Consensus
-│   ├── 05. Replication - Single-Leader, Multi-Leader & Quorums.md # Replication Lag, Read-Your-Writes, Dynamo Quorums
-│   ├── 06. Partitioning - Strategies, Secondary Indexes & Skew.md # Hash vs Range, Document vs Term Indexes, Rebalancing
-│   ├── 07. Transactions - ACID, Isolation Levels & Anomalies.md   # Dirty Reads, Read Skew, MVCC, Write Skew, 2PL, SSI
-│   ├── 08. The Trouble with Distributed Systems.md           # Unreliable Networks, Clock Drift, Byzantine Faults, System Models
-│   └── 09. Consistency & Consensus - Linearizability to Raft.md   # Linearizability, Total Order, 2PC, Paxos/Raft/Zab
-│
-└── Part-3-Derived-Data/                                      # Batch Computing, Stream Processing & Modern Unbundling
-    ├── 10. Batch Processing - MapReduce, Dataflow & Joins.md # Unix Philosophy, MapReduce, Spark/Flink DAGs, Distributed Joins
-    ├── 11. Stream Processing - Event Sourcing, CDC & State.md # Partitioned Logs, CDC vs Dual Writes, Stream Joins, Watermarks
-    └── 12. The Future of Data Systems - Unbundled Databases.md# Unbundling, Lambda vs Kappa, Correctness, End-to-End Integrity
-```
+> **An exhaustive, production-grade deep dive into all 3 parts, 12 chapters, and core distributed systems algorithms from Martin Kleppmann's definitive work.**
 
 ---
 
-## 📊 Comprehensive Comparative Technology Matrix
+## 🏛️ Book Architecture & Visual Sitemap
 
-| Dimension | Relational (OLTP) | Document / Key-Value | Column-Oriented (OLAP) | Distributed Stream / Log |
-| :--- | :--- | :--- | :--- | :--- |
-| **Exemplars** | PostgreSQL, MySQL, Oracle | MongoDB, Cassandra, DynamoDB | ClickHouse, Snowflake, DuckDB | Apache Kafka, Apache Pulsar |
-| **Primary Data Model** | Relations, normalized tuples | JSON/BSON, Wide-column key-val | Parquet columnar vectors, arrow | Append-only byte offset stream |
-| **Storage Structure** | B+Tree (4KB–8KB pages, in-place) | LSM-Tree (MemTable + SSTables) | Column chunks, RLE, Bitmaps | Sequential log segments on disk |
-| **Write Path Latency** | $O(\log N)$ disk page overwrite + WAL | $O(1)$ memory write + sequential WAL | Column block bulk flush / merge | $O(1)$ sequential OS page cache hit |
-| **Read Access Pattern** | Point lookups, small range scans | Key lookups, document traversals | Aggregations over subset of columns | Sequential offset tailing via DMA |
-| **Concurrency Control** | MVCC + 2PL / SSI Locks | Row-level atomic LWW / Paxos | Read-only snapshot views | Partition-isolated single thread |
-| **Primary Bottleneck** | Random disk I/O, lock contention | Compaction amplification, stale reads | CPU memory bandwidth, decompression | Network interface card (NIC) bandwidth |
+```mermaid
+flowchart TD
+    subgraph Part1 ["Part I: Foundations of Data Systems"]
+        C1["01. Reliability, Scalability & Maintainability"]
+        C2["02. Data Models & Query Languages"]
+        C3["03. Storage & Retrieval (LSM & B-Trees)"]
+        C4["04. Encoding & Evolution (Protobuf, Avro)"]
+        C1 --> C2 --> C3 --> C4
+    end
 
----
+    subgraph Part2 ["Part II: Distributed Data"]
+        C5["05. Replication (Single/Multi-Leader, Quorums)"]
+        C6["06. Partitioning & Secondary Indexes"]
+        C7["07. Transactions (ACID, MVCC, 2PL, SSI)"]
+        C8["08. Distributed Systems Faults & Clocks"]
+        C9["09. Consistency & Consensus (Linearizability, Raft)"]
+        C5 --> C6 --> C7 --> C8 --> C9
+    end
 
-## 🗺️ The DDIA Systems Spectrum
+    subgraph Part3 ["Part III: Derived Data"]
+        C10["10. Batch Processing (MapReduce, Spark, Pregel)"]
+        C11["11. Stream Processing (Kafka, CDC, Event Sourcing)"]
+        C12["12. The Future of Data Systems (Unbundling)"]
+        C10 --> C11 --> C12
+    end
 
-```
- [ Part I: Single-Node Foundations ]
-        │
-        ├── Storage Engine Anatomy: Memory (Memtable) vs Disk (SSTable / B-Tree Page)
-        └── Wire Protocol Serialization: Binary tag schemas (Protobuf/Avro) vs Text JSON
-        │
-        ▼
- [ Part II: Distributed Realities & Fault Tolerance ]
-        │
-        ├── Replication: Trade-offs between Consistency (Linearizability) & Latency
-        ├── Partitioning: Distributing load across shards without hotspot skew
-        ├── Concurrency: Preventing Race Conditions (Write Skew, Phantoms, Lost Updates)
-        └── Consensus: Reaching mathematical agreement across unreliable networks
-        │
-        ▼
- [ Part III: Derived Data & Unbundled Architecture ]
-        │
-        ├── Batch Processing: Transforming bounded historical records deterministically
-        ├── Stream Processing: Transforming unbounded real-time event logs continuously
-        └── The Unbundled Database: Composing heterogeneous storage engines into a cohesive whole
+    C4 ==> C5
+    C9 ==> C10
 ```
 
 ---
 
-## 📚 12-Chapter Curriculum Index
+## 📑 Complete Chapter Index
 
-### [Part I: Foundations of Data Systems](Part-1-Foundations-of-Data-Systems/)
-1. **[01. Reliability, Scalability & Maintainability](Part-1-Foundations-of-Data-Systems/01.%20Reliability,%20Scalability%20&%20Maintainability.md)**: Faults vs Failures, SLAs, tail latencies, percentiles ($p95, p99, p99.9$), Head-of-Line blocking, operability and simplicity.
-2. **[02. Data Models & Query Languages](Part-1-Foundations-of-Data-Systems/02.%20Data%20Models%20&%20Query%20Languages.md)**: Relational model vs Document model vs Graph models (Property Graphs, Neo4j, Cypher, RDF, SPARQL, Datalog).
-3. **[03. Storage & Retrieval - Engines, Indexes & Compaction](Part-1-Foundations-of-Data-Systems/03.%20Storage%20&%20Retrieval%20-%20Engines,%20Indexes%20&%20Compaction.md)**: LSM-trees, SSTables, B-Trees, Write-Ahead Logs, OLTP vs OLAP, Columnar storage, Bitmaps, Run-Length Encoding.
-4. **[04. Encoding & Evolution - Formats & Protocols](Part-1-Foundations-of-Data-Systems/04.%20Encoding%20&%20Evolution%20-%20Formats%20&%20Protocols.md)**: JSON/XML vs Protocol Buffers, Thrift, Avro; backward/forward compatibility, RPC vs REST vs asynchronous messaging.
+### Part I: Foundations of Data Systems
+Storage engine internals, query paradigms, hardware failure models, and data evolution.
 
-### [Part II: Distributed Data](Part-2-Distributed-Data/)
-5. **[05. Replication - Single-Leader, Multi-Leader & Quorums](Part-2-Distributed-Data/05.%20Replication%20-%20Single-Leader,%20Multi-Leader%20&%20Quorums.md)**: Single-leader, multi-leader, leaderless (Dynamo), replication lag anomalies (read-your-writes, monotonic reads), quorums ($W + R > N$).
-6. **[06. Partitioning - Strategies, Secondary Indexes & Skew](Part-2-Distributed-Data/06.%20Partitioning%20-%20Strategies,%20Secondary%20Indexes%20&%20Skew.md)**: Hash vs range partitioning, hotspot skew, secondary indexes (document-partitioned local vs term-partitioned global), rebalancing.
-7. **[07. Transactions - ACID, Isolation Levels & Anomalies](Part-2-Distributed-Data/07.%20Transactions%20-%20ACID,%20Isolation%20Levels%20&%20Anomalies.md)**: ACID definition, dirty reads, dirty writes, read skew (Snapshot Isolation / MVCC), lost updates, write skew, phantoms, 2PL, SSI.
-8. **[08. The Trouble with Distributed Systems](Part-2-Distributed-Data/08.%20The%20Trouble%20with%20Distributed%20Systems.md)**: Unreliable networks, clock drift, NTP leap seconds, TrueTime API, process pauses (GC), fencing tokens, Byzantine fault tolerance.
-9. **[09. Consistency & Consensus - Linearizability to Raft](Part-2-Distributed-Data/09.%20Consistency%20&%20Consensus%20-%20Linearizability%20to%20Raft.md)**: Linearizability vs Serializability, Total Order Broadcast, Two-Phase Commit (2PC), Paxos, Raft, Zab, distributed leases.
+| Chapter | Title | Focus Topics | Deep Dives & Algorithms |
+| :--- | :--- | :--- | :--- |
+| **01** | [**Reliability, Scalability & Maintainability**](./Part-1-Foundations-of-Data-Systems/01.%20Reliability,%20Scalability%20%26%20Maintainability.md) | Faults vs Failures, MTTF, Load modeling, Tail Latency Amplification | Twitter Fan-Out (push vs pull vs hybrid), Response time percentiles (p50/p95/p99/p999), SLOs vs SLAs |
+| **02** | [**Data Models & Query Languages**](./Part-1-Foundations-of-Data-Systems/02.%20Data%20Models%20%26%20Query%20Languages.md) | Relational vs Document vs Graph, Schema-on-read vs Schema-on-write | LinkedIn résumé schema, CODASYL vs SQL, Cypher, SPARQL, Datalog |
+| **03** | [**Storage & Retrieval**](./Part-1-Foundations-of-Data-Systems/03.%20Storage%20%26%20Retrieval%20-%20Engines,%20Indexes%20%26%20Compaction.md) | Hash Indexes (Bitcask), SSTables, B-Trees, Column-oriented storage (OLAP) | **Full Deep Dive: LSM-Trees in Production** (SkipLists, WAL group commit, Bloom Filter math, STCS vs LCS vs TWCS, RUM conjecture, RocksDB & Cassandra) |
+| **04** | [**Encoding & Evolution**](./Part-1-Foundations-of-Data-Systems/04.%20Encoding%20%26%20Evolution%20-%20Formats%20%26%20Protocols.md) | Binary serialization, Backward/Forward compatibility, RPC pitfalls | Protobuf vs Thrift vs Avro schema resolution, Dataflow through DBs, REST vs gRPC, Actor model |
 
-### [Part III: Derived Data](Part-3-Derived-Data/)
-10. **[10. Batch Processing - MapReduce, Dataflow & Joins](Part-3-Derived-Data/10.%20Batch%20Processing%20-%20MapReduce,%20Dataflow%20&%20Joins.md)**: Unix philosophy, MapReduce execution model, distributed joins (sort-merge, broadcast hash, partitioned hash), Spark/Flink DAG dataflows.
-11. **[11. Stream Processing - Event Sourcing, CDC & State](Part-3-Derived-Data/11.%20Stream%20Processing%20-%20Event%20Sourcing,%20CDC%20&%20State.md)**: Message brokers vs partitioned logs, dual writes vs log-based CDC, event sourcing, stream joins, watermarks, fault tolerance.
-12. **[12. The Future of Data Systems - Unbundled Databases](Part-3-Derived-Data/12.%20The%20Future%20of%20Data%20Systems%20-%20Unbundled%20Databases.md)**: Unbundling databases, composing heterogeneous engines, end-to-end correctness, verifiable computation, audit logs, ethics and privacy.
+---
+
+### Part II: Distributed Data
+The challenges of distribution across multiple machines: network partitions, clock skew, replication lag, and distributed consensus.
+
+| Chapter | Title | Focus Topics | Deep Dives & Algorithms |
+| :--- | :--- | :--- | :--- |
+| **05** | [**Replication**](./Part-2-Distributed-Data/05.%20Replication%20-%20Single-Leader,%20Multi-Leader%20%26%20Quorums.md) | Leader-Follower, Sync vs Async, Multi-Leader topologies, Dynamo Quorums | Read-after-write consistency, Monotonic reads, Consistent prefix reads, LWW hazards, Version Vectors |
+| **06** | [**Partitioning**](./Part-2-Distributed-Data/06.%20Partitioning%20-%20Strategies,%20Secondary%20Indexes%20%26%20Skew.md) | Key-range vs Hash sharding, Relieving hot spots, Request routing | Document-partitioned (local scatter/gather) vs Term-partitioned (global) secondary indexes, Rebalancing strategies |
+| **07** | [**Transactions**](./Part-2-Distributed-Data/07.%20Transactions%20-%20ACID,%20Isolation%20Levels%20%26%20Anomalies.md) | ACID meaning, Read Committed, Snapshot Isolation, Lost Updates, Write Skew | MVCC visibility rules, Alice's bank transfer, Doctors on-call, 2PL vs SSI (Serializable Snapshot Isolation) |
+| **08** | [**The Trouble with Distributed Systems**](./Part-2-Distributed-Data/08.%20The%20Trouble%20with%20Distributed%20Systems.md) | Unreliable networks, Clock drift & jumps, Process pauses (GC), Truth by quorum | LWW data loss, Google TrueTime API intervals, Fencing tokens, Byzantine faults, System timing models |
+| **09** | [**Consistency & Consensus**](./Part-2-Distributed-Data/09.%20Consistency%20%26%20Consensus%20-%20Linearizability%20to%20Raft.md) | Linearizability, CAP Theorem, Total Order Broadcast, 2PC blocking | **Full Deep Dive: The Raft Consensus Algorithm** (Wire RPC specs, Election safety, Figure 8 commitment rule, Joint Consensus, Read-Index, etcd & KRaft) |
+
+---
+
+### Part III: Derived Data
+Heterogeneous data integration, batch pipelines, event-driven streaming, and composable architectures.
+
+| Chapter | Title | Focus Topics | Deep Dives & Algorithms |
+| :--- | :--- | :--- | :--- |
+| **10** | [**Batch Processing**](./Part-3-Derived-Data/10.%20Batch%20Processing%20-%20MapReduce,%20Dataflow%20%26%20Joins.md) | Unix philosophy, HDFS, MapReduce execution, Hadoop vs MPP databases | Sort-merge joins, Broadcast vs Partitioned hash joins, Spark DAG lineage, Pregel BSP graph processing |
+| **11** | [**Stream Processing**](./Part-3-Derived-Data/11.%20Stream%20Processing%20-%20Event%20Sourcing,%20CDC%20%26%20State.md) | Traditional vs Log-based brokers (Kafka), Dual writes hazard, Event Sourcing, CDC | Tumbling / Hopping / Sliding / Session windows, Watermarks, Stream-stream & Stream-table joins, Chandy-Lamport checkpointing |
+| **12** | [**The Future of Data Systems**](./Part-3-Derived-Data/12.%20The%20Future%20of%20Data%20Systems%20-%20Unbundled%20Databases.md) | Data integration, Unbundled Meta-Database, Lambda vs Kappa architecture | Timeliness vs Integrity, Idempotence & deterministic replay, End-to-end correctness, Privacy & GDPR ethics |
+
+---
+
+## 🔬 Core Special Topic Deep Dives
+
+### 1. Log-Structured Merge-Trees (LSM-Trees) in Production
+Located in **[Chapter 03](./Part-1-Foundations-of-Data-Systems/03.%20Storage%20%26%20Retrieval%20-%20Engines,%20Indexes%20%26%20Compaction.md#38-deep-dive-log-structured-merge-trees-lsm-trees-in-production)**:
+- **Mechanical Sympathy**: Sequential vs Random I/O economics on HDDs, SATA SSDs, and NVMe Flash.
+- **MemTable Architecture**: Why SkipLists with lock-free CAS and arena allocators outperform balanced BSTs.
+- **Write-Ahead Log (WAL)**: 32KB block framing, CRC32, and group commit fsync batching.
+- **SSTable File Layout**: Data blocks with prefix delta compression, restart points, index blocks, and trailing 48-byte footers.
+- **Bloom Filter Mathematics**: Derivation of optimal hash functions ($k = rac{m}{n} \ln 2$), bit budgets, and double-hashing.
+- **Compaction Strategies**: Algorithmic comparison of **Size-Tiered (STCS)**, **Leveled (LCS)**, and **Time-Window (TWCS)**.
+- **The RUM Conjecture**: Exact mathematical formulas for Read Amplification (RA), Write Amplification (WA), and Space Amplification (SA).
+- **Tombstones**: Deletion lifecycle, garbage collection boundaries, and avoiding tombstone scan overwhelm.
+
+### 2. The Raft Consensus Algorithm in Depth
+Located in **[Chapter 09](./Part-2-Distributed-Data/09.%20Consistency%20%26%20Consensus%20-%20Linearizability%20to%20Raft.md#95-deep-dive-the-raft-consensus-algorithm-in-depth)**:
+- **State Machine Replication (SMR)**: Consensus modules, write-ahead logs, and deterministic state execution.
+- **Server Roles & State Transitions**: Follower, Candidate, Leader, and term numbers as Lamport logical clocks.
+- **Randomized Election Timeouts**: Preventing split-vote livelocks (150ms–300ms window).
+- **The Five Core Safety Invariants**: Election Safety, Leader Append-Only, Log Matching, Leader Completeness, and State Machine Safety.
+- **Wire RPC Specifications**: Exact receiver verification logic for `RequestVote`, `AppendEntries`, and `InstallSnapshot`.
+- **The Prior-Term Commitment Rule (Figure 8)**: Mathematical proof of why leaders cannot commit prior-term entries by replica counting alone.
+- **Cluster Membership Changes**: Joint Consensus ($C_{\text{old,new}}$) and Single-Server configuration changes.
+- **Linearizable Read Protocols**: Solving the phantom leader problem via the **Read-Index protocol**, bounded **Lease reads**, and **Follower reads**.
+- **Production Systems**: Architectural analysis of **etcd (Kubernetes)**, **CockroachDB (Multi-Raft)**, and **Apache Kafka (KRaft)**.
+
+---
+
+## 🎯 Recurring Architectural Principles
+
+```mermaid
+flowchart LR
+    A["Tradeoffs are Everywhere
+(Consistency vs Availability,
+Latency vs Durability)"] --- B["Abstractions Enable Scale
+(SQL, TCP, Transactions,
+SMR Consensus)"]
+    B --- C["Hardware Faults are Inevitable
+(Embrace Partial Failure,
+Verify with Checksums)"]
+    C --- D["Immutability Simplifies State
+(Append-Only Logs, CDC,
+Event Sourcing, SSTables)"]
+```
+
+1. **No Silver Bullets**: Every database architecture is an explicit compromise (e.g., B-Trees optimize reads; LSM-Trees optimize writes; Leveled Compaction optimizes space at the expense of write amplification).
+2. **Immutability and Derived Views**: Treating primary writes as immutable event streams allows building arbitrary, specialized derived views (caches, search indexes, analytics) with verifiable integrity.
+3. **End-to-End Correctness**: Low-level database guarantees are necessary but insufficient; true correctness requires application-level idempotency, deduplication tokens, and end-to-end auditability.

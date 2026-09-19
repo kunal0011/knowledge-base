@@ -12,9 +12,12 @@
 [![Cloud Data Lake](https://img.shields.io/badge/Cloud%20Data%20Lake-10%20Chapters-indigo.svg)](#-pillar-viii-cloud-data-lake--lakehouse-architecture-10-chapters)
 [![AI Math Foundations](https://img.shields.io/badge/AI%20Math%20Foundations-111%20Chapters-gold.svg)](#-pillar-ix-mathematical-foundations-of-ai--deep-learning-111-chapters)
 [![Mobile Architecture](https://img.shields.io/badge/Mobile%20Engineering-Android%20%26%20Flutter-darkcyan.svg)](#-pillar-x-production-android--flutter-development-10-chapters)
+[![Reference Books](https://img.shields.io/badge/Canonical%20Bibliography-referencebook.md-black.svg)](referencebook.md)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
+> 
+> 📚 **Complete Canonical Bibliography**: For an exhaustive, topic-by-topic directory of all authoritative literature, specifications, and books underpinning this repository, consult [**`referencebook.md`**](referencebook.md).
 
 ---
 

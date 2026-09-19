@@ -1,4 +1,14 @@
-# Diffusion Models: DDPM, Score-Based SDEs & Classifier-Free Guidance
+# Diffusion Models: DDPM, DDIM, Score-Based SDEs & Classifier-Free Guidance
+
+> **Canonical Literature & Reference Foundations:**
+> - *Deep Learning: Foundations and Concepts* (Christopher M. Bishop & Hugh Bishop, Springer 2024, Ch. 19 "Generative Models")
+> - *Deep Generative Models* (Stefano Ermon & Aditya Grover, Stanford CS236 Monograph)
+> - *Deep Unsupervised Learning using Nonequilibrium Thermodynamics* (Jascha Sohl-Dickstein et al., ICML 2015)
+> - *Denoising Diffusion Probabilistic Models (DDPM)* (Jonathan Ho, Ajay Jain, Pieter Abbeel, NeurIPS 2020)
+> - *Denoising Diffusion Implicit Models (DDIM)* (Jiaming Song, Chenlin Meng, Stefano Ermon, ICLR 2021)
+> - *Score-Based Generative Modeling through Stochastic Differential Equations* (Yang Song et al., ICLR 2021)
+> - *Classifier-Free Diffusion Guidance* (Jonathan Ho & Tim Salimans, NeurIPS Workshop 2021)
+> - *Elucidating the Design Space of Diffusion-Based Generative Models (EDM)* (Tero Karras et al., NeurIPS 2022)
 
 ---
 
@@ -136,7 +146,51 @@ To sample a new image at inference time:
 
 ---
 
-### 2.5 Unification with Score-Based Generative Modeling & SDEs (Song et al., 2020)
+### 2.5 Denoising Diffusion Implicit Models (DDIM - Song et al., 2020)
+
+Standard DDPM requires sampling every single step of the Markov chain ($T = 1000$), which is prohibitively slow for interactive inference (taking 10 to 30 seconds per image).
+
+**Key Theoretical Innovation:** Song et al. (2020) showed that the exact same neural network trained with the DDPM objective can sample along **non-Markovian forward inference distributions** that share the exact same marginals $q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathcal{N}(\sqrt{\bar{\alpha}_t}\mathbf{x}_0, (1 - \bar{\alpha}_t)\mathbf{I})$:
+
+$$q_\sigma(\mathbf{x}_{1:T} \mid \mathbf{x}_0) = q_\sigma(\mathbf{x}_T \mid \mathbf{x}_0) \prod_{t=2}^T q_\sigma(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$$
+
+where:
+$$q_\sigma(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0) = \mathcal{N}\left( \sqrt{\bar{\alpha}_{t-1}}\mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2} \frac{\mathbf{x}_t - \sqrt{\bar{\alpha}_t}\mathbf{x}_0}{\sqrt{1 - \bar{\alpha}_t}}, \sigma_t^2 \mathbf{I} \right)$$
+
+We parameterize the stochasticity via $\eta \in [0, 1]$:
+$$\sigma_t = \eta \cdot \sqrt{\frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t}} \sqrt{1 - \frac{\bar{\alpha}_t}{\bar{\alpha}_{t-1}}}$$
+
+1. **When $\eta = 1$:** The generative process becomes identical to standard stochastic **DDPM**.
+2. **When $\eta = 0$ (DDIM Deterministic Sampling):** The variance $\sigma_t = 0$. The reverse step becomes completely **deterministic**:
+   $$\mathbf{x}_{t-1} = \sqrt{\bar{\alpha}_{t-1}} \underbrace{\left( \frac{\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t} \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)}{\sqrt{\bar{\alpha}_t}} \right)}_{\text{Predicted Clean Image } \hat{\mathbf{x}}_0} + \underbrace{\sqrt{1 - \bar{\alpha}_{t-1}} \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)}_{\text{Direction pointing to } \mathbf{x}_{t-1}}$$
+
+**Benefits of DDIM:**
+- **Sub-sequence Accelerated Sampling:** One can sample along an arbitrary sub-sequence $\tau_1 < \tau_2 < \dots < \tau_S \ll T$ (e.g., $S = 20$ or $50$ steps instead of $1000$).
+- **Invertibility & Latent Manipulation:** When $\eta = 0$, the forward and reverse trajectories are deterministic ODE paths. An image $\mathbf{x}_0$ can be inverted back to noise $\mathbf{x}_T$ and accurately edited in latent space.
+
+---
+
+### 2.6 The Karras EDM Framework (Elucidating the Design Space - Karras et al., 2022)
+
+In modern production systems (such as Stable Diffusion XL and FLUX), continuous noise variance $\sigma \in [\sigma_{\min}, \sigma_{\max}]$ is decoupled from discrete step indices.
+
+Karras et al. formalize diffusion as continuous denoising with clean signal $\mathbf{y} \sim p_{\text{data}}$ corrupted by additive Gaussian noise $\mathbf{x} = \mathbf{y} + \mathbf{n}$ where $\mathbf{n} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I})$.
+
+The network is parameterized through scale-invariant **preconditioning functions**:
+$$D_{\boldsymbol{\theta}}(\mathbf{x}; \sigma) = c_{\text{skip}}(\sigma) \mathbf{x} + c_{\text{out}}(\sigma) F_{\boldsymbol{\theta}}(c_{\text{in}}(\sigma) \mathbf{x}; c_{\text{noise}}(\sigma))$$
+
+where:
+$$c_{\text{skip}}(\sigma) = \frac{\sigma_{\text{data}}^2}{\sigma^2 + \sigma_{\text{data}}^2}, \quad c_{\text{out}}(\sigma) = \frac{\sigma \cdot \sigma_{\text{data}}}{\sqrt{\sigma^2 + \sigma_{\text{data}}^2}}, \quad c_{\text{in}}(\sigma) = \frac{1}{\sqrt{\sigma^2 + \sigma_{\text{data}}^2}}, \quad c_{\text{noise}}(\sigma) = \frac{1}{4} \ln(\sigma)$$
+
+with data standard deviation $\sigma_{\text{data}} \approx 0.5$.
+This preconditioning guarantees that:
+- When $\sigma \to 0$ (almost clean): $c_{\text{skip}} \to 1, c_{\text{out}} \to 0$, protecting the network from predicting huge values.
+- When $\sigma \to \infty$ (pure noise): $c_{\text{skip}} \to 0$, forcing the network to predict the clean data mode.
+- The training loss is uniformly weighted across all noise levels: $\lambda(\sigma) = \frac{\sigma^2 + \sigma_{\text{data}}^2}{(\sigma \cdot \sigma_{\text{data}})^2}$.
+
+---
+
+### 2.7 Unification with Score-Based Generative Modeling & SDEs (Song et al., 2020)
 
 What is the neural network $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$ actually learning?
 
@@ -164,7 +218,7 @@ In the limit as $T \to \infty$ and $\Delta t \to 0$:
 
 ---
 
-### 2.6 Classifier-Free Guidance (CFG - Ho & Salimans, 2021)
+### 2.8 Classifier-Free Guidance (CFG - Ho & Salimans, 2021)
 
 In conditioned diffusion (e.g., text-to-image prompts $\mathbf{c}$), we want to sample from:
 $$p(\mathbf{x} \mid \mathbf{c}) \propto p(\mathbf{x}) p(\mathbf{c} \mid \mathbf{x})$$
@@ -209,7 +263,7 @@ where $\emptyset$ is the null conditioning token (unconditional generation).
 
 ---
 
-### 2.7 Rigorous Mathematical Derivations
+### 2.9 Rigorous Mathematical Derivations
 
 #### Derivation 10.4.1: Variational Lower Bound (VLB) on Diffusion Log-Likelihood and Rao-Blackwellized Step-by-Step KL Decomposition
 

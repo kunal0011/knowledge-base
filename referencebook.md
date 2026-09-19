@@ -206,14 +206,32 @@ This document is the definitive master bibliography and canonical reading syllab
 ## 12. Artificial Intelligence, Deep Learning & Mathematical Foundations
 *Anchors: `Projects/ai_math/`, `Data-and-AI-Frameworks/`*
 
+### Core Deep Learning & Mathematical Foundations
 1. **Deep Learning** — Ian Goodfellow, Yoshua Bengio, Aaron Courville (MIT Press)
-2. **Pattern Recognition and Machine Learning** — Christopher M. Bishop (Springer)
-3. **Mathematics for Machine Learning** — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (Cambridge University Press)
-4. **Linear Algebra and Its Applications (5th Edition)** — David C. Lay, Steven R. Lay, Judi J. McDonald (Pearson)
-5. **Introduction to Applied Linear Algebra: Vectors, Matrices, and Least Squares** — Stephen Boyd & Lieven Vandenberghe (Cambridge University Press)
-6. **Convex Optimization** — Stephen Boyd & Lieven Vandenberghe (Cambridge University Press)
-7. **Reinforcement Learning: An Introduction (2nd Edition)** — Richard S. Sutton & Andrew G. Barto (MIT Press)
-8. **Speech and Language Processing (3rd Edition Draft)** — Dan Jurafsky & James H. Martin (Stanford University)
+2. **Deep Learning: Foundations and Concepts** — Christopher M. Bishop & Hugh Bishop (Springer, 2024)
+3. **Pattern Recognition and Machine Learning** — Christopher M. Bishop (Springer)
+4. **Mathematics for Machine Learning** — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (Cambridge University Press)
+5. **Linear Algebra and Its Applications (5th Edition)** — David C. Lay, Steven R. Lay, Judi J. McDonald (Pearson)
+6. **Introduction to Applied Linear Algebra: Vectors, Matrices, and Least Squares** — Stephen Boyd & Lieven Vandenberghe (Cambridge University Press)
+7. **Convex Optimization** — Stephen Boyd & Lieven Vandenberghe (Cambridge University Press)
+8. **Reinforcement Learning: An Introduction (2nd Edition)** — Richard S. Sutton & Andrew G. Barto (MIT Press)
+9. **Speech and Language Processing (3rd Edition Draft)** — Dan Jurafsky & James H. Martin (Stanford University)
+
+### Deep Generative Models, Diffusion Architectures & Flow Matching
+1. **Deep Generative Models: CS236 Monograph & Course Notes** — Stefano Ermon & Aditya Grover (Stanford University)
+2. **Deep Unsupervised Learning using Nonequilibrium Thermodynamics** — Jascha Sohl-Dickstein, Eric A. Weiss, Niru Maheswaranathan, Surya Ganguli (*International Conference on Machine Learning - ICML 2015*)
+3. **Denoising Diffusion Probabilistic Models (DDPM)** — Jonathan Ho, Ajay Jain, Pieter Abbeel (*Conference on Neural Information Processing Systems - NeurIPS 2020*)
+4. **Denoising Diffusion Implicit Models (DDIM)** — Jiaming Song, Chenlin Meng, Stefano Ermon (*International Conference on Learning Representations - ICLR 2021*)
+5. **Score-Based Generative Modeling through Stochastic Differential Equations** — Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, Ben Poole (*International Conference on Learning Representations - ICLR 2021*)
+6. **Classifier-Free Diffusion Guidance** — Jonathan Ho & Tim Salimans (*NeurIPS Workshop on NeurIPS NeurIPS 2021*)
+7. **Elucidating the Design Space of Diffusion-Based Generative Models (EDM)** — Tero Karras, Miika Aittala, Timo Aila, Samuli Laine (*Conference on Neural Information Processing Systems - NeurIPS 2022*)
+8. **Neural Ordinary Differential Equations** — Ricky T. Q. Chen, Yulia Rubanova, Jesse Bettencourt, David Duvenaud (*Conference on Neural Information Processing Systems - NeurIPS 2018 Best Paper Award*)
+9. **Flow Matching for Generative Modeling** — Yaron Lipman, Ricky T. Q. Chen, Heli Ben-Hamu, Maximilian Nickel, Matt Le (*International Conference on Learning Representations - ICLR 2023*)
+10. **Building Normalizing Flows with Stochastic Interpolants** — Michael S. Albergo & Eric Vanden-Eijnden (*International Conference on Learning Representations - ICLR 2023*)
+11. **Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow** — Xingchao Liu, Chengyue Gong, Qiang Liu (*International Conference on Learning Representations - ICLR 2023*)
+12. **Scaling Rectified Flow Transformers for High-Resolution Image Synthesis (Stable Diffusion 3)** — Patrick Esser, Sumith Kulal, Andreas Blattmann et al. (*Conference on Computer Vision and Pattern Recognition - CVPR 2024*)
+13. **High-Resolution Image Synthesis with Latent Diffusion Models (Stable Diffusion)** — Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer (*IEEE/CVF Conference on Computer Vision and Pattern Recognition - CVPR 2022*)
+14. **Scalable Diffusion Models with Transformers (DiT)** — William Peebles & Saining Xie (*IEEE/CVF International Conference on Computer Vision - ICCV 2023*)
 
 ---
 

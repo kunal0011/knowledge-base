@@ -30,7 +30,7 @@ Every topic is authored in an uncompromised 8-part pedagogical framework:
 | **Module 07** | [Convolutional Networks & Computer Vision](./07_convolutional_networks) | 4 Chapters | Spatial Convolutions, Backprop through Convs, Modern ConvNets, ViTs |
 | **Module 08** | [Recurrent Networks & Sequence Modeling](./08_recurrent_networks) | 4 Chapters | BPTT, Exploding/Vanishing Gradients, LSTM, GRU, Classical Attention |
 | **Module 09** | [Transformers, LLMs & Alignment](./09_transformers_and_llms) | 8 Chapters | Scaled Dot-Product, RoPE, FlashAttention, Scaling Laws, RLHF, DPO |
-| **Module 10** | [Generative Modeling](./10_generative_models) | 4 Chapters | VAEs & ELBO, GANs & WGAN, Diffusion Models (DDPM & Score SDEs) |
+| **Module 10** | [Generative Modeling](./10_generative_models) | 5 Chapters | VAEs & ELBO, GANs & WGAN, Diffusion Models (DDPM, DDIM, Score SDEs), Flow Matching (OT-CFM, CNFs & Rectified Flow) |
 | **Module 11** | [Reinforcement Learning](./11_reinforcement_learning) | 28 Chapters | Bellman Equations, Policy Gradients, TRPO, PPO, SAC, MCTS, GRPO |
 | **Module 12** | [Modern LLM Architectures](./12_modern_llm_architectures) | 12 Chapters | Tokenization, SwiGLU, GQA, MoE, LoRA/QLoRA, DiTs, Vision-Language |
 | **Module 13** | [Frontier Reasoning & Inference-Time Compute](./13_reasoning_and_test_time_compute) | 9 Chapters | CoT, Test-Time Scaling, PRMs, Search (MCTS), DeepSeek-R1, Lean 4 |
@@ -630,7 +630,7 @@ All 111 comprehensive textbook chapters can be navigated via:
 - [07_convolutional_networks/](./07_convolutional_networks) — 4 chapters on CNN backprop, architectures, and ViTs.
 - [08_recurrent_networks/](./08_recurrent_networks) — 4 chapters on sequence modeling, vanishing gradients, and LSTMs.
 - [09_transformers_and_llms/](./09_transformers_and_llms) — 8 chapters on attention, RoPE, efficiency, and alignment.
-- [10_generative_models/](./10_generative_models) — 4 chapters on VAEs, GANs, and Diffusion models.
+- [10_generative_models/](./10_generative_models) — 5 chapters on VAEs, GANs, Diffusion Models (DDPM/DDIM/Score SDEs), and Flow Matching (OT-CFM/CNFs/Rectified Flow).
 - [11_reinforcement_learning/](./11_reinforcement_learning) — 28 chapters on MDPs, PPO, SAC, MCTS, and GRPO.
 - [12_modern_llm_architectures/](./12_modern_llm_architectures) — 12 chapters on tokenizers, SwiGLU, MoE, LoRA, and DiTs.
 - [13_reasoning_and_test_time_compute/](./13_reasoning_and_test_time_compute) — 9 chapters on CoT, PRMs, MCTS, and DeepSeek-R1.

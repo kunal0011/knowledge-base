@@ -119,7 +119,8 @@ Every topic is authored in an uncompromised 8-part pedagogical framework:
 - [x] **10.1 [Taxonomy of Generative Models](./10_generative_models/01_taxonomy_of_generative_models.md)**
 - [x] **10.2 [Variational Autoencoders (VAEs & ELBO Derivation)](./10_generative_models/02_variational_autoencoders_and_elbo.md)**
 - [x] **10.3 [Generative Adversarial Networks (GANs & Wasserstein GAN)](./10_generative_models/03_generative_adversarial_networks_and_wgan.md)**
-- [x] **10.4 [Diffusion Models (DDPM, Score-Based SDEs & CFG)](./10_generative_models/04_diffusion_models_ddpm_and_score_sdes.md)**
+- [x] **10.4 [Diffusion Models (DDPM, DDIM, Score-Based SDEs & CFG)](./10_generative_models/04_diffusion_models_ddpm_and_score_sdes.md)**
+- [x] **10.5 [Flow Matching & Continuous Normalizing Flows (OT-CFM, CNFs & Rectified Flow)](./10_generative_models/05_flow_matching_and_continuous_normalizing_flows.md)**
 
 #### Module 11: Reinforcement Learning (Foundations to Frontier Reasoning)
 - [x] **11.1 [Multi-Armed Bandits & Exploration-Exploitation Dilemma](./11_reinforcement_learning/01_multi_armed_bandits.md)**

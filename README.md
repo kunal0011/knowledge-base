@@ -76,16 +76,10 @@ knowledge-base/
 │   │
 │   ├── Microservices-Architecture-and-Design/ # Polyglot Microservices Patterns & Blueprints
 │   │   ├── README.md                          # Master Architecture Portal & Pattern Taxonomy
-│   │   ├── 01. Decomposition, Bounded Contexts & Monolith Migration.md
-│   │   ├── 02. Inter-Service Communication - REST, gRPC & Messaging.md
-│   │   ├── 03. API Gateway, BFF & Service Discovery Topologies.md
-│   │   ├── 04. Distributed Data - Database-per-Service & CQRS.md
-│   │   ├── 05. Distributed Transactions & Saga Orchestration.md
-│   │   ├── 06. Transactional Outbox Pattern & CDC Ingestion.md
-│   │   ├── 07. Resilience Patterns - Circuit Breakers, Bulkheads & Retries.md
-│   │   ├── 08. Security & Identity - OAuth2, OIDC, JWT & Zero-Trust mTLS.md
-│   │   ├── 09. Observability - OpenTelemetry, Tracing & Metrics.md
-│   │   └── 10. Multi-Language Microservice Blueprint (Java, Go, Python).md
+│   │   ├── 01-10. Core Architectural Patterns (Saga, Outbox, CQRS, Resilience, OTel)
+│   │   ├── Spring-and-Spring-Cloud/           # Spring Boot 3, Virtual Threads (Loom), Gateway, Resilience4j
+│   │   ├── FastAPI-Microservices/             # FastAPI, Starlette ASGI, Pydantic v2 (Rust), Async SQLAlchemy
+│   │   └── Golang-Microservices/              # Go M:N Scheduler (GMP), gRPC Protobuf, pgxpool, Clean Arch
 │   │
 │   ├── Designing-Cloud-Data-Lake-and-Lakehouse/ # Cloud Lakehouse, Open Table Formats & FinOps
 │   │   ├── README.md                          # Master Architecture Portal & Comparative Matrix

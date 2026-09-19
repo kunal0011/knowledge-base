@@ -31,7 +31,14 @@ Projects/Microservices-Architecture-and-Design/
 ├── 07. Resilience Patterns - Circuit Breakers, Bulkheads & Retries.md # Resilience4j, Go State Machine, Full Jitter Math
 ├── 08. Security & Identity - OAuth2, OIDC, JWT & Zero-Trust mTLS.md   # Gateway Token Translation, RS256 Asymmetric JWT, SPIFFE/mTLS
 ├── 09. Observability - OpenTelemetry, Tracing & Metrics.md   # W3C traceparent DAG, OTel SDK, Micrometer, Structured JSON Logs
-└── 10. Multi-Language Microservice Blueprint (Java, Go, Python).md    # End-to-End Hexagonal Microservices in Java, Go & Python
+├── 10. Multi-Language Microservice Blueprint (Java, Go, Python).md    # End-to-End Hexagonal Microservices in Java, Go & Python
+│
+├── Spring-and-Spring-Cloud/                                  # Production Spring Boot 3 & Spring Cloud Deep Dive
+│   └── README.md                                             # Virtual Threads (Loom), Gateway, Resilience4j, Kafka Stream
+├── FastAPI-Microservices/                                    # Production FastAPI & Async Python Deep Dive
+│   └── README.md                                             # Starlette ASGI, Pydantic v2 (Rust), Async SQLAlchemy 2.0
+└── Golang-Microservices/                                     # Production Go Microservices Deep Dive
+    └── README.md                                             # M:N Scheduler (GMP), gRPC Protobuf, pgxpool, Graceful Shutdown
 ```
 
 ---

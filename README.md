@@ -101,17 +101,9 @@ knowledge-base/
 │   │   └── 10. Multi-Cloud Blueprints & Production Implementation.md
 │   │
 │   ├── Production-Android-and-Flutter-Development/ # Production Android (Kotlin) & Cross-Platform (Flutter)
-│   │   ├── README.md                          # Master Portal, Comparison Matrix & Sitemap
-│   │   ├── 01. Core Languages & Modern Runtime Internals (Kotlin vs Dart).md
-│   │   ├── 02. Declarative UI Paradigms (Jetpack Compose & Flutter Widgets).md
-│   │   ├── 03. Architecture Patterns (MVI, MVVM, Clean Architecture & BLoC).md
-│   │   ├── 04. Dependency Injection & Service Locators (Hilt, Koin, Injectable).md
-│   │   ├── 05. Local Persistence, Caching & Offline-First Data.md
-│   │   ├── 06. Networking, Serialization & Real-Time Sync.md
-│   │   ├── 07. Background Processing, Concurrency & Push Notifications.md
-│   │   ├── 08. Native Platform Channels & Hardware Integration.md
-│   │   ├── 09. Performance Optimization, Profiling & Security Hardening.md
-│   │   └── 10. CI-CD, Release Engineering & Testing (Unit, Widget, E2E).md
+│   │   ├── README.md                          # Master Portal, Comparison Matrix & Master Sitemap
+│   │   ├── Part 1 - Deep Kotlin & Android Internals/ # Native Android Track (12 In-Depth Chapters)
+│   │   └── Part 2 - Deep Dart & Flutter Internals/   # Cross-Platform Flutter Track (12 In-Depth Chapters)
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute

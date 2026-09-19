@@ -165,27 +165,27 @@ We prove both directions of the theorem: A continuously differentiable function 
 We provide the modern variational proof of Jensen's Inequality, valid for any arbitrary random variable $X$ (discrete, continuous, or mixed) taking values in convex set $\mathcal{C} \subseteq \mathbb{R}^n$.
 
 #### 1. Setup
-Let $X \in \mathcal{C}$ with finite expectation $\boldsymbol{\mu} = \mathbb{E}[X] \in \mathcal{C}$.
+Let $X \in \mathcal{C}$ with finite expectation $\mu = \mathbb{E}[X] \in \mathcal{C}$.
 Let $g: \mathcal{C} \to \mathbb{R}$ be a convex function.
 
 #### 2. Existence of Supporting Hyperplane (Subgradient)
-Because $g$ is convex on $\mathcal{C}$, at any point $\boldsymbol{\mu} \in \mathcal{C}$ there exists at least one supporting affine hyperplane (characterized by subgradient vector $\mathbf{s} \in \partial g(\boldsymbol{\mu})$):
-$$g(x) \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (x - \boldsymbol{\mu}) \quad \forall x \in \mathcal{C}$$
-(If $g$ is differentiable, $\mathbf{s} = \nabla g(\boldsymbol{\mu})$ is the unique gradient).
+Because $g$ is convex on $\mathcal{C}$, at any point $\mu \in \mathcal{C}$ there exists at least one supporting affine hyperplane (characterized by subgradient vector $\mathbf{s} \in \partial g(\mu)$):
+$$g(x) \ge g(\mu) + \mathbf{s}^T (x - \mu) \quad \forall x \in \mathcal{C}$$
+(If $g$ is differentiable, $\mathbf{s} = \nabla g(\mu)$ is the unique gradient).
 
 #### 3. Evaluation on the Random Variable
 Since $X$ takes values in $\mathcal{C}$ with probability 1, this inequality holds pointwise for the random variable $X$:
-$$g(X) \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (X - \boldsymbol{\mu})$$
+$$g(X) \ge g(\mu) + \mathbf{s}^T (X - \mu)$$
 
 #### 4. Taking Expectations
 Take the mathematical expectation $\mathbb{E}[\cdot]$ of both sides:
-$$\mathbb{E}[g(X)] \ge \mathbb{E}\left[ g(\boldsymbol{\mu}) + \mathbf{s}^T (X - \boldsymbol{\mu}) \right]$$
-By linearity of expectation, and noting that $g(\boldsymbol{\mu})$, $\mathbf{s}$, and $\boldsymbol{\mu}$ are deterministic constants:
-$$\mathbb{E}[g(X)] \ge g(\boldsymbol{\mu}) + \mathbf{s}^T (\mathbb{E}[X] - \boldsymbol{\mu})$$
-Since $\boldsymbol{\mu} = \mathbb{E}[X]$, the deviation vector is identically zero:
-$$\mathbb{E}[X] - \boldsymbol{\mu} = \boldsymbol{\mu} - \boldsymbol{\mu} = \mathbf{0}$$
+$$\mathbb{E}[g(X)] \ge \mathbb{E}\left[ g(\mu) + \mathbf{s}^T (X - \mu) \right]$$
+By linearity of expectation, and noting that $g(\mu)$, $\mathbf{s}$, and $\mu$ are deterministic constants:
+$$\mathbb{E}[g(X)] \ge g(\mu) + \mathbf{s}^T (\mathbb{E}[X] - \mu)$$
+Since $\mu = \mathbb{E}[X]$, the deviation vector is identically zero:
+$$\mathbb{E}[X] - \mu = \mu - \mu = \mathbf{0}$$
 Therefore:
-$$\mathbb{E}[g(X)] \ge g(\boldsymbol{\mu}) + \mathbf{s}^T \mathbf{0} = g(\boldsymbol{\mu}) = g(\mathbb{E}[X])$$
+$$\mathbb{E}[g(X)] \ge g(\mu) + \mathbf{s}^T \mathbf{0} = g(\mu) = g(\mathbb{E}[X])$$
 $$\mathbf{g(\mathbb{E}[X]) \le \mathbb{E}[g(X)]} \quad \blacksquare$$
 
 *Significance:* This geometric proof avoids induction on discrete mixtures and holds unconditionally for high-dimensional continuous probability measures!

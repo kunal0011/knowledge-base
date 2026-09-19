@@ -125,13 +125,13 @@ This propagates reward signals backward 3 times faster per step, substantially s
 
 $\epsilon$-greedy exploration is crude: it explores by taking completely uniform random actions, which is inefficient in deep state spaces.
 **Noisy Nets** replace standard linear layers $y = W x + b$ with layers containing learned parametric Gaussian noise:
-$$y \triangleq \left( \boldsymbol{\mu}^W + \boldsymbol{\sigma}^W \odot \boldsymbol{\varepsilon}^W \right) x + \left( \boldsymbol{\mu}^b + \boldsymbol{\sigma}^b \odot \boldsymbol{\varepsilon}^b \right)$$
+$$y \triangleq \left( \mu^W + \sigma^W \odot \varepsilon^W \right) x + \left( \mu^b + \sigma^b \odot \varepsilon^b \right)$$
 where:
-- $\boldsymbol{\mu}^W, \boldsymbol{\mu}^b$ are the learnable deterministic mean parameters.
-- $\boldsymbol{\sigma}^W, \boldsymbol{\sigma}^b$ are the learnable noise scale parameters.
-- $\boldsymbol{\varepsilon}^W, \boldsymbol{\varepsilon}^b$ are zero-mean unit-variance noise variables resampled at every forward pass.
+- $\mu^W, \mu^b$ are the learnable deterministic mean parameters.
+- $\sigma^W, \sigma^b$ are the learnable noise scale parameters.
+- $\varepsilon^W, \varepsilon^b$ are zero-mean unit-variance noise variables resampled at every forward pass.
 
-As training progresses, the network naturally drives $\boldsymbol{\sigma} \to 0$ in states where exploitation is optimal, while keeping $\boldsymbol{\sigma}$ high in unfamiliar regions—enabling **self-annealing state-dependent exploration**!
+As training progresses, the network naturally drives $\sigma \to 0$ in states where exploitation is optimal, while keeping $\sigma$ high in unfamiliar regions—enabling **self-annealing state-dependent exploration**!
 
 ---
 
@@ -329,9 +329,9 @@ Generating $p \times q$ independent Gaussian noise variables at every forward pa
    *(Note: Fortunato et al. utilized $f(z) = \operatorname{sgn}(z)\sqrt{|z|}$ so that entry-wise products $f(\varepsilon_i) f(\varepsilon_j)$ maintain low dynamic range and stable activations without blowing up layer variance).*
 
 *Step 2: Properties of the outer product noise matrix.*
-Let $\mathbf{e}_p \triangleq f(\boldsymbol{\varepsilon}_p) \in \mathbb{R}^p$ and $\mathbf{e}_q \triangleq f(\boldsymbol{\varepsilon}_q) \in \mathbb{R}^q$.
+Let $\mathbf{e}_p \triangleq f(\varepsilon_p) \in \mathbb{R}^p$ and $\mathbf{e}_q \triangleq f(\varepsilon_q) \in \mathbb{R}^q$.
 The noise matrix is $\mathbf{E}^W \triangleq \mathbf{e}_q \mathbf{e}_p^\top \in \mathbb{R}^{q \times p}$, with entry $E^W_{i, j} = e_{q, i} e_{p, j}$.
-Since $\boldsymbol{\varepsilon}_p$ and $\boldsymbol{\varepsilon}_q$ are independent:
+Since $\varepsilon_p$ and $\varepsilon_q$ are independent:
 $$\mathbb{E}[E^W_{i, j}] = \mathbb{E}[e_{q, i}] \mathbb{E}[e_{p, j}] = 0 \times 0 = 0$$
 Number of random Gaussian draws required:
 $$\text{Full Noise: } p \times q \quad \text{vs.} \quad \text{Factorized Noise: } p + q$$
@@ -340,16 +340,16 @@ For a layer with $p = 512, q = 512$, factorized noise requires **$256\times$ few
 *Step 3: Analytical Backpropagation Gradients.*
 During the forward pass, the noise vectors $\mathbf{e}_p, \mathbf{e}_q$ are sampled and held constant.
 The layer computes:
-$$\mathbf{y} = \mathbf{W} \mathbf{x} + \mathbf{b} = \left( \boldsymbol{\mu}^W + \boldsymbol{\sigma}^W \odot \mathbf{E}^W \right) \mathbf{x} + \left( \boldsymbol{\mu}^b + \boldsymbol{\sigma}^b \odot \mathbf{E}^b \right)$$
+$$\mathbf{y} = \mathbf{W} \mathbf{x} + \mathbf{b} = \left( \mu^W + \sigma^W \odot \mathbf{E}^W \right) \mathbf{x} + \left( \mu^b + \sigma^b \odot \mathbf{E}^b \right)$$
 Let $\mathbf{g}_y \triangleq \frac{\partial \mathcal{L}}{\partial \mathbf{y}} \in \mathbb{R}^q$.
 Using matrix calculus:
 1. **Gradients with respect to Mean Parameters:**
-   $$\frac{\partial \mathcal{L}}{\partial \boldsymbol{\mu}^W} = \mathbf{g}_y \mathbf{x}^\top \in \mathbb{R}^{q \times p}, \quad \frac{\partial \mathcal{L}}{\partial \boldsymbol{\mu}^b} = \mathbf{g}_y \in \mathbb{R}^q$$
+   $$\frac{\partial \mathcal{L}}{\partial \mu^W} = \mathbf{g}_y \mathbf{x}^\top \in \mathbb{R}^{q \times p}, \quad \frac{\partial \mathcal{L}}{\partial \mu^b} = \mathbf{g}_y \in \mathbb{R}^q$$
 2. **Gradients with respect to Noise Scale Parameters:**
    By the chain rule for element-wise products:
-   $$\frac{\partial \mathcal{L}}{\partial \boldsymbol{\sigma}^W} = \frac{\partial \mathcal{L}}{\partial \mathbf{W}} \odot \mathbf{E}^W = \left( \mathbf{g}_y \mathbf{x}^\top \right) \odot \mathbf{E}^W$$
-   $$\frac{\partial \mathcal{L}}{\partial \boldsymbol{\sigma}^b} = \frac{\partial \mathcal{L}}{\partial \mathbf{b}} \odot \mathbf{E}^b = \mathbf{g}_y \odot \mathbf{E}^b$$
-When the agent reaches regions of high reward certainty, the gradient signal consistently penalizes performance variance, driving $\boldsymbol{\sigma} \to 0$ and transitioning the network smoothly from exploration to exploitation! $\blacksquare$
+   $$\frac{\partial \mathcal{L}}{\partial \sigma^W} = \frac{\partial \mathcal{L}}{\partial \mathbf{W}} \odot \mathbf{E}^W = \left( \mathbf{g}_y \mathbf{x}^\top \right) \odot \mathbf{E}^W$$
+   $$\frac{\partial \mathcal{L}}{\partial \sigma^b} = \frac{\partial \mathcal{L}}{\partial \mathbf{b}} \odot \mathbf{E}^b = \mathbf{g}_y \odot \mathbf{E}^b$$
+When the agent reaches regions of high reward certainty, the gradient signal consistently penalizes performance variance, driving $\sigma \to 0$ and transitioning the network smoothly from exploration to exploitation! $\blacksquare$
 
 ---
 
@@ -640,36 +640,36 @@ Sampling completed in exactly $\log_2(4) = 2$ comparisons! $\blacksquare$
 
 **Problem:**
 Consider a Noisy Net layer with input dimension $p = 2$ and output dimension $q = 2$:
-$$\mathbf{y} = \left( \boldsymbol{\mu}^W + \boldsymbol{\sigma}^W \odot \mathbf{E}^W \right) \mathbf{x} + \left( \boldsymbol{\mu}^b + \boldsymbol{\sigma}^b \odot \mathbf{E}^b \right)$$
-where $\mathbf{E}^W = f(\boldsymbol{\varepsilon}_q) f(\boldsymbol{\varepsilon}_p)^\top$ and $\mathbf{E}^b = f(\boldsymbol{\varepsilon}_q)$ with $f(z) = \operatorname{sgn}(z) \sqrt{|z|}$.
+$$\mathbf{y} = \left( \mu^W + \sigma^W \odot \mathbf{E}^W \right) \mathbf{x} + \left( \mu^b + \sigma^b \odot \mathbf{E}^b \right)$$
+where $\mathbf{E}^W = f(\varepsilon_q) f(\varepsilon_p)^\top$ and $\mathbf{E}^b = f(\varepsilon_q)$ with $f(z) = \operatorname{sgn}(z) \sqrt{|z|}$.
 Given parameters:
-$$\boldsymbol{\mu}^W = \begin{bmatrix} 0.40 & 0.20 \\ -0.10 & 0.50 \end{bmatrix}, \quad \boldsymbol{\sigma}^W = \begin{bmatrix} 0.10 & 0.10 \\ 0.10 & 0.10 \end{bmatrix}, \quad \boldsymbol{\mu}^b = \begin{bmatrix} 0.00 \\ 0.10 \end{bmatrix}, \quad \boldsymbol{\sigma}^b = \begin{bmatrix} 0.05 \\ 0.05 \end{bmatrix}$$
+$$\mu^W = \begin{bmatrix} 0.40 & 0.20 \\ -0.10 & 0.50 \end{bmatrix}, \quad \sigma^W = \begin{bmatrix} 0.10 & 0.10 \\ 0.10 & 0.10 \end{bmatrix}, \quad \mu^b = \begin{bmatrix} 0.00 \\ 0.10 \end{bmatrix}, \quad \sigma^b = \begin{bmatrix} 0.05 \\ 0.05 \end{bmatrix}$$
 Input vector $\mathbf{x} = [1.00, 2.00]^\top$.
 The pseudo-random generator draws standard normal samples:
-$$\boldsymbol{\varepsilon}_p = \begin{bmatrix} 1.00 \\ -4.00 \end{bmatrix}, \quad \boldsymbol{\varepsilon}_q = \begin{bmatrix} 0.25 \\ -1.00 \end{bmatrix}$$
-1. Compute the non-linear transforms $f(\boldsymbol{\varepsilon}_p)$ and $f(\boldsymbol{\varepsilon}_q)$.
+$$\varepsilon_p = \begin{bmatrix} 1.00 \\ -4.00 \end{bmatrix}, \quad \varepsilon_q = \begin{bmatrix} 0.25 \\ -1.00 \end{bmatrix}$$
+1. Compute the non-linear transforms $f(\varepsilon_p)$ and $f(\varepsilon_q)$.
 2. Construct the factorized noise matrices $\mathbf{E}^W$ and $\mathbf{E}^b$.
 3. Compute the effective noisy parameters $\mathbf{W}, \mathbf{b}$ and the layer output $\mathbf{y}$.
 
 **Solution:**
 
 *Step 1: Compute $f(z) = \operatorname{sgn}(z) \sqrt{|z|}$.*
-- For $\boldsymbol{\varepsilon}_p$:
+- For $\varepsilon_p$:
   $$f(\varepsilon_{p, 0}) = \operatorname{sgn}(1.00) \sqrt{|1.00|} = +1.0 \times 1.0 = \mathbf{+1.0000}$$
   $$f(\varepsilon_{p, 1}) = \operatorname{sgn}(-4.00) \sqrt{|-4.00|} = -1.0 \times 2.0 = \mathbf{-2.0000}$$
-  $$\mathbf{e}_p = f(\boldsymbol{\varepsilon}_p) = \begin{bmatrix} 1.0000 \\ -2.0000 \end{bmatrix}$$
-- For $\boldsymbol{\varepsilon}_q$:
+  $$\mathbf{e}_p = f(\varepsilon_p) = \begin{bmatrix} 1.0000 \\ -2.0000 \end{bmatrix}$$
+- For $\varepsilon_q$:
   $$f(\varepsilon_{q, 0}) = \operatorname{sgn}(0.25) \sqrt{|0.25|} = +1.0 \times 0.5 = \mathbf{+0.5000}$$
   $$f(\varepsilon_{q, 1}) = \operatorname{sgn}(-1.00) \sqrt{|-1.00|} = -1.0 \times 1.0 = \mathbf{-1.0000}$$
-  $$\mathbf{e}_q = f(\boldsymbol{\varepsilon}_q) = \begin{bmatrix} 0.5000 \\ -1.0000 \end{bmatrix}$$
+  $$\mathbf{e}_q = f(\varepsilon_q) = \begin{bmatrix} 0.5000 \\ -1.0000 \end{bmatrix}$$
 
 *Step 2: Construct factorized noise tensors.*
 $$\mathbf{E}^W = \mathbf{e}_q \mathbf{e}_p^\top = \begin{bmatrix} 0.50 \\ -1.00 \end{bmatrix} \begin{bmatrix} 1.00 & -2.00 \end{bmatrix} = \begin{bmatrix} 0.50(1.0) & 0.50(-2.0) \\ -1.0(1.0) & -1.0(-2.0) \end{bmatrix} = \begin{bmatrix} \mathbf{0.5000} & \mathbf{-1.0000} \\ \mathbf{-1.0000} & \mathbf{2.0000} \end{bmatrix}$$
 $$\mathbf{E}^b = \mathbf{e}_q = \begin{bmatrix} \mathbf{0.5000} \\ \mathbf{-1.0000} \end{bmatrix}$$
 
 *Step 3: Compute effective weights and output $\mathbf{y}$.*
-$$\mathbf{W} = \boldsymbol{\mu}^W + \boldsymbol{\sigma}^W \odot \mathbf{E}^W = \begin{bmatrix} 0.40 & 0.20 \\ -0.10 & 0.50 \end{bmatrix} + 0.10 \begin{bmatrix} 0.50 & -1.00 \\ -1.00 & 2.00 \end{bmatrix} = \begin{bmatrix} 0.40 + 0.05 & 0.20 - 0.10 \\ -0.10 - 0.10 & 0.50 + 0.20 \end{bmatrix} = \begin{bmatrix} \mathbf{0.4500} & \mathbf{0.1000} \\ \mathbf{-0.2000} & \mathbf{0.7000} \end{bmatrix}$$
-$$\mathbf{b} = \boldsymbol{\mu}^b + \boldsymbol{\sigma}^b \odot \mathbf{E}^b = \begin{bmatrix} 0.00 \\ 0.10 \end{bmatrix} + 0.05 \begin{bmatrix} 0.50 \\ -1.00 \end{bmatrix} = \begin{bmatrix} 0.00 + 0.025 \\ 0.10 - 0.050 \end{bmatrix} = \begin{bmatrix} \mathbf{0.0250} \\ \mathbf{0.0500} \end{bmatrix}$$
+$$\mathbf{W} = \mu^W + \sigma^W \odot \mathbf{E}^W = \begin{bmatrix} 0.40 & 0.20 \\ -0.10 & 0.50 \end{bmatrix} + 0.10 \begin{bmatrix} 0.50 & -1.00 \\ -1.00 & 2.00 \end{bmatrix} = \begin{bmatrix} 0.40 + 0.05 & 0.20 - 0.10 \\ -0.10 - 0.10 & 0.50 + 0.20 \end{bmatrix} = \begin{bmatrix} \mathbf{0.4500} & \mathbf{0.1000} \\ \mathbf{-0.2000} & \mathbf{0.7000} \end{bmatrix}$$
+$$\mathbf{b} = \mu^b + \sigma^b \odot \mathbf{E}^b = \begin{bmatrix} 0.00 \\ 0.10 \end{bmatrix} + 0.05 \begin{bmatrix} 0.50 \\ -1.00 \end{bmatrix} = \begin{bmatrix} 0.00 + 0.025 \\ 0.10 - 0.050 \end{bmatrix} = \begin{bmatrix} \mathbf{0.0250} \\ \mathbf{0.0500} \end{bmatrix}$$
 
 Now evaluate forward output on $\mathbf{x} = [1.0, 2.0]^\top$:
 $$\mathbf{y} = \mathbf{W} \mathbf{x} + \mathbf{b} = \begin{bmatrix} 0.4500 & 0.1000 \\ -0.2000 & 0.7000 \end{bmatrix} \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} + \begin{bmatrix} 0.0250 \\ 0.0500 \end{bmatrix}$$

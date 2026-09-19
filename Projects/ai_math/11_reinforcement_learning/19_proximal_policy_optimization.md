@@ -13,7 +13,7 @@ However, TRPO's heavy reliance on second-order optimization introduces severe pr
 
 In 2017, John Schulman et al. at OpenAI introduced **Proximal Policy Optimization (PPO)**. PPO asked a simple question: *Can we achieve the stability and sample efficiency of TRPO using simple, first-order stochastic gradient descent (Adam)?*
 
-The answer is the **PPO Clipped Surrogate Objective**: an elegant mathematical formulation that clips the probability ratio $r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)}$ to the interval $[1 - \epsilon, 1 + \epsilon]$, creating a zero-gradient safety plateau that physically prevents destructive policy updates.
+The answer is the **PPO Clipped Surrogate Objective**: an elegant mathematical formulation that clips the probability ratio $r_t(\theta) = \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$ to the interval $[1 - \epsilon, 1 + \epsilon]$, creating a zero-gradient safety plateau that physically prevents destructive policy updates.
 
 Today, PPO is the undisputed **workhorse algorithm of modern deep reinforcement learning**, powering breakthroughs from OpenAI Five (Dota 2) to **Reinforcement Learning from Human Feedback (RLHF)** in ChatGPT and frontier reasoning models.
 
@@ -44,45 +44,45 @@ Today, PPO is the undisputed **workhorse algorithm of modern deep reinforcement 
 
 ### 2.1 The Probability Ratio
 
-Let $\pi_{\boldsymbol{\theta}_{\text{old}}}$ be the policy parameters used to collect rollout experience.
-For any candidate parameter vector $\boldsymbol{\theta}$, the **probability ratio** at time step $t$ is:
+Let $\pi_{\theta_{\text{old}}}$ be the policy parameters used to collect rollout experience.
+For any candidate parameter vector $\theta$, the **probability ratio** at time step $t$ is:
 
-$$r_t(\boldsymbol{\theta}) \triangleq \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)}$$
+$$r_t(\theta) \triangleq \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$$
 
-Notice that when $\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}$, the ratio is identically unity: $r_t(\boldsymbol{\theta}_{\text{old}}) = 1.0$.
+Notice that when $\theta = \theta_{\text{old}}$, the ratio is identically unity: $r_t(\theta_{\text{old}}) = 1.0$.
 
 The unconstrained surrogate objective is:
-$$L^{\text{CPI}}(\boldsymbol{\theta}) \triangleq \hat{\mathbb{E}}_t \left[ \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \right] = \hat{\mathbb{E}}_t \left[ r_t(\boldsymbol{\theta}) \hat{A}_t \right]$$
+$$L^{\text{CPI}}(\theta) \triangleq \hat{\mathbb{E}}_t \left[ \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \right] = \hat{\mathbb{E}}_t \left[ r_t(\theta) \hat{A}_t \right]$$
 where CPI stands for *Conservative Policy Iteration*. Without constraints, maximizing $L^{\text{CPI}}$ leads to excessively large steps and catastrophic policy collapse.
 
 ---
 
 ### 2.2 The Clipped Surrogate Objective ($L^{\text{CLIP}}$)
 
-To penalize moves that take $r_t(\boldsymbol{\theta})$ far away from $1$, PPO modifies the objective using a **min-clip** operator:
+To penalize moves that take $r_t(\theta)$ far away from $1$, PPO modifies the objective using a **min-clip** operator:
 
-$$L^{\text{CLIP}}(\boldsymbol{\theta}) \triangleq \hat{\mathbb{E}}_t \left[ \min\left( r_t(\boldsymbol{\theta}) \hat{A}_t, \quad \operatorname{clip}(r_t(\boldsymbol{\theta}), 1 - \epsilon, 1 + \epsilon) \hat{A}_t \right) \right]$$
+$$L^{\text{CLIP}}(\theta) \triangleq \hat{\mathbb{E}}_t \left[ \min\left( r_t(\theta) \hat{A}_t, \quad \operatorname{clip}(r_t(\theta), 1 - \epsilon, 1 + \epsilon) \hat{A}_t \right) \right]$$
 where $\epsilon$ is a hyperparameter (typically $\epsilon = 0.20$).
 
 #### Mathematical Case Analysis:
 
 1. **Case 1: Positive Advantage ($\hat{A}_t > 0$):**
-   The chosen action yielded a higher return than average. We want to *increase* its probability ($\pi_{\boldsymbol{\theta}} \uparrow \implies r_t > 1$).
-   - When $1 \le r_t \le 1 + \epsilon$: The step is within the trust region. The objective is $r_t \hat{A}_t$, providing a positive gradient pushing $\pi_{\boldsymbol{\theta}}$ upward.
+   The chosen action yielded a higher return than average. We want to *increase* its probability ($\pi_{\theta} \uparrow \implies r_t > 1$).
+   - When $1 \le r_t \le 1 + \epsilon$: The step is within the trust region. The objective is $r_t \hat{A}_t$, providing a positive gradient pushing $\pi_{\theta}$ upward.
    - When $r_t > 1 + \epsilon$: The update has already made the action sufficiently more likely. The objective is clipped to $(1 + \epsilon) \hat{A}_t$.
-     $$\left. \nabla_{\boldsymbol{\theta}} L^{\text{CLIP}} \right|_{r_t > 1 + \epsilon} = \mathbf{0}$$
+     $$\left. \nabla_{\theta} L^{\text{CLIP}} \right|_{r_t > 1 + \epsilon} = \mathbf{0}$$
      The gradient vanishes! The optimizer cannot push the ratio any further, preventing overconfidence.
 
 2. **Case 2: Negative Advantage ($\hat{A}_t < 0$):**
-   The chosen action performed worse than expected. We want to *decrease* its probability ($\pi_{\boldsymbol{\theta}} \downarrow \implies r_t < 1$).
-   - When $1 - \epsilon \le r_t \le 1$: The objective is $r_t \hat{A}_t$, providing a gradient that decreases $\pi_{\boldsymbol{\theta}}$.
+   The chosen action performed worse than expected. We want to *decrease* its probability ($\pi_{\theta} \downarrow \implies r_t < 1$).
+   - When $1 - \epsilon \le r_t \le 1$: The objective is $r_t \hat{A}_t$, providing a gradient that decreases $\pi_{\theta}$.
    - When $r_t < 1 - \epsilon$: The action has already been sufficiently suppressed. Because $\hat{A}_t < 0$, multiplying by $(1 - \epsilon)$ gives a larger (less negative) number than multiplying by $r_t < 1 - \epsilon$. The $\min$ operator selects the lower bound $(1 - \epsilon) \hat{A}_t$.
-     $$\left. \nabla_{\boldsymbol{\theta}} L^{\text{CLIP}} \right|_{r_t < 1 - \epsilon} = \mathbf{0}$$
+     $$\left. \nabla_{\theta} L^{\text{CLIP}} \right|_{r_t < 1 - \epsilon} = \mathbf{0}$$
      The gradient vanishes! The policy avoids over-correcting and destroying exploratory entropy.
 
 #### The Pessimistic Bound:
-Taking the minimum between the unclipped and clipped terms ensures that $L^{\text{CLIP}}(\boldsymbol{\theta})$ forms a **pessimistic lower bound**:
-$$L^{\text{CLIP}}(\boldsymbol{\theta}) \le r_t(\boldsymbol{\theta}) \hat{A}_t$$
+Taking the minimum between the unclipped and clipped terms ensures that $L^{\text{CLIP}}(\theta)$ forms a **pessimistic lower bound**:
+$$L^{\text{CLIP}}(\theta) \le r_t(\theta) \hat{A}_t$$
 We only ignore the change when the objective would have become *better* than the bound, never when it becomes worse!
 
 ---
@@ -91,14 +91,14 @@ We only ignore the change when the objective would have become *better* than the
 
 In deep networks, Actor and Critic heads share underlying representation layers. The unified objective maximized via Adam is:
 
-$$\mathcal{L}^{\text{PPO}}(\boldsymbol{\theta}, \boldsymbol{\phi}) \triangleq \hat{\mathbb{E}}_t \left[ L_t^{\text{CLIP}}(\boldsymbol{\theta}) - c_1 L_t^{\text{VF}}(\boldsymbol{\phi}) + c_2 \mathcal{H}(\pi_{\boldsymbol{\theta}}(\cdot \mid S_t)) \right]$$
+$$\mathcal{L}^{\text{PPO}}(\theta, \phi) \triangleq \hat{\mathbb{E}}_t \left[ L_t^{\text{CLIP}}(\theta) - c_1 L_t^{\text{VF}}(\phi) + c_2 \mathcal{H}(\pi_{\theta}(\cdot \mid S_t)) \right]$$
 
 where:
 1. **Clipped Value Function Loss ($L^{\text{VF}}$):**
-   Similar to the policy, value targets can also be clipped around the old value $V_{\boldsymbol{\phi}_{\text{old}}}$:
-   $$L_t^{\text{VF}}(\boldsymbol{\phi}) = \max \left( (V_{\boldsymbol{\phi}}(S_t) - V_t^{\text{targ}})^2, \quad (\operatorname{clip}(V_{\boldsymbol{\phi}}(S_t), V_{\boldsymbol{\phi}_{\text{old}}}(S_t) - \epsilon_v, V_{\boldsymbol{\phi}_{\text{old}}}(S_t) + \epsilon_v) - V_t^{\text{targ}})^2 \right)$$
+   Similar to the policy, value targets can also be clipped around the old value $V_{\phi_{\text{old}}}$:
+   $$L_t^{\text{VF}}(\phi) = \max \left( (V_{\phi}(S_t) - V_t^{\text{targ}})^2, \quad (\operatorname{clip}(V_{\phi}(S_t), V_{\phi_{\text{old}}}(S_t) - \epsilon_v, V_{\phi_{\text{old}}}(S_t) + \epsilon_v) - V_t^{\text{targ}})^2 \right)$$
 2. **Entropy Bonus ($\mathcal{H}$):**
-   $$\mathcal{H}(\pi_{\boldsymbol{\theta}}(\cdot \mid S_t)) = - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid S_t) \log \pi_{\boldsymbol{\theta}}(a \mid S_t)$$
+   $$\mathcal{H}(\pi_{\theta}(\cdot \mid S_t)) = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid S_t) \log \pi_{\theta}(a \mid S_t)$$
 3. **Coefficients:** Typically $c_1 \in [0.5, 1.0]$ and $c_2 \in [0.01, 0.05]$.
 
 ---
@@ -155,19 +155,19 @@ Prove from first principles:
 ```
 
 **Part 1: Problem Statement & Mathematical Goal:**
-In policy search, the expected discounted return of a candidate policy $\pi_{\boldsymbol{\theta}}$ is denoted $\eta(\pi_{\boldsymbol{\theta}}) \triangleq \mathbb{E}_{\tau \sim \pi_{\boldsymbol{\theta}}} \left[ \sum_{t=0}^\infty \gamma^t R(s_t, a_t) \right]$. Under the policy improvement theorem of Kakade & Langford (2002), the return of $\pi_{\boldsymbol{\theta}}$ can be expressed relative to a reference rollout policy $\pi_{\boldsymbol{\theta}_{\text{old}}}$:
-$$\eta(\pi_{\boldsymbol{\theta}}) = \eta(\pi_{\boldsymbol{\theta}_{\text{old}}}) + \mathbb{E}_{\tau \sim \pi_{\boldsymbol{\theta}}} \left[ \sum_{t=0}^\infty \gamma^t A_{\pi_{\boldsymbol{\theta}_{\text{old}}}}(s_t, a_t) \right]$$
-Because sampling trajectories directly from $\pi_{\boldsymbol{\theta}}$ during optimization is impossible without interacting with the environment at every sub-step, Conservative Policy Iteration (CPI) replaces the state visitation distribution $\rho_{\pi_{\boldsymbol{\theta}}}$ with $\rho_{\pi_{\boldsymbol{\theta}_{\text{old}}}}$ and uses importance sampling over actions:
-$$L^{\text{CPI}}(\boldsymbol{\theta}) \triangleq \hat{\mathbb{E}}_t \left[ \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \right] = \hat{\mathbb{E}}_t \left[ r_t(\boldsymbol{\theta}) \hat{A}_t \right]$$
-Maximizing $L^{\text{CPI}}(\boldsymbol{\theta})$ without constraint leads to catastrophic policy collapse when $r_t(\boldsymbol{\theta})$ deviates significantly from $1.0$. PPO replaces $L^{\text{CPI}}$ with the clipped surrogate:
-$$L^{\text{CLIP}}(\boldsymbol{\theta}) \triangleq \hat{\mathbb{E}}_t \left[ \min\left( r_t(\boldsymbol{\theta})\hat{A}_t, \quad \operatorname{clip}(r_t(\boldsymbol{\theta}), 1 - \epsilon, 1 + \epsilon)\hat{A}_t \right) \right]$$
-The mathematical goal is to prove that $L_t^{\text{CLIP}}(\boldsymbol{\theta}) \le r_t(\boldsymbol{\theta})\hat{A}_t$ universally across all $\hat{A}_t \in \mathbb{R}$ and all $r_t \in [0, \infty)$, providing an analytical lower bound that enforces conservative policy improvement without requiring second-order Hessian computation.
+In policy search, the expected discounted return of a candidate policy $\pi_{\theta}$ is denoted $\eta(\pi_{\theta}) \triangleq \mathbb{E}_{\tau \sim \pi_{\theta}} \left[ \sum_{t=0}^\infty \gamma^t R(s_t, a_t) \right]$. Under the policy improvement theorem of Kakade & Langford (2002), the return of $\pi_{\theta}$ can be expressed relative to a reference rollout policy $\pi_{\theta_{\text{old}}}$:
+$$\eta(\pi_{\theta}) = \eta(\pi_{\theta_{\text{old}}}) + \mathbb{E}_{\tau \sim \pi_{\theta}} \left[ \sum_{t=0}^\infty \gamma^t A_{\pi_{\theta_{\text{old}}}}(s_t, a_t) \right]$$
+Because sampling trajectories directly from $\pi_{\theta}$ during optimization is impossible without interacting with the environment at every sub-step, Conservative Policy Iteration (CPI) replaces the state visitation distribution $\rho_{\pi_{\theta}}$ with $\rho_{\pi_{\theta_{\text{old}}}}$ and uses importance sampling over actions:
+$$L^{\text{CPI}}(\theta) \triangleq \hat{\mathbb{E}}_t \left[ \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \right] = \hat{\mathbb{E}}_t \left[ r_t(\theta) \hat{A}_t \right]$$
+Maximizing $L^{\text{CPI}}(\theta)$ without constraint leads to catastrophic policy collapse when $r_t(\theta)$ deviates significantly from $1.0$. PPO replaces $L^{\text{CPI}}$ with the clipped surrogate:
+$$L^{\text{CLIP}}(\theta) \triangleq \hat{\mathbb{E}}_t \left[ \min\left( r_t(\theta)\hat{A}_t, \quad \operatorname{clip}(r_t(\theta), 1 - \epsilon, 1 + \epsilon)\hat{A}_t \right) \right]$$
+The mathematical goal is to prove that $L_t^{\text{CLIP}}(\theta) \le r_t(\theta)\hat{A}_t$ universally across all $\hat{A}_t \in \mathbb{R}$ and all $r_t \in [0, \infty)$, providing an analytical lower bound that enforces conservative policy improvement without requiring second-order Hessian computation.
 
 **Part 2: Explicit Assumptions & Regularity Conditions:**
-1. **Support Invariance (Common Support):** For all state-action pairs $(s_t, a_t)$ visited under $\pi_{\boldsymbol{\theta}_{\text{old}}}$, the reference policy has non-zero probability: $\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t) > 0$. The ratio $r_t(\boldsymbol{\theta}) \in [0, \infty)$ is well-defined.
+1. **Support Invariance (Common Support):** For all state-action pairs $(s_t, a_t)$ visited under $\pi_{\theta_{\text{old}}}$, the reference policy has non-zero probability: $\pi_{\theta_{\text{old}}}(a_t \mid s_t) > 0$. The ratio $r_t(\theta) \in [0, \infty)$ is well-defined.
 2. **Finite Bounded Advantages:** The estimated advantage $\hat{A}_t$ is bounded: $|\hat{A}_t| \le A_{\max} < \infty$.
 3. **Valid Clipping Hyperparameter:** The clipping threshold satisfies $\epsilon \in (0, 1)$, ensuring $0 < 1 - \epsilon < 1 < 1 + \epsilon < 2$.
-4. **Probability Measure Normalization:** $\sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) = 1$ (discrete) or $\int_{\mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) da = 1$ (continuous) for all parameter vectors $\boldsymbol{\theta}$.
+4. **Probability Measure Normalization:** $\sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) = 1$ (discrete) or $\int_{\mathcal{A}} \pi_{\theta}(a \mid s) da = 1$ (continuous) for all parameter vectors $\theta$.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation:**
 In TRPO (Schulman et al., 2015), monotonic improvement is guaranteed by bounding the true return from below using Kakade & Langford's theorem: $\eta(\pi) \ge L_{\pi_{\text{old}}}(\pi) - C \cdot D_{\text{KL}}^{\max}(\pi_{\text{old}}, \pi)$, where $C = \frac{4 \epsilon_{\text{rew}} \gamma}{(1 - \gamma)^2}$.
@@ -272,10 +272,10 @@ Hence $L_t^{\text{CLIP}} \le r_t \hat{A}_t$ holds with equality.
 
 **Global Pessimistic Lower Bound Property:**
 Combining Cases 1, 2, and 3, we have proved that for all $r_t \ge 0$ and all $\hat{A}_t \in \mathbb{R}$:
-$$L_t^{\text{CLIP}}(r_t(\boldsymbol{\theta}), \hat{A}_t) \le r_t(\boldsymbol{\theta}) \hat{A}_t \quad \text{pointwise everywhere}$$
+$$L_t^{\text{CLIP}}(r_t(\theta), \hat{A}_t) \le r_t(\theta) \hat{A}_t \quad \text{pointwise everywhere}$$
 
 Taking the empirical expectation $\hat{\mathbb{E}}_t [\cdot] = \frac{1}{T} \sum_{t=1}^T (\cdot)$ over any finite batch of rollout transitions preserves the inequality by linearity and monotonicity of expectation:
-$$L^{\text{CLIP}}(\boldsymbol{\theta}) = \hat{\mathbb{E}}_t \left[ L_t^{\text{CLIP}}(r_t(\boldsymbol{\theta}), \hat{A}_t) \right] \le \hat{\mathbb{E}}_t \left[ r_t(\boldsymbol{\theta}) \hat{A}_t \right] = L^{\text{CPI}}(\boldsymbol{\theta})$$
+$$L^{\text{CLIP}}(\theta) = \hat{\mathbb{E}}_t \left[ L_t^{\text{CLIP}}(r_t(\theta), \hat{A}_t) \right] \le \hat{\mathbb{E}}_t \left[ r_t(\theta) \hat{A}_t \right] = L^{\text{CPI}}(\theta)$$
 This completes the first-principles proof that the clipped surrogate objective is a global pessimistic lower bound on the unclipped conservative policy iteration objective. $\blacksquare$
 
 ---
@@ -303,37 +303,37 @@ Prove from first principles:
 ```
 
 **Part 1: Problem Statement & Mathematical Goal:**
-Consider the transition-level clipped surrogate objective $L_t^{\text{CLIP}}(\boldsymbol{\theta})$. Because $L_t^{\text{CLIP}}$ is composed of the continuous non-linear functions $\min$ and $\operatorname{clip}$, it is continuous and locally Lipschitz, but non-differentiable along the hyperplanes where $r_t(\boldsymbol{\theta}) = 1 - \epsilon$ and $r_t(\boldsymbol{\theta}) = 1 + \epsilon$.
+Consider the transition-level clipped surrogate objective $L_t^{\text{CLIP}}(\theta)$. Because $L_t^{\text{CLIP}}$ is composed of the continuous non-linear functions $\min$ and $\operatorname{clip}$, it is continuous and locally Lipschitz, but non-differentiable along the hyperplanes where $r_t(\theta) = 1 - \epsilon$ and $r_t(\theta) = 1 + \epsilon$.
 The mathematical goal is to:
-1. Formulate the gradient $\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta})$ in all open regions of parameter space.
-2. Prove that $\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} = \mathbf{0}$ whenever the policy moves too far in the direction that exploits the advantage estimate.
-3. Prove that $\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} \neq \mathbf{0}$ if the policy moves in the direction that worsens the objective, creating an asymmetric restoring force.
-4. Formally define Clarke's generalized gradient $\partial_C L_t^{\text{CLIP}}(\boldsymbol{\theta})$ at the non-differentiable boundaries $r_t = 1 \pm \epsilon$.
+1. Formulate the gradient $\nabla_{\theta} L_t^{\text{CLIP}}(\theta)$ in all open regions of parameter space.
+2. Prove that $\nabla_{\theta} L_t^{\text{CLIP}} = \mathbf{0}$ whenever the policy moves too far in the direction that exploits the advantage estimate.
+3. Prove that $\nabla_{\theta} L_t^{\text{CLIP}} \neq \mathbf{0}$ if the policy moves in the direction that worsens the objective, creating an asymmetric restoring force.
+4. Formally define Clarke's generalized gradient $\partial_C L_t^{\text{CLIP}}(\theta)$ at the non-differentiable boundaries $r_t = 1 \pm \epsilon$.
 
 **Part 2: Explicit Assumptions & Regularity Conditions:**
-1. **Differentiable Policy Parametrization:** The stochastic policy $\pi_{\boldsymbol{\theta}}(a \mid s)$ is continuously differentiable ($C^1$) with respect to $\boldsymbol{\theta} \in \mathbb{R}^d$ for all $(s, a)$.
-2. **Fixed Advantage during Policy Step:** In accordance with standard policy gradient formulations, the rollout advantage $\hat{A}_t$ is computed from rollout data prior to policy updates and is treated as an independent scalar constant with respect to $\boldsymbol{\theta}$ ($\nabla_{\boldsymbol{\theta}} \hat{A}_t = \mathbf{0}$).
-3. **Locally Lipschitz Continuity:** The composite map $\boldsymbol{\theta} \mapsto L_t^{\text{CLIP}}(r_t(\boldsymbol{\theta}), \hat{A}_t)$ is locally Lipschitz continuous on $\mathbb{R}^d$, guaranteeing the existence of Clarke's generalized gradient $\partial_C L_t^{\text{CLIP}}(\boldsymbol{\theta}) \neq \emptyset$.
-4. **Non-Zero Reference Density:** $\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t) > 0$.
+1. **Differentiable Policy Parametrization:** The stochastic policy $\pi_{\theta}(a \mid s)$ is continuously differentiable ($C^1$) with respect to $\theta \in \mathbb{R}^d$ for all $(s, a)$.
+2. **Fixed Advantage during Policy Step:** In accordance with standard policy gradient formulations, the rollout advantage $\hat{A}_t$ is computed from rollout data prior to policy updates and is treated as an independent scalar constant with respect to $\theta$ ($\nabla_{\theta} \hat{A}_t = \mathbf{0}$).
+3. **Locally Lipschitz Continuity:** The composite map $\theta \mapsto L_t^{\text{CLIP}}(r_t(\theta), \hat{A}_t)$ is locally Lipschitz continuous on $\mathbb{R}^d$, guaranteeing the existence of Clarke's generalized gradient $\partial_C L_t^{\text{CLIP}}(\theta) \neq \emptyset$.
+4. **Non-Zero Reference Density:** $\pi_{\theta_{\text{old}}}(a_t \mid s_t) > 0$.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation:**
-In an unconstrained policy gradient algorithm (such as REINFORCE or standard Actor-Critic), the objective gradient is $\hat{A}_t \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)$. If $\hat{A}_t > 0$, the gradient continues pulling $\boldsymbol{\theta}$ in the direction of increasing $\pi_{\boldsymbol{\theta}}(a_t \mid s_t)$ indefinitely, even across multiple mini-batch epochs on the same data.
+In an unconstrained policy gradient algorithm (such as REINFORCE or standard Actor-Critic), the objective gradient is $\hat{A}_t \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)$. If $\hat{A}_t > 0$, the gradient continues pulling $\theta$ in the direction of increasing $\pi_{\theta}(a_t \mid s_t)$ indefinitely, even across multiple mini-batch epochs on the same data.
 In PPO:
-- As soon as the parameter update pushes $\pi_{\boldsymbol{\theta}}(a_t \mid s_t)$ above $(1 + \epsilon)\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)$, the objective enters a horizontal plateau of constant value $(1 + \epsilon)\hat{A}_t$. The directional derivative along the ascent trajectory becomes identically zero ($\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} = \mathbf{0}$). The optimizer encounters a "frictionless ceiling" and halts updates for this transition.
-- Similarly, if $\hat{A}_t < 0$, as soon as the policy suppresses the action below $(1 - \epsilon)\pi_{\boldsymbol{\theta}_{\text{old}}}$, the objective hits a horizontal floor of value $(1 - \epsilon)\hat{A}_t$. The gradient becomes $\mathbf{0}$, preventing the policy from extinguishing exploration entropy.
+- As soon as the parameter update pushes $\pi_{\theta}(a_t \mid s_t)$ above $(1 + \epsilon)\pi_{\theta_{\text{old}}}(a_t \mid s_t)$, the objective enters a horizontal plateau of constant value $(1 + \epsilon)\hat{A}_t$. The directional derivative along the ascent trajectory becomes identically zero ($\nabla_{\theta} L_t^{\text{CLIP}} = \mathbf{0}$). The optimizer encounters a "frictionless ceiling" and halts updates for this transition.
+- Similarly, if $\hat{A}_t < 0$, as soon as the policy suppresses the action below $(1 - \epsilon)\pi_{\theta_{\text{old}}}$, the objective hits a horizontal floor of value $(1 - \epsilon)\hat{A}_t$. The gradient becomes $\mathbf{0}$, preventing the policy from extinguishing exploration entropy.
 - Crucially, if destructive cross-sample gradient interference pushes a bad action ($\hat{A}_t < 0$) upward to $r_t > 1 + \epsilon$, the objective is $r_t \hat{A}_t$, which has negative slope $\hat{A}_t < 0$. The gradient does *not* vanish; instead, it strongly pushes the policy back downward!
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof:**
 
 *Step 1: Chain rule decomposition.*
-The scalar objective $L_t^{\text{CLIP}}$ depends on the parameter vector $\boldsymbol{\theta}$ exclusively through the scalar probability ratio:
-$$r_t(\boldsymbol{\theta}) \triangleq \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)}$$
+The scalar objective $L_t^{\text{CLIP}}$ depends on the parameter vector $\theta$ exclusively through the scalar probability ratio:
+$$r_t(\theta) \triangleq \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$$
 Applying the multivariate chain rule:
-$$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \frac{\partial L_t^{\text{CLIP}}}{\partial r_t} \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta})$$
-We first evaluate the gradient of the ratio $\nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta})$:
-$$\nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \left( \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \right) = \frac{1}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a_t \mid s_t)$$
-Using the identity $\nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}} = \pi_{\boldsymbol{\theta}} \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}$:
-$$\nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) = r_t(\boldsymbol{\theta}) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)$$
+$$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = \frac{\partial L_t^{\text{CLIP}}}{\partial r_t} \nabla_{\theta} r_t(\theta)$$
+We first evaluate the gradient of the ratio $\nabla_{\theta} r_t(\theta)$:
+$$\nabla_{\theta} r_t(\theta) = \nabla_{\theta} \left( \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \right) = \frac{1}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \nabla_{\theta} \pi_{\theta}(a_t \mid s_t)$$
+Using the identity $\nabla_{\theta} \pi_{\theta} = \pi_{\theta} \nabla_{\theta} \log \pi_{\theta}$:
+$$\nabla_{\theta} r_t(\theta) = \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) = r_t(\theta) \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)$$
 
 *Step 2: Differentiating $L_t^{\text{CLIP}}$ with respect to $r_t$.*
 From Derivation 11.19.1, the piecewise form of $L_t^{\text{CLIP}}(r_t)$ is:
@@ -354,23 +354,23 @@ Differentiating with respect to $r_t$ in the interior of each region:
 - On $r_t \in (1 - \epsilon, \infty)$:
   $$\frac{\partial L_t^{\text{CLIP}}}{\partial r_t} = \frac{d}{dr_t}(r_t \hat{A}_t) = \hat{A}_t$$
 
-*Step 3: Evaluating parameter gradients $\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta})$.*
-Substituting $\frac{\partial L_t^{\text{CLIP}}}{\partial r_t}$ into the chain rule $\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} = \frac{\partial L_t^{\text{CLIP}}}{\partial r_t} \nabla_{\boldsymbol{\theta}} r_t$:
+*Step 3: Evaluating parameter gradients $\nabla_{\theta} L_t^{\text{CLIP}}(\theta)$.*
+Substituting $\frac{\partial L_t^{\text{CLIP}}}{\partial r_t}$ into the chain rule $\nabla_{\theta} L_t^{\text{CLIP}} = \frac{\partial L_t^{\text{CLIP}}}{\partial r_t} \nabla_{\theta} r_t$:
 
 1. **Active Positive Update Zone ($\hat{A}_t > 0, \; r_t < 1 + \epsilon$):**
-   $$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)$$
+   $$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = \hat{A}_t \nabla_{\theta} r_t(\theta) = \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)$$
    The gradient is non-zero, pushing the parameter in the direction of the policy gradient.
 
 2. **Positive Saturation Zone ($\hat{A}_t > 0, \; r_t > 1 + \epsilon$):**
-   $$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = 0 \cdot \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \mathbf{0}$$
+   $$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = 0 \cdot \nabla_{\theta} r_t(\theta) = \mathbf{0}$$
    The gradient vanishes completely! Further updates receive zero contribution from this transition.
 
 3. **Active Negative Update Zone ($\hat{A}_t < 0, \; r_t > 1 - \epsilon$):**
-   $$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)$$
+   $$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = \hat{A}_t \nabla_{\theta} r_t(\theta) = \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} \hat{A}_t \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)$$
    The gradient is active, driving down the probability of this suboptimal action.
 
 4. **Negative Saturation Zone ($\hat{A}_t < 0, \; r_t < 1 - \epsilon$):**
-   $$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = 0 \cdot \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) = \mathbf{0}$$
+   $$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = 0 \cdot \nabla_{\theta} r_t(\theta) = \mathbf{0}$$
    The gradient vanishes completely! The policy cannot be penalized further on this sample.
 
 5. **Asymmetric Restoring Zone ($\hat{A}_t < 0, \; r_t > 1 + \epsilon$):**
@@ -378,21 +378,21 @@ Substituting $\frac{\partial L_t^{\text{CLIP}}}{\partial r_t}$ into the chain ru
    As derived in Step 2, for $\hat{A}_t < 0$ and $r_t > 1 - \epsilon$, the derivative is $\frac{\partial L_t^{\text{CLIP}}}{\partial r_t} = \hat{A}_t$.
    Since $1 + \epsilon > 1 - \epsilon$, the point $r_t > 1 + \epsilon$ belongs strictly to $(1 - \epsilon, \infty)$.
    Therefore:
-   $$\nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) \neq \mathbf{0}$$
-   The objective does NOT saturate at zero! Instead, it retains the full negative gradient $\hat{A}_t \nabla_{\boldsymbol{\theta}} r_t$, generating an aggressive restorative force that actively suppresses the bad action back down toward $1.0$.
+   $$\nabla_{\theta} L_t^{\text{CLIP}}(\theta) = \hat{A}_t \nabla_{\theta} r_t(\theta) \neq \mathbf{0}$$
+   The objective does NOT saturate at zero! Instead, it retains the full negative gradient $\hat{A}_t \nabla_{\theta} r_t$, generating an aggressive restorative force that actively suppresses the bad action back down toward $1.0$.
 
 *Step 4: Clarke generalized subdifferential at the non-differentiable boundaries.*
 At the kink boundaries $r_t = 1 + \epsilon$ (when $\hat{A}_t > 0$) and $r_t = 1 - \epsilon$ (when $\hat{A}_t < 0$), the classical derivative does not exist.
 By Clarke's subdifferential theorem for continuous piecewise $C^1$ functions, the generalized gradient $\partial_C f(\mathbf{x})$ is the convex hull of the limits of gradients of sequences of smooth points converging to $\mathbf{x}$:
-- For $\hat{A}_t > 0$ at $r_t(\boldsymbol{\theta}) = 1 + \epsilon$:
-  The left limit is $\lim_{r_t \to (1+\epsilon)^-} \nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} = \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta})$.
-  The right limit is $\lim_{r_t \to (1+\epsilon)^+} \nabla_{\boldsymbol{\theta}} L_t^{\text{CLIP}} = \mathbf{0}$.
+- For $\hat{A}_t > 0$ at $r_t(\theta) = 1 + \epsilon$:
+  The left limit is $\lim_{r_t \to (1+\epsilon)^-} \nabla_{\theta} L_t^{\text{CLIP}} = \hat{A}_t \nabla_{\theta} r_t(\theta)$.
+  The right limit is $\lim_{r_t \to (1+\epsilon)^+} \nabla_{\theta} L_t^{\text{CLIP}} = \mathbf{0}$.
   Therefore, Clarke's generalized subdifferential is:
-  $$\partial_C L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \operatorname{conv}\left\{ \mathbf{0}, \; \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) \right\} = \left\{ \alpha \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) \;\middle|\; \alpha \in [0, 1] \right\}$$
-- For $\hat{A}_t < 0$ at $r_t(\boldsymbol{\theta}) = 1 - \epsilon$:
-  The left limit is $\mathbf{0}$, and the right limit is $\hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta})$.
+  $$\partial_C L_t^{\text{CLIP}}(\theta) = \operatorname{conv}\left\{ \mathbf{0}, \; \hat{A}_t \nabla_{\theta} r_t(\theta) \right\} = \left\{ \alpha \hat{A}_t \nabla_{\theta} r_t(\theta) \;\middle|\; \alpha \in [0, 1] \right\}$$
+- For $\hat{A}_t < 0$ at $r_t(\theta) = 1 - \epsilon$:
+  The left limit is $\mathbf{0}$, and the right limit is $\hat{A}_t \nabla_{\theta} r_t(\theta)$.
   Therefore:
-  $$\partial_C L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \operatorname{conv}\left\{ \mathbf{0}, \; \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) \right\} = \left\{ \alpha \hat{A}_t \nabla_{\boldsymbol{\theta}} r_t(\boldsymbol{\theta}) \;\middle|\; \alpha \in [0, 1] \right\}$$
+  $$\partial_C L_t^{\text{CLIP}}(\theta) = \operatorname{conv}\left\{ \mathbf{0}, \; \hat{A}_t \nabla_{\theta} r_t(\theta) \right\} = \left\{ \alpha \hat{A}_t \nabla_{\theta} r_t(\theta) \;\middle|\; \alpha \in [0, 1] \right\}$$
 
 In standard automatic differentiation libraries (PyTorch autograd, JAX, TensorFlow), conditional branching is implemented via `torch.where(r <= 1 + eps, ...)`, which selects $\alpha = 1$ at the boundary point $r_t = 1 + \epsilon$, and selects $\alpha = 1$ at $r_t = 1 - \epsilon$. $\blacksquare$
 
@@ -434,13 +434,13 @@ The goal is to derive from first principles:
 2. The exact mathematical derivation showing that the update rule $\beta_{k+1} \in \{\beta_k / 2, \beta_k \times 2, \beta_k\}$ is a log-dual gradient ascent step with a hysteresis deadband.
 
 **Part 2: Explicit Assumptions & Regularity Conditions:**
-1. **Differentiable Parameterization & Information Regularity:** The policy $\pi_{\boldsymbol{\theta}}$ is twice continuously differentiable ($C^2$) in $\boldsymbol{\theta}$. The average KL divergence $\bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}})$ is strictly convex in a neighborhood around $\boldsymbol{\theta}_{\text{old}}$ with positive-definite Fisher Information Matrix $\mathbf{F} \succ \mathbf{0}$.
+1. **Differentiable Parameterization & Information Regularity:** The policy $\pi_{\theta}$ is twice continuously differentiable ($C^2$) in $\theta$. The average KL divergence $\bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta})$ is strictly convex in a neighborhood around $\theta_{\text{old}}$ with positive-definite Fisher Information Matrix $\mathbf{F} \succ \mathbf{0}$.
 2. **Strictly Positive Target:** The target divergence satisfies $d_{\text{targ}} > 0$ (typically $d_{\text{targ}} \in [0.003, 0.03]$).
 3. **Initial Multiplier:** $\beta_0 > 0$ (typically $\beta_0 = 1.0$).
 4. **Hysteresis Factor:** The deadband parameter $\kappa > 1$ (Schulman et al. set $\kappa = 1.5$).
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation:**
-Imagine an elastic tether connecting the candidate policy $\pi_{\boldsymbol{\theta}}$ to the anchor policy $\pi_{\boldsymbol{\theta}_{\text{old}}}$. The stiffness of the tether is $\beta$.
+Imagine an elastic tether connecting the candidate policy $\pi_{\theta}$ to the anchor policy $\pi_{\theta_{\text{old}}}$. The stiffness of the tether is $\beta$.
 - If the policy update moves very little ($d_k < d_{\text{targ}} / 1.5$), the tether is excessively rigid, suffocating policy improvement. Halving $\beta$ softens the tether, permitting larger exploratory steps in subsequent epochs.
 - If the policy update moves too far ($d_k > 1.5 d_{\text{targ}}$), the tether is too slack, allowing dangerous policy drift. Doubling $\beta$ stiffens the tether, pulling the policy back toward the safe trust region.
 - The deadband $[d_{\text{targ}} / 1.5, 1.5 d_{\text{targ}}]$ acts as a mechanical damper: when the divergence is within acceptable bounds, $\beta$ remains unchanged. Without this deadband, $\beta$ would constantly oscillate between doubling and halving (bang-bang chattering), destabilizing optimization.
@@ -449,24 +449,24 @@ Imagine an elastic tether connecting the candidate policy $\pi_{\boldsymbol{\the
 
 *Step 1: Lagrangian relaxation of the constrained trust region problem.*
 The primal constrained optimization problem is:
-$$\max_{\boldsymbol{\theta}} L^{\text{CPI}}(\boldsymbol{\theta}) \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}}) \le d_{\text{targ}}$$
-where $L^{\text{CPI}}(\boldsymbol{\theta}) = \hat{\mathbb{E}}_t \left[ r_t(\boldsymbol{\theta}) \hat{A}_t \right]$ and $\bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}}) = \hat{\mathbb{E}}_t \left[ D_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}}(\cdot \mid s_t) \parallel \pi_{\boldsymbol{\theta}}(\cdot \mid s_t)) \right]$.
+$$\max_{\theta} L^{\text{CPI}}(\theta) \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta}) \le d_{\text{targ}}$$
+where $L^{\text{CPI}}(\theta) = \hat{\mathbb{E}}_t \left[ r_t(\theta) \hat{A}_t \right]$ and $\bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta}) = \hat{\mathbb{E}}_t \left[ D_{\text{KL}}(\pi_{\theta_{\text{old}}}(\cdot \mid s_t) \parallel \pi_{\theta}(\cdot \mid s_t)) \right]$.
 
 Rewriting as an equivalent minimization problem:
-$$\min_{\boldsymbol{\theta}} \left( - L^{\text{CPI}}(\boldsymbol{\theta}) \right) \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}}) - d_{\text{targ}} \le 0$$
+$$\min_{\theta} \left( - L^{\text{CPI}}(\theta) \right) \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta}) - d_{\text{targ}} \le 0$$
 Introducing the Lagrange multiplier $\beta \ge 0$, the Lagrangian function is:
-$$\mathcal{L}(\boldsymbol{\theta}, \beta) \triangleq - L^{\text{CPI}}(\boldsymbol{\theta}) + \beta \left( \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}}) - d_{\text{targ}} \right)$$
+$$\mathcal{L}(\theta, \beta) \triangleq - L^{\text{CPI}}(\theta) + \beta \left( \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta}) - d_{\text{targ}} \right)$$
 Negating back to maximization form:
-$$\max_{\boldsymbol{\theta}} \left[ L^{\text{CPI}}(\boldsymbol{\theta}) - \beta \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}}) \right] + \beta d_{\text{targ}}$$
-For any fixed $\beta$, the term $+\beta d_{\text{targ}}$ does not depend on $\boldsymbol{\theta}$. Thus, maximizing the Lagrangian over $\boldsymbol{\theta}$ is algebraically identical to maximizing the penalized surrogate:
-$$L^{\text{KLPEN}}(\boldsymbol{\theta}; \beta) \triangleq \hat{\mathbb{E}}_t \left[ r_t(\boldsymbol{\theta}) \hat{A}_t \right] - \beta \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}})$$
+$$\max_{\theta} \left[ L^{\text{CPI}}(\theta) - \beta \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta}) \right] + \beta d_{\text{targ}}$$
+For any fixed $\beta$, the term $+\beta d_{\text{targ}}$ does not depend on $\theta$. Thus, maximizing the Lagrangian over $\theta$ is algebraically identical to maximizing the penalized surrogate:
+$$L^{\text{KLPEN}}(\theta; \beta) \triangleq \hat{\mathbb{E}}_t \left[ r_t(\theta) \hat{A}_t \right] - \beta \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta})$$
 
 *Step 2: Dual function and subgradient.*
 The Lagrange dual function $g(\beta)$ is defined as:
-$$g(\beta) \triangleq \min_{\boldsymbol{\theta}} \mathcal{L}(\boldsymbol{\theta}, \beta) = \mathcal{L}(\boldsymbol{\theta}^*(\beta), \beta)$$
-where $\boldsymbol{\theta}^*(\beta) \triangleq \arg\max_{\boldsymbol{\theta}} L^{\text{KLPEN}}(\boldsymbol{\theta}; \beta)$.
-By Danskin's Theorem, because $\mathcal{L}(\boldsymbol{\theta}, \beta)$ is affine in $\beta$, the derivative of the dual function with respect to $\beta$ is simply the partial derivative evaluated at the optimal primal point:
-$$\frac{dg}{d\beta} = \left. \frac{\partial \mathcal{L}}{\partial \beta} \right|_{\boldsymbol{\theta}^*(\beta)} = \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}^*(\beta)}) - d_{\text{targ}} = d(\beta) - d_{\text{targ}}$$
+$$g(\beta) \triangleq \min_{\theta} \mathcal{L}(\theta, \beta) = \mathcal{L}(\theta^*(\beta), \beta)$$
+where $\theta^*(\beta) \triangleq \arg\max_{\theta} L^{\text{KLPEN}}(\theta; \beta)$.
+By Danskin's Theorem, because $\mathcal{L}(\theta, \beta)$ is affine in $\beta$, the derivative of the dual function with respect to $\beta$ is simply the partial derivative evaluated at the optimal primal point:
+$$\frac{dg}{d\beta} = \left. \frac{\partial \mathcal{L}}{\partial \beta} \right|_{\theta^*(\beta)} = \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta^*(\beta)}) - d_{\text{targ}} = d(\beta) - d_{\text{targ}}$$
 To maximize the concave dual function $g(\beta)$ over $\beta \ge 0$, standard dual gradient ascent applies the update:
 $$\beta_{k+1} = \left[ \beta_k + \alpha_{\text{dual}} (d_k - d_{\text{targ}}) \right]_+$$
 where $[x]_+ \triangleq \max(0, x)$.
@@ -477,7 +477,7 @@ Notice the sign of the dual gradient:
 *Step 3: Reparameterization in log-dual space.*
 In practice, standard additive dual gradient ascent has two fatal flaws:
 1. It requires an artificial projection $[\cdot]_+$ to prevent $\beta \le 0$. If $\beta = 0$, the penalty vanishes entirely and the policy immediately destabilizes.
-2. The divergence $d(\beta)$ scales inversely with $\beta^2$ (from the second-order Taylor expansion $d \approx \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \approx \frac{1}{2\beta^2} \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}$). An additive step size $\alpha_{\text{dual}}$ cannot maintain stable step magnitudes across different scales of $\beta$.
+2. The divergence $d(\beta)$ scales inversely with $\beta^2$ (from the second-order Taylor expansion $d \approx \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \approx \frac{1}{2\beta^2} \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}$). An additive step size $\alpha_{\text{dual}}$ cannot maintain stable step magnitudes across different scales of $\beta$.
 
 To resolve this, we reparameterize the multiplier in **logarithmic space**:
 $$\beta = \exp(\psi) \iff \psi = \ln \beta \quad \text{where } \psi \in (-\infty, \infty)$$
@@ -573,7 +573,7 @@ We will compute:
 | Symbol | Mathematical Entity | Hand Walkthrough Meaning |
 | :--- | :--- | :--- |
 | $\epsilon$ | Clipping Threshold | $\epsilon = 0.2000 \implies [0.8000, 1.2000]$ |
-| $r_t$ | Probability Ratio | $\frac{\pi_{\boldsymbol{\theta}}(a_t \mid s_t)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid s_t)}$ |
+| $r_t$ | Probability Ratio | $\frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$ |
 | $\hat{A}_t$ | Estimated Advantage | $\hat{A} > 0$ (good action), $\hat{A} < 0$ (bad action) |
 | $T_{\text{unclip}}$ | Unclipped Surrogate | $r_t \cdot \hat{A}_t$ |
 | $\tilde{r}_t$ | Clipped Ratio | $\operatorname{clip}(r_t, 1 - \epsilon, 1 + \epsilon)$ |
@@ -655,7 +655,7 @@ Every single arithmetic operation matches PyTorch execution to exact machine pre
 ### Illustration 1: Why the $\min$ Operator is Mandatory: Concrete Counterexamples and Safety Failure Analysis
 
 **Problem Statement:**
-A common question in reinforcement learning is: *Why can't we simply define the clipped surrogate objective as $\tilde{L}(\boldsymbol{\theta}) = \operatorname{clip}(r_t(\boldsymbol{\theta}), 1 - \epsilon, 1 + \epsilon) \hat{A}_t$ without the outer $\min$ operator?*
+A common question in reinforcement learning is: *Why can't we simply define the clipped surrogate objective as $\tilde{L}(\theta) = \operatorname{clip}(r_t(\theta), 1 - \epsilon, 1 + \epsilon) \hat{A}_t$ without the outer $\min$ operator?*
 Provide concrete numerical counterexamples proving that removing the outer $\min$ operator leads to two catastrophic failure modes:
 1. Complete loss of gradient signal when a catastrophic policy update dramatically worsens performance on a bad action.
 2. Complete loss of gradient signal when an update severely over-suppresses a good action.
@@ -668,16 +668,16 @@ Let the clipping threshold be $\epsilon = 0.2000$, establishing the trust interv
 Suppose an action performed very poorly during rollouts, with estimated advantage:
 $$\hat{A}_t = -10.0000$$
 During multi-epoch mini-batch training, suppose cross-sample gradient interference causes the policy to mistakenly *increase* the probability of this disastrous action, resulting in an exploded probability ratio:
-$$r_t(\boldsymbol{\theta}) = 2.0000 \quad (\text{The action became twice as likely!})$$
+$$r_t(\theta) = 2.0000 \quad (\text{The action became twice as likely!})$$
 
 Let us evaluate the candidate objectives:
 1. **Unclipped Surrogate ($T_{\text{unclip}}$):**
    $$T_{\text{unclip}} = r_t \hat{A}_t = 2.0000 \times (-10.0000) = \mathbf{-20.0000}$$
 2. **Clipped Surrogate without $\min$ ($\tilde{L}$):**
    $$\tilde{r}_t = \operatorname{clip}(2.0000, 0.8000, 1.2000) = 1.2000$$
-   $$\tilde{L}(\boldsymbol{\theta}) = \tilde{r}_t \hat{A}_t = 1.2000 \times (-10.0000) = \mathbf{-12.0000}$$
+   $$\tilde{L}(\theta) = \tilde{r}_t \hat{A}_t = 1.2000 \times (-10.0000) = \mathbf{-12.0000}$$
 3. **PPO-Clip with $\min$ ($L^{\text{CLIP}}$):**
-   $$L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \min(T_{\text{unclip}}, \tilde{L}) = \min(-20.0000, -12.0000) = \mathbf{-20.0000}$$
+   $$L_t^{\text{CLIP}}(\theta) = \min(T_{\text{unclip}}, \tilde{L}) = \min(-20.0000, -12.0000) = \mathbf{-20.0000}$$
 
 Now examine the resulting gradient signals with respect to the probability ratio $r_t$:
 - **Under naive clipping $\tilde{L}$:**
@@ -695,16 +695,16 @@ Now examine the resulting gradient signals with respect to the probability ratio
 Suppose an action was exceptionally lucrative:
 $$\hat{A}_t = +5.0000$$
 Due to off-policy parameter drift, the policy inadvertently collapses the probability of this action:
-$$r_t(\boldsymbol{\theta}) = 0.5000 \quad (\text{The action probability dropped by half!})$$
+$$r_t(\theta) = 0.5000 \quad (\text{The action probability dropped by half!})$$
 
 Let us evaluate the candidate objectives:
 1. **Unclipped Surrogate ($T_{\text{unclip}}$):**
    $$T_{\text{unclip}} = r_t \hat{A}_t = 0.5000 \times (+5.0000) = \mathbf{+2.5000}$$
 2. **Clipped Surrogate without $\min$ ($\tilde{L}$):**
    $$\tilde{r}_t = \operatorname{clip}(0.5000, 0.8000, 1.2000) = 0.8000$$
-   $$\tilde{L}(\boldsymbol{\theta}) = \tilde{r}_t \hat{A}_t = 0.8000 \times (+5.0000) = \mathbf{+4.0000}$$
+   $$\tilde{L}(\theta) = \tilde{r}_t \hat{A}_t = 0.8000 \times (+5.0000) = \mathbf{+4.0000}$$
 3. **PPO-Clip with $\min$ ($L^{\text{CLIP}}$):**
-   $$L_t^{\text{CLIP}}(\boldsymbol{\theta}) = \min(T_{\text{unclip}}, \tilde{L}) = \min(+2.5000, +4.0000) = \mathbf{+2.5000}$$
+   $$L_t^{\text{CLIP}}(\theta) = \min(T_{\text{unclip}}, \tilde{L}) = \min(+2.5000, +4.0000) = \mathbf{+2.5000}$$
 
 Examining gradients:
 - Under naive clipping $\tilde{L}$, $\tilde{r}_t = 0.8000$ is constant for all $r_t < 0.8000$, so $\frac{\partial \tilde{L}}{\partial r_t} = \mathbf{0.0000}$. The optimizer is completely blind to the fact that an outstanding action was suppressed.
@@ -815,21 +815,21 @@ Every single intermediate value matches exact analytical arithmetic and PyTorch 
 **Problem Statement:**
 Consider a mini-batch of 4 consecutive episodic transitions $t \in \{0, 1, 2, 3\}$ terminating at step $T = 4$ ($V(S_4) \triangleq 0$).
 Let the discount factor be $\gamma = 1.0000$, GAE parameter $\lambda = 0.5000$ ($\gamma \lambda = 0.5000$), clipping threshold $\epsilon = 0.2000$, critic loss coefficient $c_1 = 0.5000$, and entropy bonus coefficient $c_2 = 0.0100$.
-The recorded rollout data from reference policy $\pi_{\boldsymbol{\theta}_{\text{old}}}$ is:
+The recorded rollout data from reference policy $\pi_{\theta_{\text{old}}}$ is:
 - **Rewards:** $R_1 = 0.0000, \; R_2 = +4.0000, \; R_3 = -3.0000, \; R_4 = +1.0000$
 - **Critic Baseline Values:** $V(S_0) = 1.0000, \; V(S_1) = 2.0000, \; V(S_2) = 1.0000, \; V(S_3) = 3.0000, \; V(S_4) = 0.0000$
-- **Old Action Probabilities:** $\pi_{\boldsymbol{\theta}_{\text{old}}}(a_t \mid S_t) = [0.4000, 0.5000, 0.6000, 0.5000]$
-- **Updated Action Probabilities:** $\pi_{\boldsymbol{\theta}}(a_t \mid S_t) = [0.4400, 0.6500, 0.5400, 0.3500]$
-- **Current Critic Predictions:** $V_{\boldsymbol{\phi}}(S_t) = [1.2000, 2.3000, 0.8000, 2.8000]$
+- **Old Action Probabilities:** $\pi_{\theta_{\text{old}}}(a_t \mid S_t) = [0.4000, 0.5000, 0.6000, 0.5000]$
+- **Updated Action Probabilities:** $\pi_{\theta}(a_t \mid S_t) = [0.4400, 0.6500, 0.5400, 0.3500]$
+- **Current Critic Predictions:** $V_{\phi}(S_t) = [1.2000, 2.3000, 0.8000, 2.8000]$
 
 Execute the complete end-to-end PPO forward and backward pass:
 1. Compute 1-step TD errors $\delta_t^V = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$.
 2. Compute unnormalized GAE advantages $\hat{A}_t^{\text{GAE}(\gamma, \lambda)}$ via backward recursion.
 3. Standardize advantages across the mini-batch: $\hat{A}_t = \frac{\hat{A}_t^{\text{GAE}} - \mu_A}{\sigma_A}$.
 4. Compute critic target values: $V_t^{\text{targ}} = \hat{A}_t^{\text{GAE}} + V(S_t)$.
-5. Compute probability ratios $r_t(\boldsymbol{\theta})$ and binary clipping masks $M_t \in \{0, 1\}$.
+5. Compute probability ratios $r_t(\theta)$ and binary clipping masks $M_t \in \{0, 1\}$.
 6. Compute clipped surrogate policy loss $L_t^{\text{CLIP}}$ and batch mean $\bar{L}^{\text{CLIP}}$.
-7. Compute value function loss $L_t^{\text{VF}} = (V_{\boldsymbol{\phi}}(S_t) - V_t^{\text{targ}})^2$ and batch mean $\bar{L}^{\text{VF}}$.
+7. Compute value function loss $L_t^{\text{VF}} = (V_{\phi}(S_t) - V_t^{\text{targ}})^2$ and batch mean $\bar{L}^{\text{VF}}$.
 8. Compute policy entropy bonus $\mathcal{H}_t = - \sum_a \pi(a \mid S_t) \ln \pi(a \mid S_t)$ for binary actions and batch mean $\bar{\mathcal{H}}$.
 9. Compute total multi-task loss $\mathcal{L}^{\text{PPO}} = \bar{L}^{\text{CLIP}} - c_1 \bar{L}^{\text{VF}} + c_2 \bar{\mathcal{H}}$.
 10. Compute exact backpropagation gradients $\frac{\partial \mathcal{L}^{\text{PPO}}}{\partial r_t}$ and $\frac{\partial \mathcal{L}^{\text{PPO}}}{\partial V(S_t)}$.
@@ -894,8 +894,8 @@ Unrolling backward from terminal step $t = 3$:
 
 ---
 
-#### Step 7: Value Function Loss ($L_t^{\text{VF}} = (V_{\boldsymbol{\phi}}(S_t) - V_t^{\text{targ}})^2$)
-Given current predictions $V_{\boldsymbol{\phi}} = [1.2000, 2.3000, 0.8000, 2.8000]$ and targets $V^{\text{targ}} = [3.0, 4.0, -1.0, 1.0]$:
+#### Step 7: Value Function Loss ($L_t^{\text{VF}} = (V_{\phi}(S_t) - V_t^{\text{targ}})^2$)
+Given current predictions $V_{\phi} = [1.2000, 2.3000, 0.8000, 2.8000]$ and targets $V^{\text{targ}} = [3.0, 4.0, -1.0, 1.0]$:
 - $t = 0$: $(1.2000 - 3.0000)^2 = (-1.8000)^2 = \mathbf{3.2400}$
 - $t = 1$: $(2.3000 - 4.0000)^2 = (-1.7000)^2 = \mathbf{2.8900}$
 - $t = 2$: $(0.8000 - (-1.0000))^2 = (+1.8000)^2 = \mathbf{3.2400}$
@@ -948,9 +948,9 @@ This gives the exact backward pass computed by PyTorch autograd! $\blacksquare$
 In the Adaptive KL Penalty variant of PPO (Derivation 11.19.3), the penalty parameter $\beta$ is dynamically adjusted between policy rollout epochs based on the target KL divergence $d_{\text{targ}} = 0.0100$ and hysteresis factor $\kappa = 1.5000$.
 Let the initial penalty multiplier be $\beta_0 = 1.0000$.
 Across three consecutive training epochs, the empirical average KL divergence measurements between the old policy and the updated policy are:
-- **Epoch 0:** $d_0 = \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}_0}) = 0.0040$
-- **Epoch 1:** $d_1 = \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}_1}) = 0.0250$
-- **Epoch 2:** $d_2 = \bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}} \parallel \pi_{\boldsymbol{\theta}_2}) = 0.0090$
+- **Epoch 0:** $d_0 = \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta_0}) = 0.0040$
+- **Epoch 1:** $d_1 = \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta_1}) = 0.0250$
+- **Epoch 2:** $d_2 = \bar{D}_{\text{KL}}(\pi_{\theta_{\text{old}}} \parallel \pi_{\theta_2}) = 0.0090$
 
 Calculate the decision boundaries, state condition checks, and exact updated multiplier values $\beta_1, \beta_2, \beta_3$. Provide the engineering rationale for each adaptation.
 
@@ -1105,7 +1105,7 @@ PPO-Clip detects that the ratio crossed the safety threshold at Step 2 and freez
 ### 1. The Core of ChatGPT / RLHF (InstructGPT - Ouyang et al., NeurIPS 2022)
 In Reinforcement Learning from Human Feedback (RLHF), an LLM generates a response $y$ to prompt $x$. The reward model outputs scalar score $R(x, y)$.
 The PPO objective aligns the LLM while adding a token-level KL penalty from the base SFT model:
-$$\mathcal{L}_{\text{RLHF}}(\boldsymbol{\theta}) = \mathbb{E}_{(x, y)} \left[ r_t(\boldsymbol{\theta}) \hat{A}_t - \beta D_{\text{KL}}(\pi_{\boldsymbol{\theta}} \parallel \pi_{\text{ref}}) \right]$$
+$$\mathcal{L}_{\text{RLHF}}(\theta) = \mathbb{E}_{(x, y)} \left[ r_t(\theta) \hat{A}_t - \beta D_{\text{KL}}(\pi_{\theta} \parallel \pi_{\text{ref}}) \right]$$
 PPO-Clip ensures the LLM's token distribution does not drift into hallucination or gibberish.
 
 ### 2. DeepSeek-R1 Predecessor: PPO vs GRPO

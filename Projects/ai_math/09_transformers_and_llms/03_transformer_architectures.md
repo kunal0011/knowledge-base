@@ -161,11 +161,11 @@ Let:
 - Cross context: $\mathbf{C} = \mathbf{A} \mathbf{V} \in \mathbb{R}^{T_{\text{dec}} \times d_v}$.
 
 #### Theorem: Analytical Adjoints of Cross-Attention
-Given upstream loss gradient $\boldsymbol{\Delta}^C = \frac{\partial \mathcal{L}}{\partial \mathbf{C}} \in \mathbb{R}^{T_{\text{dec}} \times d_v}$:
+Given upstream loss gradient $\Delta^C = \frac{\partial \mathcal{L}}{\partial \mathbf{C}} \in \mathbb{R}^{T_{\text{dec}} \times d_v}$:
 
 1. **Decoder Value and Score Sensitivities:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{V}} = \mathbf{A}^T \boldsymbol{\Delta}^C \in \mathbb{R}^{T_{\text{enc}} \times d_v}$$
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{A}} = \boldsymbol{\Delta}^C \mathbf{V}^T \in \mathbb{R}^{T_{\text{dec}} \times T_{\text{enc}}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{V}} = \mathbf{A}^T \Delta^C \in \mathbb{R}^{T_{\text{enc}} \times d_v}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{A}} = \Delta^C \mathbf{V}^T \in \mathbb{R}^{T_{\text{dec}} \times T_{\text{enc}}}$$
    $$\frac{\partial \mathcal{L}}{\partial \mathbf{P}} = \mathbf{A} \odot \left( \frac{\partial \mathcal{L}}{\partial \mathbf{A}} - \left[ \left(\frac{\partial \mathcal{L}}{\partial \mathbf{A}} \odot \mathbf{A}\right) \mathbf{1}_{T_{\text{enc}}} \right] \mathbf{1}_{T_{\text{enc}}}^T \right) \in \mathbb{R}^{T_{\text{dec}} \times T_{\text{enc}}}$$
 
 2. **Decoder Query and Encoder Key Sensitivities:**
@@ -184,16 +184,16 @@ Given upstream loss gradient $\boldsymbol{\Delta}^C = \frac{\partial \mathcal{L}
 #### LayerNorm Definition
 For input $\mathbf{x} \in \mathbb{R}^d$:
 $$\mu = \frac{1}{d} \sum_{i=1}^d x_i = \frac{1}{d} \mathbf{1}^T \mathbf{x}, \quad \sigma^2 = \frac{1}{d} \sum_{i=1}^d (x_i - \mu)^2 = \frac{1}{d} \|\mathbf{x} - \mu \mathbf{1}\|_2^2$$
-$$\hat{\mathbf{x}} = \frac{\mathbf{x} - \mu \mathbf{1}}{\sqrt{\sigma^2 + \epsilon}}, \quad \mathbf{y} = \boldsymbol{\gamma} \odot \hat{\mathbf{x}} + \boldsymbol{\beta}$$
+$$\hat{\mathbf{x}} = \frac{\mathbf{x} - \mu \mathbf{1}}{\sqrt{\sigma^2 + \epsilon}}, \quad \mathbf{y} = \gamma \odot \hat{\mathbf{x}} + \beta$$
 
 #### Theorem: The Exact Matrix Jacobian of LayerNorm
 Let $\sigma = \sqrt{\sigma^2 + \epsilon}$. The Jacobian matrix $\mathbf{J}_{\text{LN}} = \frac{\partial \mathbf{y}}{\partial \mathbf{x}} \in \mathbb{R}^{d \times d}$ is:
-$$\mathbf{J}_{\text{LN}} = \frac{1}{\sigma} \operatorname{diag}(\boldsymbol{\gamma}) \left( \mathbf{I} - \frac{1}{d} \mathbf{1}\mathbf{1}^T - \frac{1}{d} \hat{\mathbf{x}} \hat{\mathbf{x}}^T \right)$$
+$$\mathbf{J}_{\text{LN}} = \frac{1}{\sigma} \operatorname{diag}(\gamma) \left( \mathbf{I} - \frac{1}{d} \mathbf{1}\mathbf{1}^T - \frac{1}{d} \hat{\mathbf{x}} \hat{\mathbf{x}}^T \right)$$
 where $\mathbf{P}_{\mathbf{1}}^\perp = \mathbf{I} - \frac{1}{d} \mathbf{1}\mathbf{1}^T$ is the centering projection matrix, and $\mathbf{P}_{\hat{\mathbf{x}}}^\perp = \mathbf{I} - \frac{1}{d} \hat{\mathbf{x}} \hat{\mathbf{x}}^T$ removes the radial scaling component.
 
 #### Proof:
 1. **Total Differential:**
-   $$d\mathbf{y} = \boldsymbol{\gamma} \odot d\hat{\mathbf{x}} = \operatorname{diag}(\boldsymbol{\gamma}) d\hat{\mathbf{x}}$$
+   $$d\mathbf{y} = \gamma \odot d\hat{\mathbf{x}} = \operatorname{diag}(\gamma) d\hat{\mathbf{x}}$$
    Differentiating the standardized vector $\hat{\mathbf{x}} = \sigma^{-1} (\mathbf{x} - \mu \mathbf{1})$:
    $$d\hat{\mathbf{x}} = \sigma^{-1} (d\mathbf{x} - d\mu \mathbf{1}) - \sigma^{-2} d\sigma (\mathbf{x} - \mu \mathbf{1}) = \frac{1}{\sigma} (d\mathbf{x} - d\mu \mathbf{1}) - \frac{d\sigma}{\sigma} \hat{\mathbf{x}}$$
 
@@ -205,7 +205,7 @@ where $\mathbf{P}_{\mathbf{1}}^\perp = \mathbf{I} - \frac{1}{d} \mathbf{1}\mathb
 
 3. **Substitution into $d\hat{\mathbf{x}}$:**
    $$d\hat{\mathbf{x}} = \frac{1}{\sigma} \left( d\mathbf{x} - \frac{1}{d} \mathbf{1}\mathbf{1}^T d\mathbf{x} \right) - \left( \frac{1}{d} \hat{\mathbf{x}}^T d\mathbf{x} \right) \hat{\mathbf{x}} = \frac{1}{\sigma} \left( \mathbf{I} - \frac{1}{d} \mathbf{1}\mathbf{1}^T - \frac{1}{d} \hat{\mathbf{x}} \hat{\mathbf{x}}^T \right) d\mathbf{x}$$
-   Multiplying by $\operatorname{diag}(\boldsymbol{\gamma})$ yields the stated Jacobian.
+   Multiplying by $\operatorname{diag}(\gamma)$ yields the stated Jacobian.
 
 #### Corollary: Why Post-LN Vanishes as $\mathcal{O}(L^{-1/2})$
 In Post-LN, $\mathbf{x}_{l+1} = \text{LN}(\mathbf{x}_l + \mathcal{F}(\mathbf{x}_l))$.
@@ -373,7 +373,7 @@ Consider the Cross-Attention step from Section 5 where a single decoder token qu
 $$\mathbf{Q} = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix}, \quad \mathbf{K} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}, \quad \mathbf{V} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix}$$
 $$\mathbf{S}_{\text{cross}} = \begin{bmatrix} 0.707107 & 1.414214 \end{bmatrix}, \quad \mathbf{A}_{\text{cross}} = \begin{bmatrix} 0.330239 & 0.669761 \end{bmatrix}, \quad \mathbf{C} = \begin{bmatrix} 0.330239 & 1.339522 \end{bmatrix}$$
 Given upstream loss sensitivity w.r.t. the extracted cross context:
-$$\boldsymbol{\delta}_C = \frac{\partial \mathcal{L}}{\partial \mathbf{C}} = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix}$$
+$$\delta_C = \frac{\partial \mathcal{L}}{\partial \mathbf{C}} = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix}$$
 1. Calculate the gradient w.r.t. encoder values $\frac{\partial \mathcal{L}}{\partial \mathbf{V}}$ and attention probabilities $\frac{\partial \mathcal{L}}{\partial \mathbf{A}_{\text{cross}}}$.
 2. Propagate through the Softmax Jacobian to compute $\frac{\partial \mathcal{L}}{\partial \mathbf{S}_{\text{cross}}}$.
 3. Evaluate the decoder query gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{Q}}$ and encoder key gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{K}}$.
@@ -383,10 +383,10 @@ $$\boldsymbol{\delta}_C = \frac{\partial \mathcal{L}}{\partial \mathbf{C}} = \be
 #### Step 1: Sensitivities for Values and Attention Weights
 
 1. **Gradient w.r.t. Encoder Values $\mathbf{V}$:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{V}} = \mathbf{A}_{\text{cross}}^T \boldsymbol{\delta}_C = \begin{bmatrix} 0.330239 \\ 0.669761 \end{bmatrix} \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.330239} & \mathbf{0.330239} \\ \mathbf{0.669761} & \mathbf{0.669761} \end{bmatrix}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{V}} = \mathbf{A}_{\text{cross}}^T \delta_C = \begin{bmatrix} 0.330239 \\ 0.669761 \end{bmatrix} \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.330239} & \mathbf{0.330239} \\ \mathbf{0.669761} & \mathbf{0.669761} \end{bmatrix}$$
 
 2. **Gradient w.r.t. Attention Weights $\mathbf{A}_{\text{cross}}$:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{A}_{\text{cross}}} = \boldsymbol{\delta}_C \mathbf{V}^T = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.000000} & \mathbf{2.000000} \end{bmatrix}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{A}_{\text{cross}}} = \delta_C \mathbf{V}^T = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix} = \begin{bmatrix} \mathbf{1.000000} & \mathbf{2.000000} \end{bmatrix}$$
 
 ---
 
@@ -420,9 +420,9 @@ The gradient backpropagates simultaneously into both the decoding step query $\m
 
 **Problem:**
 A LayerNorm module operates on a 4-dimensional hidden activation vector $\mathbf{x} = [2.0, 4.0, 6.0, 8.0]^T \in \mathbb{R}^4$.
-Assume learnable affine scale $\boldsymbol{\gamma} = [1, 1, 1, 1]^T$ and bias $\boldsymbol{\beta} = [0, 0, 0, 0]^T$ (with stability $\epsilon = 0$).
+Assume learnable affine scale $\gamma = [1, 1, 1, 1]^T$ and bias $\beta = [0, 0, 0, 0]^T$ (with stability $\epsilon = 0$).
 1. Compute the mean $\mu$, sample variance $\sigma^2$, standard deviation $\sigma$, and normalized output vector $\hat{\mathbf{x}} = \mathbf{y}$.
-2. Given upstream loss gradient $\boldsymbol{\delta}_y = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} = [1.0, 0.0, 0.0, -1.0]^T$, calculate the exact input gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{x}}$ step-by-step using the analytical LayerNorm Jacobian formula.
+2. Given upstream loss gradient $\delta_y = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} = [1.0, 0.0, 0.0, -1.0]^T$, calculate the exact input gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{x}}$ step-by-step using the analytical LayerNorm Jacobian formula.
 
 **Solution:**
 
@@ -439,28 +439,28 @@ Assume learnable affine scale $\boldsymbol{\gamma} = [1, 1, 1, 1]^T$ and bias $\
 3. **Standardized Representation $\hat{\mathbf{x}}$:**
    $$\hat{\mathbf{x}} = \frac{\mathbf{x} - \mu \mathbf{1}}{\sigma} = \begin{bmatrix} -3.0 / 2.236068 \\ -1.0 / 2.236068 \\ 1.0 / 2.236068 \\ 3.0 / 2.236068 \end{bmatrix} = \begin{bmatrix} \mathbf{-1.341641} \\ \mathbf{-0.447214} \\ \mathbf{0.447214} \\ \mathbf{1.341641} \end{bmatrix}$$
    *(Verification: $\sum \hat{x}_i = 0$, and $\sum \hat{x}_i^2 = 1.8 + 0.2 + 0.2 + 1.8 = 4.0 = d$)*.
-   Since $\boldsymbol{\gamma} = \mathbf{1}$ and $\boldsymbol{\beta} = \mathbf{0}$, $\mathbf{y} = \hat{\mathbf{x}}$.
+   Since $\gamma = \mathbf{1}$ and $\beta = \mathbf{0}$, $\mathbf{y} = \hat{\mathbf{x}}$.
 
 ---
 
 #### Step 2: Backward Sensitivity via Analytical LayerNorm Jacobian
 
 The closed-form derivative is:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}} = \frac{1}{\sigma} \left[ \boldsymbol{\delta}_y - \bar{\delta}_y \mathbf{1} - \hat{\mathbf{x}} \left( \frac{1}{d} \sum_{i=1}^d \delta_{y, i} \hat{x}_i \right) \right]$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}} = \frac{1}{\sigma} \left[ \delta_y - \bar{\delta}_y \mathbf{1} - \hat{\mathbf{x}} \left( \frac{1}{d} \sum_{i=1}^d \delta_{y, i} \hat{x}_i \right) \right]$$
 
 1. **Mean of Upstream Gradient:**
    $$\bar{\delta}_y = \frac{1}{4} (1.0 + 0.0 + 0.0 - 1.0) = \mathbf{0.0}$$
-   $$\boldsymbol{\delta}_y - \bar{\delta}_y \mathbf{1} = \begin{bmatrix} 1.0 \\ 0.0 \\ 0.0 \\ -1.0 \end{bmatrix}$$
+   $$\delta_y - \bar{\delta}_y \mathbf{1} = \begin{bmatrix} 1.0 \\ 0.0 \\ 0.0 \\ -1.0 \end{bmatrix}$$
 
 2. **Inner Product with $\hat{\mathbf{x}}$:**
-   $$\boldsymbol{\delta}_y^T \hat{\mathbf{x}} = (1.0)(-1.341641) + (0.0)(-0.447214) + (0.0)(0.447214) + (-1.0)(1.341641) = -2.683282$$
+   $$\delta_y^T \hat{\mathbf{x}} = (1.0)(-1.341641) + (0.0)(-0.447214) + (0.0)(0.447214) + (-1.0)(1.341641) = -2.683282$$
    Dividing by $d = 4$:
-   $$\frac{1}{4} \boldsymbol{\delta}_y^T \hat{\mathbf{x}} = \frac{-2.683282}{4} = \mathbf{-0.6708205}$$
+   $$\frac{1}{4} \delta_y^T \hat{\mathbf{x}} = \frac{-2.683282}{4} = \mathbf{-0.6708205}$$
 
 3. **Projection Subtraction:**
-   $$\hat{\mathbf{x}} \left( \frac{1}{d} \boldsymbol{\delta}_y^T \hat{\mathbf{x}} \right) = -0.6708205 \times \begin{bmatrix} -1.341641 \\ -0.447214 \\ 0.447214 \\ 1.341641 \end{bmatrix} = \begin{bmatrix} +0.900000 \\ +0.300000 \\ -0.300000 \\ -0.900000 \end{bmatrix}$$
+   $$\hat{\mathbf{x}} \left( \frac{1}{d} \delta_y^T \hat{\mathbf{x}} \right) = -0.6708205 \times \begin{bmatrix} -1.341641 \\ -0.447214 \\ 0.447214 \\ 1.341641 \end{bmatrix} = \begin{bmatrix} +0.900000 \\ +0.300000 \\ -0.300000 \\ -0.900000 \end{bmatrix}$$
    Subtracting from centered gradient:
-   $$\boldsymbol{\Delta} = \begin{bmatrix} 1.0 - 0.900000 \\ 0.0 - 0.300000 \\ 0.0 - (-0.300000) \\ -1.0 - (-0.900000) \end{bmatrix} = \begin{bmatrix} +0.100000 \\ -0.300000 \\ +0.300000 \\ -0.100000 \end{bmatrix}$$
+   $$\Delta = \begin{bmatrix} 1.0 - 0.900000 \\ 0.0 - 0.300000 \\ 0.0 - (-0.300000) \\ -1.0 - (-0.900000) \end{bmatrix} = \begin{bmatrix} +0.100000 \\ -0.300000 \\ +0.300000 \\ -0.100000 \end{bmatrix}$$
    *(Verification: sum is $0.1 - 0.3 + 0.3 - 0.1 = 0$)*.
 
 4. **Scaling by $\frac{1}{\sigma}$:**

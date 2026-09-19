@@ -89,7 +89,7 @@ Let on-chip SRAM capacity per Streaming Multiprocessor be $M$ bytes.
    $$B_c = \left\lceil \frac{M}{4d} \right\rceil, \quad B_r = \min\left( \left\lceil \frac{M}{4d} \right\rceil, d \right)$$
 2. Partition $Q$ into $T_r = \lceil L / B_r \rceil$ blocks: $Q_1, Q_2, \dots, Q_{T_r} \in \mathbb{R}^{B_r \times d}$.
 3. Partition $K, V$ into $T_c = \lceil L / B_c \rceil$ blocks: $K_1, \dots, K_{T_c}$ and $V_1, \dots, V_{T_c}$.
-4. Initialize running statistics in HBM: $O = \mathbf{0} \in \mathbb{R}^{L \times d}$, $m = -\boldsymbol{\infty} \in \mathbb{R}^L$, $d = \mathbf{0} \in \mathbb{R}^L$.
+4. Initialize running statistics in HBM: $O = \mathbf{0} \in \mathbb{R}^{L \times d}$, $m = -\infty \in \mathbb{R}^L$, $d = \mathbf{0} \in \mathbb{R}^L$.
 5. **Outer Loop (over KV blocks $j = 1, \dots, T_c$):**
    - Load $K_j, V_j$ from slow HBM to fast SRAM.
    - **Inner Loop (over Query blocks $i = 1, \dots, T_r$):**

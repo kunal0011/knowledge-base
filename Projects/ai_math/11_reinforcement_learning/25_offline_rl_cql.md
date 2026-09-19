@@ -180,7 +180,7 @@ Isolating $Q(s, a)$ gives the exact pointwise recursive update:
 $$Q^{k+1}(s, a) = \hat{\mathcal{B}}^\pi Q^k(s, a) - \alpha \frac{\mu(a \mid s)}{\hat{\pi}_\beta(a \mid s)}$$
 
 **Step 3: Definition of the Conservative Bellman Operator**
-Define the non-negative penalty vector $\boldsymbol{\Delta} \in \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$ with entries:
+Define the non-negative penalty vector $\Delta \in \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$ with entries:
 $$\Delta(s, a) \triangleq \alpha \frac{\mu(a \mid s)}{\hat{\pi}_\beta(a \mid s)}$$
 Since $\alpha > 0$, $\mu(a \mid s) \ge 0$, and $\hat{\pi}_\beta(a \mid s) > 0$, every component satisfies:
 $$\Delta(s, a) \ge 0 \quad \forall (s, a) \in \operatorname{supp}(d^\mathcal{D})$$
@@ -198,14 +198,14 @@ Therefore:
 $$\|\mathcal{B}_{\text{CQL}}^\pi Q_1 - \mathcal{B}_{\text{CQL}}^\pi Q_2\|_\infty \le \gamma \|Q_1 - Q_2\|_\infty$$
 Since $\gamma \in [0, 1)$, $\mathcal{B}_{\text{CQL}}^\pi$ is a strict contraction mapping on the complete metric space $(\mathbb{R}^{|\mathcal{S}||\mathcal{A}|}, \|\cdot\|_\infty)$.
 By the Banach Fixed-Point Theorem, there exists a unique fixed point $\hat{Q}^\pi$ such that:
-$$\hat{Q}^\pi = \mathcal{B}_{\text{CQL}}^\pi \hat{Q}^\pi = \mathcal{B}^\pi \hat{Q}^\pi - \boldsymbol{\Delta}$$
+$$\hat{Q}^\pi = \mathcal{B}_{\text{CQL}}^\pi \hat{Q}^\pi = \mathcal{B}^\pi \hat{Q}^\pi - \Delta$$
 
 **Step 5: Algebraic Inversion via Resolvent Operator**
 In matrix-vector notation, let $r \in \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$ denote the reward vector, and let $P^\pi \in \mathbb{R}^{(|\mathcal{S}||\mathcal{A}|) \times (|\mathcal{S}||\mathcal{A}|)}$ denote the policy transition matrix whose $((s, a), (s', a'))$ entry is given by $P(s' \mid s, a) \pi(a' \mid s')$.
 The fixed-point equation expands to:
-$$\hat{Q}^\pi = r + \gamma P^\pi \hat{Q}^\pi - \boldsymbol{\Delta}$$
+$$\hat{Q}^\pi = r + \gamma P^\pi \hat{Q}^\pi - \Delta$$
 Subtract $\gamma P^\pi \hat{Q}^\pi$ from both sides:
-$$(I - \gamma P^\pi) \hat{Q}^\pi = r - \boldsymbol{\Delta}$$
+$$(I - \gamma P^\pi) \hat{Q}^\pi = r - \Delta$$
 Because $P^\pi$ is a row-stochastic probability matrix, its spectral radius satisfies $\rho(P^\pi) = 1$. Since $\gamma \in [0, 1)$, the spectral radius of $\gamma P^\pi$ satisfies:
 $$\rho(\gamma P^\pi) = \gamma \rho(P^\pi) = \gamma < 1$$
 Consequently, the matrix $(I - \gamma P^\pi)$ is strictly invertible, and its inverse is given by the uniformly convergent Neumann series:
@@ -220,34 +220,34 @@ $$\left[ (I - \gamma P^\pi)^{-1} \right]_{(s, a), (s', a')} = \sum_{t=0}^\infty 
 Hence, $(I - \gamma P^\pi)^{-1} \ge \mathbf{0}$ elementwise.
 
 **Step 7: Proving Pointwise Underestimation in the Asymptotic Regime**
-Premultiplying $(I - \gamma P^\pi) \hat{Q}^\pi = r - \boldsymbol{\Delta}$ by $(I - \gamma P^\pi)^{-1}$:
-$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} (r - \boldsymbol{\Delta})$$
+Premultiplying $(I - \gamma P^\pi) \hat{Q}^\pi = r - \Delta$ by $(I - \gamma P^\pi)^{-1}$:
+$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} (r - \Delta)$$
 By linearity of matrix algebra:
-$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} r - (I - \gamma P^\pi)^{-1} \boldsymbol{\Delta}$$
+$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} r - (I - \gamma P^\pi)^{-1} \Delta$$
 Recall that the true action-value function $Q^\pi$ satisfies the Bellman equation $Q^\pi = r + \gamma P^\pi Q^\pi$, which yields:
 $$Q^\pi = (I - \gamma P^\pi)^{-1} r$$
 Substitute $Q^\pi$ into the expression for $\hat{Q}^\pi$:
-$$\hat{Q}^\pi = Q^\pi - (I - \gamma P^\pi)^{-1} \boldsymbol{\Delta}$$
+$$\hat{Q}^\pi = Q^\pi - (I - \gamma P^\pi)^{-1} \Delta$$
 Rearranging to compute the pointwise discrepancy:
-$$Q^\pi - \hat{Q}^\pi = (I - \gamma P^\pi)^{-1} \boldsymbol{\Delta} = \sum_{t=0}^\infty \gamma^t (P^\pi)^t \boldsymbol{\Delta}$$
-Because $\boldsymbol{\Delta} \ge \mathbf{0}$ elementwise and $(I - \gamma P^\pi)^{-1} \ge \mathbf{0}$ elementwise, the product is an elementwise non-negative vector:
-$$(I - \gamma P^\pi)^{-1} \boldsymbol{\Delta} \ge \mathbf{0}$$
+$$Q^\pi - \hat{Q}^\pi = (I - \gamma P^\pi)^{-1} \Delta = \sum_{t=0}^\infty \gamma^t (P^\pi)^t \Delta$$
+Because $\Delta \ge \mathbf{0}$ elementwise and $(I - \gamma P^\pi)^{-1} \ge \mathbf{0}$ elementwise, the product is an elementwise non-negative vector:
+$$(I - \gamma P^\pi)^{-1} \Delta \ge \mathbf{0}$$
 Therefore:
 $$Q^\pi(s, a) - \hat{Q}^\pi(s, a) \ge 0 \implies \hat{Q}^\pi(s, a) \le Q^\pi(s, a) \quad \forall (s, a) \in \operatorname{supp}(d^\mathcal{D})$$
 This proves exact pointwise underestimation in the asymptotic data regime.
 
 **Step 8: Accounting for Finite-Sample Estimation Errors**
-In practice, policy evaluation is performed with the empirical Bellman operator $\hat{\mathcal{B}}^\pi$. Define the empirical sampling error vector $\boldsymbol{\epsilon} \in \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$ with entries:
+In practice, policy evaluation is performed with the empirical Bellman operator $\hat{\mathcal{B}}^\pi$. Define the empirical sampling error vector $\epsilon \in \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}$ with entries:
 $$\epsilon(s, a) \triangleq \hat{\mathcal{B}}^\pi \hat{Q}^\pi(s, a) - \mathcal{B}^\pi \hat{Q}^\pi(s, a)$$
 The empirical fixed-point equation is:
-$$\hat{Q}^\pi = \hat{\mathcal{B}}^\pi \hat{Q}^\pi - \boldsymbol{\Delta} = \mathcal{B}^\pi \hat{Q}^\pi + \boldsymbol{\epsilon} - \boldsymbol{\Delta} = r + \gamma P^\pi \hat{Q}^\pi + \boldsymbol{\epsilon} - \boldsymbol{\Delta}$$
+$$\hat{Q}^\pi = \hat{\mathcal{B}}^\pi \hat{Q}^\pi - \Delta = \mathcal{B}^\pi \hat{Q}^\pi + \epsilon - \Delta = r + \gamma P^\pi \hat{Q}^\pi + \epsilon - \Delta$$
 Rearranging:
-$$(I - \gamma P^\pi) \hat{Q}^\pi = r + (\boldsymbol{\epsilon} - \boldsymbol{\Delta})$$
+$$(I - \gamma P^\pi) \hat{Q}^\pi = r + (\epsilon - \Delta)$$
 Multiplying by the non-negative resolvent $(I - \gamma P^\pi)^{-1}$:
-$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} r + (I - \gamma P^\pi)^{-1} (\boldsymbol{\epsilon} - \boldsymbol{\Delta}) = Q^\pi - (I - \gamma P^\pi)^{-1} (\boldsymbol{\Delta} - \boldsymbol{\epsilon})$$
+$$\hat{Q}^\pi = (I - \gamma P^\pi)^{-1} r + (I - \gamma P^\pi)^{-1} (\epsilon - \Delta) = Q^\pi - (I - \gamma P^\pi)^{-1} (\Delta - \epsilon)$$
 Therefore:
-$$Q^\pi - \hat{Q}^\pi = (I - \gamma P^\pi)^{-1} (\boldsymbol{\Delta} - \boldsymbol{\epsilon})$$
-Since $(I - \gamma P^\pi)^{-1} \ge \mathbf{0}$ elementwise, a sufficient and necessary condition for $Q^\pi - \hat{Q}^\pi \ge \mathbf{0}$ elementwise is that every coordinate of $(\boldsymbol{\Delta} - \boldsymbol{\epsilon})$ remains non-negative:
+$$Q^\pi - \hat{Q}^\pi = (I - \gamma P^\pi)^{-1} (\Delta - \epsilon)$$
+Since $(I - \gamma P^\pi)^{-1} \ge \mathbf{0}$ elementwise, a sufficient and necessary condition for $Q^\pi - \hat{Q}^\pi \ge \mathbf{0}$ elementwise is that every coordinate of $(\Delta - \epsilon)$ remains non-negative:
 $$\Delta(s, a) - \epsilon(s, a) \ge 0 \iff \Delta(s, a) \ge \epsilon(s, a) \quad \forall (s, a)$$
 By Assumption 4, with probability at least $1 - \delta$:
 $$\epsilon(s, a) \le |\epsilon(s, a)| \le \frac{C_{\delta}}{\sqrt{|\mathcal{D}(s, a)|}}$$
@@ -415,18 +415,18 @@ where $\mathcal{H}(\mu(\cdot \mid s)) \triangleq - \sum_{a \in \mathcal{A}} \mu(
 
 ##### Part 2: Explicit Assumptions & Regularity Conditions
 1. **Finite Discrete Action Space:** The action space $\mathcal{A}$ has finite cardinality $|\mathcal{A}| < \infty$.
-2. **Probability Simplex Constraints:** The inner optimization variable $\boldsymbol{\mu} \in \mathbb{R}^{|\mathcal{A}|}$ is constrained to the compact, convex set $\Delta^{|\mathcal{A}| - 1}$ defined by:
-   - Equality constraint: $g_0(\boldsymbol{\mu}) = \sum_{a \in \mathcal{A}} \mu(a) - 1 = 0$
-   - Inequality constraints: $g_a(\boldsymbol{\mu}) = -\mu(a) \le 0$ for each $a \in \mathcal{A}$.
+2. **Probability Simplex Constraints:** The inner optimization variable $\mu \in \mathbb{R}^{|\mathcal{A}|}$ is constrained to the compact, convex set $\Delta^{|\mathcal{A}| - 1}$ defined by:
+   - Equality constraint: $g_0(\mu) = \sum_{a \in \mathcal{A}} \mu(a) - 1 = 0$
+   - Inequality constraints: $g_a(\mu) = -\mu(a) \le 0$ for each $a \in \mathcal{A}$.
 3. **Finiteness of Q-Values:** For every state-action pair, $|Q(s, a)| < \infty$. This ensures that the partition function $Z(s) \triangleq \sum_{a \in \mathcal{A}} \exp(Q(s, a))$ satisfies $0 < Z(s) < \infty$, preventing singularities in the logarithm.
-4. **Strict Concavity of the Entropy Regularizer:** The Shannon entropy $\mathcal{H}(\boldsymbol{\mu}) = -\sum_a \mu(a) \ln \mu(a)$ is strictly concave on $\Delta^{|\mathcal{A}| - 1}$ (its Hessian is negative definite: $\nabla^2 \mathcal{H}(\boldsymbol{\mu}) = -\operatorname{diag}(1/\mu(a)) \prec 0$). Therefore, the inner maximization admits a **unique global maximum**.
+4. **Strict Concavity of the Entropy Regularizer:** The Shannon entropy $\mathcal{H}(\mu) = -\sum_a \mu(a) \ln \mu(a)$ is strictly concave on $\Delta^{|\mathcal{A}| - 1}$ (its Hessian is negative definite: $\nabla^2 \mathcal{H}(\mu) = -\operatorname{diag}(1/\mu(a)) \prec 0$). Therefore, the inner maximization admits a **unique global maximum**.
 
 ##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
 This derivation reveals that CQL's Log-Sum-Exp regularizer is not an ad-hoc heuristic; it is the exact **Legendre-Fenchel conjugate** of the negative Shannon entropy!
 
-In convex analysis, the Fenchel conjugate of a convex function $f(\boldsymbol{\mu}) = \sum_a \mu(a) \ln \mu(a)$ (the negative entropy) is defined as:
-$$f^*(\boldsymbol{q}) = \sup_{\boldsymbol{\mu} \in \Delta} \left\{ \boldsymbol{q}^T \boldsymbol{\mu} - f(\boldsymbol{\mu}) \right\}$$
-Solving this conjugate optimization yields the cumulant-generating function $f^*(\boldsymbol{q}) = \ln \sum_a \exp(q_a)$.
+In convex analysis, the Fenchel conjugate of a convex function $f(\mu) = \sum_a \mu(a) \ln \mu(a)$ (the negative entropy) is defined as:
+$$f^*(\mathbf{q}) = \sup_{\mu \in \Delta} \left\{ \mathbf{q}^T \mu - f(\mu) \right\}$$
+Solving this conjugate optimization yields the cumulant-generating function $f^*(\mathbf{q}) = \ln \sum_a \exp(q_a)$.
 
 **Physical Interpretation (Statistical Mechanics & Free Energy):**
 In thermodynamics, a physical system at temperature $T = 1$ subject to energy levels $-Q(s, a)$ seeks to minimize its Helmholtz free energy:
@@ -439,14 +439,14 @@ By penalizing $\ln \sum_a \exp(Q(s, a))$, CQL is penalizing the total partition 
 
 **Step 1: Formulating the Inner Maximization Problem**
 Fix an arbitrary state $s \in \mathcal{S}$. Let $q_a \triangleq Q(s, a)$ for each $a \in \mathcal{A}$. The state-wise inner optimization problem is:
-$$\max_{\boldsymbol{\mu}} \Phi(\boldsymbol{\mu}) \triangleq \sum_{a \in \mathcal{A}} \mu(a) q_a - \sum_{a \in \mathcal{A}} \mu(a) \ln \mu(a)$$
+$$\max_{\mu} \Phi(\mu) \triangleq \sum_{a \in \mathcal{A}} \mu(a) q_a - \sum_{a \in \mathcal{A}} \mu(a) \ln \mu(a)$$
 subject to:
 $$\sum_{a \in \mathcal{A}} \mu(a) = 1$$
 $$\mu(a) \ge 0 \quad \forall a \in \mathcal{A}$$
 
 **Step 2: Constructing the Lagrangian Function**
-Introduce a Lagrange multiplier $\nu \in \mathbb{R}$ for the equality constraint and multipliers $\lambda_a \ge 0$ for the non-negativity inequality constraints. The Lagrangian function $\mathcal{L}(\boldsymbol{\mu}, \nu, \boldsymbol{\lambda})$ is:
-$$\mathcal{L}(\boldsymbol{\mu}, \nu, \boldsymbol{\lambda}) = \sum_{a \in \mathcal{A}} \mu(a) q_a - \sum_{a \in \mathcal{A}} \mu(a) \ln \mu(a) - \nu \left( \sum_{a \in \mathcal{A}} \mu(a) - 1 \right) + \sum_{a \in \mathcal{A}} \lambda_a \mu(a)$$
+Introduce a Lagrange multiplier $\nu \in \mathbb{R}$ for the equality constraint and multipliers $\lambda_a \ge 0$ for the non-negativity inequality constraints. The Lagrangian function $\mathcal{L}(\mu, \nu, \lambda)$ is:
+$$\mathcal{L}(\mu, \nu, \lambda) = \sum_{a \in \mathcal{A}} \mu(a) q_a - \sum_{a \in \mathcal{A}} \mu(a) \ln \mu(a) - \nu \left( \sum_{a \in \mathcal{A}} \mu(a) - 1 \right) + \sum_{a \in \mathcal{A}} \lambda_a \mu(a)$$
 
 **Step 3: Differentiating the Lagrangian (First-Order KKT Stationarity)**
 Compute the partial derivative of $\mathcal{L}$ with respect to the coordinate $\mu(a)$:
@@ -463,7 +463,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mu(a)} = q_a - \ln \mu(a) - 1 - \nu + \l
 **Step 4: Strict Positivity and Inactivity of Boundary Constraints**
 Examine the boundary behavior as $\mu(a) \to 0^+$:
 $$\lim_{\mu(a) \to 0^+} \frac{\partial \Phi}{\partial \mu(a)} = \lim_{\mu(a) \to 0^+} (q_a - 1 - \ln \mu(a)) = +\infty$$
-Because the derivative approaches $+\infty$ at the boundary $\mu(a) = 0$, the objective $\Phi(\boldsymbol{\mu})$ increases strictly when moving into the interior of the simplex. Therefore, the optimal solution $\mu^*(a)$ must lie strictly in the interior:
+Because the derivative approaches $+\infty$ at the boundary $\mu(a) = 0$, the objective $\Phi(\mu)$ increases strictly when moving into the interior of the simplex. Therefore, the optimal solution $\mu^*(a)$ must lie strictly in the interior:
 $$\mu^*(a) > 0 \quad \forall a \in \mathcal{A}$$
 By the Karush-Kuhn-Tucker complementary slackness condition:
 $$\lambda_a \mu^*(a) = 0 \quad \text{with } \lambda_a \ge 0$$
@@ -491,7 +491,7 @@ Reinserting $q_a = Q(s, a)$, we have proven that the adversarial policy is preci
 $$\mu^*(a \mid s) = \frac{\exp(Q(s, a))}{\sum_{b \in \mathcal{A}} \exp(Q(s, b))} = \operatorname{softmax}(Q(s, \cdot))_a$$
 
 **Step 7: Substituting $\mu^*$ Back into the Primal Objective**
-Now substitute $\mu^*(a)$ into the objective $\Phi(\boldsymbol{\mu})$ to evaluate its maximum value $\Phi^*$:
+Now substitute $\mu^*(a)$ into the objective $\Phi(\mu)$ to evaluate its maximum value $\Phi^*$:
 $$\Phi^* = \sum_{a \in \mathcal{A}} \mu^*(a) q_a - \sum_{a \in \mathcal{A}} \mu^*(a) \ln \mu^*(a)$$
 From Step 5, we have the identity:
 $$\ln \mu^*(a) = q_a - \ln \left( \sum_{b \in \mathcal{A}} \exp(q_b) \right)$$

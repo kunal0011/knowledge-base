@@ -5,17 +5,17 @@
 ## 1. Intuition & 101 Motivation
 
 In standard policy gradient methods (REINFORCE, A2C), parameters are updated along the direction of steepest ascent in flat Euclidean parameter space:
-$$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \alpha \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+$$\theta_{t+1} = \theta_t + \alpha \nabla_{\theta} J(\theta)$$
 
 This update is the solution to a constrained optimization problem bounded by Euclidean distance:
-$$\max_{\Delta \boldsymbol{\theta}} \nabla_{\boldsymbol{\theta}} J^\top \Delta \boldsymbol{\theta} \quad \text{subject to} \quad \|\Delta \boldsymbol{\theta}\|_2^2 \le \epsilon$$
+$$\max_{\Delta \theta} \nabla_{\theta} J^\top \Delta \theta \quad \text{subject to} \quad \|\Delta \theta\|_2^2 \le \epsilon$$
 
-However, measuring step size in Euclidean parameter space $\|\Delta \boldsymbol{\theta}\|_2$ is fundamentally flawed:
+However, measuring step size in Euclidean parameter space $\|\Delta \theta\|_2$ is fundamentally flawed:
 1. **Parameter Coordinates are Arbitrary:** Changing the units of a neural network's weights or re-parameterizing a layer (e.g., using log-variance instead of standard deviation) changes the Euclidean norm without altering the underlying policy at all!
-2. **The "Cliff of Catastrophic Forgetting":** In probability distribution space, a tiny parameter change $\|\Delta \boldsymbol{\theta}\|_2 = 0.01$ might alter action probabilities by a minuscule $0.1\%$ in flat regions, but could alter action probabilities by $50\%$ in saturated regions, causing policy collapse.
+2. **The "Cliff of Catastrophic Forgetting":** In probability distribution space, a tiny parameter change $\|\Delta \theta\|_2 = 0.01$ might alter action probabilities by a minuscule $0.1\%$ in flat regions, but could alter action probabilities by $50\%$ in saturated regions, causing policy collapse.
 
-**Natural Policy Gradient (Kakade, 2002)** replaces the arbitrary Euclidean metric with **Information Geometry** (Amari, 1998). Instead of constraining parameter distance $\|\Delta \boldsymbol{\theta}\|_2^2$, it constrains the **Kullback-Leibler (KL) divergence** between the old and new policies:
-$$D_{\text{KL}}(\pi_{\boldsymbol{\theta}} \parallel \pi_{\boldsymbol{\theta} + \Delta \boldsymbol{\theta}}) \le \epsilon$$
+**Natural Policy Gradient (Kakade, 2002)** replaces the arbitrary Euclidean metric with **Information Geometry** (Amari, 1998). Instead of constraining parameter distance $\|\Delta \theta\|_2^2$, it constrains the **Kullback-Leibler (KL) divergence** between the old and new policies:
+$$D_{\text{KL}}(\pi_{\theta} \parallel \pi_{\theta + \Delta \theta}) \le \epsilon$$
 
 The natural gradient moves along the **Riemannian manifold of probability distributions**, where the metric tensor is the **Fisher Information Matrix (FIM)**.
 
@@ -39,74 +39,74 @@ The natural gradient moves along the **Riemannian manifold of probability distri
 
 ### 2.1 Second-Order Taylor Expansion of KL Divergence
 
-Let $\pi_{\boldsymbol{\theta}}(a \mid s)$ be a parameterized policy.
-The expected KL divergence between $\pi_{\boldsymbol{\theta}}$ and $\pi_{\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}}$ across state visitation distribution $d^\pi(s)$ is:
-$$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim d^\pi} \left[ D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}}(\cdot \mid s)) \right]$$
+Let $\pi_{\theta}(a \mid s)$ be a parameterized policy.
+The expected KL divergence between $\pi_{\theta}$ and $\pi_{\theta + \mathbf{d}\theta}$ across state visitation distribution $d^\pi(s)$ is:
+$$\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta) \triangleq \mathbb{E}_{s \sim d^\pi} \left[ D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta + \mathbf{d}\theta}(\cdot \mid s)) \right]$$
 
-Perform a Taylor expansion of $\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta})$ about $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$:
+Perform a Taylor expansion of $\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta)$ about $\mathbf{d}\theta = \mathbf{0}$:
 1. **Zeroth-order term:**
-   $$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}) = 0$$
+   $$\bar{D}_{\text{KL}}(\theta \parallel \theta) = 0$$
 2. **First-order term:**
-   Because $\bar{D}_{\text{KL}} \ge 0$ for all distributions, $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$ is a global minimum. Thus, the first derivative vanishes:
-   $$\left. \nabla_{\mathbf{d}\boldsymbol{\theta}} \bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}) \right|_{\mathbf{d}\boldsymbol{\theta} = \mathbf{0}} = \mathbf{0}$$
+   Because $\bar{D}_{\text{KL}} \ge 0$ for all distributions, $\mathbf{d}\theta = \mathbf{0}$ is a global minimum. Thus, the first derivative vanishes:
+   $$\left. \nabla_{\mathbf{d}\theta} \bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta) \right|_{\mathbf{d}\theta = \mathbf{0}} = \mathbf{0}$$
 3. **Second-order term (Hessian):**
-   The Hessian of the KL divergence at $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$ is the **Fisher Information Matrix** $\mathbf{F}(\boldsymbol{\theta})$:
+   The Hessian of the KL divergence at $\mathbf{d}\theta = \mathbf{0}$ is the **Fisher Information Matrix** $\mathbf{F}(\theta)$:
 
-$$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}) = \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
+$$\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta) = \frac{1}{2} \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
 
 ---
 
 ### 2.2 The Fisher Information Matrix (FIM)
 
 #### Definition:
-$$\mathbf{F}(\boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right]$$
+$$\mathbf{F}(\theta) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right]$$
 
 Equivalently, by the information equality (under mild regularity conditions):
-$$\mathbf{F}(\boldsymbol{\theta}) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ - \nabla_{\boldsymbol{\theta}}^2 \log \pi_{\boldsymbol{\theta}}(a \mid s) \right]$$
+$$\mathbf{F}(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ - \nabla_{\theta}^2 \log \pi_{\theta}(a \mid s) \right]$$
 
 #### Mathematical Properties of $\mathbf{F}$:
-1. $\mathbf{F}(\boldsymbol{\theta}) \in \mathbb{R}^{d \times d}$ is **symmetric** and **positive semi-definite** ($\mathbf{x}^\top \mathbf{F} \mathbf{x} \ge 0$).
+1. $\mathbf{F}(\theta) \in \mathbb{R}^{d \times d}$ is **symmetric** and **positive semi-definite** ($\mathbf{x}^\top \mathbf{F} \mathbf{x} \ge 0$).
 2. It acts as the **Riemannian Metric Tensor** on the statistical manifold of policies.
 3. It defines the local distance metric in distribution space:
-   $$ds^2 = \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta}$$
+   $$ds^2 = \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta$$
 
 ---
 
 ### 2.3 The Constrained Optimization Problem
 
-The Natural Policy Gradient seeks the step $\Delta \boldsymbol{\theta}$ that maximizes expected return subject to a strict bound on policy divergence:
+The Natural Policy Gradient seeks the step $\Delta \theta$ that maximizes expected return subject to a strict bound on policy divergence:
 
-$$\max_{\Delta \boldsymbol{\theta}} \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})^\top \Delta \boldsymbol{\theta} \quad \text{subject to} \quad \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \Delta \boldsymbol{\theta} \le \epsilon$$
-where $\mathbf{g} \triangleq \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ is the standard vanilla policy gradient.
+$$\max_{\Delta \theta} \nabla_{\theta} J(\theta)^\top \Delta \theta \quad \text{subject to} \quad \frac{1}{2} \Delta \theta^\top \mathbf{F}(\theta) \Delta \theta \le \epsilon$$
+where $\mathbf{g} \triangleq \nabla_{\theta} J(\theta)$ is the standard vanilla policy gradient.
 
 #### Derivation via Lagrangian Duality:
 Form the Lagrangian with dual multiplier $\lambda \ge 0$:
-$$\mathcal{L}(\Delta \boldsymbol{\theta}, \lambda) = \mathbf{g}^\top \Delta \boldsymbol{\theta} - \lambda \left( \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} - \epsilon \right)$$
+$$\mathcal{L}(\Delta \theta, \lambda) = \mathbf{g}^\top \Delta \theta - \lambda \left( \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta - \epsilon \right)$$
 
-Set the derivative with respect to $\Delta \boldsymbol{\theta}$ to zero:
-$$\nabla_{\Delta \boldsymbol{\theta}} \mathcal{L} = \mathbf{g} - \lambda \mathbf{F} \Delta \boldsymbol{\theta} = \mathbf{0}$$
-$$\mathbf{F} \Delta \boldsymbol{\theta} = \frac{1}{\lambda} \mathbf{g} \implies \Delta \boldsymbol{\theta}^* = \frac{1}{\lambda} \mathbf{F}^{-1} \mathbf{g}$$
+Set the derivative with respect to $\Delta \theta$ to zero:
+$$\nabla_{\Delta \theta} \mathcal{L} = \mathbf{g} - \lambda \mathbf{F} \Delta \theta = \mathbf{0}$$
+$$\mathbf{F} \Delta \theta = \frac{1}{\lambda} \mathbf{g} \implies \Delta \theta^* = \frac{1}{\lambda} \mathbf{F}^{-1} \mathbf{g}$$
 
-Substitute $\Delta \boldsymbol{\theta}^*$ into the boundary constraint $\frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} = \epsilon$:
+Substitute $\Delta \theta^*$ into the boundary constraint $\frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta = \epsilon$:
 $$\frac{1}{2} \left( \frac{1}{\lambda} \mathbf{F}^{-1} \mathbf{g} \right)^\top \mathbf{F} \left( \frac{1}{\lambda} \mathbf{F}^{-1} \mathbf{g} \right) = \epsilon$$
 $$\frac{1}{2 \lambda^2} \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{F} \mathbf{F}^{-1} \mathbf{g} = \epsilon \implies \frac{1}{2 \lambda^2} \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g} = \epsilon$$
 $$\lambda^* = \sqrt{\frac{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}{2 \epsilon}}$$
 
 Substitute $\lambda^*$ back into the optimal step:
-$$\Delta \boldsymbol{\theta}^* = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g}$$
+$$\Delta \theta^* = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g}$$
 
 #### The Natural Gradient Direction:
-$$\tilde{\mathbf{g}} \triangleq \mathbf{F}(\boldsymbol{\theta})^{-1} \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+$$\tilde{\mathbf{g}} \triangleq \mathbf{F}(\theta)^{-1} \nabla_{\theta} J(\theta)$$
 The Natural Policy Gradient update step scales $\tilde{\mathbf{g}}$ to exactly satisfy the trust region $\epsilon$:
-$$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g}$$
+$$\theta_{t+1} = \theta_t + \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g}$$
 
 ---
 
 ### 2.4 Theorem: Invariance to Re-Parameterization (Kakade, 2002)
 
-Let $\boldsymbol{\psi} = f(\boldsymbol{\theta})$ be an arbitrary smooth, invertible change of coordinates.
-Then the natural policy gradient update in $\boldsymbol{\psi}$-space produces the **exact same change in probability distributions** as the natural policy gradient update in $\boldsymbol{\theta}$-space:
-$$\pi_{\boldsymbol{\theta} + \Delta \boldsymbol{\theta}}(a \mid s) = \pi_{\boldsymbol{\psi} + \Delta \boldsymbol{\psi}}(a \mid s) + \mathcal{O}(\epsilon^2)$$
+Let $\psi = f(\theta)$ be an arbitrary smooth, invertible change of coordinates.
+Then the natural policy gradient update in $\psi$-space produces the **exact same change in probability distributions** as the natural policy gradient update in $\theta$-space:
+$$\pi_{\theta + \Delta \theta}(a \mid s) = \pi_{\psi + \Delta \psi}(a \mid s) + \mathcal{O}(\epsilon^2)$$
 The natural gradient is a **geometric invariant** of the manifold, completely independent of how the neural network weights are parameterized!
 
 ---
@@ -132,140 +132,140 @@ Prove from first principles that:
 #### Derivation 11.17.1: Fisher Information Matrix as the Hessian of KL Divergence
 
 ##### Part 1: Problem Statement & Mathematical Goal
-Let $\mathcal{S}$ be the state space, $\mathcal{A}$ be the action space, and let $\pi_{\boldsymbol{\theta}}(a \mid s)$ be a policy parameterized by $\boldsymbol{\theta} \in \mathbb{R}^d$.
-For a fixed state $s \in \mathcal{S}$ and candidate parameter vectors $\boldsymbol{\theta}, \boldsymbol{\theta}' \in \mathbb{R}^d$, the Kullback-Leibler (KL) divergence from $\pi_{\boldsymbol{\theta}}(\cdot \mid s)$ to $\pi_{\boldsymbol{\theta}'}(\cdot \mid s)$ is defined as:
-$$D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \triangleq \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \left( \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \right)$$
-For continuous action spaces, the summation is replaced by an integral $\int_{\mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \, da$.
-Let $d^\pi(s)$ denote the stationary state visitation distribution under policy $\pi_{\boldsymbol{\theta}}$. The expected (state-averaged) KL divergence is:
-$$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}') \triangleq \mathbb{E}_{s \sim d^\pi}\left[ D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right]$$
-The Fisher Information Matrix (FIM) $\mathbf{F}(\boldsymbol{\theta}) \in \mathbb{R}^{d \times d}$ is defined as the expected outer product of score functions:
-$$\mathbf{F}(\boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right]$$
+Let $\mathcal{S}$ be the state space, $\mathcal{A}$ be the action space, and let $\pi_{\theta}(a \mid s)$ be a policy parameterized by $\theta \in \mathbb{R}^d$.
+For a fixed state $s \in \mathcal{S}$ and candidate parameter vectors $\theta, \theta' \in \mathbb{R}^d$, the Kullback-Leibler (KL) divergence from $\pi_{\theta}(\cdot \mid s)$ to $\pi_{\theta'}(\cdot \mid s)$ is defined as:
+$$D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \triangleq \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \left( \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta'}(a \mid s)} \right)$$
+For continuous action spaces, the summation is replaced by an integral $\int_{\mathcal{A}} \pi_{\theta}(a \mid s) \log \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta'}(a \mid s)} \, da$.
+Let $d^\pi(s)$ denote the stationary state visitation distribution under policy $\pi_{\theta}$. The expected (state-averaged) KL divergence is:
+$$\bar{D}_{\text{KL}}(\theta \parallel \theta') \triangleq \mathbb{E}_{s \sim d^\pi}\left[ D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right]$$
+The Fisher Information Matrix (FIM) $\mathbf{F}(\theta) \in \mathbb{R}^{d \times d}$ is defined as the expected outer product of score functions:
+$$\mathbf{F}(\theta) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right]$$
 
 **Mathematical Goals:**
-1. Prove that the zeroth-order divergence vanishes: $\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}) = 0$.
-2. Prove that the first-order gradient of $\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}')$ with respect to $\boldsymbol{\theta}'$, evaluated at $\boldsymbol{\theta}' = \boldsymbol{\theta}$, is identically zero:
-   $$\left. \nabla_{\boldsymbol{\theta}'} \bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}') \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \mathbf{0}$$
-3. Prove that the second-order derivative (Hessian matrix) with respect to $\boldsymbol{\theta}'$, evaluated at $\boldsymbol{\theta}' = \boldsymbol{\theta}$, is exactly the Fisher Information Matrix:
-   $$\left. \nabla_{\boldsymbol{\theta}'}^2 \bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}') \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \mathbf{F}(\boldsymbol{\theta})$$
+1. Prove that the zeroth-order divergence vanishes: $\bar{D}_{\text{KL}}(\theta \parallel \theta) = 0$.
+2. Prove that the first-order gradient of $\bar{D}_{\text{KL}}(\theta \parallel \theta')$ with respect to $\theta'$, evaluated at $\theta' = \theta$, is identically zero:
+   $$\left. \nabla_{\theta'} \bar{D}_{\text{KL}}(\theta \parallel \theta') \right|_{\theta' = \theta} = \mathbf{0}$$
+3. Prove that the second-order derivative (Hessian matrix) with respect to $\theta'$, evaluated at $\theta' = \theta$, is exactly the Fisher Information Matrix:
+   $$\left. \nabla_{\theta'}^2 \bar{D}_{\text{KL}}(\theta \parallel \theta') \right|_{\theta' = \theta} = \mathbf{F}(\theta)$$
 4. Prove the Information Equality connecting the outer product of score functions to the negative expected Hessian of the log-likelihood:
-   $$\mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right] = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ -\nabla_{\boldsymbol{\theta}}^2 \log \pi_{\boldsymbol{\theta}}(a \mid s) \right]$$
-5. Prove that the second-order Taylor series expansion of $\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta})$ about $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$ is:
-   $$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}) = \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
-6. Prove that the reverse KL divergence $\bar{D}_{\text{KL}}(\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta} \parallel \boldsymbol{\theta})$ possesses the exact same Hessian and second-order Taylor expansion at $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$.
+   $$\mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right] = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ -\nabla_{\theta}^2 \log \pi_{\theta}(a \mid s) \right]$$
+5. Prove that the second-order Taylor series expansion of $\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta)$ about $\mathbf{d}\theta = \mathbf{0}$ is:
+   $$\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta) = \frac{1}{2} \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
+6. Prove that the reverse KL divergence $\bar{D}_{\text{KL}}(\theta + \mathbf{d}\theta \parallel \theta)$ possesses the exact same Hessian and second-order Taylor expansion at $\mathbf{d}\theta = \mathbf{0}$.
 
 ##### Part 2: Explicit Assumptions & Regularity Conditions
-1. **Common Support:** For all parameter values $\boldsymbol{\theta}, \boldsymbol{\theta}' \in \Theta$, the support of the policy $\operatorname{supp}(\pi_{\boldsymbol{\theta}}(\cdot \mid s)) = \{a \in \mathcal{A} : \pi_{\boldsymbol{\theta}}(a \mid s) > 0\}$ is identical and strictly independent of $\boldsymbol{\theta}$. This ensures $\log \pi_{\boldsymbol{\theta}'}(a \mid s)$ is finite and continuously defined almost everywhere.
-2. **Smoothness and Differentiability:** For every $s \in \mathcal{S}$ and $a \in \mathcal{A}$, the policy density/mass $\pi_{\boldsymbol{\theta}}(a \mid s)$ is twice continuously differentiable ($C^2$) with respect to $\boldsymbol{\theta} \in \mathbb{R}^d$.
-3. **Leibniz Integral Rule / Dominated Convergence:** The order of differentiation with respect to $\boldsymbol{\theta}$ and integration (or summation) over the action space $\mathcal{A}$ can be legitimately interchanged:
-   $$\nabla_{\boldsymbol{\theta}} \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) = \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s), \quad \nabla_{\boldsymbol{\theta}}^2 \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) = \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}}^2 \pi_{\boldsymbol{\theta}}(a \mid s)$$
+1. **Common Support:** For all parameter values $\theta, \theta' \in \Theta$, the support of the policy $\operatorname{supp}(\pi_{\theta}(\cdot \mid s)) = \{a \in \mathcal{A} : \pi_{\theta}(a \mid s) > 0\}$ is identical and strictly independent of $\theta$. This ensures $\log \pi_{\theta'}(a \mid s)$ is finite and continuously defined almost everywhere.
+2. **Smoothness and Differentiability:** For every $s \in \mathcal{S}$ and $a \in \mathcal{A}$, the policy density/mass $\pi_{\theta}(a \mid s)$ is twice continuously differentiable ($C^2$) with respect to $\theta \in \mathbb{R}^d$.
+3. **Leibniz Integral Rule / Dominated Convergence:** The order of differentiation with respect to $\theta$ and integration (or summation) over the action space $\mathcal{A}$ can be legitimately interchanged:
+   $$\nabla_{\theta} \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) = \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s), \quad \nabla_{\theta}^2 \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) = \sum_{a \in \mathcal{A}} \nabla_{\theta}^2 \pi_{\theta}(a \mid s)$$
    This holds under dominated convergence when derivatives are uniformly bounded by an integrable envelope.
-4. **Finite Moments:** The components of the score vector $\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$ have finite second moments under $\pi_{\boldsymbol{\theta}}$, ensuring $|F_{ij}(\boldsymbol{\theta})| < \infty$ for all coordinates $i, j \in \{1, \dots, d\}$.
+4. **Finite Moments:** The components of the score vector $\nabla_{\theta} \log \pi_{\theta}(a \mid s)$ have finite second moments under $\pi_{\theta}$, ensuring $|F_{ij}(\theta)| < \infty$ for all coordinates $i, j \in \{1, \dots, d\}$.
 5. **Stationary State Measure:** The stationary state visitation distribution $d^\pi(s)$ exists and satisfies $\sum_{s \in \mathcal{S}} d^\pi(s) = 1$ (or $\int_{\mathcal{S}} d^\pi(s) \, ds = 1$).
 
 ##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
 The Kullback-Leibler divergence measures information loss between probability distributions. While KL divergence is not a true metric (it is asymmetric, $D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$, and fails the triangle inequality), it is non-negative and achieves a unique global minimum of $0$ when $P = Q$.
-Because $\boldsymbol{\theta}' = \boldsymbol{\theta}$ is a global minimum of the smooth function $f(\boldsymbol{\theta}') = D_{\text{KL}}(\pi_{\boldsymbol{\theta}} \parallel \pi_{\boldsymbol{\theta}'})$, the tangent plane at $\boldsymbol{\theta}' = \boldsymbol{\theta}$ must be completely flat: the first derivative vanishes identically ($\nabla f = \mathbf{0}$).
-Consequently, the local geometry of probability space around $\boldsymbol{\theta}$ is governed entirely by the quadratic curvature (the Hessian $\nabla^2 f$). This Hessian is precisely the Fisher Information Matrix $\mathbf{F}(\boldsymbol{\theta})$.
-Thus, for infinitesimal steps $\mathbf{d}\boldsymbol{\theta}$, the asymmetry of the KL divergence vanishes, and probability space behaves as a Riemannian manifold equipped with metric tensor $\mathbf{g}_{ij}(\boldsymbol{\theta}) = F_{ij}(\boldsymbol{\theta})$, where squared infinitesimal distance is:
-$$ds^2 = 2 D_{\text{KL}}(\pi_{\boldsymbol{\theta}} \parallel \pi_{\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}}) \approx \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta}$$
+Because $\theta' = \theta$ is a global minimum of the smooth function $f(\theta') = D_{\text{KL}}(\pi_{\theta} \parallel \pi_{\theta'})$, the tangent plane at $\theta' = \theta$ must be completely flat: the first derivative vanishes identically ($\nabla f = \mathbf{0}$).
+Consequently, the local geometry of probability space around $\theta$ is governed entirely by the quadratic curvature (the Hessian $\nabla^2 f$). This Hessian is precisely the Fisher Information Matrix $\mathbf{F}(\theta)$.
+Thus, for infinitesimal steps $\mathbf{d}\theta$, the asymmetry of the KL divergence vanishes, and probability space behaves as a Riemannian manifold equipped with metric tensor $\mathbf{g}_{ij}(\theta) = F_{ij}(\theta)$, where squared infinitesimal distance is:
+$$ds^2 = 2 D_{\text{KL}}(\pi_{\theta} \parallel \pi_{\theta + \mathbf{d}\theta}) \approx \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta$$
 
 ##### Part 4: End-to-End Step-by-Step Algebraic Proof
 We prove the result for an arbitrary fixed state $s \in \mathcal{S}$. (The state-averaged result follows immediately by taking the expectation over $s \sim d^\pi(s)$ using linearity of expectation and dominated convergence).
 
 **Step 1: Decompose the KL Divergence into Entropy and Cross-Entropy.**
 By definition:
-$$D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \left( \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \right)$$
+$$D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \left( \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta'}(a \mid s)} \right)$$
 Using the logarithm identity $\log(u / v) = \log u - \log v$:
-$$D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \pi_{\boldsymbol{\theta}}(a \mid s) - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \pi_{\boldsymbol{\theta}'}(a \mid s)$$
-Notice that the first term is the negative Shannon entropy $-H(\pi_{\boldsymbol{\theta}}(\cdot \mid s))$, which is constant with respect to $\boldsymbol{\theta}'$.
+$$D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \pi_{\theta}(a \mid s) - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \pi_{\theta'}(a \mid s)$$
+Notice that the first term is the negative Shannon entropy $-H(\pi_{\theta}(\cdot \mid s))$, which is constant with respect to $\theta'$.
 
 **Step 2: Evaluate the Zeroth-Order Term.**
-Setting $\boldsymbol{\theta}' = \boldsymbol{\theta}$:
-$$D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \left( \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}}(a \mid s)} \right) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log(1) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \cdot 0 = 0$$
+Setting $\theta' = \theta$:
+$$D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta}(\cdot \mid s)) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \left( \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta}(a \mid s)} \right) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log(1) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \cdot 0 = 0$$
 
-**Step 3: Differentiate with respect to $\boldsymbol{\theta}'$ (First-Order Gradient).**
+**Step 3: Differentiate with respect to $\theta'$ (First-Order Gradient).**
 Taking the partial derivative of $D_{\text{KL}}$ with respect to parameter component $\theta'_i$ for $i \in \{1, \dots, d\}$:
-$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = \frac{\partial}{\partial \theta'_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \pi_{\boldsymbol{\theta}}(a \mid s) - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \pi_{\boldsymbol{\theta}'}(a \mid s) \right]$$
-The first sum does not depend on $\boldsymbol{\theta}'$, so its derivative is zero:
-$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = - \frac{\partial}{\partial \theta'_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \log \pi_{\boldsymbol{\theta}'}(a \mid s) \right]$$
+$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = \frac{\partial}{\partial \theta'_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \pi_{\theta}(a \mid s) - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \pi_{\theta'}(a \mid s) \right]$$
+The first sum does not depend on $\theta'$, so its derivative is zero:
+$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = - \frac{\partial}{\partial \theta'_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \log \pi_{\theta'}(a \mid s) \right]$$
 Applying the Leibniz differentiation rule (Assumption 3):
-$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\partial}{\partial \theta'_i} \log \pi_{\boldsymbol{\theta}'}(a \mid s)$$
+$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\partial}{\partial \theta'_i} \log \pi_{\theta'}(a \mid s)$$
 Using the derivative of the logarithm $\frac{\partial}{\partial x} \log u(x) = \frac{1}{u(x)} \frac{\partial u(x)}{\partial x}$:
-$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i}$$
+$$\frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_i}$$
 
-**Step 4: Evaluate the Gradient at $\boldsymbol{\theta}' = \boldsymbol{\theta}$.**
-Evaluating this derivative at $\boldsymbol{\theta}' = \boldsymbol{\theta}$:
-$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{1}{\pi_{\boldsymbol{\theta}}(a \mid s)} \left. \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}}$$
-Because $\pi_{\boldsymbol{\theta}}(a \mid s) > 0$ on its support, the terms cancel:
-$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = - \sum_{a \in \mathcal{A}} \frac{\partial \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i}$$
+**Step 4: Evaluate the Gradient at $\theta' = \theta$.**
+Evaluating this derivative at $\theta' = \theta$:
+$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{1}{\pi_{\theta}(a \mid s)} \left. \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \right|_{\theta' = \theta}$$
+Because $\pi_{\theta}(a \mid s) > 0$ on its support, the terms cancel:
+$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = - \sum_{a \in \mathcal{A}} \frac{\partial \pi_{\theta}(a \mid s)}{\partial \theta_i}$$
 Interchanging summation and differentiation (Assumption 3):
-$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = - \frac{\partial}{\partial \theta_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \right]$$
-Since probabilities must sum to 1 for any parameter setting, $\sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) = 1$:
-$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = - \frac{\partial}{\partial \theta_i} [1] = 0$$
+$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = - \frac{\partial}{\partial \theta_i} \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \right]$$
+Since probabilities must sum to 1 for any parameter setting, $\sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) = 1$:
+$$\left. \frac{\partial}{\partial \theta'_i} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = - \frac{\partial}{\partial \theta_i} [1] = 0$$
 In vector notation across all coordinates $i \in \{1, \dots, d\}$:
-$$\left. \nabla_{\boldsymbol{\theta}'} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \mathbf{0}$$
+$$\left. \nabla_{\theta'} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = \mathbf{0}$$
 
 **Step 5: Compute the Second-Order Partial Derivatives (Hessian).**
 Differentiating the first derivative with respect to $\theta'_j$ for $j \in \{1, \dots, d\}$:
-$$\frac{\partial^2}{\partial \theta'_i \partial \theta'_j} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = \frac{\partial}{\partial \theta'_j} \left[ - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \right]$$
+$$\frac{\partial^2}{\partial \theta'_i \partial \theta'_j} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = \frac{\partial}{\partial \theta'_j} \left[ - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \right]$$
 Interchanging differentiation and summation:
-$$\frac{\partial^2}{\partial \theta'_i \partial \theta'_j} D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j}$$
+$$\frac{\partial^2}{\partial \theta'_i \partial \theta'_j} D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j}$$
 Now evaluate the second derivative of the log-likelihood:
-$$\frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\partial}{\partial \theta'_j} \left( \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \right)$$
+$$\frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\partial}{\partial \theta'_j} \left( \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \right)$$
 Applying the quotient rule $\frac{\partial}{\partial x} \left(\frac{u}{v}\right) = \frac{u' v - u v'}{v^2}$:
-$$\frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\frac{\partial^2 \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} \pi_{\boldsymbol{\theta}'}(a \mid s) - \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_j}}{\left( \pi_{\boldsymbol{\theta}'}(a \mid s) \right)^2}$$
+$$\frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\frac{\partial^2 \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} \pi_{\theta'}(a \mid s) - \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_j}}{\left( \pi_{\theta'}(a \mid s) \right)^2}$$
 Splitting into two terms:
-$$\frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} - \left( \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \right) \left( \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_j} \right)$$
-Using $\frac{\partial \log \pi_{\boldsymbol{\theta}'}}{\partial \theta'_k} = \frac{1}{\pi_{\boldsymbol{\theta}'}} \frac{\partial \pi_{\boldsymbol{\theta}'}}{\partial \theta'_k}$:
-$$\frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} - \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_j}$$
+$$\frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial^2 \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} - \left( \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \right) \left( \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial \pi_{\theta'}(a \mid s)}{\partial \theta'_j} \right)$$
+Using $\frac{\partial \log \pi_{\theta'}}{\partial \theta'_k} = \frac{1}{\pi_{\theta'}} \frac{\partial \pi_{\theta'}}{\partial \theta'_k}$:
+$$\frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial^2 \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} - \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_j}$$
 
 **Step 6: Substitute into Hessian Expression.**
 Negating this expression yields:
-$$- \frac{\partial^2 \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_j} - \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j}$$
+$$- \frac{\partial^2 \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} = \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_j} - \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial^2 \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j}$$
 Substitute this directly into the Hessian formula:
-$$\frac{\partial^2 D_{\text{KL}}}{\partial \theta'_i \partial \theta'_j} = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left[ \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_j} - \frac{1}{\pi_{\boldsymbol{\theta}'}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} \right]$$
+$$\frac{\partial^2 D_{\text{KL}}}{\partial \theta'_i \partial \theta'_j} = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left[ \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_i} \frac{\partial \log \pi_{\theta'}(a \mid s)}{\partial \theta'_j} - \frac{1}{\pi_{\theta'}(a \mid s)} \frac{\partial^2 \pi_{\theta'}(a \mid s)}{\partial \theta'_i \partial \theta'_j} \right]$$
 
-**Step 7: Evaluate the Hessian at $\boldsymbol{\theta}' = \boldsymbol{\theta}$.**
-Now set $\boldsymbol{\theta}' = \boldsymbol{\theta}$:
-$$\left. \frac{\partial^2 D_{\text{KL}}}{\partial \theta'_i \partial \theta'_j} \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_j} - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{1}{\pi_{\boldsymbol{\theta}}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j}$$
+**Step 7: Evaluate the Hessian at $\theta' = \theta$.**
+Now set $\theta' = \theta$:
+$$\left. \frac{\partial^2 D_{\text{KL}}}{\partial \theta'_i \partial \theta'_j} \right|_{\theta' = \theta} = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_j} - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{1}{\pi_{\theta}(a \mid s)} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j}$$
 In the second summation, the probabilities cancel:
-$$\sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{1}{\pi_{\boldsymbol{\theta}}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} = \sum_{a \in \mathcal{A}} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j}$$
+$$\sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{1}{\pi_{\theta}(a \mid s)} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} = \sum_{a \in \mathcal{A}} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j}$$
 Interchanging summation and derivatives (Assumption 3):
-$$\sum_{a \in \mathcal{A}} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} = \frac{\partial^2}{\partial \theta_i \partial \theta_j} \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \right] = \frac{\partial^2}{\partial \theta_i \partial \theta_j} [1] = 0$$
+$$\sum_{a \in \mathcal{A}} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} = \frac{\partial^2}{\partial \theta_i \partial \theta_j} \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \right] = \frac{\partial^2}{\partial \theta_i \partial \theta_j} [1] = 0$$
 Thus, the second term vanishes identically!
 We obtain:
-$$\left. \frac{\partial^2 D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s))}{\partial \theta'_i \partial \theta'_j} \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_j}$$
+$$\left. \frac{\partial^2 D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s))}{\partial \theta'_i \partial \theta'_j} \right|_{\theta' = \theta} = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_j}$$
 In full matrix form for state $s$:
-$$\left. \nabla_{\boldsymbol{\theta}'}^2 D_{\text{KL}}(\pi_{\boldsymbol{\theta}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}'}(\cdot \mid s)) \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \mathbb{E}_{a \sim \pi_{\boldsymbol{\theta}}(\cdot \mid s)} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right] \triangleq \mathbf{F}_s(\boldsymbol{\theta})$$
+$$\left. \nabla_{\theta'}^2 D_{\text{KL}}(\pi_{\theta}(\cdot \mid s) \parallel \pi_{\theta'}(\cdot \mid s)) \right|_{\theta' = \theta} = \mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right] \triangleq \mathbf{F}_s(\theta)$$
 
 **Step 8: State-Averaged Fisher Information Matrix.**
 Averaging over the stationary state visitation distribution $s \sim d^\pi(s)$:
-$$\left. \nabla_{\boldsymbol{\theta}'}^2 \bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta}') \right|_{\boldsymbol{\theta}' = \boldsymbol{\theta}} = \mathbb{E}_{s \sim d^\pi} [\mathbf{F}_s(\boldsymbol{\theta})] = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right] = \mathbf{F}(\boldsymbol{\theta})$$
+$$\left. \nabla_{\theta'}^2 \bar{D}_{\text{KL}}(\theta \parallel \theta') \right|_{\theta' = \theta} = \mathbb{E}_{s \sim d^\pi} [\mathbf{F}_s(\theta)] = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right] = \mathbf{F}(\theta)$$
 
 **Step 9: Proof of the Information Equality.**
 From Step 5, we found:
-$$\frac{\partial^2 \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} = \frac{1}{\pi_{\boldsymbol{\theta}}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} - \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_j}$$
-Taking the expectation $\mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}}$ of both sides:
-$$\mathbb{E}_{s, a} \left[ \frac{\partial^2 \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} \right] = \mathbb{E}_{s \sim d^\pi} \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{1}{\pi_{\boldsymbol{\theta}}(a \mid s)} \frac{\partial^2 \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i \partial \theta_j} \right] - \mathbb{E}_{s, a} \left[ \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_j} \right]$$
-$$= \mathbb{E}_{s \sim d^\pi} \left[ \frac{\partial^2}{\partial \theta_i \partial \theta_j} \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \right] - F_{ij}(\boldsymbol{\theta})$$
-$$= \mathbb{E}_{s \sim d^\pi} \left[ \frac{\partial^2}{\partial \theta_i \partial \theta_j} (1) \right] - F_{ij}(\boldsymbol{\theta}) = 0 - F_{ij}(\boldsymbol{\theta}) = -F_{ij}(\boldsymbol{\theta})$$
+$$\frac{\partial^2 \log \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} = \frac{1}{\pi_{\theta}(a \mid s)} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} - \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_j}$$
+Taking the expectation $\mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}}$ of both sides:
+$$\mathbb{E}_{s, a} \left[ \frac{\partial^2 \log \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} \right] = \mathbb{E}_{s \sim d^\pi} \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{1}{\pi_{\theta}(a \mid s)} \frac{\partial^2 \pi_{\theta}(a \mid s)}{\partial \theta_i \partial \theta_j} \right] - \mathbb{E}_{s, a} \left[ \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_i} \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_j} \right]$$
+$$= \mathbb{E}_{s \sim d^\pi} \left[ \frac{\partial^2}{\partial \theta_i \partial \theta_j} \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \right] - F_{ij}(\theta)$$
+$$= \mathbb{E}_{s \sim d^\pi} \left[ \frac{\partial^2}{\partial \theta_i \partial \theta_j} (1) \right] - F_{ij}(\theta) = 0 - F_{ij}(\theta) = -F_{ij}(\theta)$$
 Negating both sides:
-$$\mathbf{F}(\boldsymbol{\theta}) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ - \nabla_{\boldsymbol{\theta}}^2 \log \pi_{\boldsymbol{\theta}}(a \mid s) \right]$$
+$$\mathbf{F}(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ - \nabla_{\theta}^2 \log \pi_{\theta}(a \mid s) \right]$$
 
 **Step 10: Taylor Series Expansion for Infinitesimal Perturbations.**
-Let $\mathbf{d}\boldsymbol{\theta} = \boldsymbol{\theta}' - \boldsymbol{\theta}$ be an infinitesimal displacement vector.
-Define the multivariable function $g(\mathbf{d}\boldsymbol{\theta}) \triangleq \bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta})$.
-Computing the second-order Taylor expansion of $g(\mathbf{d}\boldsymbol{\theta})$ about $\mathbf{d}\boldsymbol{\theta} = \mathbf{0}$:
-$$g(\mathbf{d}\boldsymbol{\theta}) = g(\mathbf{0}) + \nabla_{\mathbf{d}\boldsymbol{\theta}} g(\mathbf{0})^\top \mathbf{d}\boldsymbol{\theta} + \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \nabla_{\mathbf{d}\boldsymbol{\theta}}^2 g(\mathbf{0}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
+Let $\mathbf{d}\theta = \theta' - \theta$ be an infinitesimal displacement vector.
+Define the multivariable function $g(\mathbf{d}\theta) \triangleq \bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta)$.
+Computing the second-order Taylor expansion of $g(\mathbf{d}\theta)$ about $\mathbf{d}\theta = \mathbf{0}$:
+$$g(\mathbf{d}\theta) = g(\mathbf{0}) + \nabla_{\mathbf{d}\theta} g(\mathbf{0})^\top \mathbf{d}\theta + \frac{1}{2} \mathbf{d}\theta^\top \nabla_{\mathbf{d}\theta}^2 g(\mathbf{0}) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
 From Step 2, $g(\mathbf{0}) = 0$.
-From Step 4, $\nabla_{\mathbf{d}\boldsymbol{\theta}} g(\mathbf{0}) = \mathbf{0}$.
-From Step 8, $\nabla_{\mathbf{d}\boldsymbol{\theta}}^2 g(\mathbf{0}) = \mathbf{F}(\boldsymbol{\theta})$.
+From Step 4, $\nabla_{\mathbf{d}\theta} g(\mathbf{0}) = \mathbf{0}$.
+From Step 8, $\nabla_{\mathbf{d}\theta}^2 g(\mathbf{0}) = \mathbf{F}(\theta)$.
 Substituting these values:
-$$\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta}) = 0 + \mathbf{0}^\top \mathbf{d}\boldsymbol{\theta} + \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
-$$= \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
-By an identical symmetric argument on $h(\mathbf{d}\boldsymbol{\theta}) \triangleq \bar{D}_{\text{KL}}(\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta} \parallel \boldsymbol{\theta})$, we have $h(\mathbf{0}) = 0$, $\nabla h(\mathbf{0}) = \mathbf{0}$, and $\nabla^2 h(\mathbf{0}) = \mathbf{F}(\boldsymbol{\theta})$, so:
-$$\bar{D}_{\text{KL}}(\boldsymbol{\theta} + \mathbf{d}\boldsymbol{\theta} \parallel \boldsymbol{\theta}) = \frac{1}{2} \mathbf{d}\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}\boldsymbol{\theta} + \mathcal{O}(\|\mathbf{d}\boldsymbol{\theta}\|_2^3)$$
-proving that both forward and reverse KL divergences possess the identical quadratic Riemannian metric $\mathbf{F}(\boldsymbol{\theta})$. $\blacksquare$
+$$\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}\theta) = 0 + \mathbf{0}^\top \mathbf{d}\theta + \frac{1}{2} \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
+$$= \frac{1}{2} \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
+By an identical symmetric argument on $h(\mathbf{d}\theta) \triangleq \bar{D}_{\text{KL}}(\theta + \mathbf{d}\theta \parallel \theta)$, we have $h(\mathbf{0}) = 0$, $\nabla h(\mathbf{0}) = \mathbf{0}$, and $\nabla^2 h(\mathbf{0}) = \mathbf{F}(\theta)$, so:
+$$\bar{D}_{\text{KL}}(\theta + \mathbf{d}\theta \parallel \theta) = \frac{1}{2} \mathbf{d}\theta^\top \mathbf{F}(\theta) \mathbf{d}\theta + \mathcal{O}(\|\mathbf{d}\theta\|_2^3)$$
+proving that both forward and reverse KL divergences possess the identical quadratic Riemannian metric $\mathbf{F}(\theta)$. $\blacksquare$
 
 ---
 
@@ -287,40 +287,40 @@ Prove from first principles that:
 #### Derivation 11.17.2: Natural Policy Gradient as Steepest Ascent on Riemannian Manifold
 
 ##### Part 1: Problem Statement & Mathematical Goal
-Let $J(\boldsymbol{\theta})$ be the expected discounted policy performance objective:
-$$J(\boldsymbol{\theta}) \triangleq \mathbb{E}_{\tau \sim \pi_{\boldsymbol{\theta}}} \left[ \sum_{t=0}^\infty \gamma^t R(S_t, A_t) \right]$$
-Let $\mathbf{g} \triangleq \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ denote the standard vanilla policy gradient vector in $\mathbb{R}^d$.
-Consider the Riemannian manifold $\mathcal{M} = \{\pi_{\boldsymbol{\theta}} : \boldsymbol{\theta} \in \Theta\}$ equipped with the Fisher Information Matrix $\mathbf{F}(\boldsymbol{\theta}) \in \mathbb{R}^{d \times d}$ as its metric tensor $\mathbf{G}(\boldsymbol{\theta}) = \mathbf{F}(\boldsymbol{\theta})$.
+Let $J(\theta)$ be the expected discounted policy performance objective:
+$$J(\theta) \triangleq \mathbb{E}_{\tau \sim \pi_{\theta}} \left[ \sum_{t=0}^\infty \gamma^t R(S_t, A_t) \right]$$
+Let $\mathbf{g} \triangleq \nabla_{\theta} J(\theta)$ denote the standard vanilla policy gradient vector in $\mathbb{R}^d$.
+Consider the Riemannian manifold $\mathcal{M} = \{\pi_{\theta} : \theta \in \Theta\}$ equipped with the Fisher Information Matrix $\mathbf{F}(\theta) \in \mathbb{R}^{d \times d}$ as its metric tensor $\mathbf{G}(\theta) = \mathbf{F}(\theta)$.
 The squared Riemannian distance of an infinitesimal parameter displacement vector $\mathbf{d} \in \mathbb{R}^d$ is:
-$$\|\mathbf{d}\|_{\mathbf{F}}^2 \triangleq \mathbf{d}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}$$
-By Derivation 11.17.1, this corresponds to twice the local KL divergence: $\bar{D}_{\text{KL}}(\boldsymbol{\theta} \parallel \boldsymbol{\theta} + \mathbf{d}) \approx \frac{1}{2} \mathbf{d}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d}$.
-We formulate the trust-region optimization problem: find the step direction $\mathbf{d}^* \in \mathbb{R}^d$ that maximizes the first-order improvement in return $J(\boldsymbol{\theta} + \mathbf{d}) - J(\boldsymbol{\theta}) \approx \mathbf{g}^\top \mathbf{d}$ subject to a strict bound $\epsilon > 0$ on the Riemannian distance:
-$$\max_{\mathbf{d} \in \mathbb{R}^d} \mathbf{g}^\top \mathbf{d} \quad \text{subject to} \quad \frac{1}{2} \mathbf{d}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d} \le \epsilon$$
+$$\|\mathbf{d}\|_{\mathbf{F}}^2 \triangleq \mathbf{d}^\top \mathbf{F}(\theta) \mathbf{d}$$
+By Derivation 11.17.1, this corresponds to twice the local KL divergence: $\bar{D}_{\text{KL}}(\theta \parallel \theta + \mathbf{d}) \approx \frac{1}{2} \mathbf{d}^\top \mathbf{F}(\theta) \mathbf{d}$.
+We formulate the trust-region optimization problem: find the step direction $\mathbf{d}^* \in \mathbb{R}^d$ that maximizes the first-order improvement in return $J(\theta + \mathbf{d}) - J(\theta) \approx \mathbf{g}^\top \mathbf{d}$ subject to a strict bound $\epsilon > 0$ on the Riemannian distance:
+$$\max_{\mathbf{d} \in \mathbb{R}^d} \mathbf{g}^\top \mathbf{d} \quad \text{subject to} \quad \frac{1}{2} \mathbf{d}^\top \mathbf{F}(\theta) \mathbf{d} \le \epsilon$$
 
 **Mathematical Goals:**
 1. Formulate the primal optimization problem and its Lagrangian function.
 2. Apply the Karush-Kuhn-Tucker (KKT) first-order optimality conditions to solve for the analytical displacement vector $\mathbf{d}^*$.
 3. Prove that the optimal Lagrange multiplier is:
-   $$\lambda^* = \sqrt{\frac{\mathbf{g}^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}}{2 \epsilon}}$$
+   $$\lambda^* = \sqrt{\frac{\mathbf{g}^\top \mathbf{F}(\theta)^{-1} \mathbf{g}}{2 \epsilon}}$$
 4. Prove that the normalized optimal step vector is:
-   $$\mathbf{d}^* = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}}} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}$$
+   $$\mathbf{d}^* = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}(\theta)^{-1} \mathbf{g}}} \mathbf{F}(\theta)^{-1} \mathbf{g}$$
 5. Prove that the unnormalized steepest ascent direction on the statistical manifold is the Natural Policy Gradient:
-   $$\tilde{\mathbf{g}} \triangleq \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g} = \mathbf{F}(\boldsymbol{\theta})^{-1} \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+   $$\tilde{\mathbf{g}} \triangleq \mathbf{F}(\theta)^{-1} \mathbf{g} = \mathbf{F}(\theta)^{-1} \nabla_{\theta} J(\theta)$$
 6. Provide a geometric proof using the Cauchy-Schwarz inequality on the Riemannian Hilbert space $(\mathbb{R}^d, \langle \cdot, \cdot \rangle_{\mathbf{F}})$.
 
 ##### Part 2: Explicit Assumptions & Regularity Conditions
-1. **Positive Definiteness:** The Fisher Information Matrix $\mathbf{F}(\boldsymbol{\theta})$ is symmetric and strictly positive definite ($\mathbf{F}(\boldsymbol{\theta}) \succ \mathbf{0}$):
-   $$\mathbf{d}^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{d} > 0 \quad \forall \mathbf{d} \in \mathbb{R}^d \setminus \{\mathbf{0}\}$$
-   This guarantees that $\mathbf{F}(\boldsymbol{\theta})$ is non-singular and its inverse $\mathbf{F}(\boldsymbol{\theta})^{-1}$ exists and is also strictly positive definite. (If rank-deficient, a positive damping term $\delta_{\text{damp}} \mathbf{I}$ is added).
-2. **Non-Zero Gradient:** The vanilla policy gradient vector is non-vanishing: $\mathbf{g} = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) \ne \mathbf{0}$. (If $\mathbf{g} = \mathbf{0}$, the policy is at a local stationary point and $\mathbf{d}^* = \mathbf{0}$).
-3. **Smooth Objective:** The expected return $J(\boldsymbol{\theta})$ is continuously differentiable ($C^1$) in a neighborhood around $\boldsymbol{\theta}$, ensuring $J(\boldsymbol{\theta} + \mathbf{d}) = J(\boldsymbol{\theta}) + \mathbf{g}^\top \mathbf{d} + \mathcal{O}(\|\mathbf{d}\|_2^2)$.
+1. **Positive Definiteness:** The Fisher Information Matrix $\mathbf{F}(\theta)$ is symmetric and strictly positive definite ($\mathbf{F}(\theta) \succ \mathbf{0}$):
+   $$\mathbf{d}^\top \mathbf{F}(\theta) \mathbf{d} > 0 \quad \forall \mathbf{d} \in \mathbb{R}^d \setminus \{\mathbf{0}\}$$
+   This guarantees that $\mathbf{F}(\theta)$ is non-singular and its inverse $\mathbf{F}(\theta)^{-1}$ exists and is also strictly positive definite. (If rank-deficient, a positive damping term $\delta_{\text{damp}} \mathbf{I}$ is added).
+2. **Non-Zero Gradient:** The vanilla policy gradient vector is non-vanishing: $\mathbf{g} = \nabla_{\theta} J(\theta) \ne \mathbf{0}$. (If $\mathbf{g} = \mathbf{0}$, the policy is at a local stationary point and $\mathbf{d}^* = \mathbf{0}$).
+3. **Smooth Objective:** The expected return $J(\theta)$ is continuously differentiable ($C^1$) in a neighborhood around $\theta$, ensuring $J(\theta + \mathbf{d}) = J(\theta) + \mathbf{g}^\top \mathbf{d} + \mathcal{O}(\|\mathbf{d}\|_2^2)$.
 4. **Positive Trust Region Radius:** $\epsilon > 0$ is a strictly positive, finite scalar.
 
 ##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
 In Euclidean optimization, "steepest ascent" is defined by maximizing the directional derivative $\nabla J^\top \mathbf{u}$ over all unit vectors $\|\mathbf{u}\|_2 = 1$. By the Cauchy-Schwarz inequality, this yields $\mathbf{u} = \mathbf{g} / \|\mathbf{g}\|_2$. The standard gradient points orthogonal to the level sets in parameter coordinates.
 However, parameter coordinates are an arbitrary convention. On a curved Riemannian manifold $(\mathcal{M}, \mathbf{G})$, the concept of a "unit step" is defined by the Riemannian metric tensor: $\mathbf{d}^\top \mathbf{G} \mathbf{d} = 1$. This defines an ellipsoid in parameter space.
 Along axes where the policy distribution changes rapidly (large eigenvalues of $\mathbf{F}$), the ellipsoid is narrow, restricting the allowed coordinate displacement. Along axes where the policy distribution changes slowly (small eigenvalues of $\mathbf{F}$), the ellipsoid is elongated, allowing large coordinate displacements.
-Geometrically, the gradient $\mathbf{g} = \nabla_{\boldsymbol{\theta}} J$ is a covector (a linear functional in cotangent space $T_{\boldsymbol{\theta}}^* \mathcal{M}$). To turn a covector into an actual motion vector in the tangent space $T_{\boldsymbol{\theta}} \mathcal{M}$, one must apply the inverse of the metric tensor: $\tilde{\mathbf{g}} = \mathbf{F}^{-1} \mathbf{g}$ (the musical isomorphism $\sharp$).
+Geometrically, the gradient $\mathbf{g} = \nabla_{\theta} J$ is a covector (a linear functional in cotangent space $T_{\theta}^* \mathcal{M}$). To turn a covector into an actual motion vector in the tangent space $T_{\theta} \mathcal{M}$, one must apply the inverse of the metric tensor: $\tilde{\mathbf{g}} = \mathbf{F}^{-1} \mathbf{g}$ (the musical isomorphism $\sharp$).
 This rotates and rescales the gradient vector so that it is steepest with respect to the intrinsic probability geometry, rather than Euclidean artifacts.
 
 ##### Part 4: End-to-End Step-by-Step Algebraic Proof
@@ -431,36 +431,36 @@ Prove from first principles that:
 #### Derivation 11.17.3: Invariance of Natural Policy Gradient to Linear Reparameterization
 
 ##### Part 1: Problem Statement & Mathematical Goal
-Let $\boldsymbol{\theta} \in \mathbb{R}^d$ parameterize a policy $\pi_{\boldsymbol{\theta}}(a \mid s)$, and let $J(\boldsymbol{\theta})$ be the expected performance objective.
+Let $\theta \in \mathbb{R}^d$ parameterize a policy $\pi_{\theta}(a \mid s)$, and let $J(\theta)$ be the expected performance objective.
 Consider an arbitrary linear, invertible change of coordinates (reparameterization):
-$$\tilde{\boldsymbol{\theta}} \triangleq \mathbf{M} \boldsymbol{\theta}$$
-where $\mathbf{M} \in \mathbb{R}^{d \times d}$ is an invertible constant matrix ($\det(\mathbf{M}) \ne 0$), with inverse $\mathbf{M}^{-1}$ such that $\boldsymbol{\theta} = \mathbf{M}^{-1} \tilde{\boldsymbol{\theta}}$.
+$$\tilde{\theta} \triangleq \mathbf{M} \theta$$
+where $\mathbf{M} \in \mathbb{R}^{d \times d}$ is an invertible constant matrix ($\det(\mathbf{M}) \ne 0$), with inverse $\mathbf{M}^{-1}$ such that $\theta = \mathbf{M}^{-1} \tilde{\theta}$.
 In the new coordinate system, the policy is defined as:
-$$\tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) \triangleq \pi_{\mathbf{M}^{-1} \tilde{\boldsymbol{\theta}}}(a \mid s)$$
+$$\tilde{\pi}_{\tilde{\theta}}(a \mid s) \triangleq \pi_{\mathbf{M}^{-1} \tilde{\theta}}(a \mid s)$$
 and the objective function is:
-$$\tilde{J}(\tilde{\boldsymbol{\theta}}) \triangleq J(\mathbf{M}^{-1} \tilde{\boldsymbol{\theta}})$$
-Clearly, at corresponding points $\tilde{\boldsymbol{\theta}} = \mathbf{M} \boldsymbol{\theta}$, both parameterizations describe the exact same physical probability distribution: $\tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) = \pi_{\boldsymbol{\theta}}(a \mid s)$ for all $s, a$, and achieve identical return: $\tilde{J}(\tilde{\boldsymbol{\theta}}) = J(\boldsymbol{\theta})$.
+$$\tilde{J}(\tilde{\theta}) \triangleq J(\mathbf{M}^{-1} \tilde{\theta})$$
+Clearly, at corresponding points $\tilde{\theta} = \mathbf{M} \theta$, both parameterizations describe the exact same physical probability distribution: $\tilde{\pi}_{\tilde{\theta}}(a \mid s) = \pi_{\theta}(a \mid s)$ for all $s, a$, and achieve identical return: $\tilde{J}(\tilde{\theta}) = J(\theta)$.
 
 **Mathematical Goals:**
-1. Derive the coordinate transformation rule for the vanilla policy gradient $\nabla_{\tilde{\boldsymbol{\theta}}} \tilde{J}(\tilde{\boldsymbol{\theta}})$.
-2. Derive the transformation rule for the score function $\nabla_{\tilde{\boldsymbol{\theta}}} \log \tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s)$ and the Fisher Information Matrix $\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})$.
-3. Derive the transformation rule for the inverse Fisher Information Matrix $\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1}$.
+1. Derive the coordinate transformation rule for the vanilla policy gradient $\nabla_{\tilde{\theta}} \tilde{J}(\tilde{\theta})$.
+2. Derive the transformation rule for the score function $\nabla_{\tilde{\theta}} \log \tilde{\pi}_{\tilde{\theta}}(a \mid s)$ and the Fisher Information Matrix $\tilde{\mathbf{F}}(\tilde{\theta})$.
+3. Derive the transformation rule for the inverse Fisher Information Matrix $\tilde{\mathbf{F}}(\tilde{\theta})^{-1}$.
 4. Prove that the trust-region quadratic curvature is an absolute scalar invariant:
-   $$\nabla_{\tilde{\boldsymbol{\theta}}} \tilde{J}(\tilde{\boldsymbol{\theta}})^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \nabla_{\tilde{\boldsymbol{\theta}}} \tilde{J}(\tilde{\boldsymbol{\theta}}) = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+   $$\nabla_{\tilde{\theta}} \tilde{J}(\tilde{\theta})^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \nabla_{\tilde{\theta}} \tilde{J}(\tilde{\theta}) = \nabla_{\theta} J(\theta)^\top \mathbf{F}(\theta)^{-1} \nabla_{\theta} J(\theta)$$
 5. Prove that the optimal parameter update vector transforms contravariantly:
-   $$\Delta \tilde{\boldsymbol{\theta}}^* = \mathbf{M} \Delta \boldsymbol{\theta}^*$$
-6. Prove that the updated parameters satisfy $\tilde{\boldsymbol{\theta}}_{\text{new}} = \mathbf{M} \boldsymbol{\theta}_{\text{new}}$, and hence the resulting probability distributions after the update are strictly identical:
-   $$\tilde{\pi}_{\tilde{\boldsymbol{\theta}}_{\text{new}}}(a \mid s) = \pi_{\boldsymbol{\theta}_{\text{new}}}(a \mid s) \quad \forall s \in \mathcal{S}, a \in \mathcal{A}$$
+   $$\Delta \tilde{\theta}^* = \mathbf{M} \Delta \theta^*$$
+6. Prove that the updated parameters satisfy $\tilde{\theta}_{\text{new}} = \mathbf{M} \theta_{\text{new}}$, and hence the resulting probability distributions after the update are strictly identical:
+   $$\tilde{\pi}_{\tilde{\theta}_{\text{new}}}(a \mid s) = \pi_{\theta_{\text{new}}}(a \mid s) \quad \forall s \in \mathcal{S}, a \in \mathcal{A}$$
 7. Prove that the standard vanilla policy gradient fails this invariance test unless $\mathbf{M}$ is an orthogonal matrix ($\mathbf{M}^\top \mathbf{M} = \mathbf{I}$).
 
 ##### Part 2: Explicit Assumptions & Regularity Conditions
 1. **Invertibility:** $\mathbf{M} \in \mathbb{R}^{d \times d}$ is non-singular and constant, so $\det(\mathbf{M}) \ne 0$ and $\mathbf{M}^{-1}$ exists.
-2. **Differentiability:** $J(\boldsymbol{\theta})$ and $\pi_{\boldsymbol{\theta}}(a \mid s)$ are continuously differentiable with respect to $\boldsymbol{\theta}$.
-3. **Non-Degenerate Metric:** $\mathbf{F}(\boldsymbol{\theta}) \succ \mathbf{0}$ is strictly positive definite.
+2. **Differentiability:** $J(\theta)$ and $\pi_{\theta}(a \mid s)$ are continuously differentiable with respect to $\theta$.
+3. **Non-Degenerate Metric:** $\mathbf{F}(\theta) \succ \mathbf{0}$ is strictly positive definite.
 4. **Equal Trust Region:** The KL trust region bound $\epsilon > 0$ is fixed to the same numerical value in both coordinate systems.
 
 ##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
-Parameters are human-invented coordinate labels for probability distributions. If one researcher parameterizes a robotic joint controller in radians ($\boldsymbol{\theta}$) and another in degrees ($\tilde{\boldsymbol{\theta}} = \frac{180}{\pi} \boldsymbol{\theta}$), or if one researcher scales a neural network layer's weights by a factor of 10 and divides the subsequent layer by 10, the physical agent and its actions are completely unchanged.
+Parameters are human-invented coordinate labels for probability distributions. If one researcher parameterizes a robotic joint controller in radians ($\theta$) and another in degrees ($\tilde{\theta} = \frac{180}{\pi} \theta$), or if one researcher scales a neural network layer's weights by a factor of 10 and divides the subsequent layer by 10, the physical agent and its actions are completely unchanged.
 However, the vanilla policy gradient is a covector (type $(0, 1)$ tensor). When coordinates are scaled by $\mathbf{M}$, the covector transforms with $(\mathbf{M}^{-1})^\top$. A standard gradient descent update treats this covector as a tangent displacement vector, scaling coordinates by the inverse factor!
 As a result, in vanilla policy gradients, scaling a parameter up by 10 makes its update step 100 times too small in physical effect!
 In contrast, the Fisher Information Matrix is a type $(0, 2)$ metric tensor. It transforms with $(\mathbf{M}^{-1})^\top \mathbf{F} \mathbf{M}^{-1}$. Its inverse $\mathbf{F}^{-1}$ is a type $(2, 0)$ tensor.
@@ -470,99 +470,99 @@ Natural policy gradient is coordinate-free: it operates directly on the intrinsi
 ##### Part 4: End-to-End Step-by-Step Algebraic Proof
 
 **Step 1: Transformation of the Vanilla Policy Gradient.**
-Let $\boldsymbol{\theta} = \mathbf{M}^{-1} \tilde{\boldsymbol{\theta}}$. In index notation, for each component $k \in \{1, \dots, d\}$:
+Let $\theta = \mathbf{M}^{-1} \tilde{\theta}$. In index notation, for each component $k \in \{1, \dots, d\}$:
 $$\theta_k = \sum_{l=1}^d (\mathbf{M}^{-1})_{kl} \tilde{\theta}_l$$
 Taking the partial derivative of $\theta_k$ with respect to $\tilde{\theta}_j$:
 $$\frac{\partial \theta_k}{\partial \tilde{\theta}_j} = (\mathbf{M}^{-1})_{kj}$$
-Now apply the multivariable chain rule to differentiate $\tilde{J}(\tilde{\boldsymbol{\theta}}) = J(\boldsymbol{\theta})$ with respect to $\tilde{\theta}_j$:
-$$\frac{\partial \tilde{J}(\tilde{\boldsymbol{\theta}})}{\partial \tilde{\theta}_j} = \sum_{k=1}^d \frac{\partial J(\boldsymbol{\theta})}{\partial \theta_k} \frac{\partial \theta_k}{\partial \tilde{\theta}_j} = \sum_{k=1}^d \frac{\partial J(\boldsymbol{\theta})}{\partial \theta_k} (\mathbf{M}^{-1})_{kj}$$
+Now apply the multivariable chain rule to differentiate $\tilde{J}(\tilde{\theta}) = J(\theta)$ with respect to $\tilde{\theta}_j$:
+$$\frac{\partial \tilde{J}(\tilde{\theta})}{\partial \tilde{\theta}_j} = \sum_{k=1}^d \frac{\partial J(\theta)}{\partial \theta_k} \frac{\partial \theta_k}{\partial \tilde{\theta}_j} = \sum_{k=1}^d \frac{\partial J(\theta)}{\partial \theta_k} (\mathbf{M}^{-1})_{kj}$$
 Using the transpose property of matrix elements $(\mathbf{M}^{-1})_{kj} = [(\mathbf{M}^{-1})^\top]_{jk}$:
-$$\frac{\partial \tilde{J}(\tilde{\boldsymbol{\theta}})}{\partial \tilde{\theta}_j} = \sum_{k=1}^d [(\mathbf{M}^{-1})^\top]_{jk} \frac{\partial J(\boldsymbol{\theta})}{\partial \theta_k}$$
+$$\frac{\partial \tilde{J}(\tilde{\theta})}{\partial \tilde{\theta}_j} = \sum_{k=1}^d [(\mathbf{M}^{-1})^\top]_{jk} \frac{\partial J(\theta)}{\partial \theta_k}$$
 Writing this in matrix-vector notation across all $j \in \{1, \dots, d\}$:
-$$\nabla_{\tilde{\boldsymbol{\theta}}} \tilde{J}(\tilde{\boldsymbol{\theta}}) = (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
-Let $\mathbf{g}_{\boldsymbol{\theta}} \triangleq \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ and $\mathbf{g}_{\tilde{\boldsymbol{\theta}}} \triangleq \nabla_{\tilde{\boldsymbol{\theta}}} \tilde{J}(\tilde{\boldsymbol{\theta}})$.
+$$\nabla_{\tilde{\theta}} \tilde{J}(\tilde{\theta}) = (\mathbf{M}^{-1})^\top \nabla_{\theta} J(\theta)$$
+Let $\mathbf{g}_{\theta} \triangleq \nabla_{\theta} J(\theta)$ and $\mathbf{g}_{\tilde{\theta}} \triangleq \nabla_{\tilde{\theta}} \tilde{J}(\tilde{\theta})$.
 Then:
-$$\mathbf{g}_{\tilde{\boldsymbol{\theta}}} = (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}}$$
+$$\mathbf{g}_{\tilde{\theta}} = (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta}$$
 
 **Step 2: Transformation of the Score Function.**
-By an identical application of the chain rule to $\tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) = \pi_{\mathbf{M}^{-1} \tilde{\boldsymbol{\theta}}}(a \mid s)$:
-$$\nabla_{\tilde{\boldsymbol{\theta}}} \log \tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) = (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$$
+By an identical application of the chain rule to $\tilde{\pi}_{\tilde{\theta}}(a \mid s) = \pi_{\mathbf{M}^{-1} \tilde{\theta}}(a \mid s)$:
+$$\nabla_{\tilde{\theta}} \log \tilde{\pi}_{\tilde{\theta}}(a \mid s) = (\mathbf{M}^{-1})^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s)$$
 
 **Step 3: Transformation of the Fisher Information Matrix.**
-By definition, the Fisher Information Matrix in the $\tilde{\boldsymbol{\theta}}$ parameterization is:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}}) = \mathbb{E}_{s \sim d^\pi, a \sim \tilde{\pi}_{\tilde{\boldsymbol{\theta}}}} \left[ \nabla_{\tilde{\boldsymbol{\theta}}} \log \tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) \left( \nabla_{\tilde{\boldsymbol{\theta}}} \log \tilde{\pi}_{\tilde{\boldsymbol{\theta}}}(a \mid s) \right)^\top \right]$$
+By definition, the Fisher Information Matrix in the $\tilde{\theta}$ parameterization is:
+$$\tilde{\mathbf{F}}(\tilde{\theta}) = \mathbb{E}_{s \sim d^\pi, a \sim \tilde{\pi}_{\tilde{\theta}}} \left[ \nabla_{\tilde{\theta}} \log \tilde{\pi}_{\tilde{\theta}}(a \mid s) \left( \nabla_{\tilde{\theta}} \log \tilde{\pi}_{\tilde{\theta}}(a \mid s) \right)^\top \right]$$
 Substitute the score function transformation from Step 2:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}}) = \mathbb{E}_{s, a} \left[ \left( (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right) \left( (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right)^\top \right]$$
+$$\tilde{\mathbf{F}}(\tilde{\theta}) = \mathbb{E}_{s, a} \left[ \left( (\mathbf{M}^{-1})^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right) \left( (\mathbf{M}^{-1})^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right)^\top \right]$$
 Using the transpose rule for matrix-vector products $(A \mathbf{v})^\top = \mathbf{v}^\top A^\top$:
-$$\left( (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right)^\top = (\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s))^\top ((\mathbf{M}^{-1})^\top)^\top = (\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s))^\top \mathbf{M}^{-1}$$
+$$\left( (\mathbf{M}^{-1})^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right)^\top = (\nabla_{\theta} \log \pi_{\theta}(a \mid s))^\top ((\mathbf{M}^{-1})^\top)^\top = (\nabla_{\theta} \log \pi_{\theta}(a \mid s))^\top \mathbf{M}^{-1}$$
 Substitute this back into the expectation:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}}) = \mathbb{E}_{s, a} \left[ (\mathbf{M}^{-1})^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) (\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s))^\top \mathbf{M}^{-1} \right]$$
+$$\tilde{\mathbf{F}}(\tilde{\theta}) = \mathbb{E}_{s, a} \left[ (\mathbf{M}^{-1})^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) (\nabla_{\theta} \log \pi_{\theta}(a \mid s))^\top \mathbf{M}^{-1} \right]$$
 Because $\mathbf{M}$ is a constant matrix independent of the random variables $s$ and $a$, by linearity of expectation we pull $(\mathbf{M}^{-1})^\top$ to the front and $\mathbf{M}^{-1}$ to the rear:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}}) = (\mathbf{M}^{-1})^\top \left( \mathbb{E}_{s, a} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) (\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s))^\top \right] \right) \mathbf{M}^{-1}$$
-Recognizing the inner expectation as $\mathbf{F}(\boldsymbol{\theta})$:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}}) = (\mathbf{M}^{-1})^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{M}^{-1}$$
+$$\tilde{\mathbf{F}}(\tilde{\theta}) = (\mathbf{M}^{-1})^\top \left( \mathbb{E}_{s, a} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) (\nabla_{\theta} \log \pi_{\theta}(a \mid s))^\top \right] \right) \mathbf{M}^{-1}$$
+Recognizing the inner expectation as $\mathbf{F}(\theta)$:
+$$\tilde{\mathbf{F}}(\tilde{\theta}) = (\mathbf{M}^{-1})^\top \mathbf{F}(\theta) \mathbf{M}^{-1}$$
 
 **Step 4: Transformation of the Inverse Fisher Matrix.**
-To find $\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1}$, we invert both sides of the relation:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} = \left( (\mathbf{M}^{-1})^\top \mathbf{F}(\boldsymbol{\theta}) \mathbf{M}^{-1} \right)^{-1}$$
+To find $\tilde{\mathbf{F}}(\tilde{\theta})^{-1}$, we invert both sides of the relation:
+$$\tilde{\mathbf{F}}(\tilde{\theta})^{-1} = \left( (\mathbf{M}^{-1})^\top \mathbf{F}(\theta) \mathbf{M}^{-1} \right)^{-1}$$
 Using the matrix product inversion rule $(A B C)^{-1} = C^{-1} B^{-1} A^{-1}$:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} = (\mathbf{M}^{-1})^{-1} \mathbf{F}(\boldsymbol{\theta})^{-1} \left( (\mathbf{M}^{-1})^\top \right)^{-1}$$
+$$\tilde{\mathbf{F}}(\tilde{\theta})^{-1} = (\mathbf{M}^{-1})^{-1} \mathbf{F}(\theta)^{-1} \left( (\mathbf{M}^{-1})^\top \right)^{-1}$$
 Simplifying the matrix inverses:
 1. $(\mathbf{M}^{-1})^{-1} = \mathbf{M}$
 2. $\left( (\mathbf{M}^{-1})^\top \right)^{-1} = \left( (\mathbf{M}^{-1})^{-1} \right)^\top = \mathbf{M}^\top$
 Substituting these:
-$$\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} = \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{M}^\top$$
+$$\tilde{\mathbf{F}}(\tilde{\theta})^{-1} = \mathbf{M} \mathbf{F}(\theta)^{-1} \mathbf{M}^\top$$
 
 **Step 5: Transformation of the Natural Gradient Direction.**
-The unnormalized natural gradient direction in $\tilde{\boldsymbol{\theta}}$ coordinates is:
-$$\tilde{\mathbf{g}}_{\tilde{\boldsymbol{\theta}}} \triangleq \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}}$$
-Substitute $\tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} = \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{M}^\top$ and $\mathbf{g}_{\tilde{\boldsymbol{\theta}}} = (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}}$:
-$$\tilde{\mathbf{g}}_{\tilde{\boldsymbol{\theta}}} = \left( \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{M}^\top \right) \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}} \right)$$
+The unnormalized natural gradient direction in $\tilde{\theta}$ coordinates is:
+$$\tilde{\mathbf{g}}_{\tilde{\theta}} \triangleq \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}}$$
+Substitute $\tilde{\mathbf{F}}(\tilde{\theta})^{-1} = \mathbf{M} \mathbf{F}(\theta)^{-1} \mathbf{M}^\top$ and $\mathbf{g}_{\tilde{\theta}} = (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta}$:
+$$\tilde{\mathbf{g}}_{\tilde{\theta}} = \left( \mathbf{M} \mathbf{F}(\theta)^{-1} \mathbf{M}^\top \right) \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta} \right)$$
 Using matrix associativity:
-$$\tilde{\mathbf{g}}_{\tilde{\boldsymbol{\theta}}} = \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \left( \mathbf{M}^\top (\mathbf{M}^{-1})^\top \right) \mathbf{g}_{\boldsymbol{\theta}}$$
+$$\tilde{\mathbf{g}}_{\tilde{\theta}} = \mathbf{M} \mathbf{F}(\theta)^{-1} \left( \mathbf{M}^\top (\mathbf{M}^{-1})^\top \right) \mathbf{g}_{\theta}$$
 Using the property $A^\top B^\top = (B A)^\top$:
 $$\mathbf{M}^\top (\mathbf{M}^{-1})^\top = (\mathbf{M}^{-1} \mathbf{M})^\top = \mathbf{I}^\top = \mathbf{I}$$
 Thus:
-$$\tilde{\mathbf{g}}_{\tilde{\boldsymbol{\theta}}} = \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{I} \mathbf{g}_{\boldsymbol{\theta}} = \mathbf{M} \left( \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}_{\boldsymbol{\theta}} \right) = \mathbf{M} \tilde{\mathbf{g}}_{\boldsymbol{\theta}}$$
-The unnormalized natural gradient vector in $\tilde{\boldsymbol{\theta}}$ coordinates equals the transformation matrix $\mathbf{M}$ times the natural gradient vector in $\boldsymbol{\theta}$ coordinates!
+$$\tilde{\mathbf{g}}_{\tilde{\theta}} = \mathbf{M} \mathbf{F}(\theta)^{-1} \mathbf{I} \mathbf{g}_{\theta} = \mathbf{M} \left( \mathbf{F}(\theta)^{-1} \mathbf{g}_{\theta} \right) = \mathbf{M} \tilde{\mathbf{g}}_{\theta}$$
+The unnormalized natural gradient vector in $\tilde{\theta}$ coordinates equals the transformation matrix $\mathbf{M}$ times the natural gradient vector in $\theta$ coordinates!
 
 **Step 6: Invariance of Quadratic Curvature and Step Scaling Factor.**
-Now evaluate the quadratic form curvature in $\tilde{\boldsymbol{\theta}}$ coordinates:
-$$\mathbf{g}_{\tilde{\boldsymbol{\theta}}}^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}} = \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}} \right)^\top \left( \mathbf{M} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{M}^\top \right) \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}} \right)$$
+Now evaluate the quadratic form curvature in $\tilde{\theta}$ coordinates:
+$$\mathbf{g}_{\tilde{\theta}}^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}} = \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta} \right)^\top \left( \mathbf{M} \mathbf{F}(\theta)^{-1} \mathbf{M}^\top \right) \left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta} \right)$$
 Expand the transpose of the first term:
-$$\left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}} \right)^\top = \mathbf{g}_{\boldsymbol{\theta}}^\top ((\mathbf{M}^{-1})^\top)^\top = \mathbf{g}_{\boldsymbol{\theta}}^\top \mathbf{M}^{-1}$$
+$$\left( (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta} \right)^\top = \mathbf{g}_{\theta}^\top ((\mathbf{M}^{-1})^\top)^\top = \mathbf{g}_{\theta}^\top \mathbf{M}^{-1}$$
 Substitute this into the expression:
-$$\mathbf{g}_{\tilde{\boldsymbol{\theta}}}^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}} = \mathbf{g}_{\boldsymbol{\theta}}^\top (\mathbf{M}^{-1} \mathbf{M}) \mathbf{F}(\boldsymbol{\theta})^{-1} (\mathbf{M}^\top (\mathbf{M}^{-1})^\top) \mathbf{g}_{\boldsymbol{\theta}}$$
+$$\mathbf{g}_{\tilde{\theta}}^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}} = \mathbf{g}_{\theta}^\top (\mathbf{M}^{-1} \mathbf{M}) \mathbf{F}(\theta)^{-1} (\mathbf{M}^\top (\mathbf{M}^{-1})^\top) \mathbf{g}_{\theta}$$
 Because $\mathbf{M}^{-1} \mathbf{M} = \mathbf{I}$ and $\mathbf{M}^\top (\mathbf{M}^{-1})^\top = \mathbf{I}$:
-$$\mathbf{g}_{\tilde{\boldsymbol{\theta}}}^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}} = \mathbf{g}_{\boldsymbol{\theta}}^\top \mathbf{I} \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{I} \mathbf{g}_{\boldsymbol{\theta}} = \mathbf{g}_{\boldsymbol{\theta}}^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}_{\boldsymbol{\theta}}$$
+$$\mathbf{g}_{\tilde{\theta}}^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}} = \mathbf{g}_{\theta}^\top \mathbf{I} \mathbf{F}(\theta)^{-1} \mathbf{I} \mathbf{g}_{\theta} = \mathbf{g}_{\theta}^\top \mathbf{F}(\theta)^{-1} \mathbf{g}_{\theta}$$
 The quadratic curvature is **strictly invariant**:
-$$\mathbf{g}_{\tilde{\boldsymbol{\theta}}}^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}} = \mathbf{g}_{\boldsymbol{\theta}}^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}_{\boldsymbol{\theta}}$$
-Consequently, the trust-region step size coefficient $\beta$ in $\tilde{\boldsymbol{\theta}}$ space satisfies:
-$$\tilde{\beta} = \sqrt{\frac{2\epsilon}{\mathbf{g}_{\tilde{\boldsymbol{\theta}}}^\top \tilde{\mathbf{F}}(\tilde{\boldsymbol{\theta}})^{-1} \mathbf{g}_{\tilde{\boldsymbol{\theta}}}}} = \sqrt{\frac{2\epsilon}{\mathbf{g}_{\boldsymbol{\theta}}^\top \mathbf{F}(\boldsymbol{\theta})^{-1} \mathbf{g}_{\boldsymbol{\theta}}}} = \beta$$
+$$\mathbf{g}_{\tilde{\theta}}^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}} = \mathbf{g}_{\theta}^\top \mathbf{F}(\theta)^{-1} \mathbf{g}_{\theta}$$
+Consequently, the trust-region step size coefficient $\beta$ in $\tilde{\theta}$ space satisfies:
+$$\tilde{\beta} = \sqrt{\frac{2\epsilon}{\mathbf{g}_{\tilde{\theta}}^\top \tilde{\mathbf{F}}(\tilde{\theta})^{-1} \mathbf{g}_{\tilde{\theta}}}} = \sqrt{\frac{2\epsilon}{\mathbf{g}_{\theta}^\top \mathbf{F}(\theta)^{-1} \mathbf{g}_{\theta}}} = \beta$$
 
-**Step 7: Transformation of the Step Vector $\Delta \tilde{\boldsymbol{\theta}}^*$.**
-The optimal step in $\tilde{\boldsymbol{\theta}}$ coordinates is:
-$$\Delta \tilde{\boldsymbol{\theta}}^* = \tilde{\beta} \tilde{\mathbf{g}}_{\tilde{\boldsymbol{\theta}}} = \beta (\mathbf{M} \tilde{\mathbf{g}}_{\boldsymbol{\theta}}) = \mathbf{M} (\beta \tilde{\mathbf{g}}_{\boldsymbol{\theta}}) = \mathbf{M} \Delta \boldsymbol{\theta}^*$$
+**Step 7: Transformation of the Step Vector $\Delta \tilde{\theta}^*$.**
+The optimal step in $\tilde{\theta}$ coordinates is:
+$$\Delta \tilde{\theta}^* = \tilde{\beta} \tilde{\mathbf{g}}_{\tilde{\theta}} = \beta (\mathbf{M} \tilde{\mathbf{g}}_{\theta}) = \mathbf{M} (\beta \tilde{\mathbf{g}}_{\theta}) = \mathbf{M} \Delta \theta^*$$
 Thus, the step vector transforms identically to the coordinate system itself:
-$$\Delta \tilde{\boldsymbol{\theta}}^* = \mathbf{M} \Delta \boldsymbol{\theta}^*$$
+$$\Delta \tilde{\theta}^* = \mathbf{M} \Delta \theta^*$$
 
 **Step 8: Exact Equivalence of the Updated Policy Distributions.**
-The updated parameter vector in $\tilde{\boldsymbol{\theta}}$ space is:
-$$\tilde{\boldsymbol{\theta}}_{\text{new}} = \tilde{\boldsymbol{\theta}} + \Delta \tilde{\boldsymbol{\theta}}^* = \mathbf{M} \boldsymbol{\theta} + \mathbf{M} \Delta \boldsymbol{\theta}^* = \mathbf{M} (\boldsymbol{\theta} + \Delta \boldsymbol{\theta}^*) = \mathbf{M} \boldsymbol{\theta}_{\text{new}}$$
+The updated parameter vector in $\tilde{\theta}$ space is:
+$$\tilde{\theta}_{\text{new}} = \tilde{\theta} + \Delta \tilde{\theta}^* = \mathbf{M} \theta + \mathbf{M} \Delta \theta^* = \mathbf{M} (\theta + \Delta \theta^*) = \mathbf{M} \theta_{\text{new}}$$
 Now evaluate the updated policy distribution under the new coordinates at any state $s$ and action $a$:
-$$\tilde{\pi}_{\tilde{\boldsymbol{\theta}}_{\text{new}}}(a \mid s) = \pi_{\mathbf{M}^{-1} \tilde{\boldsymbol{\theta}}_{\text{new}}}(a \mid s) = \pi_{\mathbf{M}^{-1} (\mathbf{M} \boldsymbol{\theta}_{\text{new}})}(a \mid s) = \pi_{\boldsymbol{\theta}_{\text{new}}}(a \mid s)$$
+$$\tilde{\pi}_{\tilde{\theta}_{\text{new}}}(a \mid s) = \pi_{\mathbf{M}^{-1} \tilde{\theta}_{\text{new}}}(a \mid s) = \pi_{\mathbf{M}^{-1} (\mathbf{M} \theta_{\text{new}})}(a \mid s) = \pi_{\theta_{\text{new}}}(a \mid s)$$
 This proves that the physical distribution step taken by the Natural Policy Gradient is **100% identical**, down to machine precision, regardless of the choice of invertible linear coordinates $\mathbf{M}$.
 
 **Step 9: Contrast with Vanilla Policy Gradient Failure.**
 Now consider what happens under standard vanilla policy gradient updates with learning rate $\alpha > 0$:
-In $\boldsymbol{\theta}$ coordinates:
-$$\Delta \boldsymbol{\theta}_{\text{vanilla}} = \alpha \mathbf{g}_{\boldsymbol{\theta}}$$
-In $\tilde{\boldsymbol{\theta}}$ coordinates:
-$$\Delta \tilde{\boldsymbol{\theta}}_{\text{vanilla}} = \alpha \mathbf{g}_{\tilde{\boldsymbol{\theta}}} = \alpha (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}}$$
-To see what physical change this produces in the original parameter space, multiply $\Delta \tilde{\boldsymbol{\theta}}_{\text{vanilla}}$ by $\mathbf{M}^{-1}$:
-$$\Delta \boldsymbol{\theta}_{\text{effective}} = \mathbf{M}^{-1} \Delta \tilde{\boldsymbol{\theta}}_{\text{vanilla}} = \alpha \mathbf{M}^{-1} (\mathbf{M}^{-1})^\top \mathbf{g}_{\boldsymbol{\theta}} = \alpha (\mathbf{M}^\top \mathbf{M})^{-1} \mathbf{g}_{\boldsymbol{\theta}}$$
-Comparing $\Delta \boldsymbol{\theta}_{\text{effective}}$ to $\Delta \boldsymbol{\theta}_{\text{vanilla}} = \alpha \mathbf{g}_{\boldsymbol{\theta}}$:
-$$\Delta \boldsymbol{\theta}_{\text{effective}} = \Delta \boldsymbol{\theta}_{\text{vanilla}} \iff (\mathbf{M}^\top \mathbf{M})^{-1} = \mathbf{I} \iff \mathbf{M}^\top \mathbf{M} = \mathbf{I}$$
+In $\theta$ coordinates:
+$$\Delta \theta_{\text{vanilla}} = \alpha \mathbf{g}_{\theta}$$
+In $\tilde{\theta}$ coordinates:
+$$\Delta \tilde{\theta}_{\text{vanilla}} = \alpha \mathbf{g}_{\tilde{\theta}} = \alpha (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta}$$
+To see what physical change this produces in the original parameter space, multiply $\Delta \tilde{\theta}_{\text{vanilla}}$ by $\mathbf{M}^{-1}$:
+$$\Delta \theta_{\text{effective}} = \mathbf{M}^{-1} \Delta \tilde{\theta}_{\text{vanilla}} = \alpha \mathbf{M}^{-1} (\mathbf{M}^{-1})^\top \mathbf{g}_{\theta} = \alpha (\mathbf{M}^\top \mathbf{M})^{-1} \mathbf{g}_{\theta}$$
+Comparing $\Delta \theta_{\text{effective}}$ to $\Delta \theta_{\text{vanilla}} = \alpha \mathbf{g}_{\theta}$:
+$$\Delta \theta_{\text{effective}} = \Delta \theta_{\text{vanilla}} \iff (\mathbf{M}^\top \mathbf{M})^{-1} = \mathbf{I} \iff \mathbf{M}^\top \mathbf{M} = \mathbf{I}$$
 This condition holds **if and only if $\mathbf{M}$ is an orthogonal matrix** (a pure rotation or reflection).
 If $\mathbf{M}$ includes ANY coordinate scaling (e.g., $\mathbf{M} = \operatorname{diag}(10, 1)$), then $(\mathbf{M}^\top \mathbf{M})^{-1} = \operatorname{diag}(0.01, 1) \ne \mathbf{I}$.
 The vanilla gradient step is distorted by a factor of $10^2 = 100$ along the scaled coordinate!
@@ -572,7 +572,7 @@ Only the Natural Policy Gradient correctly undoes this distortion and achieves t
 
 ## 3. Geometric Interpretation: Mercator Distortion vs. Geodesic Distance
 
-- In flat Euclidean gradient descent, the gradient $\nabla_{\boldsymbol{\theta}} J$ is orthogonal to the contour lines on a paper map. But on a curved surface (like a Mercator projection of Earth), walking 1 inch on the map near the equator covers 2,000 miles, whereas walking 1 inch near the poles covers 200 miles.
+- In flat Euclidean gradient descent, the gradient $\nabla_{\theta} J$ is orthogonal to the contour lines on a paper map. But on a curved surface (like a Mercator projection of Earth), walking 1 inch on the map near the equator covers 2,000 miles, whereas walking 1 inch near the poles covers 200 miles.
 - The Fisher Information Matrix $\mathbf{F}$ is the **metric tensor of the globe**: it converts paper map coordinates into true geodesic physical distances on Earth.
 - Multiplying by $\mathbf{F}^{-1}$ rotates and stretches the gradient vector so that the agent takes uniform, isotropic steps across the actual probability manifold!
 
@@ -595,7 +595,7 @@ Only the Natural Policy Gradient correctly undoes this distortion and achieves t
 ## 4. Real-World Analogy: Steering a High-Performance Aircraft
 
 Imagine flying a supersonic jet:
-- The pilot's controls (the parameters $\boldsymbol{\theta}$) have non-linear mechanical linkages: at low speeds ($100$ knots), deflecting the stick by $5^\circ$ barely turns the jet. At supersonic speeds (Mach 2), deflecting the stick by $5^\circ$ tears the wings off due to extreme aerodynamic loads.
+- The pilot's controls (the parameters $\theta$) have non-linear mechanical linkages: at low speeds ($100$ knots), deflecting the stick by $5^\circ$ barely turns the jet. At supersonic speeds (Mach 2), deflecting the stick by $5^\circ$ tears the wings off due to extreme aerodynamic loads.
 - **Euclidean Policy Gradient:** Dictates: "Always move the stick by $5^\circ$." At high speeds, the jet disintegrates.
 - **Natural Policy Gradient:** Senses the aerodynamic pressure manifold (Fisher Information Matrix) and dictates: "Apply whatever control deflection changes the aircraft's physical flight path by exactly $1.0^\circ$ of angular pitch." At low speeds, the stick moves $10^\circ$; at Mach 2, it moves $0.1^\circ$, maintaining safety across all regimes!
 
@@ -605,25 +605,25 @@ Imagine flying a supersonic jet:
 
 ### 5.1 Problem Setup: 2-Action Softmax Policy
 Consider an agent with two discrete actions $\mathcal{A} = \{a_0, a_1\}$.
-The policy parameters are $\boldsymbol{\theta} = [\theta_0, \theta_1]^\top$.
+The policy parameters are $\theta = [\theta_0, \theta_1]^\top$.
 
 **Current Parameter State:**
 $$\pi(a_0) = 0.8000, \quad \pi(a_1) = 0.2000$$
 
 **Observed Standard (Vanilla) Policy Gradient:**
-$$\mathbf{g} = \nabla_{\boldsymbol{\theta}} J = \begin{bmatrix} +1.0000 \\ -1.0000 \end{bmatrix}$$
+$$\mathbf{g} = \nabla_{\theta} J = \begin{bmatrix} +1.0000 \\ -1.0000 \end{bmatrix}$$
 
 **Hyperparameters:**
 - KL divergence trust region: $\epsilon = 0.0100$
 - Tikhonov regularization damping factor: $\delta_{\text{damp}} = 0.0400$ (ensures invertibility of $\mathbf{F}$)
 
 We will compute:
-1. Analytical score function vectors $\nabla_{\boldsymbol{\theta}} \log \pi(a_0)$ and $\nabla_{\boldsymbol{\theta}} \log \pi(a_1)$
+1. Analytical score function vectors $\nabla_{\theta} \log \pi(a_0)$ and $\nabla_{\theta} \log \pi(a_1)$
 2. The Fisher Information Matrix $\mathbf{F}$
 3. The regularized inverse $\mathbf{F}_{\text{reg}}^{-1}$
 4. The unnormalized natural gradient direction $\tilde{\mathbf{g}} = \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$
 5. The quadratic form curvature $\mathbf{g}^\top \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$
-6. The step size $\beta$ and the final normalized parameter update $\Delta \boldsymbol{\theta}^*$
+6. The step size $\beta$ and the final normalized parameter update $\Delta \theta^*$
 
 ---
 
@@ -631,7 +631,7 @@ We will compute:
 
 | Symbol | Mathematical Entity | Concrete Hand Walkthrough Value |
 | :--- | :--- | :--- |
-| $\boldsymbol{\pi}$ | Action Probabilities | $[\pi_0 = 0.8000, \pi_1 = 0.2000]^\top$ |
+| $\pi$ | Action Probabilities | $[\pi_0 = 0.8000, \pi_1 = 0.2000]^\top$ |
 | $\mathbf{s}_0, \mathbf{s}_1$ | Score Vectors $\nabla \log \pi(a_i)$ | $\mathbf{s}_0 = [1 - \pi_0, -\pi_1]^\top, \mathbf{s}_1 = [-\pi_0, 1 - \pi_1]^\top$ |
 | $\mathbf{F}$ | Fisher Information Matrix | $\pi_0 \mathbf{s}_0 \mathbf{s}_0^\top + \pi_1 \mathbf{s}_1 \mathbf{s}_1^\top$ |
 | $\mathbf{F}_{\text{reg}}$ | Damped Fisher Matrix | $\mathbf{F} + \delta_{\text{damp}} \mathbf{I}$ |
@@ -639,17 +639,17 @@ We will compute:
 | $\mathbf{g}$ | Vanilla Policy Gradient | $[+1.0000, -1.0000]^\top$ |
 | $\tilde{\mathbf{g}}$ | Natural Gradient Direction | $\mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$ |
 | $\beta$ | Trust Region Step Scaling Factor | $\sqrt{\frac{2\epsilon}{\mathbf{g}^\top \tilde{\mathbf{g}}}}$ |
-| $\Delta \boldsymbol{\theta}^*$ | Final Natural Policy Gradient Step | $\beta \tilde{\mathbf{g}}$ |
+| $\Delta \theta^*$ | Final Natural Policy Gradient Step | $\beta \tilde{\mathbf{g}}$ |
 
 ---
 
 ### 5.3 Step 1: Compute Score Functions
 
 For action $a_0$:
-$$\mathbf{s}_0 = \nabla_{\boldsymbol{\theta}} \log \pi(a_0) = \begin{bmatrix} 1 - \pi_0 \\ -\pi_1 \end{bmatrix} = \begin{bmatrix} 1 - 0.8000 \\ -0.2000 \end{bmatrix} = \begin{bmatrix} \mathbf{+0.2000} \\ \mathbf{-0.2000} \end{bmatrix}$$
+$$\mathbf{s}_0 = \nabla_{\theta} \log \pi(a_0) = \begin{bmatrix} 1 - \pi_0 \\ -\pi_1 \end{bmatrix} = \begin{bmatrix} 1 - 0.8000 \\ -0.2000 \end{bmatrix} = \begin{bmatrix} \mathbf{+0.2000} \\ \mathbf{-0.2000} \end{bmatrix}$$
 
 For action $a_1$:
-$$\mathbf{s}_1 = \nabla_{\boldsymbol{\theta}} \log \pi(a_1) = \begin{bmatrix} -\pi_0 \\ 1 - \pi_1 \end{bmatrix} = \begin{bmatrix} -0.8000 \\ 1 - 0.2000 \end{bmatrix} = \begin{bmatrix} \mathbf{-0.8000} \\ \mathbf{+0.8000} \end{bmatrix}$$
+$$\mathbf{s}_1 = \nabla_{\theta} \log \pi(a_1) = \begin{bmatrix} -\pi_0 \\ 1 - \pi_1 \end{bmatrix} = \begin{bmatrix} -0.8000 \\ 1 - 0.2000 \end{bmatrix} = \begin{bmatrix} \mathbf{-0.8000} \\ \mathbf{+0.8000} \end{bmatrix}$$
 
 ---
 
@@ -697,10 +697,10 @@ Compute scaling coefficient $\beta$:
 $$\beta = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}}} = \sqrt{\frac{2 \times 0.0100}{5.55556}} = \sqrt{\frac{0.0200}{5.55556}} = \sqrt{0.003600} = \mathbf{0.06000}$$
 
 Final Natural Policy Gradient Step:
-$$\Delta \boldsymbol{\theta}^* = \beta \tilde{\mathbf{g}} = 0.06000 \times \begin{bmatrix} +2.77778 \\ -2.77778 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.16667 \\ -0.16667 \end{bmatrix}}$$
+$$\Delta \theta^* = \beta \tilde{\mathbf{g}} = 0.06000 \times \begin{bmatrix} +2.77778 \\ -2.77778 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.16667 \\ -0.16667 \end{bmatrix}}$$
 
 Check KL divergence constraint satisfaction:
-$$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F}_{\text{reg}} (\Delta \boldsymbol{\theta}^*) = \frac{1}{2} (0.0600)^2 (5.55556) = \frac{1}{2} (0.0036)(5.55556) = \mathbf{0.0100} = \epsilon \quad \checkmark$$
+$$\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F}_{\text{reg}} (\Delta \theta^*) = \frac{1}{2} (0.0600)^2 (5.55556) = \frac{1}{2} (0.0036)(5.55556) = \mathbf{0.0100} = \epsilon \quad \checkmark$$
 
 ---
 
@@ -714,7 +714,7 @@ $$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F}_{\text{reg}} (\Delt
 | **Damped $\mathbf{F}_{\text{reg}}$** | $\mathbf{F} + 0.04 \mathbf{I}$ | $\begin{bmatrix} 0.20 & -0.16 \\ -0.16 & 0.20 \end{bmatrix}$ | Invertible Riemannian metric |
 | **Curvature $\mathbf{g}^\top \tilde{\mathbf{g}}$** | $\mathbf{g}^\top \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$ | $\mathbf{5.55556}$ | Metric curvature along gradient |
 | **Step Multiplier $\beta$** | $\sqrt{2\epsilon / 5.55556}$ | $\mathbf{0.06000}$ | Normalizes step to KL $\le 0.01$ |
-| **Final Step $\Delta \boldsymbol{\theta}^*$** | $\beta \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$ | $\mathbf{[+0.16667, -0.16667]^\top}$ | Exact Riemannian update! |
+| **Final Step $\Delta \theta^*$** | $\beta \mathbf{F}_{\text{reg}}^{-1} \mathbf{g}$ | $\mathbf{[+0.16667, -0.16667]^\top}$ | Exact Riemannian update! |
 
 ---
 
@@ -722,14 +722,14 @@ $$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F}_{\text{reg}} (\Delt
 
 ### Illustration 1: Analytical Fisher Matrix of a 1D Gaussian Policy (Analytical Derivation & Solved Numerical Walkthrough)
 **Problem:**
-Let $\pi_{\boldsymbol{\theta}}(a) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left( -\frac{(a - \mu)^2}{2\sigma^2} \right)$ be a 1D Gaussian policy with parameter vector $\boldsymbol{\theta} = [\mu, \sigma]^\top$.
+Let $\pi_{\theta}(a) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left( -\frac{(a - \mu)^2}{2\sigma^2} \right)$ be a 1D Gaussian policy with parameter vector $\theta = [\mu, \sigma]^\top$.
 1. Derive the analytical Fisher Information Matrix $\mathbf{F}(\mu, \sigma)$ from first principles.
-2. Given parameters $\mu = 1.5000, \sigma = 0.5000$, vanilla policy gradient $\mathbf{g} = \nabla_{\boldsymbol{\theta}} J = [0.8000, -0.4000]^\top$, and trust region bound $\epsilon = 0.0200$, calculate step-by-step:
+2. Given parameters $\mu = 1.5000, \sigma = 0.5000$, vanilla policy gradient $\mathbf{g} = \nabla_{\theta} J = [0.8000, -0.4000]^\top$, and trust region bound $\epsilon = 0.0200$, calculate step-by-step:
    - The numerical Fisher Information Matrix $\mathbf{F}$ and its inverse $\mathbf{F}^{-1}$.
    - The unnormalized natural gradient direction $\tilde{\mathbf{g}} = \mathbf{F}^{-1} \mathbf{g}$.
    - The trust-region quadratic curvature $\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}$ and step size $\beta$.
-   - The final natural policy gradient update $\Delta \boldsymbol{\theta}^*$.
-   - Verify that $\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} (\Delta \boldsymbol{\theta}^*) = \epsilon$.
+   - The final natural policy gradient update $\Delta \theta^*$.
+   - Verify that $\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} (\Delta \theta^*) = \epsilon$.
 
 **Analytical Derivation:**
 Log-likelihood function:
@@ -769,11 +769,11 @@ $$\mathbf{g}^\top \tilde{\mathbf{g}} = (0.8000)(0.2000) + (-0.4000)(-0.0500) = 0
 Given $\epsilon = 0.0200$:
 $$\beta = \sqrt{\frac{2\epsilon}{\mathbf{g}^\top \tilde{\mathbf{g}}}} = \sqrt{\frac{2 \times 0.0200}{0.1800}} = \sqrt{\frac{0.0400}{0.1800}} = \sqrt{\frac{2}{9}} = \frac{\sqrt{2}}{3} \approx \mathbf{0.471405}$$
 
-*Step 5: Compute Final Parameter Update $\Delta \boldsymbol{\theta}^*$:*
-$$\Delta \boldsymbol{\theta}^* = \beta \tilde{\mathbf{g}} = 0.471405 \begin{bmatrix} 0.2000 \\ -0.0500 \end{bmatrix} = \begin{bmatrix} 0.471405 \times 0.2000 \\ 0.471405 \times (-0.0500) \end{bmatrix} = \begin{bmatrix} \mathbf{+0.094281} \\ \mathbf{-0.023570} \end{bmatrix}$$
+*Step 5: Compute Final Parameter Update $\Delta \theta^*$:*
+$$\Delta \theta^* = \beta \tilde{\mathbf{g}} = 0.471405 \begin{bmatrix} 0.2000 \\ -0.0500 \end{bmatrix} = \begin{bmatrix} 0.471405 \times 0.2000 \\ 0.471405 \times (-0.0500) \end{bmatrix} = \begin{bmatrix} \mathbf{+0.094281} \\ \mathbf{-0.023570} \end{bmatrix}$$
 
 *Step 6: Verify Trust-Region Constraint:*
-$$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} (\Delta \boldsymbol{\theta}^*) = \frac{1}{2} \left[ 4.0000 \times (0.094281)^2 + 8.0000 \times (-0.023570)^2 \right]$$
+$$\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} (\Delta \theta^*) = \frac{1}{2} \left[ 4.0000 \times (0.094281)^2 + 8.0000 \times (-0.023570)^2 \right]$$
 $$= \frac{1}{2} \left[ 4.0000 \times 0.0088889 + 8.0000 \times 0.00055556 \right]$$
 $$= \frac{1}{2} \left[ 0.0355556 + 0.0044444 \right] = \frac{1}{2} (0.040000) = \mathbf{0.0200} = \epsilon \quad \checkmark$$
 
@@ -781,11 +781,11 @@ $$= \frac{1}{2} \left[ 0.0355556 + 0.0044444 \right] = \frac{1}{2} (0.040000) = 
 
 ### Illustration 2: Analytical Fisher Information Matrix of a 2-Action Softmax Policy
 **Problem:**
-Consider a policy with discrete actions $\mathcal{A} = \{a_0, a_1\}$ parameterized by logits $\boldsymbol{\theta} = [\theta_0, \theta_1]^\top \in \mathbb{R}^2$:
+Consider a policy with discrete actions $\mathcal{A} = \{a_0, a_1\}$ parameterized by logits $\theta = [\theta_0, \theta_1]^\top \in \mathbb{R}^2$:
 $$\pi_0 = \frac{e^{\theta_0}}{e^{\theta_0} + e^{\theta_1}}, \quad \pi_1 = \frac{e^{\theta_1}}{e^{\theta_0} + e^{\theta_1}}$$
-1. Prove analytically that for any discrete softmax policy, the Fisher Information Matrix satisfies $\mathbf{F}(\boldsymbol{\theta}) = \operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi} \boldsymbol{\pi}^\top$.
-2. For logits $\theta_0 = \ln(3) \approx 1.098612$ and $\theta_1 = 0.000000$, compute $\boldsymbol{\pi}$ and evaluate $\mathbf{F}(\boldsymbol{\theta})$ via:
-   - The analytical formula $\operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi} \boldsymbol{\pi}^\top$.
+1. Prove analytically that for any discrete softmax policy, the Fisher Information Matrix satisfies $\mathbf{F}(\theta) = \operatorname{diag}(\pi) - \pi \pi^\top$.
+2. For logits $\theta_0 = \ln(3) \approx 1.098612$ and $\theta_1 = 0.000000$, compute $\pi$ and evaluate $\mathbf{F}(\theta)$ via:
+   - The analytical formula $\operatorname{diag}(\pi) - \pi \pi^\top$.
    - The expectation of outer products $\sum_{i} \pi_i \mathbf{s}_i \mathbf{s}_i^\top$.
    Confirm step-by-step arithmetic matches identically.
 
@@ -794,19 +794,19 @@ For any softmax policy $\pi_i = \frac{e^{\theta_i}}{\sum_k e^{\theta_k}}$, the p
 $$\frac{\partial \pi_i}{\partial \theta_j} = \begin{cases} \pi_i (1 - \pi_i) & \text{if } i = j \\ -\pi_i \pi_j & \text{if } i \ne j \end{cases} = \pi_i (\delta_{ij} - \pi_j)$$
 The score function with respect to parameter $\theta_j$ is:
 $$s_{i, j} = \frac{\partial \log \pi_i}{\partial \theta_j} = \frac{1}{\pi_i} \frac{\partial \pi_i}{\partial \theta_j} = \delta_{ij} - \pi_j$$
-In vector notation, the score vector for action $a_i$ is $\mathbf{s}_i = \mathbf{e}_i - \boldsymbol{\pi}$, where $\mathbf{e}_i$ is the $i$-th standard basis vector.
+In vector notation, the score vector for action $a_i$ is $\mathbf{s}_i = \mathbf{e}_i - \pi$, where $\mathbf{e}_i$ is the $i$-th standard basis vector.
 The Fisher Information Matrix is the expectation of the outer product:
-$$\mathbf{F}(\boldsymbol{\theta}) = \sum_{i} \pi_i \mathbf{s}_i \mathbf{s}_i^\top = \sum_i \pi_i (\mathbf{e}_i - \boldsymbol{\pi})(\mathbf{e}_i - \boldsymbol{\pi})^\top$$
+$$\mathbf{F}(\theta) = \sum_{i} \pi_i \mathbf{s}_i \mathbf{s}_i^\top = \sum_i \pi_i (\mathbf{e}_i - \pi)(\mathbf{e}_i - \pi)^\top$$
 Expanding the outer product:
-$$(\mathbf{e}_i - \boldsymbol{\pi})(\mathbf{e}_i - \boldsymbol{\pi})^\top = \mathbf{e}_i \mathbf{e}_i^\top - \mathbf{e}_i \boldsymbol{\pi}^\top - \boldsymbol{\pi} \mathbf{e}_i^\top + \boldsymbol{\pi} \boldsymbol{\pi}^\top$$
+$$(\mathbf{e}_i - \pi)(\mathbf{e}_i - \pi)^\top = \mathbf{e}_i \mathbf{e}_i^\top - \mathbf{e}_i \pi^\top - \pi \mathbf{e}_i^\top + \pi \pi^\top$$
 Multiplying by $\pi_i$ and summing over all actions $i$:
-1. $\sum_i \pi_i \mathbf{e}_i \mathbf{e}_i^\top = \operatorname{diag}(\boldsymbol{\pi})$
-2. $\sum_i \pi_i \mathbf{e}_i \boldsymbol{\pi}^\top = \left( \sum_i \pi_i \mathbf{e}_i \right) \boldsymbol{\pi}^\top = \boldsymbol{\pi} \boldsymbol{\pi}^\top$
-3. $\sum_i \pi_i \boldsymbol{\pi} \mathbf{e}_i^\top = \boldsymbol{\pi} \left( \sum_i \pi_i \mathbf{e}_i \right)^\top = \boldsymbol{\pi} \boldsymbol{\pi}^\top$
-4. $\sum_i \pi_i \boldsymbol{\pi} \boldsymbol{\pi}^\top = \left( \sum_i \pi_i \right) \boldsymbol{\pi} \boldsymbol{\pi}^\top = 1 \cdot \boldsymbol{\pi} \boldsymbol{\pi}^\top = \boldsymbol{\pi} \boldsymbol{\pi}^\top$
+1. $\sum_i \pi_i \mathbf{e}_i \mathbf{e}_i^\top = \operatorname{diag}(\pi)$
+2. $\sum_i \pi_i \mathbf{e}_i \pi^\top = \left( \sum_i \pi_i \mathbf{e}_i \right) \pi^\top = \pi \pi^\top$
+3. $\sum_i \pi_i \pi \mathbf{e}_i^\top = \pi \left( \sum_i \pi_i \mathbf{e}_i \right)^\top = \pi \pi^\top$
+4. $\sum_i \pi_i \pi \pi^\top = \left( \sum_i \pi_i \right) \pi \pi^\top = 1 \cdot \pi \pi^\top = \pi \pi^\top$
 
 Summing these four terms:
-$$\mathbf{F}(\boldsymbol{\theta}) = \operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi}\boldsymbol{\pi}^\top - \boldsymbol{\pi}\boldsymbol{\pi}^\top + \boldsymbol{\pi}\boldsymbol{\pi}^\top = \mathbf{\operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi}\boldsymbol{\pi}^\top} \quad \blacksquare$$
+$$\mathbf{F}(\theta) = \operatorname{diag}(\pi) - \pi\pi^\top - \pi\pi^\top + \pi\pi^\top = \mathbf{\operatorname{diag}(\pi) - \pi\pi^\top} \quad \blacksquare$$
 
 **Numerical Computation:**
 *Step 1: Compute Action Probabilities:*
@@ -814,21 +814,21 @@ $$e^{\theta_0} = e^{\ln(3)} = 3.000000, \quad e^{\theta_1} = e^0 = 1.000000$$
 $$\sum_k e^{\theta_k} = 3.000000 + 1.000000 = 4.000000$$
 $$\pi_0 = \frac{3.000000}{4.000000} = \mathbf{0.750000}, \quad \pi_1 = \frac{1.000000}{4.000000} = \mathbf{0.250000}$$
 
-*Step 2: Method A (Analytical Formula $\operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi}\boldsymbol{\pi}^\top$):*
-$$\operatorname{diag}(\boldsymbol{\pi}) = \begin{bmatrix} 0.750000 & 0.000000 \\ 0.000000 & 0.250000 \end{bmatrix}$$
-$$\boldsymbol{\pi} \boldsymbol{\pi}^\top = \begin{bmatrix} 0.750000 \\ 0.250000 \end{bmatrix} \begin{bmatrix} 0.750000 & 0.250000 \end{bmatrix} = \begin{bmatrix} 0.7500^2 & 0.7500 \times 0.2500 \\ 0.2500 \times 0.7500 & 0.2500^2 \end{bmatrix} = \begin{bmatrix} 0.562500 & 0.187500 \\ 0.187500 & 0.062500 \end{bmatrix}$$
+*Step 2: Method A (Analytical Formula $\operatorname{diag}(\pi) - \pi\pi^\top$):*
+$$\operatorname{diag}(\pi) = \begin{bmatrix} 0.750000 & 0.000000 \\ 0.000000 & 0.250000 \end{bmatrix}$$
+$$\pi \pi^\top = \begin{bmatrix} 0.750000 \\ 0.250000 \end{bmatrix} \begin{bmatrix} 0.750000 & 0.250000 \end{bmatrix} = \begin{bmatrix} 0.7500^2 & 0.7500 \times 0.2500 \\ 0.2500 \times 0.7500 & 0.2500^2 \end{bmatrix} = \begin{bmatrix} 0.562500 & 0.187500 \\ 0.187500 & 0.062500 \end{bmatrix}$$
 Subtracting the matrices:
-$$\mathbf{F}(\boldsymbol{\theta}) = \begin{bmatrix} 0.750000 - 0.562500 & 0.000000 - 0.187500 \\ 0.000000 - 0.187500 & 0.250000 - 0.062500 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.187500 & -0.187500 \\ -0.187500 & 0.187500 \end{bmatrix}}$$
+$$\mathbf{F}(\theta) = \begin{bmatrix} 0.750000 - 0.562500 & 0.000000 - 0.187500 \\ 0.000000 - 0.187500 & 0.250000 - 0.062500 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.187500 & -0.187500 \\ -0.187500 & 0.187500 \end{bmatrix}}$$
 
 *Step 3: Method B (Score Vectors & Outer Products):*
 For action $a_0$:
-$$\mathbf{s}_0 = \mathbf{e}_0 - \boldsymbol{\pi} = \begin{bmatrix} 1 - 0.7500 \\ 0 - 0.2500 \end{bmatrix} = \begin{bmatrix} +0.2500 \\ -0.2500 \end{bmatrix}$$
+$$\mathbf{s}_0 = \mathbf{e}_0 - \pi = \begin{bmatrix} 1 - 0.7500 \\ 0 - 0.2500 \end{bmatrix} = \begin{bmatrix} +0.2500 \\ -0.2500 \end{bmatrix}$$
 $$\mathbf{s}_0 \mathbf{s}_0^\top = \begin{bmatrix} +0.2500 \\ -0.2500 \end{bmatrix} \begin{bmatrix} +0.2500 & -0.2500 \end{bmatrix} = \begin{bmatrix} 0.062500 & -0.062500 \\ -0.062500 & 0.062500 \end{bmatrix}$$
 For action $a_1$:
-$$\mathbf{s}_1 = \mathbf{e}_1 - \boldsymbol{\pi} = \begin{bmatrix} 0 - 0.7500 \\ 1 - 0.2500 \end{bmatrix} = \begin{bmatrix} -0.7500 \\ +0.7500 \end{bmatrix}$$
+$$\mathbf{s}_1 = \mathbf{e}_1 - \pi = \begin{bmatrix} 0 - 0.7500 \\ 1 - 0.2500 \end{bmatrix} = \begin{bmatrix} -0.7500 \\ +0.7500 \end{bmatrix}$$
 $$\mathbf{s}_1 \mathbf{s}_1^\top = \begin{bmatrix} -0.7500 \\ +0.7500 \end{bmatrix} \begin{bmatrix} -0.7500 & +0.7500 \end{bmatrix} = \begin{bmatrix} 0.562500 & -0.562500 \\ -0.562500 & 0.562500 \end{bmatrix}$$
 Weighting by action probabilities:
-$$\mathbf{F}(\boldsymbol{\theta}) = 0.7500 \begin{bmatrix} 0.062500 & -0.062500 \\ -0.062500 & 0.062500 \end{bmatrix} + 0.2500 \begin{bmatrix} 0.562500 & -0.562500 \\ -0.562500 & 0.562500 \end{bmatrix}$$
+$$\mathbf{F}(\theta) = 0.7500 \begin{bmatrix} 0.062500 & -0.062500 \\ -0.062500 & 0.062500 \end{bmatrix} + 0.2500 \begin{bmatrix} 0.562500 & -0.562500 \\ -0.562500 & 0.562500 \end{bmatrix}$$
 $$= \begin{bmatrix} 0.046875 & -0.046875 \\ -0.046875 & 0.046875 \end{bmatrix} + \begin{bmatrix} 0.140625 & -0.140625 \\ -0.140625 & 0.140625 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.187500 & -0.187500 \\ -0.187500 & 0.187500 \end{bmatrix}}$$
 Both methods match to machine precision. $\blacksquare$
 
@@ -840,9 +840,9 @@ Suppose an agent operates in an ill-conditioned policy landscape where parameter
 $$\mathbf{F} = \begin{bmatrix} 25.0000 & 0.0000 \\ 0.0000 & 0.0400 \end{bmatrix}$$
 The condition number of the metric tensor is $\kappa = 25.0000 / 0.0400 = 625$.
 The observed policy gradient is $\mathbf{g} = [1.0000, 0.2000]^\top$, and the allowable KL trust region is $\epsilon = 0.0100$.
-1. Compute the Vanilla policy gradient step $\Delta \boldsymbol{\theta}_{\text{vanilla}}$ normalized to satisfy the trust-region budget $\frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} = \epsilon$.
-2. Compute the Natural policy gradient step $\Delta \boldsymbol{\theta}_{\text{natural}}$ under the same trust-region budget.
-3. Compare the objective improvements $\Delta J \approx \mathbf{g}^\top \Delta \boldsymbol{\theta}$ and explain the geometric speedup.
+1. Compute the Vanilla policy gradient step $\Delta \theta_{\text{vanilla}}$ normalized to satisfy the trust-region budget $\frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta = \epsilon$.
+2. Compute the Natural policy gradient step $\Delta \theta_{\text{natural}}$ under the same trust-region budget.
+3. Compare the objective improvements $\Delta J \approx \mathbf{g}^\top \Delta \theta$ and explain the geometric speedup.
 
 **Step-by-Step Solution:**
 
@@ -853,9 +853,9 @@ $$\mathbf{g}^\top \mathbf{F} \mathbf{g} = (1.0000)^2 \times 25.0000 + (0.2000)^2
 The maximum step size $\alpha$ that satisfies $\frac{1}{2} \alpha^2 (\mathbf{g}^\top \mathbf{F} \mathbf{g}) = \epsilon$ is:
 $$\alpha = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F} \mathbf{g}}} = \sqrt{\frac{2 \times 0.0100}{25.0016}} = \sqrt{\frac{0.0200}{25.0016}} \approx \mathbf{0.028283}$$
 The resulting vanilla parameter update vector is:
-$$\Delta \boldsymbol{\theta}_{\text{vanilla}} = 0.028283 \begin{bmatrix} 1.0000 \\ 0.2000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.028283 \\ 0.005657 \end{bmatrix}}$$
+$$\Delta \theta_{\text{vanilla}} = 0.028283 \begin{bmatrix} 1.0000 \\ 0.2000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.028283 \\ 0.005657 \end{bmatrix}}$$
 The first-order expected return improvement under vanilla gradient:
-$$\Delta J_{\text{vanilla}} = \mathbf{g}^\top \Delta \boldsymbol{\theta}_{\text{vanilla}} = 1.0000 \times 0.028283 + 0.2000 \times 0.005657 = 0.028283 + 0.001131 = \mathbf{0.029415}$$
+$$\Delta J_{\text{vanilla}} = \mathbf{g}^\top \Delta \theta_{\text{vanilla}} = 1.0000 \times 0.028283 + 0.2000 \times 0.005657 = 0.028283 + 0.001131 = \mathbf{0.029415}$$
 
 *Step 2: Natural Policy Gradient Step:*
 Compute the inverse metric tensor:
@@ -867,9 +867,9 @@ $$\mathbf{g}^\top \tilde{\mathbf{g}} = \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g
 Compute the natural step size $\beta$:
 $$\beta = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} = \sqrt{\frac{2 \times 0.0100}{1.0400}} = \sqrt{\frac{0.0200}{1.0400}} = \sqrt{\frac{1}{52}} \approx \mathbf{0.138675}$$
 The final natural policy gradient parameter update is:
-$$\Delta \boldsymbol{\theta}_{\text{natural}} = \beta \tilde{\mathbf{g}} = 0.138675 \begin{bmatrix} 0.0400 \\ 5.0000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.005547 \\ 0.693375 \end{bmatrix}}$$
+$$\Delta \theta_{\text{natural}} = \beta \tilde{\mathbf{g}} = 0.138675 \begin{bmatrix} 0.0400 \\ 5.0000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.005547 \\ 0.693375 \end{bmatrix}}$$
 The first-order expected return improvement under natural gradient:
-$$\Delta J_{\text{natural}} = \mathbf{g}^\top \Delta \boldsymbol{\theta}_{\text{natural}} = 1.0000 \times 0.005547 + 0.2000 \times 0.693375 = 0.005547 + 0.138675 = \mathbf{0.144222}$$
+$$\Delta J_{\text{natural}} = \mathbf{g}^\top \Delta \theta_{\text{natural}} = 1.0000 \times 0.005547 + 0.2000 \times 0.693375 = 0.005547 + 0.138675 = \mathbf{0.144222}$$
 
 *Step 3: Comparison & Geometric Interpretation:*
 Ratio of return improvements for the identical KL divergence constraint ($\epsilon = 0.0100$):
@@ -883,7 +883,7 @@ $$\frac{\Delta J_{\text{natural}}}{\Delta J_{\text{vanilla}}} = \frac{0.144222}{
 
 ### Illustration 4: Empirical Fisher Matrix Estimation and Damped Inversion ($N = 4$)
 **Problem:**
-In deep reinforcement learning, the expectation over $(s, a)$ is approximated using a batch of $N$ transition samples. Suppose an empirical batch of $N = 4$ transitions produces the following score vectors $\mathbf{g}_i = \nabla_{\boldsymbol{\theta}} \log \pi(a_i \mid s_i) \in \mathbb{R}^2$:
+In deep reinforcement learning, the expectation over $(s, a)$ is approximated using a batch of $N$ transition samples. Suppose an empirical batch of $N = 4$ transitions produces the following score vectors $\mathbf{g}_i = \nabla_{\theta} \log \pi(a_i \mid s_i) \in \mathbb{R}^2$:
 $$\mathbf{g}_1 = \begin{bmatrix} 1.0000 \\ 0.5000 \end{bmatrix}, \quad \mathbf{g}_2 = \begin{bmatrix} -0.5000 \\ 1.0000 \end{bmatrix}, \quad \mathbf{g}_3 = \begin{bmatrix} 0.8000 \\ -0.4000 \end{bmatrix}, \quad \mathbf{g}_4 = \begin{bmatrix} -0.6000 \\ -0.8000 \end{bmatrix}$$
 1. Compute the empirical Fisher Information Matrix $\mathbf{F}_{\text{emp}} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i \mathbf{g}_i^\top$.
 2. Apply Tikhonov damping with regularization parameter $\lambda = 10^{-3} = 0.0010$:
@@ -933,54 +933,54 @@ $$\tilde{\mathbf{g}} = \mathbf{\begin{bmatrix} +0.92004633 \\ -0.46115258 \end{b
 
 ### Illustration 5: Continuous Action Gaussian Policy Natural Gradient & Coordinate Invariance
 **Problem:**
-Consider a 2D continuous action policy parameterized by mean vector $\boldsymbol{\mu} \in \mathbb{R}^2$ with fixed covariance matrix $\boldsymbol{\Sigma}$:
-$$\pi_{\boldsymbol{\mu}}(\mathbf{a}) = \frac{1}{(2\pi) |\boldsymbol{\Sigma}|^{1/2}} \exp\left( -\frac{1}{2} (\mathbf{a} - \boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{a} - \boldsymbol{\mu}) \right)$$
+Consider a 2D continuous action policy parameterized by mean vector $\mu \in \mathbb{R}^2$ with fixed covariance matrix $\Sigma$:
+$$\pi_{\mu}(\mathbf{a}) = \frac{1}{(2\pi) |\Sigma|^{1/2}} \exp\left( -\frac{1}{2} (\mathbf{a} - \mu)^\top \Sigma^{-1} (\mathbf{a} - \mu) \right)$$
 where:
-$$\boldsymbol{\Sigma} = \begin{bmatrix} 4.0000 & 1.0000 \\ 1.0000 & 2.0000 \end{bmatrix}$$
-The observed policy gradient with respect to mean $\boldsymbol{\mu}$ is $\mathbf{g} = [1.5000, -0.5000]^\top$, and the trust-region bound is $\epsilon = 0.0500$.
-1. Prove that the Fisher Information Matrix with respect to the mean vector $\boldsymbol{\mu}$ is exactly the precision matrix $\mathbf{F}_{\boldsymbol{\mu}} = \boldsymbol{\Sigma}^{-1}$, and therefore the natural gradient direction is $\tilde{\mathbf{g}} = \boldsymbol{\Sigma} \mathbf{g}$.
-2. Compute the natural policy gradient update $\Delta \boldsymbol{\mu}^*$ in the original action coordinates.
+$$\Sigma = \begin{bmatrix} 4.0000 & 1.0000 \\ 1.0000 & 2.0000 \end{bmatrix}$$
+The observed policy gradient with respect to mean $\mu$ is $\mathbf{g} = [1.5000, -0.5000]^\top$, and the trust-region bound is $\epsilon = 0.0500$.
+1. Prove that the Fisher Information Matrix with respect to the mean vector $\mu$ is exactly the precision matrix $\mathbf{F}_{\mu} = \Sigma^{-1}$, and therefore the natural gradient direction is $\tilde{\mathbf{g}} = \Sigma \mathbf{g}$.
+2. Compute the natural policy gradient update $\Delta \mu^*$ in the original action coordinates.
 3. Consider a coordinate transformation that scales the first action dimension by a factor of 10: $\tilde{\mathbf{a}} = \mathbf{C} \mathbf{a}$ where $\mathbf{C} = \operatorname{diag}(10.0, 1.0)$.
-   Compute the scaled covariance $\tilde{\boldsymbol{\Sigma}}$, scaled gradient $\mathbf{g}_{\text{scaled}}$, and scaled natural gradient update $\Delta \tilde{\boldsymbol{\mu}}^*$.
-   Show that mapping $\Delta \tilde{\boldsymbol{\mu}}^*$ back to the original space via $\mathbf{C}^{-1} \Delta \tilde{\boldsymbol{\mu}}^*$ reproduces $\Delta \boldsymbol{\mu}^*$ exactly.
+   Compute the scaled covariance $\tilde{\Sigma}$, scaled gradient $\mathbf{g}_{\text{scaled}}$, and scaled natural gradient update $\Delta \tilde{\mu}^*$.
+   Show that mapping $\Delta \tilde{\mu}^*$ back to the original space via $\mathbf{C}^{-1} \Delta \tilde{\mu}^*$ reproduces $\Delta \mu^*$ exactly.
 4. Contrast this with the vanilla policy gradient update to demonstrate vanilla failure under scaling.
 
 **Step-by-Step Solution:**
 
 *Step 1: Analytical Fisher Matrix for Gaussian Mean:*
 Log-likelihood function:
-$$\log \pi_{\boldsymbol{\mu}}(\mathbf{a}) = -\log(2\pi) - \frac{1}{2}\log|\boldsymbol{\Sigma}| - \frac{1}{2} (\mathbf{a} - \boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{a} - \boldsymbol{\mu})$$
-Compute the gradient with respect to $\boldsymbol{\mu}$:
-$$\nabla_{\boldsymbol{\mu}} \log \pi_{\boldsymbol{\mu}}(\mathbf{a}) = \boldsymbol{\Sigma}^{-1} (\mathbf{a} - \boldsymbol{\mu})$$
+$$\log \pi_{\mu}(\mathbf{a}) = -\log(2\pi) - \frac{1}{2}\log|\Sigma| - \frac{1}{2} (\mathbf{a} - \mu)^\top \Sigma^{-1} (\mathbf{a} - \mu)$$
+Compute the gradient with respect to $\mu$:
+$$\nabla_{\mu} \log \pi_{\mu}(\mathbf{a}) = \Sigma^{-1} (\mathbf{a} - \mu)$$
 Compute the Fisher Information Matrix:
-$$\mathbf{F}_{\boldsymbol{\mu}} = \mathbb{E}_{\mathbf{a} \sim \pi} \left[ (\nabla_{\boldsymbol{\mu}} \log \pi)(\nabla_{\boldsymbol{\mu}} \log \pi)^\top \right] = \mathbb{E}\left[ \boldsymbol{\Sigma}^{-1} (\mathbf{a} - \boldsymbol{\mu}) (\mathbf{a} - \boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} \right]$$
-Since $\boldsymbol{\Sigma}^{-1}$ is constant, pull it outside the expectation:
-$$\mathbf{F}_{\boldsymbol{\mu}} = \boldsymbol{\Sigma}^{-1} \left( \mathbb{E}\left[ (\mathbf{a} - \boldsymbol{\mu})(\mathbf{a} - \boldsymbol{\mu})^\top \right] \right) \boldsymbol{\Sigma}^{-1}$$
-Recognizing the inner expectation as the covariance matrix $\boldsymbol{\Sigma}$:
-$$\mathbf{F}_{\boldsymbol{\mu}} = \boldsymbol{\Sigma}^{-1} \boldsymbol{\Sigma} \boldsymbol{\Sigma}^{-1} = \mathbf{I} \boldsymbol{\Sigma}^{-1} = \mathbf{\boldsymbol{\Sigma}^{-1}}$$
+$$\mathbf{F}_{\mu} = \mathbb{E}_{\mathbf{a} \sim \pi} \left[ (\nabla_{\mu} \log \pi)(\nabla_{\mu} \log \pi)^\top \right] = \mathbb{E}\left[ \Sigma^{-1} (\mathbf{a} - \mu) (\mathbf{a} - \mu)^\top \Sigma^{-1} \right]$$
+Since $\Sigma^{-1}$ is constant, pull it outside the expectation:
+$$\mathbf{F}_{\mu} = \Sigma^{-1} \left( \mathbb{E}\left[ (\mathbf{a} - \mu)(\mathbf{a} - \mu)^\top \right] \right) \Sigma^{-1}$$
+Recognizing the inner expectation as the covariance matrix $\Sigma$:
+$$\mathbf{F}_{\mu} = \Sigma^{-1} \Sigma \Sigma^{-1} = \mathbf{I} \Sigma^{-1} = \mathbf{\Sigma^{-1}}$$
 Therefore, the inverse Fisher matrix is:
-$$\mathbf{F}_{\boldsymbol{\mu}}^{-1} = (\boldsymbol{\Sigma}^{-1})^{-1} = \mathbf{\boldsymbol{\Sigma}}$$
+$$\mathbf{F}_{\mu}^{-1} = (\Sigma^{-1})^{-1} = \mathbf{\Sigma}$$
 The unnormalized natural gradient direction is:
-$$\tilde{\mathbf{g}}_{\boldsymbol{\mu}} = \mathbf{F}_{\boldsymbol{\mu}}^{-1} \mathbf{g} = \mathbf{\boldsymbol{\Sigma} \mathbf{g}}$$
+$$\tilde{\mathbf{g}}_{\mu} = \mathbf{F}_{\mu}^{-1} \mathbf{g} = \mathbf{\Sigma \mathbf{g}}$$
 The natural gradient is simply the vanilla gradient smoothed and rotated by the action covariance matrix!
 
 *Step 2: Natural Gradient Update in Original Coordinates:*
 Compute the unnormalized natural gradient:
-$$\tilde{\mathbf{g}} = \boldsymbol{\Sigma} \mathbf{g} = \begin{bmatrix} 4.0000 & 1.0000 \\ 1.0000 & 2.0000 \end{bmatrix} \begin{bmatrix} 1.5000 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 4.0 \times 1.5 + 1.0 \times (-0.5) \\ 1.0 \times 1.5 + 2.0 \times (-0.5) \end{bmatrix} = \begin{bmatrix} 6.0000 - 0.5000 \\ 1.5000 - 1.0000 \end{bmatrix} = \mathbf{\begin{bmatrix} 5.5000 \\ 0.5000 \end{bmatrix}}$$
+$$\tilde{\mathbf{g}} = \Sigma \mathbf{g} = \begin{bmatrix} 4.0000 & 1.0000 \\ 1.0000 & 2.0000 \end{bmatrix} \begin{bmatrix} 1.5000 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 4.0 \times 1.5 + 1.0 \times (-0.5) \\ 1.0 \times 1.5 + 2.0 \times (-0.5) \end{bmatrix} = \begin{bmatrix} 6.0000 - 0.5000 \\ 1.5000 - 1.0000 \end{bmatrix} = \mathbf{\begin{bmatrix} 5.5000 \\ 0.5000 \end{bmatrix}}$$
 Compute curvature:
-$$\mathbf{g}^\top \tilde{\mathbf{g}} = \mathbf{g}^\top \boldsymbol{\Sigma} \mathbf{g} = 1.5000 \times 5.5000 + (-0.5000) \times 0.5000 = 8.2500 - 0.2500 = \mathbf{8.0000}$$
+$$\mathbf{g}^\top \tilde{\mathbf{g}} = \mathbf{g}^\top \Sigma \mathbf{g} = 1.5000 \times 5.5000 + (-0.5000) \times 0.5000 = 8.2500 - 0.2500 = \mathbf{8.0000}$$
 Compute step size $\beta$ for $\epsilon = 0.0500$:
-$$\beta = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \boldsymbol{\Sigma} \mathbf{g}}} = \sqrt{\frac{2 \times 0.0500}{8.0000}} = \sqrt{\frac{0.1000}{8.0000}} = \sqrt{0.012500} \approx \mathbf{0.1118034}$$
+$$\beta = \sqrt{\frac{2 \epsilon}{\mathbf{g}^\top \Sigma \mathbf{g}}} = \sqrt{\frac{2 \times 0.0500}{8.0000}} = \sqrt{\frac{0.1000}{8.0000}} = \sqrt{0.012500} \approx \mathbf{0.1118034}$$
 Compute the parameter update:
-$$\Delta \boldsymbol{\mu}^* = \beta \tilde{\mathbf{g}} = 0.1118034 \begin{bmatrix} 5.5000 \\ 0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.6149187 \\ 0.0559017 \end{bmatrix}}$$
+$$\Delta \mu^* = \beta \tilde{\mathbf{g}} = 0.1118034 \begin{bmatrix} 5.5000 \\ 0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.6149187 \\ 0.0559017 \end{bmatrix}}$$
 
 *Step 3: Natural Gradient Update in Transformed Coordinates ($\mathbf{C} = \operatorname{diag}(10.0, 1.0)$):*
-In the scaled action space $\tilde{\mathbf{a}} = \mathbf{C} \mathbf{a}$, the mean is $\tilde{\boldsymbol{\mu}} = \mathbf{C} \boldsymbol{\mu}$, and the covariance matrix transforms as:
-$$\tilde{\boldsymbol{\Sigma}} = \mathbf{C} \boldsymbol{\Sigma} \mathbf{C}^\top = \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 4.0 & 1.0 \\ 1.0 & 2.0 \end{bmatrix} \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} 40.0 & 10.0 \\ 1.0 & 2.0 \end{bmatrix} \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 400.0000 & 10.0000 \\ 10.0000 & 2.0000 \end{bmatrix}}$$
+In the scaled action space $\tilde{\mathbf{a}} = \mathbf{C} \mathbf{a}$, the mean is $\tilde{\mu} = \mathbf{C} \mu$, and the covariance matrix transforms as:
+$$\tilde{\Sigma} = \mathbf{C} \Sigma \mathbf{C}^\top = \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 4.0 & 1.0 \\ 1.0 & 2.0 \end{bmatrix} \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} 40.0 & 10.0 \\ 1.0 & 2.0 \end{bmatrix} \begin{bmatrix} 10.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 400.0000 & 10.0000 \\ 10.0000 & 2.0000 \end{bmatrix}}$$
 The policy gradient transforms covariantly with $(\mathbf{C}^{-1})^\top = \mathbf{C}^{-1} = \operatorname{diag}(0.10, 1.00)$:
 $$\mathbf{g}_{\text{scaled}} = \mathbf{C}^{-1} \mathbf{g} = \begin{bmatrix} 0.1000 & 0.0000 \\ 0.0000 & 1.0000 \end{bmatrix} \begin{bmatrix} 1.5000 \\ -0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.1500 \\ -0.5000 \end{bmatrix}}$$
 Compute the natural gradient direction in scaled coordinates:
-$$\tilde{\mathbf{g}}_{\text{scaled}} = \tilde{\boldsymbol{\Sigma}} \mathbf{g}_{\text{scaled}} = \begin{bmatrix} 400.0 & 10.0 \\ 10.0 & 2.0 \end{bmatrix} \begin{bmatrix} 0.1500 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 400.0 \times 0.15 + 10.0 \times (-0.5) \\ 10.0 \times 0.15 + 2.0 \times (-0.5) \end{bmatrix} = \begin{bmatrix} 60.0 - 5.0 \\ 1.5 - 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 55.0000 \\ 0.5000 \end{bmatrix}}$$
+$$\tilde{\mathbf{g}}_{\text{scaled}} = \tilde{\Sigma} \mathbf{g}_{\text{scaled}} = \begin{bmatrix} 400.0 & 10.0 \\ 10.0 & 2.0 \end{bmatrix} \begin{bmatrix} 0.1500 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 400.0 \times 0.15 + 10.0 \times (-0.5) \\ 10.0 \times 0.15 + 2.0 \times (-0.5) \end{bmatrix} = \begin{bmatrix} 60.0 - 5.0 \\ 1.5 - 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 55.0000 \\ 0.5000 \end{bmatrix}}$$
 Notice that $\tilde{\mathbf{g}}_{\text{scaled}} = \mathbf{C} \tilde{\mathbf{g}}$:
 $$\begin{bmatrix} 55.0000 \\ 0.5000 \end{bmatrix} = \begin{bmatrix} 10.0 \times 5.5000 \\ 1.0 \times 0.5000 \end{bmatrix} = \mathbf{C} \tilde{\mathbf{g}} \quad \checkmark$$
 Compute the Riemannian curvature in scaled coordinates:
@@ -989,19 +989,19 @@ The curvature is identical!
 Compute step size:
 $$\beta_{\text{scaled}} = \sqrt{\frac{2 \times 0.0500}{8.0000}} = \mathbf{0.1118034} = \beta$$
 Compute update in scaled coordinates:
-$$\Delta \tilde{\boldsymbol{\mu}}^* = 0.1118034 \begin{bmatrix} 55.0000 \\ 0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 6.1491869 \\ 0.0559017 \end{bmatrix}}$$
-Now map $\Delta \tilde{\boldsymbol{\mu}}^*$ back to the original physical coordinate system via $\mathbf{C}^{-1}$:
-$$\mathbf{C}^{-1} \Delta \tilde{\boldsymbol{\mu}}^* = \begin{bmatrix} 0.1000 & 0.0000 \\ 0.0000 & 1.0000 \end{bmatrix} \begin{bmatrix} 6.1491869 \\ 0.0559017 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.6149187 \\ 0.0559017 \end{bmatrix}} = \Delta \boldsymbol{\mu}^* \quad \blacksquare$$
+$$\Delta \tilde{\mu}^* = 0.1118034 \begin{bmatrix} 55.0000 \\ 0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 6.1491869 \\ 0.0559017 \end{bmatrix}}$$
+Now map $\Delta \tilde{\mu}^*$ back to the original physical coordinate system via $\mathbf{C}^{-1}$:
+$$\mathbf{C}^{-1} \Delta \tilde{\mu}^* = \begin{bmatrix} 0.1000 & 0.0000 \\ 0.0000 & 1.0000 \end{bmatrix} \begin{bmatrix} 6.1491869 \\ 0.0559017 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.6149187 \\ 0.0559017 \end{bmatrix}} = \Delta \mu^* \quad \blacksquare$$
 
 *Step 4: Contrast with Vanilla Policy Gradient Failure:*
 Suppose a practitioner uses standard vanilla policy gradient with learning rate $\alpha = 0.1000$.
 In the original coordinates:
-$$\Delta \boldsymbol{\mu}_{\text{vanilla}} = \alpha \mathbf{g} = 0.1000 \begin{bmatrix} 1.5000 \\ -0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.1500 \\ -0.0500 \end{bmatrix}}$$
+$$\Delta \mu_{\text{vanilla}} = \alpha \mathbf{g} = 0.1000 \begin{bmatrix} 1.5000 \\ -0.5000 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.1500 \\ -0.0500 \end{bmatrix}}$$
 In the scaled coordinates, the vanilla gradient is $\mathbf{g}_{\text{scaled}} = [0.1500, -0.5000]^\top$.
 The vanilla step in scaled space is:
-$$\Delta \tilde{\boldsymbol{\mu}}_{\text{vanilla}} = \alpha \mathbf{g}_{\text{scaled}} = 0.1000 \begin{bmatrix} 0.1500 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 0.0150 \\ -0.0500 \end{bmatrix}$$
+$$\Delta \tilde{\mu}_{\text{vanilla}} = \alpha \mathbf{g}_{\text{scaled}} = 0.1000 \begin{bmatrix} 0.1500 \\ -0.5000 \end{bmatrix} = \begin{bmatrix} 0.0150 \\ -0.0500 \end{bmatrix}$$
 Mapping this back to original physical action units:
-$$\mathbf{C}^{-1} \Delta \tilde{\boldsymbol{\mu}}_{\text{vanilla}} = \begin{bmatrix} 0.1000 & 0.0000 \\ 0.0000 & 1.0000 \end{bmatrix} \begin{bmatrix} 0.0150 \\ -0.0500 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.0015 \\ -0.0500 \end{bmatrix}} \ne \mathbf{\begin{bmatrix} 0.1500 \\ -0.0500 \end{bmatrix}}$$
+$$\mathbf{C}^{-1} \Delta \tilde{\mu}_{\text{vanilla}} = \begin{bmatrix} 0.1000 & 0.0000 \\ 0.0000 & 1.0000 \end{bmatrix} \begin{bmatrix} 0.0150 \\ -0.0500 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.0015 \\ -0.0500 \end{bmatrix}} \ne \mathbf{\begin{bmatrix} 0.1500 \\ -0.0500 \end{bmatrix}}$$
 The physical update along the first action dimension was suppressed by a factor of $100$ ($10^2$)!
 Vanilla policy gradient is severely distorted by coordinate scaling, whereas Natural Policy Gradient produces the exact same physical probability distribution update. $\blacksquare$
 
@@ -1030,14 +1030,14 @@ The Fisher information matrix $F$ governs the **geometry of the parameter space*
 ## 8. Code Implementation & Verification
 
 The accompanying Python script implements an exhaustive suite of 8 automated mathematical verification tests:
-1. **Part 5 Hand Calculations Verification:** Confirms scores $\mathbf{s}_0, \mathbf{s}_1$, Fisher Matrix $\mathbf{F}$, damped inverse $\mathbf{F}_{\text{reg}}^{-1}$, natural gradient $\tilde{\mathbf{g}} = [+2.7778, -2.7778]^\top$, step size $\beta = 0.06000$, update $\Delta \boldsymbol{\theta}^* = [+0.16667, -0.16667]^\top$, and exact KL divergence $\frac{1}{2}\Delta\boldsymbol{\theta}^\top \mathbf{F}_{\text{reg}} \Delta\boldsymbol{\theta} = 0.0100$ to machine precision.
-2. **Kakade Invariance Theorem Test:** Verifies that under random non-singular coordinate transformations $\tilde{\boldsymbol{\theta}} = \mathbf{M} \boldsymbol{\theta}$, the natural gradient step satisfies $\mathbf{M}^{-1} \Delta \tilde{\boldsymbol{\theta}}^* = \Delta \boldsymbol{\theta}^*$ with zero coordinate distortion.
+1. **Part 5 Hand Calculations Verification:** Confirms scores $\mathbf{s}_0, \mathbf{s}_1$, Fisher Matrix $\mathbf{F}$, damped inverse $\mathbf{F}_{\text{reg}}^{-1}$, natural gradient $\tilde{\mathbf{g}} = [+2.7778, -2.7778]^\top$, step size $\beta = 0.06000$, update $\Delta \theta^* = [+0.16667, -0.16667]^\top$, and exact KL divergence $\frac{1}{2}\Delta\theta^\top \mathbf{F}_{\text{reg}} \Delta\theta = 0.0100$ to machine precision.
+2. **Kakade Invariance Theorem Test:** Verifies that under random non-singular coordinate transformations $\tilde{\theta} = \mathbf{M} \theta$, the natural gradient step satisfies $\mathbf{M}^{-1} \Delta \tilde{\theta}^* = \Delta \theta^*$ with zero coordinate distortion.
 3. **Analytical vs. Monte Carlo Gaussian Fisher Matrix:** Validates analytical $\mathbf{F} = \operatorname{diag}(1/\sigma^2, 2/\sigma^2)$ against a $100,000$-sample empirical expectation.
-4. **Illustration 1 Verification:** Verifies the 1D Gaussian policy natural gradient step ($\Delta \boldsymbol{\theta}^* = [0.094281, -0.023570]^\top$) and exact trust-region satisfaction.
-5. **Illustration 2 Verification:** Verifies the analytical 2-action softmax Fisher matrix $\mathbf{F} = \operatorname{diag}(\boldsymbol{\pi}) - \boldsymbol{\pi}\boldsymbol{\pi}^\top = \begin{bmatrix} 0.1875 & -0.1875 \\ -0.1875 & 0.1875 \end{bmatrix}$ matches the expectation of outer product score vectors identically.
+4. **Illustration 1 Verification:** Verifies the 1D Gaussian policy natural gradient step ($\Delta \theta^* = [0.094281, -0.023570]^\top$) and exact trust-region satisfaction.
+5. **Illustration 2 Verification:** Verifies the analytical 2-action softmax Fisher matrix $\mathbf{F} = \operatorname{diag}(\pi) - \pi\pi^\top = \begin{bmatrix} 0.1875 & -0.1875 \\ -0.1875 & 0.1875 \end{bmatrix}$ matches the expectation of outer product score vectors identically.
 6. **Illustration 3 Verification:** Verifies the $4.9031\times$ speedup of Natural Policy Gradient over Vanilla Policy Gradient on an ill-conditioned plateau ($\kappa = 625$) under identical KL divergence $\epsilon = 0.0100$.
 7. **Illustration 4 Verification:** Verifies batch sample outer products, empirical Fisher estimation ($N = 4$), Tikhonov damping ($\lambda = 10^{-3}$), analytical $2 \times 2$ determinant, and matrix inversion.
-8. **Illustration 5 Verification:** Verifies the continuous Gaussian covariance-scaled natural direction ($\tilde{\mathbf{g}} = \boldsymbol{\Sigma}\mathbf{g}$) and absolute coordinate invariance under diagonal scaling ($\mathbf{C} = \operatorname{diag}(10, 1)$), contrasting with the $100\times$ distortion suffered by vanilla gradients.
+8. **Illustration 5 Verification:** Verifies the continuous Gaussian covariance-scaled natural direction ($\tilde{\mathbf{g}} = \Sigma\mathbf{g}$) and absolute coordinate invariance under diagonal scaling ($\mathbf{C} = \operatorname{diag}(10, 1)$), contrasting with the $100\times$ distortion suffered by vanilla gradients.
 
 See implementation in:
 [`11_reinforcement_learning/code/17_natural_policy_gradients.py`](./code/17_natural_policy_gradients.py)

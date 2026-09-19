@@ -499,7 +499,7 @@ $$\mathbf{W}_g = \begin{bmatrix} 1.0 & 0.0 & -1.0 \\ 0.0 & 1.0 & 1.0 \end{bmatri
 1. Evaluate raw routing logits $\mathbf{h} = \mathbf{x}^T \mathbf{W}_g$ and identify the Top-2 active experts.
 2. Compute normalized gating weights $G_i$ over the Top-2 set.
 3. The selected experts produce outputs $\mathbf{e}_0 = [1.0, 0.0]^T, \mathbf{e}_1 = [0.0, 2.0]^T$. The layer output is $\mathbf{y} = G_0 \mathbf{e}_0 + G_1 \mathbf{e}_1$.
-4. Given upstream loss sensitivity $\boldsymbol{\delta}_y = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} = [1.0, 1.0]^T$, backpropagate through the gating network to compute parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_g} \in \mathbb{R}^{2 \times 3}$.
+4. Given upstream loss sensitivity $\delta_y = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} = [1.0, 1.0]^T$, backpropagate through the gating network to compute parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_g} \in \mathbb{R}^{2 \times 3}$.
 
 **Solution:**
 
@@ -531,8 +531,8 @@ $$\mathbf{W}_g = \begin{bmatrix} 1.0 & 0.0 & -1.0 \\ 0.0 & 1.0 & 1.0 \end{bmatri
 #### Step 2: Backward Pass Through Gating Mechanism
 
 1. **Gradient w.r.t. Gating Weights $G_i$:**
-   $$\frac{\partial \mathcal{L}}{\partial G_0} = \boldsymbol{\delta}_y^T \mathbf{e}_0 = [1.0, 1.0] \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} = \mathbf{1.000000}$$
-   $$\frac{\partial \mathcal{L}}{\partial G_1} = \boldsymbol{\delta}_y^T \mathbf{e}_1 = [1.0, 1.0] \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix} = \mathbf{2.000000}$$
+   $$\frac{\partial \mathcal{L}}{\partial G_0} = \delta_y^T \mathbf{e}_0 = [1.0, 1.0] \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} = \mathbf{1.000000}$$
+   $$\frac{\partial \mathcal{L}}{\partial G_1} = \delta_y^T \mathbf{e}_1 = [1.0, 1.0] \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix} = \mathbf{2.000000}$$
 
 2. **Backpropagation Through Softmax to Active Logits $h_i$:**
    Weighted mean:

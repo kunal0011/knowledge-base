@@ -87,19 +87,19 @@ Historically, no single architecture maximized all three:
 
 ### 2.1 The Maximum Likelihood Estimator & Forward vs. Reverse KL
 
-Given true empirical data distribution $p_{\text{data}}(\mathbf{x})$ and parameterized model distribution $p_{\boldsymbol{\theta}}(\mathbf{x})$, maximum likelihood estimation minimizes the **Forward Kullback-Leibler (KL) Divergence**:
+Given true empirical data distribution $p_{\text{data}}(\mathbf{x})$ and parameterized model distribution $p_{\theta}(\mathbf{x})$, maximum likelihood estimation minimizes the **Forward Kullback-Leibler (KL) Divergence**:
 
-$$D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\boldsymbol{\theta}}) = \int p_{\text{data}}(\mathbf{x}) \log \frac{p_{\text{data}}(\mathbf{x})}{p_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x} = \underbrace{\mathbb{E}_{p_{\text{data}}}[\log p_{\text{data}}(\mathbf{x})]}_{\text{Constant entropy } -H(p_{\text{data}})} - \mathbb{E}_{p_{\text{data}}}[\log p_{\boldsymbol{\theta}}(\mathbf{x})]$$
+$$D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\theta}) = \int p_{\text{data}}(\mathbf{x}) \log \frac{p_{\text{data}}(\mathbf{x})}{p_{\theta}(\mathbf{x})} d\mathbf{x} = \underbrace{\mathbb{E}_{p_{\text{data}}}[\log p_{\text{data}}(\mathbf{x})]}_{\text{Constant entropy } -H(p_{\text{data}})} - \mathbb{E}_{p_{\text{data}}}[\log p_{\theta}(\mathbf{x})]$$
 
-Minimizing $D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\boldsymbol{\theta}})$ is strictly equivalent to maximizing the expected log-likelihood:
-$$\arg\min_{\boldsymbol{\theta}} D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\boldsymbol{\theta}}) \equiv \arg\max_{\boldsymbol{\theta}} \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} \left[ \log p_{\boldsymbol{\theta}}(\mathbf{x}) \right]$$
+Minimizing $D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\theta})$ is strictly equivalent to maximizing the expected log-likelihood:
+$$\arg\min_{\theta} D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\theta}) \equiv \arg\max_{\theta} \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} \left[ \log p_{\theta}(\mathbf{x}) \right]$$
 
 #### The Forward vs. Reverse KL Asymmetry:
-1. **Forward KL ($D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\boldsymbol{\theta}})$ - Mode-Covering / Zero-Avoiding):**
-   If $p_{\text{data}}(\mathbf{x}) > 0$, the model must ensure $p_{\boldsymbol{\theta}}(\mathbf{x}) > 0$; otherwise $\log \frac{p_{\text{data}}}{p_{\boldsymbol{\theta}}} \to \infty$.
-   To avoid infinite penalties, $p_{\boldsymbol{\theta}}$ broadens its support to cover **all modes** of the data, even if it places probability mass in empty valleys between modes (producing blurry VAE samples).
-2. **Reverse KL ($D_{\text{KL}}(p_{\boldsymbol{\theta}} \,\|\, p_{\text{data}})$ - Mode-Dropping / Zero-Forcing):**
-   If $p_{\text{data}}(\mathbf{x}) = 0$, the model must force $p_{\boldsymbol{\theta}}(\mathbf{x}) = 0$ to avoid infinite loss.
+1. **Forward KL ($D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\theta})$ - Mode-Covering / Zero-Avoiding):**
+   If $p_{\text{data}}(\mathbf{x}) > 0$, the model must ensure $p_{\theta}(\mathbf{x}) > 0$; otherwise $\log \frac{p_{\text{data}}}{p_{\theta}} \to \infty$.
+   To avoid infinite penalties, $p_{\theta}$ broadens its support to cover **all modes** of the data, even if it places probability mass in empty valleys between modes (producing blurry VAE samples).
+2. **Reverse KL ($D_{\text{KL}}(p_{\theta} \,\|\, p_{\text{data}})$ - Mode-Dropping / Zero-Forcing):**
+   If $p_{\text{data}}(\mathbf{x}) = 0$, the model must force $p_{\theta}(\mathbf{x}) = 0$ to avoid infinite loss.
    The model prefers to concentrate its probability mass sharply on a **single mode** of the data, completely ignoring other modes (the mode collapse phenomenon in GANs).
 
 ```
@@ -118,20 +118,20 @@ $$\arg\min_{\boldsymbol{\theta}} D_{\text{KL}}(p_{\text{data}} \,\|\, p_{\boldsy
 ### 2.2 The Invertible Change of Variables Theorem (Normalizing Flows)
 
 Let $\mathbf{z} \in \mathbb{R}^d$ be a latent vector sampled from a known tractable prior $p_{\mathbf{z}}(\mathbf{z})$ (e.g., standard normal $\mathcal{N}(\mathbf{0}, \mathbf{I})$).
-Let $\mathbf{x} = f_{\boldsymbol{\theta}}(\mathbf{z})$ be a bijective (invertible) and differentiable transformation ($f_{\boldsymbol{\theta}}: \mathbb{R}^d \to \mathbb{R}^d$).
+Let $\mathbf{x} = f_{\theta}(\mathbf{z})$ be a bijective (invertible) and differentiable transformation ($f_{\theta}: \mathbb{R}^d \to \mathbb{R}^d$).
 
 By conservation of probability mass across differential volumes $d\mathbf{x}$ and $d\mathbf{z}$:
 $$p_{\mathbf{x}}(\mathbf{x}) |d\mathbf{x}| = p_{\mathbf{z}}(\mathbf{z}) |d\mathbf{z}|$$
 
 Rearranging:
-$$p_{\mathbf{x}}(\mathbf{x}) = p_{\mathbf{z}}\left( f_{\boldsymbol{\theta}}^{-1}(\mathbf{x}) \right) \cdot \left| \det \left( \frac{\partial f_{\boldsymbol{\theta}}^{-1}(\mathbf{x})}{\partial \mathbf{x}} \right) \right|$$
+$$p_{\mathbf{x}}(\mathbf{x}) = p_{\mathbf{z}}\left( f_{\theta}^{-1}(\mathbf{x}) \right) \cdot \left| \det \left( \frac{\partial f_{\theta}^{-1}(\mathbf{x})}{\partial \mathbf{x}} \right) \right|$$
 
 Taking the logarithm:
-$$\log p_{\mathbf{x}}(\mathbf{x}) = \log p_{\mathbf{z}}\left( f_{\boldsymbol{\theta}}^{-1}(\mathbf{x}) \right) + \log \left| \det \mathbf{J}_{f^{-1}}(\mathbf{x}) \right|$$
+$$\log p_{\mathbf{x}}(\mathbf{x}) = \log p_{\mathbf{z}}\left( f_{\theta}^{-1}(\mathbf{x}) \right) + \log \left| \det \mathbf{J}_{f^{-1}}(\mathbf{x}) \right|$$
 where $\mathbf{J}_{f^{-1}} \in \mathbb{R}^{d \times d}$ is the Jacobian matrix of the inverse mapping.
 
 **Architectural Requirement:**
-For Normalizing Flows (e.g., RealNVP, Glow), the transformation $f_{\boldsymbol{\theta}}$ must be designed with an **upper or lower triangular Jacobian**, so that the determinant is simply the product of diagonal elements:
+For Normalizing Flows (e.g., RealNVP, Glow), the transformation $f_{\theta}$ must be designed with an **upper or lower triangular Jacobian**, so that the determinant is simply the product of diagonal elements:
 $$\det \mathbf{J} = \prod_{i=1}^d J_{i, i} \implies \log |\det \mathbf{J}| = \sum_{i=1}^d \log |J_{i, i}|$$
 evaluating in $\mathcal{O}(d)$ time instead of $\mathcal{O}(d^3)$.
 
@@ -139,21 +139,21 @@ evaluating in $\mathcal{O}(d)$ time instead of $\mathcal{O}(d^3)$.
 
 ### 2.3 Energy-Based Models (EBMs) & Intractable Partition Functions
 
-An Energy-Based Model parameterizes the probability density using an unconstrained neural network scalar energy function $E_{\boldsymbol{\theta}}(\mathbf{x}) \in \mathbb{R}$:
-$$p_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{\exp\left( -E_{\boldsymbol{\theta}}(\mathbf{x}) \right)}{Z(\boldsymbol{\theta})}$$
-where $Z(\boldsymbol{\theta})$ is the **partition function**:
-$$Z(\boldsymbol{\theta}) = \int_{\mathbb{R}^D} \exp\left( -E_{\boldsymbol{\theta}}(\mathbf{x}) \right) d\mathbf{x}$$
+An Energy-Based Model parameterizes the probability density using an unconstrained neural network scalar energy function $E_{\theta}(\mathbf{x}) \in \mathbb{R}$:
+$$p_{\theta}(\mathbf{x}) = \frac{\exp\left( -E_{\theta}(\mathbf{x}) \right)}{Z(\theta)}$$
+where $Z(\theta)$ is the **partition function**:
+$$Z(\theta) = \int_{\mathbb{R}^D} \exp\left( -E_{\theta}(\mathbf{x}) \right) d\mathbf{x}$$
 
 #### The Intractability Crisis:
-In $D = 196,608$ dimensions, computing the integral $Z(\boldsymbol{\theta})$ analytically or numerically via naive Monte Carlo is physically impossible.
+In $D = 196,608$ dimensions, computing the integral $Z(\theta)$ analytically or numerically via naive Monte Carlo is physically impossible.
 Taking the log-likelihood gradient:
-$$\nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}) = -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) - \nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta})$$
-$$\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta}) = \frac{1}{Z(\boldsymbol{\theta})} \int -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}') e^{-E_{\boldsymbol{\theta}}(\mathbf{x}')} d\mathbf{x}' = - \mathbb{E}_{\mathbf{x}' \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}') \right]$$
+$$\nabla_{\theta} \log p_{\theta}(\mathbf{x}) = -\nabla_{\theta} E_{\theta}(\mathbf{x}) - \nabla_{\theta} \log Z(\theta)$$
+$$\nabla_{\theta} \log Z(\theta) = \frac{1}{Z(\theta)} \int -\nabla_{\theta} E_{\theta}(\mathbf{x}') e^{-E_{\theta}(\mathbf{x}')} d\mathbf{x}' = - \mathbb{E}_{\mathbf{x}' \sim p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}') \right]$$
 
 Thus:
-$$\nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}) = \underbrace{-\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x})}_{\text{Positive Phase (Pushes energy of data down)}} + \underbrace{\mathbb{E}_{\mathbf{x}' \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}') \right]}_{\text{Negative Phase (Pushes energy of hallucinations up)}}$$
+$$\nabla_{\theta} \log p_{\theta}(\mathbf{x}) = \underbrace{-\nabla_{\theta} E_{\theta}(\mathbf{x})}_{\text{Positive Phase (Pushes energy of data down)}} + \underbrace{\mathbb{E}_{\mathbf{x}' \sim p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}') \right]}_{\text{Negative Phase (Pushes energy of hallucinations up)}}$$
 
-Sampling $\mathbf{x}' \sim p_{\boldsymbol{\theta}}$ requires expensive Markov Chain Monte Carlo (MCMC) Langevin dynamics at every gradient step.
+Sampling $\mathbf{x}' \sim p_{\theta}$ requires expensive Markov Chain Monte Carlo (MCMC) Langevin dynamics at every gradient step.
 
 ---
 
@@ -167,50 +167,50 @@ Assume an unknown true data-generating distribution $p^*(\mathbf{x}) = p_{\text{
 We observe an independently and identically distributed (i.i.d.) dataset $\mathcal{D} = \{\mathbf{x}^{(1)}, \mathbf{x}^{(2)}, \dots, \mathbf{x}^{(N)}\}$.
 The empirical distribution is represented as a sum of Dirac delta measures:
 $$p_{\text{data}}^{(N)}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^N \delta(\mathbf{x} - \mathbf{x}^{(i)})$$
-Let $\mathcal{P} = \{p_{\boldsymbol{\theta}} : \boldsymbol{\theta} \in \Theta \subseteq \mathbb{R}^P\}$ be a family of parametric probability densities with shared support satisfying $\operatorname{supp}(p^*) \subseteq \operatorname{supp}(p_{\boldsymbol{\theta}})$, where $p_{\boldsymbol{\theta}}(\mathbf{x}) > 0$ for all $\mathbf{x} \in \operatorname{supp}(p^*)$. Assume $p_{\boldsymbol{\theta}}(\mathbf{x})$ is twice continuously differentiable with respect to $\boldsymbol{\theta}$.
+Let $\mathcal{P} = \{p_{\theta} : \theta \in \Theta \subseteq \mathbb{R}^P\}$ be a family of parametric probability densities with shared support satisfying $\operatorname{supp}(p^*) \subseteq \operatorname{supp}(p_{\theta})$, where $p_{\theta}(\mathbf{x}) > 0$ for all $\mathbf{x} \in \operatorname{supp}(p^*)$. Assume $p_{\theta}(\mathbf{x})$ is twice continuously differentiable with respect to $\theta$.
 
 **2. Step 1: Definition of KL Divergence & Non-Negativity (Gibbs' Inequality):**
-The Forward Kullback-Leibler divergence from $p_{\boldsymbol{\theta}}$ to $p^*$ is defined as:
-$$D_{\mathrm{KL}}(p^* \,\|\, p_{\boldsymbol{\theta}}) \triangleq \int_{\mathcal{X}} p^*(\mathbf{x}) \log \left( \frac{p^*(\mathbf{x})}{p_{\boldsymbol{\theta}}(\mathbf{x})} \right) d\mathbf{x} = -\int_{\mathcal{X}} p^*(\mathbf{x}) \log \left( \frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} \right) d\mathbf{x}$$
+The Forward Kullback-Leibler divergence from $p_{\theta}$ to $p^*$ is defined as:
+$$D_{\mathrm{KL}}(p^* \,\|\, p_{\theta}) \triangleq \int_{\mathcal{X}} p^*(\mathbf{x}) \log \left( \frac{p^*(\mathbf{x})}{p_{\theta}(\mathbf{x})} \right) d\mathbf{x} = -\int_{\mathcal{X}} p^*(\mathbf{x}) \log \left( \frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} \right) d\mathbf{x}$$
 Because $\phi(u) = -\log(u)$ is strictly convex for $u > 0$ (since $\phi''(u) = 1/u^2 > 0$), by Jensen's inequality:
-$$D_{\mathrm{KL}}(p^* \,\|\, p_{\boldsymbol{\theta}}) = \mathbb{E}_{\mathbf{x} \sim p^*} \left[ -\log \left( \frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} \right) \right] \ge -\log \left( \mathbb{E}_{\mathbf{x} \sim p^*} \left[ \frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} \right] \right)$$
+$$D_{\mathrm{KL}}(p^* \,\|\, p_{\theta}) = \mathbb{E}_{\mathbf{x} \sim p^*} \left[ -\log \left( \frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} \right) \right] \ge -\log \left( \mathbb{E}_{\mathbf{x} \sim p^*} \left[ \frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} \right] \right)$$
 Evaluating the inner expectation:
-$$\mathbb{E}_{\mathbf{x} \sim p^*} \left[ \frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} \right] = \int_{\mathcal{X}} p^*(\mathbf{x}) \frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} d\mathbf{x} = \int_{\mathcal{X}} p_{\boldsymbol{\theta}}(\mathbf{x}) d\mathbf{x} = 1$$
+$$\mathbb{E}_{\mathbf{x} \sim p^*} \left[ \frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} \right] = \int_{\mathcal{X}} p^*(\mathbf{x}) \frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} d\mathbf{x} = \int_{\mathcal{X}} p_{\theta}(\mathbf{x}) d\mathbf{x} = 1$$
 Therefore:
-$$D_{\mathrm{KL}}(p^* \,\|\, p_{\boldsymbol{\theta}}) \ge -\log(1) = 0$$
-Strict convexity implies equality holds if and only if $\frac{p_{\boldsymbol{\theta}}(\mathbf{x})}{p^*(\mathbf{x})} = 1$ almost everywhere with respect to $p^*$.
+$$D_{\mathrm{KL}}(p^* \,\|\, p_{\theta}) \ge -\log(1) = 0$$
+Strict convexity implies equality holds if and only if $\frac{p_{\theta}(\mathbf{x})}{p^*(\mathbf{x})} = 1$ almost everywhere with respect to $p^*$.
 
 **3. Step 2: Information Decomposition into Entropy and Cross-Entropy:**
 Expanding the logarithmic ratio:
-$$D_{\mathrm{KL}}(p^* \,\|\, p_{\boldsymbol{\theta}}) = \int_{\mathcal{X}} p^*(\mathbf{x}) \log p^*(\mathbf{x}) d\mathbf{x} - \int_{\mathcal{X}} p^*(\mathbf{x}) \log p_{\boldsymbol{\theta}}(\mathbf{x}) d\mathbf{x} = -H(p^*) + H(p^*, p_{\boldsymbol{\theta}})$$
-Notice that the true data entropy $H(p^*) \triangleq -\mathbb{E}_{\mathbf{x} \sim p^*}[\log p^*(\mathbf{x})]$ is purely a property of nature and has zero partial derivative with respect to model parameters $\boldsymbol{\theta}$:
-$$\nabla_{\boldsymbol{\theta}} D_{\mathrm{KL}}(p^* \,\|\, p_{\boldsymbol{\theta}}) = -\nabla_{\boldsymbol{\theta}} \mathbb{E}_{\mathbf{x} \sim p^*} [\log p_{\boldsymbol{\theta}}(\mathbf{x})]$$
+$$D_{\mathrm{KL}}(p^* \,\|\, p_{\theta}) = \int_{\mathcal{X}} p^*(\mathbf{x}) \log p^*(\mathbf{x}) d\mathbf{x} - \int_{\mathcal{X}} p^*(\mathbf{x}) \log p_{\theta}(\mathbf{x}) d\mathbf{x} = -H(p^*) + H(p^*, p_{\theta})$$
+Notice that the true data entropy $H(p^*) \triangleq -\mathbb{E}_{\mathbf{x} \sim p^*}[\log p^*(\mathbf{x})]$ is purely a property of nature and has zero partial derivative with respect to model parameters $\theta$:
+$$\nabla_{\theta} D_{\mathrm{KL}}(p^* \,\|\, p_{\theta}) = -\nabla_{\theta} \mathbb{E}_{\mathbf{x} \sim p^*} [\log p_{\theta}(\mathbf{x})]$$
 
 **4. Step 3: Empirical Approximation via Sample Measure:**
 Substituting the empirical measure $p_{\text{data}}^{(N)}(\mathbf{x})$ in place of the population density $p^*(\mathbf{x})$:
-$$\mathbb{E}_{\mathbf{x} \sim p_{\text{data}}^{(N)}} [\log p_{\boldsymbol{\theta}}(\mathbf{x})] = \int_{\mathcal{X}} \left( \frac{1}{N} \sum_{i=1}^N \delta(\mathbf{x} - \mathbf{x}^{(i)}) \right) \log p_{\boldsymbol{\theta}}(\mathbf{x}) d\mathbf{x} = \frac{1}{N} \sum_{i=1}^N \log p_{\boldsymbol{\theta}}(\mathbf{x}^{(i)})$$
+$$\mathbb{E}_{\mathbf{x} \sim p_{\text{data}}^{(N)}} [\log p_{\theta}(\mathbf{x})] = \int_{\mathcal{X}} \left( \frac{1}{N} \sum_{i=1}^N \delta(\mathbf{x} - \mathbf{x}^{(i)}) \right) \log p_{\theta}(\mathbf{x}) d\mathbf{x} = \frac{1}{N} \sum_{i=1}^N \log p_{\theta}(\mathbf{x}^{(i)})$$
 Hence, minimizing empirical forward KL divergence:
-$$\arg\min_{\boldsymbol{\theta} \in \Theta} D_{\mathrm{KL}}\left( p_{\text{data}}^{(N)} \,\|\, p_{\boldsymbol{\theta}} \right) \equiv \arg\max_{\boldsymbol{\theta} \in \Theta} \frac{1}{N} \sum_{i=1}^N \log p_{\boldsymbol{\theta}}(\mathbf{x}^{(i)}) = \arg\max_{\boldsymbol{\theta} \in \Theta} \mathcal{L}_{\mathrm{MLE}}(\boldsymbol{\theta})$$
-By the Strong Law of Large Numbers, $\frac{1}{N}\sum_{i=1}^N \log p_{\boldsymbol{\theta}}(\mathbf{x}^{(i)}) \xrightarrow{\text{a.s.}} \mathbb{E}_{p^*}[\log p_{\boldsymbol{\theta}}(\mathbf{x})]$ as $N \to \infty$.
+$$\arg\min_{\theta \in \Theta} D_{\mathrm{KL}}\left( p_{\text{data}}^{(N)} \,\|\, p_{\theta} \right) \equiv \arg\max_{\theta \in \Theta} \frac{1}{N} \sum_{i=1}^N \log p_{\theta}(\mathbf{x}^{(i)}) = \arg\max_{\theta \in \Theta} \mathcal{L}_{\mathrm{MLE}}(\theta)$$
+By the Strong Law of Large Numbers, $\frac{1}{N}\sum_{i=1}^N \log p_{\theta}(\mathbf{x}^{(i)}) \xrightarrow{\text{a.s.}} \mathbb{E}_{p^*}[\log p_{\theta}(\mathbf{x})]$ as $N \to \infty$.
 
 **5. Step 4: Local Curvature and the Fisher Information Metric:**
-Suppose the model is well-specified, meaning $\exists \boldsymbol{\theta}^* \in \Theta$ such that $p_{\boldsymbol{\theta}^*} = p^*$.
-Consider a small parameter perturbation $\boldsymbol{\theta} = \boldsymbol{\theta}^* + \Delta \boldsymbol{\theta}$.
-Taylor expand $D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}^* + \Delta \boldsymbol{\theta}})$ around $\Delta \boldsymbol{\theta} = \mathbf{0}$:
-$$D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}^* + \Delta \boldsymbol{\theta}}) = D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}^*}) + \left. \nabla_{\boldsymbol{\theta}} D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}}) \right|_{\boldsymbol{\theta}^*}^\top \Delta \boldsymbol{\theta} + \frac{1}{2} \Delta \boldsymbol{\theta}^\top \left. \nabla_{\boldsymbol{\theta}}^2 D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}}) \right|_{\boldsymbol{\theta}^*} \Delta \boldsymbol{\theta} + \mathcal{O}(\|\Delta \boldsymbol{\theta}\|^3)$$
-Since $D_{\mathrm{KL}} \ge 0$ achieves its global minimum at $\boldsymbol{\theta}^*$, the zeroth-order term is 0 and the first-order gradient vanishes:
-$$\left. \nabla_{\boldsymbol{\theta}} D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}}) \right|_{\boldsymbol{\theta}^*} = -\mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}^*}} \left[ \nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}) \right]_{\boldsymbol{\theta}^*} = -\int \nabla_{\boldsymbol{\theta}} p_{\boldsymbol{\theta}^*}(\mathbf{x}) d\mathbf{x} = -\nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$$
+Suppose the model is well-specified, meaning $\exists \theta^* \in \Theta$ such that $p_{\theta^*} = p^*$.
+Consider a small parameter perturbation $\theta = \theta^* + \Delta \theta$.
+Taylor expand $D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta^* + \Delta \theta})$ around $\Delta \theta = \mathbf{0}$:
+$$D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta^* + \Delta \theta}) = D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta^*}) + \left. \nabla_{\theta} D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta}) \right|_{\theta^*}^\top \Delta \theta + \frac{1}{2} \Delta \theta^\top \left. \nabla_{\theta}^2 D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta}) \right|_{\theta^*} \Delta \theta + \mathcal{O}(\|\Delta \theta\|^3)$$
+Since $D_{\mathrm{KL}} \ge 0$ achieves its global minimum at $\theta^*$, the zeroth-order term is 0 and the first-order gradient vanishes:
+$$\left. \nabla_{\theta} D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta}) \right|_{\theta^*} = -\mathbb{E}_{\mathbf{x} \sim p_{\theta^*}} \left[ \nabla_{\theta} \log p_{\theta}(\mathbf{x}) \right]_{\theta^*} = -\int \nabla_{\theta} p_{\theta^*}(\mathbf{x}) d\mathbf{x} = -\nabla_{\theta} (1) = \mathbf{0}$$
 Now differentiate the expectation twice:
-$$\nabla_{\boldsymbol{\theta}}^2 D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}}) = -\mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}^*}} \left[ \nabla_{\boldsymbol{\theta}}^2 \log p_{\boldsymbol{\theta}}(\mathbf{x}) \right]$$
+$$\nabla_{\theta}^2 D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta}) = -\mathbb{E}_{\mathbf{x} \sim p_{\theta^*}} \left[ \nabla_{\theta}^2 \log p_{\theta}(\mathbf{x}) \right]$$
 Using the identity $\nabla^2 \log f = \frac{\nabla^2 f}{f} - \frac{\nabla f \nabla f^\top}{f^2}$:
-$$\nabla_{\boldsymbol{\theta}}^2 \log p_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{\nabla_{\boldsymbol{\theta}}^2 p_{\boldsymbol{\theta}}(\mathbf{x})}{p_{\boldsymbol{\theta}}(\mathbf{x})} - \left( \nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}) \right) \left( \nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}) \right)^\top$$
-Taking expectation under $p_{\boldsymbol{\theta}^*}$:
-$$\mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}^*}} \left[ \frac{\nabla_{\boldsymbol{\theta}}^2 p_{\boldsymbol{\theta}^*}(\mathbf{x})}{p_{\boldsymbol{\theta}^*}(\mathbf{x})} \right] = \int_{\mathcal{X}} \nabla_{\boldsymbol{\theta}}^2 p_{\boldsymbol{\theta}^*}(\mathbf{x}) d\mathbf{x} = \nabla_{\boldsymbol{\theta}}^2 \int_{\mathcal{X}} p_{\boldsymbol{\theta}^*}(\mathbf{x}) d\mathbf{x} = \mathbf{0}$$
+$$\nabla_{\theta}^2 \log p_{\theta}(\mathbf{x}) = \frac{\nabla_{\theta}^2 p_{\theta}(\mathbf{x})}{p_{\theta}(\mathbf{x})} - \left( \nabla_{\theta} \log p_{\theta}(\mathbf{x}) \right) \left( \nabla_{\theta} \log p_{\theta}(\mathbf{x}) \right)^\top$$
+Taking expectation under $p_{\theta^*}$:
+$$\mathbb{E}_{\mathbf{x} \sim p_{\theta^*}} \left[ \frac{\nabla_{\theta}^2 p_{\theta^*}(\mathbf{x})}{p_{\theta^*}(\mathbf{x})} \right] = \int_{\mathcal{X}} \nabla_{\theta}^2 p_{\theta^*}(\mathbf{x}) d\mathbf{x} = \nabla_{\theta}^2 \int_{\mathcal{X}} p_{\theta^*}(\mathbf{x}) d\mathbf{x} = \mathbf{0}$$
 Therefore:
-$$\left. \nabla_{\boldsymbol{\theta}}^2 D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}}) \right|_{\boldsymbol{\theta}=\boldsymbol{\theta}^*} = \mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}^*}} \left[ \nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}^*}(\mathbf{x}) \, \nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}^*}(\mathbf{x})^\top \right] \equiv \mathbf{I}(\boldsymbol{\theta}^*)$$
-where $\mathbf{I}(\boldsymbol{\theta}^*)$ is the **Fisher Information Matrix (FIM)**.
+$$\left. \nabla_{\theta}^2 D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta}) \right|_{\theta=\theta^*} = \mathbb{E}_{\mathbf{x} \sim p_{\theta^*}} \left[ \nabla_{\theta} \log p_{\theta^*}(\mathbf{x}) \, \nabla_{\theta} \log p_{\theta^*}(\mathbf{x})^\top \right] \equiv \mathbf{I}(\theta^*)$$
+where $\mathbf{I}(\theta^*)$ is the **Fisher Information Matrix (FIM)**.
 Locally, the Forward KL divergence is a Riemannian metric with metric tensor given by the Fisher Information:
-$$D_{\mathrm{KL}}(p_{\boldsymbol{\theta}^*} \,\|\, p_{\boldsymbol{\theta}^* + \Delta \boldsymbol{\theta}}) = \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{I}(\boldsymbol{\theta}^*) \Delta \boldsymbol{\theta} + \mathcal{O}(\|\Delta \boldsymbol{\theta}\|^3)$$
+$$D_{\mathrm{KL}}(p_{\theta^*} \,\|\, p_{\theta^* + \Delta \theta}) = \frac{1}{2} \Delta \theta^\top \mathbf{I}(\theta^*) \Delta \theta + \mathcal{O}(\|\Delta \theta\|^3)$$
 
 ---
 
@@ -285,54 +285,54 @@ This yields exact algebraic reconstruction with zero numerical drift.
 #### Derivation 10.1.3: Energy-Based Models: Log-Likelihood Gradient, the Covariance Identity, and Langevin Sampling Dynamics
 
 **1. Context and Assumptions:**
-Let $E_{\boldsymbol{\theta}}(\mathbf{x}) \in \mathbb{R}$ be an unnormalized scalar energy function parameterized by $\boldsymbol{\theta} \in \mathbb{R}^P$.
+Let $E_{\theta}(\mathbf{x}) \in \mathbb{R}$ be an unnormalized scalar energy function parameterized by $\theta \in \mathbb{R}^P$.
 The probability density is the Gibbs-Boltzmann distribution:
-$$p_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}}{Z(\boldsymbol{\theta})}, \quad \text{where } Z(\boldsymbol{\theta}) \triangleq \int_{\mathbb{R}^D} e^{-E_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x} < \infty$$
-Assume $e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}$ and its parameter derivatives are integrable over $\mathbb{R}^D$, permitting differentiation under the integral sign via the Dominated Convergence Theorem.
+$$p_{\theta}(\mathbf{x}) = \frac{e^{-E_{\theta}(\mathbf{x})}}{Z(\theta)}, \quad \text{where } Z(\theta) \triangleq \int_{\mathbb{R}^D} e^{-E_{\theta}(\mathbf{x})} d\mathbf{x} < \infty$$
+Assume $e^{-E_{\theta}(\mathbf{x})}$ and its parameter derivatives are integrable over $\mathbb{R}^D$, permitting differentiation under the integral sign via the Dominated Convergence Theorem.
 
 **2. Step 1: Derivative of the Log-Partition Function:**
-Compute the gradient of $\log Z(\boldsymbol{\theta})$ with respect to $\boldsymbol{\theta}$:
-$$\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta}) = \frac{1}{Z(\boldsymbol{\theta})} \nabla_{\boldsymbol{\theta}} Z(\boldsymbol{\theta}) = \frac{1}{Z(\boldsymbol{\theta})} \nabla_{\boldsymbol{\theta}} \int_{\mathbb{R}^D} e^{-E_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x}$$
+Compute the gradient of $\log Z(\theta)$ with respect to $\theta$:
+$$\nabla_{\theta} \log Z(\theta) = \frac{1}{Z(\theta)} \nabla_{\theta} Z(\theta) = \frac{1}{Z(\theta)} \nabla_{\theta} \int_{\mathbb{R}^D} e^{-E_{\theta}(\mathbf{x})} d\mathbf{x}$$
 Passing the gradient operator through the integral:
-$$\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta}) = \frac{1}{Z(\boldsymbol{\theta})} \int_{\mathbb{R}^D} \left( -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right) e^{-E_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x} = \int_{\mathbb{R}^D} \left( -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right) \underbrace{\frac{e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}}{Z(\boldsymbol{\theta})}}_{p_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x}$$
+$$\nabla_{\theta} \log Z(\theta) = \frac{1}{Z(\theta)} \int_{\mathbb{R}^D} \left( -\nabla_{\theta} E_{\theta}(\mathbf{x}) \right) e^{-E_{\theta}(\mathbf{x})} d\mathbf{x} = \int_{\mathbb{R}^D} \left( -\nabla_{\theta} E_{\theta}(\mathbf{x}) \right) \underbrace{\frac{e^{-E_{\theta}(\mathbf{x})}}{Z(\theta)}}_{p_{\theta}(\mathbf{x})} d\mathbf{x}$$
 By definition of mathematical expectation:
-$$\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta}) = -\mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right]$$
+$$\nabla_{\theta} \log Z(\theta) = -\mathbb{E}_{\mathbf{x} \sim p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}) \right]$$
 Now compute the gradient of the log-likelihood for a data point $\mathbf{x}_{\text{data}}$:
-$$\log p_{\boldsymbol{\theta}}(\mathbf{x}_{\text{data}}) = -E_{\boldsymbol{\theta}}(\mathbf{x}_{\text{data}}) - \log Z(\boldsymbol{\theta})$$
-$$\nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}}(\mathbf{x}_{\text{data}}) = -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}_{\text{data}}) - \nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta}) = -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}_{\text{data}}) + \mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right]$$
+$$\log p_{\theta}(\mathbf{x}_{\text{data}}) = -E_{\theta}(\mathbf{x}_{\text{data}}) - \log Z(\theta)$$
+$$\nabla_{\theta} \log p_{\theta}(\mathbf{x}_{\text{data}}) = -\nabla_{\theta} E_{\theta}(\mathbf{x}_{\text{data}}) - \nabla_{\theta} \log Z(\theta) = -\nabla_{\theta} E_{\theta}(\mathbf{x}_{\text{data}}) + \mathbb{E}_{\mathbf{x} \sim p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}) \right]$$
 Taking expectation over the true data distribution $p_{\text{data}}$:
-$$\nabla_{\boldsymbol{\theta}} \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} [\log p_{\boldsymbol{\theta}}(\mathbf{x})] = \underbrace{-\mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right]}_{\text{Positive Phase}} + \underbrace{\mathbb{E}_{\mathbf{x}' \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}') \right]}_{\text{Negative Phase}}$$
+$$\nabla_{\theta} \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} [\log p_{\theta}(\mathbf{x})] = \underbrace{-\mathbb{E}_{\mathbf{x} \sim p_{\text{data}}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}) \right]}_{\text{Positive Phase}} + \underbrace{\mathbb{E}_{\mathbf{x}' \sim p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}') \right]}_{\text{Negative Phase}}$$
 
 **3. Step 2: The Covariance Identity & Hessian of the Free Energy:**
-Differentiate $\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta})$ a second time:
-$$\nabla_{\boldsymbol{\theta}}^2 \log Z(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \left( \frac{\nabla_{\boldsymbol{\theta}} Z(\boldsymbol{\theta})}{Z(\boldsymbol{\theta})} \right) = \frac{\nabla_{\boldsymbol{\theta}}^2 Z(\boldsymbol{\theta})}{Z(\boldsymbol{\theta})} - \frac{\nabla_{\boldsymbol{\theta}} Z(\boldsymbol{\theta}) \nabla_{\boldsymbol{\theta}} Z(\boldsymbol{\theta})^\top}{Z(\boldsymbol{\theta})^2}$$
-Compute $\nabla_{\boldsymbol{\theta}}^2 Z(\boldsymbol{\theta})$:
-$$\nabla_{\boldsymbol{\theta}}^2 Z(\boldsymbol{\theta}) = \int_{\mathbb{R}^D} \nabla_{\boldsymbol{\theta}} \left( -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) e^{-E_{\boldsymbol{\theta}}(\mathbf{x})} \right) d\mathbf{x} = \int_{\mathbb{R}^D} \left( -\nabla_{\boldsymbol{\theta}}^2 E_{\boldsymbol{\theta}}(\mathbf{x}) + \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x})^\top \right) e^{-E_{\boldsymbol{\theta}}(\mathbf{x})} d\mathbf{x}$$
-Dividing by $Z(\boldsymbol{\theta})$:
-$$\frac{\nabla_{\boldsymbol{\theta}}^2 Z(\boldsymbol{\theta})}{Z(\boldsymbol{\theta})} = -\mathbb{E}_{p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}}^2 E_{\boldsymbol{\theta}}(\mathbf{x}) \right] + \mathbb{E}_{p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x})^\top \right]$$
-Since $\frac{\nabla_{\boldsymbol{\theta}} Z(\boldsymbol{\theta})}{Z(\boldsymbol{\theta})} = -\mathbb{E}_{p_{\boldsymbol{\theta}}}[\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x})]$, we substitute:
-$$\nabla_{\boldsymbol{\theta}}^2 \log Z(\boldsymbol{\theta}) = \operatorname{Cov}_{\mathbf{x} \sim p_{\boldsymbol{\theta}}} \left( \nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}(\mathbf{x}) \right) - \mathbb{E}_{\mathbf{x} \sim p_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}}^2 E_{\boldsymbol{\theta}}(\mathbf{x}) \right]$$
-For linear energy models (exponential families where $E_{\boldsymbol{\theta}}(\mathbf{x}) = -\boldsymbol{\theta}^\top \boldsymbol{\phi}(\mathbf{x})$), the second derivative $\nabla^2_{\boldsymbol{\theta}} E = \mathbf{0}$, yielding:
-$$\nabla_{\boldsymbol{\theta}}^2 \log Z(\boldsymbol{\theta}) = \operatorname{Cov}_{\mathbf{x} \sim p_{\boldsymbol{\theta}}}(\boldsymbol{\phi}(\mathbf{x})) \succeq 0$$
-This proves that the log-partition function $\log Z(\boldsymbol{\theta})$ is strictly convex in $\boldsymbol{\theta}$ for exponential families, ensuring a unique global maximum likelihood solution.
+Differentiate $\nabla_{\theta} \log Z(\theta)$ a second time:
+$$\nabla_{\theta}^2 \log Z(\theta) = \nabla_{\theta} \left( \frac{\nabla_{\theta} Z(\theta)}{Z(\theta)} \right) = \frac{\nabla_{\theta}^2 Z(\theta)}{Z(\theta)} - \frac{\nabla_{\theta} Z(\theta) \nabla_{\theta} Z(\theta)^\top}{Z(\theta)^2}$$
+Compute $\nabla_{\theta}^2 Z(\theta)$:
+$$\nabla_{\theta}^2 Z(\theta) = \int_{\mathbb{R}^D} \nabla_{\theta} \left( -\nabla_{\theta} E_{\theta}(\mathbf{x}) e^{-E_{\theta}(\mathbf{x})} \right) d\mathbf{x} = \int_{\mathbb{R}^D} \left( -\nabla_{\theta}^2 E_{\theta}(\mathbf{x}) + \nabla_{\theta} E_{\theta}(\mathbf{x}) \nabla_{\theta} E_{\theta}(\mathbf{x})^\top \right) e^{-E_{\theta}(\mathbf{x})} d\mathbf{x}$$
+Dividing by $Z(\theta)$:
+$$\frac{\nabla_{\theta}^2 Z(\theta)}{Z(\theta)} = -\mathbb{E}_{p_{\theta}} \left[ \nabla_{\theta}^2 E_{\theta}(\mathbf{x}) \right] + \mathbb{E}_{p_{\theta}} \left[ \nabla_{\theta} E_{\theta}(\mathbf{x}) \nabla_{\theta} E_{\theta}(\mathbf{x})^\top \right]$$
+Since $\frac{\nabla_{\theta} Z(\theta)}{Z(\theta)} = -\mathbb{E}_{p_{\theta}}[\nabla_{\theta} E_{\theta}(\mathbf{x})]$, we substitute:
+$$\nabla_{\theta}^2 \log Z(\theta) = \operatorname{Cov}_{\mathbf{x} \sim p_{\theta}} \left( \nabla_{\theta} E_{\theta}(\mathbf{x}) \right) - \mathbb{E}_{\mathbf{x} \sim p_{\theta}} \left[ \nabla_{\theta}^2 E_{\theta}(\mathbf{x}) \right]$$
+For linear energy models (exponential families where $E_{\theta}(\mathbf{x}) = -\theta^\top \phi(\mathbf{x})$), the second derivative $\nabla^2_{\theta} E = \mathbf{0}$, yielding:
+$$\nabla_{\theta}^2 \log Z(\theta) = \operatorname{Cov}_{\mathbf{x} \sim p_{\theta}}(\phi(\mathbf{x})) \succeq 0$$
+This proves that the log-partition function $\log Z(\theta)$ is strictly convex in $\theta$ for exponential families, ensuring a unique global maximum likelihood solution.
 
 **4. Step 3: Derivation of the Stationary Distribution of Langevin Diffusion:**
-To sample $\mathbf{x}' \sim p_{\boldsymbol{\theta}}(\mathbf{x})$ for the negative phase, consider the Itô Stochastic Differential Equation (SDE):
-$$d\mathbf{x}(t) = -\frac{1}{2} \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}(t)) dt + d\mathbf{w}(t)$$
+To sample $\mathbf{x}' \sim p_{\theta}(\mathbf{x})$ for the negative phase, consider the Itô Stochastic Differential Equation (SDE):
+$$d\mathbf{x}(t) = -\frac{1}{2} \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}(t)) dt + d\mathbf{w}(t)$$
 where $\mathbf{w}(t) \in \mathbb{R}^D$ is standard Brownian motion with covariance $\mathbb{E}[d\mathbf{w}(t) d\mathbf{w}(t)^\top] = \mathbf{I} dt$.
 Let $q(\mathbf{x}, t)$ be the probability density of the process at time $t$. By the Fokker-Planck (Kolmogorov Forward) Equation:
-$$\frac{\partial q(\mathbf{x}, t)}{\partial t} = -\nabla_{\mathbf{x}} \cdot \left( \boldsymbol{\mu}(\mathbf{x}) q(\mathbf{x}, t) \right) + \frac{1}{2} \sum_{i=1}^D \frac{\partial^2}{\partial x_i^2} q(\mathbf{x}, t)$$
-where the drift vector is $\boldsymbol{\mu}(\mathbf{x}) = -\frac{1}{2} \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x})$, and diffusion coefficient is $\mathbf{D} = \mathbf{I}$:
-$$\frac{\partial q(\mathbf{x}, t)}{\partial t} = \nabla_{\mathbf{x}} \cdot \left( \frac{1}{2} \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}) q(\mathbf{x}, t) + \frac{1}{2} \nabla_{\mathbf{x}} q(\mathbf{x}, t) \right) = \frac{1}{2} \nabla_{\mathbf{x}} \cdot \left[ q(\mathbf{x}, t) \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}) + \nabla_{\mathbf{x}} q(\mathbf{x}, t) \right]$$
+$$\frac{\partial q(\mathbf{x}, t)}{\partial t} = -\nabla_{\mathbf{x}} \cdot \left( \mu(\mathbf{x}) q(\mathbf{x}, t) \right) + \frac{1}{2} \sum_{i=1}^D \frac{\partial^2}{\partial x_i^2} q(\mathbf{x}, t)$$
+where the drift vector is $\mu(\mathbf{x}) = -\frac{1}{2} \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x})$, and diffusion coefficient is $\mathbf{D} = \mathbf{I}$:
+$$\frac{\partial q(\mathbf{x}, t)}{\partial t} = \nabla_{\mathbf{x}} \cdot \left( \frac{1}{2} \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}) q(\mathbf{x}, t) + \frac{1}{2} \nabla_{\mathbf{x}} q(\mathbf{x}, t) \right) = \frac{1}{2} \nabla_{\mathbf{x}} \cdot \left[ q(\mathbf{x}, t) \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}) + \nabla_{\mathbf{x}} q(\mathbf{x}, t) \right]$$
 At stationarity, $\frac{\partial q^*}{\partial t} = 0$. A sufficient condition is zero probability flux:
-$$q^*(\mathbf{x}) \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}) + \nabla_{\mathbf{x}} q^*(\mathbf{x}) = \mathbf{0} \implies \frac{\nabla_{\mathbf{x}} q^*(\mathbf{x})}{q^*(\mathbf{x})} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x})$$
-$$\nabla_{\mathbf{x}} \log q^*(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}) \implies \log q^*(\mathbf{x}) = -E_{\boldsymbol{\theta}}(\mathbf{x}) - \log Z \implies q^*(\mathbf{x}) = \frac{e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}}{Z(\boldsymbol{\theta})} = p_{\boldsymbol{\theta}}(\mathbf{x})$$
-The stationary distribution of the SDE is exactly the Gibbs density $p_{\boldsymbol{\theta}}(\mathbf{x})$!
+$$q^*(\mathbf{x}) \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}) + \nabla_{\mathbf{x}} q^*(\mathbf{x}) = \mathbf{0} \implies \frac{\nabla_{\mathbf{x}} q^*(\mathbf{x})}{q^*(\mathbf{x})} = -\nabla_{\mathbf{x}} E_{\theta}(\mathbf{x})$$
+$$\nabla_{\mathbf{x}} \log q^*(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}) \implies \log q^*(\mathbf{x}) = -E_{\theta}(\mathbf{x}) - \log Z \implies q^*(\mathbf{x}) = \frac{e^{-E_{\theta}(\mathbf{x})}}{Z(\theta)} = p_{\theta}(\mathbf{x})$$
+The stationary distribution of the SDE is exactly the Gibbs density $p_{\theta}(\mathbf{x})$!
 
 **5. Step 4: Discretization and Unadjusted Langevin Algorithm (ULA):**
 Applying the Euler-Maruyama discretization with step size $\epsilon > 0$:
-$$\mathbf{x}_{k+1} = \mathbf{x}_k - \frac{\epsilon}{2} \nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x}_k) + \sqrt{\epsilon} \boldsymbol{\xi}_k, \quad \boldsymbol{\xi}_k \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
-As $k \to \infty$ and $\epsilon \to 0$, the distribution of $\mathbf{x}_k$ converges in Wasserstein distance to $p_{\boldsymbol{\theta}}(\mathbf{x})$. In Contrastive Divergence (CD-$k$), running $k$ steps initialized from data $\mathbf{x}^{(0)} \sim p_{\text{data}}$ yields the negative phase sample $\mathbf{x}^- \approx \mathbf{x}_k$.
+$$\mathbf{x}_{k+1} = \mathbf{x}_k - \frac{\epsilon}{2} \nabla_{\mathbf{x}} E_{\theta}(\mathbf{x}_k) + \sqrt{\epsilon} \xi_k, \quad \xi_k \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+As $k \to \infty$ and $\epsilon \to 0$, the distribution of $\mathbf{x}_k$ converges in Wasserstein distance to $p_{\theta}(\mathbf{x})$. In Contrastive Divergence (CD-$k$), running $k$ steps initialized from data $\mathbf{x}^{(0)} \sim p_{\text{data}}$ yields the negative phase sample $\mathbf{x}^- \approx \mathbf{x}_k$.
 
 ---
 
@@ -341,7 +341,7 @@ As $k \to \infty$ and $\epsilon \to 0$, the distribution of $\mathbf{x}_k$ conve
 ### Push-Forward Measure & Diffeomorphic Warping
 
 Let $(\mathcal{Z}, \Sigma_z, \mu_z)$ be a probability space with Gaussian measure.
-A generative network $\mathbf{x} = G_{\boldsymbol{\theta}}(\mathbf{z})$ defines a **push-forward measure** $G_\# \mu_z$:
+A generative network $\mathbf{x} = G_{\theta}(\mathbf{z})$ defines a **push-forward measure** $G_\# \mu_z$:
 $$(G_\# \mu_z)(A) = \mu_z\left( G^{-1}(A) \right) \quad \text{for any measurable set } A \subset \mathcal{X}$$
 
 ```
@@ -554,7 +554,7 @@ At iteration step $t$, the current parameter values are:
 $$\mathbf{w}^{(t)} = \begin{bmatrix} w_1 \\ w_2 \\ w_{12} \end{bmatrix} = \begin{bmatrix} 1.00 \\ 1.00 \\ 0.00 \end{bmatrix}$$
 We observe a single empirical data point (positive sample):
 $$\mathbf{x}^+ = \begin{bmatrix} 2.00 \\ 1.00 \end{bmatrix}$$
-To approximate the intractable negative phase gradient, we execute one step of Unadjusted Langevin Algorithm (CD-1) initialized at $\mathbf{x}^{(0)} = \mathbf{x}^+$, with step size $\epsilon = 0.10$ and injected Gaussian noise $\boldsymbol{\xi} = [0.40, -0.60]^\top$.
+To approximate the intractable negative phase gradient, we execute one step of Unadjusted Langevin Algorithm (CD-1) initialized at $\mathbf{x}^{(0)} = \mathbf{x}^+$, with step size $\epsilon = 0.10$ and injected Gaussian noise $\xi = [0.40, -0.60]^\top$.
 1. Compute the data gradient $\nabla_{\mathbf{x}} E_{\mathbf{w}}(\mathbf{x}^{(0)})$.
 2. Execute the Langevin transition step to obtain negative hallucinated sample $\mathbf{x}^- = \mathbf{x}^{(1)}$.
 3. Compute the positive phase parameter gradient $\nabla_{\mathbf{w}} E_{\mathbf{w}}(\mathbf{x}^+)$ and negative phase parameter gradient $\nabla_{\mathbf{w}} E_{\mathbf{w}}(\mathbf{x}^-)$.
@@ -570,10 +570,10 @@ $$\nabla_{\mathbf{x}} E_{\mathbf{w}}(\mathbf{x}^{(0)}) = \begin{bmatrix} 1.00(2.
 
 **2. Langevin Diffusion Step (Negative Sample Generation):**
 The discrete Langevin transition is:
-$$\mathbf{x}^{(1)} = \mathbf{x}^{(0)} - \frac{\epsilon}{2} \nabla_{\mathbf{x}} E_{\mathbf{w}}(\mathbf{x}^{(0)}) + \sqrt{\epsilon} \boldsymbol{\xi}$$
+$$\mathbf{x}^{(1)} = \mathbf{x}^{(0)} - \frac{\epsilon}{2} \nabla_{\mathbf{x}} E_{\mathbf{w}}(\mathbf{x}^{(0)}) + \sqrt{\epsilon} \xi$$
 With $\epsilon = 0.10 \implies \frac{\epsilon}{2} = 0.05$ and $\sqrt{\epsilon} = \sqrt{0.10} \approx 0.316228$:
 $$\text{Drift term: } -\frac{\epsilon}{2} \nabla_{\mathbf{x}} E = -0.05 \begin{bmatrix} 2.00 \\ 1.00 \end{bmatrix} = \begin{bmatrix} -0.1000 \\ -0.0500 \end{bmatrix}$$
-$$\text{Diffusion term: } \sqrt{\epsilon} \boldsymbol{\xi} = 0.316228 \begin{bmatrix} 0.40 \\ -0.60 \end{bmatrix} = \begin{bmatrix} +0.126491 \\ -0.189737 \end{bmatrix}$$
+$$\text{Diffusion term: } \sqrt{\epsilon} \xi = 0.316228 \begin{bmatrix} 0.40 \\ -0.60 \end{bmatrix} = \begin{bmatrix} +0.126491 \\ -0.189737 \end{bmatrix}$$
 Summing the terms:
 $$\mathbf{x}^- = \mathbf{x}^{(1)} = \begin{bmatrix} 2.00 - 0.1000 + 0.126491 \\ 1.00 - 0.0500 - 0.189737 \end{bmatrix} = \begin{bmatrix} \mathbf{2.026491} \\ \mathbf{0.760263} \end{bmatrix}$$
 

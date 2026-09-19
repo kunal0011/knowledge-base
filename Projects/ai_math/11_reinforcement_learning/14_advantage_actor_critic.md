@@ -9,9 +9,9 @@ $$G_t = \sum_{k=0}^{T-t-1} \gamma^k R_{t+k+1}$$
 the variance scales quadratically with the horizon $T$, requiring millions of rollouts to find clear gradient signals. Furthermore, REINFORCE cannot learn online or mid-episode; it must wait for the entire episode to terminate.
 
 **Actor-Critic methods** eliminate this episodic restriction by replacing full Monte Carlo rollouts with **1-step bootstrapping**:
-- **The Actor:** The parameterized policy $\pi_{\boldsymbol{\theta}}(a \mid s)$, which explores the environment and selects actions.
-- **The Critic:** A parameterized state-value function $V_{\boldsymbol{\phi}}(s)$, which evaluates the quality of states by computing the 1-step Temporal-Difference (TD) error:
-  $$\delta_t = R_{t+1} + \gamma V_{\boldsymbol{\phi}}(S_{t+1}) - V_{\boldsymbol{\phi}}(S_t)$$
+- **The Actor:** The parameterized policy $\pi_{\theta}(a \mid s)$, which explores the environment and selects actions.
+- **The Critic:** A parameterized state-value function $V_{\phi}(s)$, which evaluates the quality of states by computing the 1-step Temporal-Difference (TD) error:
+  $$\delta_t = R_{t+1} + \gamma V_{\phi}(S_{t+1}) - V_{\phi}(S_t)$$
 
 The TD error $\delta_t$ serves as an immediate, low-variance estimate of the **Advantage function** $A(S_t, A_t)$. The Actor updates its policy weights at *every single time step* without waiting for the episode to end!
 
@@ -52,7 +52,7 @@ The TD error $\delta_t$ serves as an immediate, low-variance estimate of the **A
 ### 2.1 The Policy Gradient with Advantage Function
 
 Recall the general policy gradient theorem:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbb{E}_{\pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(A_t \mid S_t) \Psi_t \right]$$
+$$\nabla_{\theta} J(\theta) = \mathbb{E}_{\pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(A_t \mid S_t) \Psi_t \right]$$
 
 Common choices for $\Psi_t$:
 1. Trajectory Return: $\Psi_t = R(\tau)$ (high variance, unbiased)
@@ -77,16 +77,16 @@ $$= Q^\pi(s, a) - V^\pi(s) = A^\pi(s, a) \quad \blacksquare$$
 
 In practice, the Actor and Critic share feature representations (e.g., convolutional or MLP hidden layers). The unified training loss combines three distinct objectives:
 
-$$\mathcal{L}_{\text{total}}(\boldsymbol{\theta}, \boldsymbol{\phi}) \triangleq \mathcal{L}_{\text{policy}}(\boldsymbol{\theta}) + c_1 \mathcal{L}_{\text{value}}(\boldsymbol{\phi}) - c_2 \mathcal{H}(\pi_{\boldsymbol{\theta}}(\cdot \mid S_t))$$
+$$\mathcal{L}_{\text{total}}(\theta, \phi) \triangleq \mathcal{L}_{\text{policy}}(\theta) + c_1 \mathcal{L}_{\text{value}}(\phi) - c_2 \mathcal{H}(\pi_{\theta}(\cdot \mid S_t))$$
 
 where:
 1. **Policy Loss (Actor):**
-   $$\mathcal{L}_{\text{policy}}(\boldsymbol{\theta}) = - \log \pi_{\boldsymbol{\theta}}(A_t \mid S_t) \cdot \delta_t$$
+   $$\mathcal{L}_{\text{policy}}(\theta) = - \log \pi_{\theta}(A_t \mid S_t) \cdot \delta_t$$
    (The negative sign converts gradient ascent on expected return into gradient descent). Note: $\delta_t$ is detached from autograd when optimizing the Actor!
 2. **Value Loss (Critic):**
-   $$\mathcal{L}_{\text{value}}(\boldsymbol{\phi}) = \frac{1}{2} \delta_t^2 = \frac{1}{2} \left( R_{t+1} + \gamma V_{\boldsymbol{\phi}}(S_{t+1}) - V_{\boldsymbol{\phi}}(S_t) \right)^2$$
+   $$\mathcal{L}_{\text{value}}(\phi) = \frac{1}{2} \delta_t^2 = \frac{1}{2} \left( R_{t+1} + \gamma V_{\phi}(S_{t+1}) - V_{\phi}(S_t) \right)^2$$
 3. **Entropy Regularization ($\mathcal{H}$):**
-   $$\mathcal{H}(\pi_{\boldsymbol{\theta}}(\cdot \mid S_t)) \triangleq - \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid S_t) \log \pi_{\boldsymbol{\theta}}(a \mid S_t)$$
+   $$\mathcal{H}(\pi_{\theta}(\cdot \mid S_t)) \triangleq - \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid S_t) \log \pi_{\theta}(a \mid S_t)$$
    Maximizing entropy (subtracting $c_2 \mathcal{H}$ from the loss) prevents the policy from prematurely collapsing into a deterministic suboptimal action, encouraging persistent exploration.
 4. $c_1 \approx 0.5$ and $c_2 \approx 0.01$ are positive scaling coefficients.
 
@@ -97,10 +97,10 @@ where:
 Let $K$ be the number of parallel environment runners. At each rollout step:
 1. Each environment $k \in \{1, \dots, K\}$ holds state $s_t^{(k)}$.
 2. A single batched forward pass computes:
-   $$\boldsymbol{\pi}_t = \text{Softmax}(\text{Actor}(\mathbf{S}_t)), \quad \mathbf{V}_t = \text{Critic}(\mathbf{S}_t)$$
+   $$\pi_t = \text{Softmax}(\text{Actor}(\mathbf{S}_t)), \quad \mathbf{V}_t = \text{Critic}(\mathbf{S}_t)$$
 3. Sample actions $a_t^{(k)} \sim \pi_t^{(k)}$ and step all $K$ environments synchronously in parallel, obtaining rewards $\mathbf{R}_{t+1}$ and next states $\mathbf{S}_{t+1}$.
 4. Compute batched TD errors across all $K$ workers:
-   $$\boldsymbol{\delta}_t = \mathbf{R}_{t+1} + \gamma (1 - \mathbf{d}) \mathbf{V}(S_{t+1}) - \mathbf{V}_t$$
+   $$\delta_t = \mathbf{R}_{t+1} + \gamma (1 - \mathbf{d}) \mathbf{V}(S_{t+1}) - \mathbf{V}_t$$
 5. Perform a single batched backpropagation update on the unified loss $\mathcal{L}_{\text{total}}$.
 
 ---
@@ -130,83 +130,83 @@ then the policy gradient computed using the approximate critic is strictly exact
 ```
 
 **Part 1: Problem Statement & Mathematical Goal**
-In policy gradient reinforcement learning, evaluating the exact policy gradient $\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ requires the true action-value function $Q^{\pi_{\boldsymbol{\theta}}}(s, a)$. However, $Q^{\pi_{\boldsymbol{\theta}}}$ is generally unknown and lies in an infinite- or high-dimensional function space. If we approximate $Q^{\pi_{\boldsymbol{\theta}}}(s, a)$ using a parametric function approximator $Q_{\mathbf{w}}(s, a)$ (such as a neural network or linear architecture), substituting $Q_{\mathbf{w}}$ directly into the policy gradient formula typically introduces systematic bias:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) \triangleq \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) Q_{\mathbf{w}}(s, a) \neq \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+In policy gradient reinforcement learning, evaluating the exact policy gradient $\nabla_{\theta} J(\theta)$ requires the true action-value function $Q^{\pi_{\theta}}(s, a)$. However, $Q^{\pi_{\theta}}$ is generally unknown and lies in an infinite- or high-dimensional function space. If we approximate $Q^{\pi_{\theta}}(s, a)$ using a parametric function approximator $Q_{\mathbf{w}}(s, a)$ (such as a neural network or linear architecture), substituting $Q_{\mathbf{w}}$ directly into the policy gradient formula typically introduces systematic bias:
+$$\widehat{\nabla}_{\theta} J(\theta) \triangleq \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) Q_{\mathbf{w}}(s, a) \neq \nabla_{\theta} J(\theta)$$
 Our mathematical goal is to prove the **Compatible Function Approximation Theorem** (Sutton, McAllester, Singh, & Mansour, 1999): under two specific conditions—the compatibility condition matching critic gradient features to policy score functions, and the mean-squared value error (MSVE) stationary condition—the gradient estimation error vanishes identically:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) - \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbf{0}$$
+$$\widehat{\nabla}_{\theta} J(\theta) - \nabla_{\theta} J(\theta) = \mathbf{0}$$
 meaning that critic function approximation error introduces **zero bias** into the policy gradient.
 
 **Part 2: Explicit Assumptions & Regularity Conditions**
-1. **Policy Differentiability & Non-Degeneracy:** The policy $\pi_{\boldsymbol{\theta}}(a \mid s)$ is strictly positive $\pi_{\boldsymbol{\theta}}(a \mid s) > 0$ and continuously differentiable with respect to $\boldsymbol{\theta} \in \mathbb{R}^d$ for all $(s, a) \in \mathcal{S} \times \mathcal{A}$.
-2. **Well-Defined Discounted State Measure:** The unnormalized discounted state visitation measure $d^{\pi_{\boldsymbol{\theta}}}(s) \triangleq \sum_{t=0}^\infty \gamma^t \mathbb{P}(S_t = s \mid S_0 \sim \mu; \pi_{\boldsymbol{\theta}})$ is strictly positive on all recurrent states for starting distribution $\mu$, with total mass $\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) = \frac{1}{1 - \gamma}$.
+1. **Policy Differentiability & Non-Degeneracy:** The policy $\pi_{\theta}(a \mid s)$ is strictly positive $\pi_{\theta}(a \mid s) > 0$ and continuously differentiable with respect to $\theta \in \mathbb{R}^d$ for all $(s, a) \in \mathcal{S} \times \mathcal{A}$.
+2. **Well-Defined Discounted State Measure:** The unnormalized discounted state visitation measure $d^{\pi_{\theta}}(s) \triangleq \sum_{t=0}^\infty \gamma^t \mathbb{P}(S_t = s \mid S_0 \sim \mu; \pi_{\theta})$ is strictly positive on all recurrent states for starting distribution $\mu$, with total mass $\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) = \frac{1}{1 - \gamma}$.
 3. **Compatibility Condition:** The critic architecture $Q_{\mathbf{w}}(s, a)$ has parameter dimension matching the policy parameter dimension ($m = d$), and its gradient with respect to $\mathbf{w}$ equals the score function of the policy:
-   $$\nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) = \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) = \frac{\nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}}(a \mid s)} \quad \forall (s, a) \in \mathcal{S} \times \mathcal{A}$$
-   Consequently, $Q_{\mathbf{w}}(s, a)$ is linear in the compatible features $\boldsymbol{\psi}_{\boldsymbol{\theta}}(s, a) \triangleq \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$:
-   $$Q_{\mathbf{w}}(s, a) = \mathbf{w}^\top \boldsymbol{\psi}_{\boldsymbol{\theta}}(s, a) = \mathbf{w}^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$$
-   (or with an arbitrary action-independent state baseline $Q_{\mathbf{w}}(s, a) = \mathbf{w}^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) + V(s)$).
+   $$\nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) = \nabla_{\theta} \log \pi_{\theta}(a \mid s) = \frac{\nabla_{\theta} \pi_{\theta}(a \mid s)}{\pi_{\theta}(a \mid s)} \quad \forall (s, a) \in \mathcal{S} \times \mathcal{A}$$
+   Consequently, $Q_{\mathbf{w}}(s, a)$ is linear in the compatible features $\psi_{\theta}(s, a) \triangleq \nabla_{\theta} \log \pi_{\theta}(a \mid s)$:
+   $$Q_{\mathbf{w}}(s, a) = \mathbf{w}^\top \psi_{\theta}(s, a) = \mathbf{w}^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s)$$
+   (or with an arbitrary action-independent state baseline $Q_{\mathbf{w}}(s, a) = \mathbf{w}^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) + V(s)$).
 4. **MSVE Stationarity:** The critic parameter vector $\mathbf{w}^*$ is a stationary point (global minimizer) of the stationary weighted Mean Squared Value Error (MSVE):
-   $$\mathcal{E}(\mathbf{w}) \triangleq \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}}(s, a) \right)^2$$
+   $$\mathcal{E}(\mathbf{w}) \triangleq \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}}(s, a) \right)^2$$
    satisfying the first-order optimality condition $\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}^*) = \mathbf{0}$.
-5. **Non-Degenerate Fisher Metric:** The expected outer product of compatible features (the Fisher Information Matrix under measure $d^{\pi_{\boldsymbol{\theta}}}$) $\mathbf{F}(\boldsymbol{\theta}) \triangleq \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \boldsymbol{\psi}_{\boldsymbol{\theta}}(s, a) \boldsymbol{\psi}_{\boldsymbol{\theta}}(s, a)^\top$ is strictly positive definite, ensuring that $\mathbf{w}^*$ is uniquely determined.
+5. **Non-Degenerate Fisher Metric:** The expected outer product of compatible features (the Fisher Information Matrix under measure $d^{\pi_{\theta}}$) $\mathbf{F}(\theta) \triangleq \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \psi_{\theta}(s, a) \psi_{\theta}(s, a)^\top$ is strictly positive definite, ensuring that $\mathbf{w}^*$ is uniquely determined.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation**
-Geometrically, consider the Hilbert space $\mathcal{H} = L^2(\mathcal{S} \times \mathcal{A}, \rho^{\pi_{\boldsymbol{\theta}}})$, where the weighting measure is $\rho^{\pi_{\boldsymbol{\theta}}}(s, a) \triangleq d^{\pi_{\boldsymbol{\theta}}}(s) \pi_{\boldsymbol{\theta}}(a \mid s)$, equipped with the inner product:
-$$\langle f, g \rangle_{\rho} \triangleq \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}} d^{\pi_{\boldsymbol{\theta}}}(s) \pi_{\boldsymbol{\theta}}(a \mid s) f(s, a) g(s, a)$$
-The Policy Gradient Theorem states that the $k$-th component of the policy gradient is an inner product between the $k$-th score function $\psi_k(s, a) = \frac{\partial \log \pi_{\boldsymbol{\theta}}(a \mid s)}{\partial \theta_k}$ and the true value function $Q^{\pi_{\boldsymbol{\theta}}}$:
-$$[\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})]_k = \langle \psi_k, Q^{\pi_{\boldsymbol{\theta}}} \rangle_{\rho}$$
+Geometrically, consider the Hilbert space $\mathcal{H} = L^2(\mathcal{S} \times \mathcal{A}, \rho^{\pi_{\theta}})$, where the weighting measure is $\rho^{\pi_{\theta}}(s, a) \triangleq d^{\pi_{\theta}}(s) \pi_{\theta}(a \mid s)$, equipped with the inner product:
+$$\langle f, g \rangle_{\rho} \triangleq \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}} d^{\pi_{\theta}}(s) \pi_{\theta}(a \mid s) f(s, a) g(s, a)$$
+The Policy Gradient Theorem states that the $k$-th component of the policy gradient is an inner product between the $k$-th score function $\psi_k(s, a) = \frac{\partial \log \pi_{\theta}(a \mid s)}{\partial \theta_k}$ and the true value function $Q^{\pi_{\theta}}$:
+$$[\nabla_{\theta} J(\theta)]_k = \langle \psi_k, Q^{\pi_{\theta}} \rangle_{\rho}$$
 Now define the **compatible subspace** $\mathcal{M} \triangleq \operatorname{span}\{\psi_1, \psi_2, \dots, \psi_d\} \subset \mathcal{H}$. Any function in $\mathcal{H}$ can be decomposed uniquely into a parallel component in $\mathcal{M}$ and an orthogonal component in $\mathcal{M}^\perp$:
-$$Q^{\pi_{\boldsymbol{\theta}}} = Q_\parallel + Q_\perp, \quad Q_\parallel \in \mathcal{M}, \quad Q_\perp \in \mathcal{M}^\perp$$
-Minimizing the MSVE $\mathcal{E}(\mathbf{w})$ performs an **orthogonal projection** of $Q^{\pi_{\boldsymbol{\theta}}}$ onto $\mathcal{M}$! By the Hilbert Projection Theorem, the approximation error $e(s, a) \triangleq Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}^*}(s, a) = Q_\perp(s, a)$ is strictly orthogonal to every basis vector of $\mathcal{M}$:
+$$Q^{\pi_{\theta}} = Q_\parallel + Q_\perp, \quad Q_\parallel \in \mathcal{M}, \quad Q_\perp \in \mathcal{M}^\perp$$
+Minimizing the MSVE $\mathcal{E}(\mathbf{w})$ performs an **orthogonal projection** of $Q^{\pi_{\theta}}$ onto $\mathcal{M}$! By the Hilbert Projection Theorem, the approximation error $e(s, a) \triangleq Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}^*}(s, a) = Q_\perp(s, a)$ is strictly orthogonal to every basis vector of $\mathcal{M}$:
 $$\langle \psi_k, e \rangle_\rho = 0 \quad \forall k \in \{1, \dots, d\}$$
-Because the policy gradient depends on $Q^{\pi_{\boldsymbol{\theta}}}$ *only* through its projection onto $\mathcal{M}$, the orthogonal error $Q_\perp$ has zero inner product with the score functions. The approximate critic $Q_{\mathbf{w}^*}$ discards all extraneous dimensions of the value function that do not affect the policy gradient, retaining 100% of the true gradient signal!
+Because the policy gradient depends on $Q^{\pi_{\theta}}$ *only* through its projection onto $\mathcal{M}$, the orthogonal error $Q_\perp$ has zero inner product with the score functions. The approximate critic $Q_{\mathbf{w}^*}$ discards all extraneous dimensions of the value function that do not affect the policy gradient, retaining 100% of the true gradient signal!
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof**
 *Step 1: Compute the gradient of the MSVE objective with respect to critic weights $\mathbf{w}$.*
 The weighted MSVE objective is:
-$$\mathcal{E}(\mathbf{w}) = \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}}(s, a) \right)^2$$
+$$\mathcal{E}(\mathbf{w}) = \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}}(s, a) \right)^2$$
 Differentiating with respect to the parameter vector $\mathbf{w} \in \mathbb{R}^d$:
-$$\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}) = \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \cdot 2 \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}}(s, a) \right) \cdot \nabla_{\mathbf{w}} \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}}(s, a) \right)$$
-Since $Q^{\pi_{\boldsymbol{\theta}}}(s, a)$ is independent of $\mathbf{w}$, $\nabla_{\mathbf{w}} Q^{\pi_{\boldsymbol{\theta}}}(s, a) = \mathbf{0}$. Therefore:
-$$\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}) = - \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}}(s, a) \right) \nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) \quad \text{(Equation 1)}$$
+$$\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}) = \frac{1}{2} \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \cdot 2 \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}}(s, a) \right) \cdot \nabla_{\mathbf{w}} \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}}(s, a) \right)$$
+Since $Q^{\pi_{\theta}}(s, a)$ is independent of $\mathbf{w}$, $\nabla_{\mathbf{w}} Q^{\pi_{\theta}}(s, a) = \mathbf{0}$. Therefore:
+$$\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}) = - \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}}(s, a) \right) \nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) \quad \text{(Equation 1)}$$
 
 *Step 2: Enforce first-order optimality at $\mathbf{w}^*$.*
 By Assumption 4, $\mathbf{w}^*$ minimizes $\mathcal{E}(\mathbf{w})$, so the gradient must vanish:
 $$\nabla_{\mathbf{w}} \mathcal{E}(\mathbf{w}^*) = \mathbf{0}$$
 Setting Equation 1 to zero:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}^*}(s, a) \right) \nabla_{\mathbf{w}} Q_{\mathbf{w}^*}(s, a) = \mathbf{0} \quad \text{(Equation 2)}$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}^*}(s, a) \right) \nabla_{\mathbf{w}} Q_{\mathbf{w}^*}(s, a) = \mathbf{0} \quad \text{(Equation 2)}$$
 
 *Step 3: Substitute the compatibility condition.*
-By Assumption 3, the critic satisfies $\nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) = \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$. Substituting this identity into Equation 2:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - Q_{\mathbf{w}^*}(s, a) \right) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) = \mathbf{0} \quad \text{(Equation 3)}$$
+By Assumption 3, the critic satisfies $\nabla_{\mathbf{w}} Q_{\mathbf{w}}(s, a) = \nabla_{\theta} \log \pi_{\theta}(a \mid s)$. Substituting this identity into Equation 2:
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \left( Q^{\pi_{\theta}}(s, a) - Q_{\mathbf{w}^*}(s, a) \right) \nabla_{\theta} \log \pi_{\theta}(a \mid s) = \mathbf{0} \quad \text{(Equation 3)}$$
 
 *Step 4: Distribute the terms across the difference.*
 Distributing the product inside the summation:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) Q^{\pi_{\boldsymbol{\theta}}}(s, a) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) - \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) Q_{\mathbf{w}^*}(s, a) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) = \mathbf{0}$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) Q^{\pi_{\theta}}(s, a) \nabla_{\theta} \log \pi_{\theta}(a \mid s) - \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) Q_{\mathbf{w}^*}(s, a) \nabla_{\theta} \log \pi_{\theta}(a \mid s) = \mathbf{0}$$
 Equivalently:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) Q^{\pi_{\boldsymbol{\theta}}}(s, a) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) Q_{\mathbf{w}^*}(s, a) \quad \text{(Equation 4)}$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) Q^{\pi_{\theta}}(s, a) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) Q_{\mathbf{w}^*}(s, a) \quad \text{(Equation 4)}$$
 
 *Step 5: Apply the log-derivative score identity.*
 Recall the score function identity for differentiable policies:
-$$\pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) = \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}}(a \mid s)} = \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)$$
+$$\pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) = \pi_{\theta}(a \mid s) \frac{\nabla_{\theta} \pi_{\theta}(a \mid s)}{\pi_{\theta}(a \mid s)} = \nabla_{\theta} \pi_{\theta}(a \mid s)$$
 Applying this identity to both sides of Equation 4:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) Q^{\pi_{\boldsymbol{\theta}}}(s, a) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) Q_{\mathbf{w}^*}(s, a)$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) Q^{\pi_{\theta}}(s, a) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) Q_{\mathbf{w}^*}(s, a)$$
 
 *Step 6: Recognize the exact and approximate policy gradients.*
 By the Policy Gradient Theorem (Sutton et al., 1999), the left-hand side is identically the true policy gradient:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) Q^{\pi_{\boldsymbol{\theta}}}(s, a)$$
+$$\nabla_{\theta} J(\theta) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) Q^{\pi_{\theta}}(s, a)$$
 The right-hand side is identically the approximate policy gradient evaluated using critic $Q_{\mathbf{w}^*}$:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) Q_{\mathbf{w}^*}(s, a)$$
+$$\widehat{\nabla}_{\theta} J(\theta) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) Q_{\mathbf{w}^*}(s, a)$$
 Therefore:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) \quad \blacksquare$$
+$$\nabla_{\theta} J(\theta) = \widehat{\nabla}_{\theta} J(\theta) \quad \blacksquare$$
 
 *Step 7: Invariance under addition of arbitrary state baseline $V(s)$.*
 If the compatible critic is augmented with an arbitrary action-independent baseline $V(s)$:
-$$Q_{\mathbf{w}, V}(s, a) \triangleq \mathbf{w}^\top \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) + V(s)$$
+$$Q_{\mathbf{w}, V}(s, a) \triangleq \mathbf{w}^\top \nabla_{\theta} \log \pi_{\theta}(a \mid s) + V(s)$$
 the approximate policy gradient becomes:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) \left( \mathbf{w}^{*\top} \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) + V(s) \right)$$
-$$= \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) \mathbf{w}^{*\top} \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) + \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) V(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)$$
-Since probabilities sum to 1 ($\sum_a \pi_{\boldsymbol{\theta}}(a \mid s) = 1$), $\sum_a \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) = \nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$. The second term vanishes identically:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) V(s) \cdot \mathbf{0} = \mathbf{0}$$
+$$\widehat{\nabla}_{\theta} J(\theta) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) \left( \mathbf{w}^{*\top} \nabla_{\theta} \log \pi_{\theta}(a \mid s) + V(s) \right)$$
+$$= \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) \mathbf{w}^{*\top} \nabla_{\theta} \log \pi_{\theta}(a \mid s) + \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) V(s) \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s)$$
+Since probabilities sum to 1 ($\sum_a \pi_{\theta}(a \mid s) = 1$), $\sum_a \nabla_{\theta} \pi_{\theta}(a \mid s) = \nabla_{\theta} (1) = \mathbf{0}$. The second term vanishes identically:
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) V(s) \cdot \mathbf{0} = \mathbf{0}$$
 Hence, exactness holds unconditionally for any state baseline $V(s)$. $\blacksquare$
 
 ---
@@ -235,12 +235,12 @@ guaranteeing almost-sure asymptotic convergence to the set of stationary policy 
 ```
 
 **Part 1: Problem Statement & Mathematical Goal**
-In online Actor-Critic algorithms, the critic updates its value weights $\mathbf{w}_k \in \mathbb{R}^m$ while the actor simultaneously updates its policy weights $\boldsymbol{\theta}_k \in \mathbb{R}^d$ on every observed transition $(s_k, a_k, r_{k+1}, s_{k+1})$. This creates a non-stationary feedback loop: the critic evaluates a moving target policy $\pi_{\boldsymbol{\theta}_k}$, while the actor ascends a moving landscape evaluated by an imperfect, evolving critic $\mathbf{w}_k$. Without coordination, this coupled dynamical system can oscillate indefinitely or diverge.
+In online Actor-Critic algorithms, the critic updates its value weights $\mathbf{w}_k \in \mathbb{R}^m$ while the actor simultaneously updates its policy weights $\theta_k \in \mathbb{R}^d$ on every observed transition $(s_k, a_k, r_{k+1}, s_{k+1})$. This creates a non-stationary feedback loop: the critic evaluates a moving target policy $\pi_{\theta_k}$, while the actor ascends a moving landscape evaluated by an imperfect, evolving critic $\mathbf{w}_k$. Without coordination, this coupled dynamical system can oscillate indefinitely or diverge.
 
 Our mathematical goal is to prove, using the **Two-Timescale Stochastic Approximation ODE Method** (Borkar, 1997; Borkar & Meyn, 2000), that enforcing a separation of timescales ($\alpha_k = o(\beta_k)$):
 1. Completely decouples the asymptotic dynamics into a fast critic system and a slow actor system.
-2. Ensures the fast critic converges to the unique projected Bellman fixed point $\mathbf{w}^*(\boldsymbol{\theta})$ corresponding to the frozen policy $\boldsymbol{\theta}$.
-3. Guarantees the slow actor asymptotically follows the continuous-time gradient ascent trajectory $\dot{\boldsymbol{\theta}}(t) = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t))$, converging almost surely to a stationary point of expected return $\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbf{0}$.
+2. Ensures the fast critic converges to the unique projected Bellman fixed point $\mathbf{w}^*(\theta)$ corresponding to the frozen policy $\theta$.
+3. Guarantees the slow actor asymptotically follows the continuous-time gradient ascent trajectory $\dot{\theta}(t) = \nabla_{\theta} J(\theta(t))$, converging almost surely to a stationary point of expected return $\nabla_{\theta} J(\theta) = \mathbf{0}$.
 
 **Part 2: Explicit Assumptions & Regularity Conditions**
 1. **Timescale Separation of Step-Sizes:**
@@ -250,99 +250,99 @@ Our mathematical goal is to prove, using the **Two-Timescale Stochastic Approxim
    $$\lim_{k \to \infty} \frac{\alpha_k}{\beta_k} = 0$$
    (Typical schedules: $\beta_k = (k+1)^{-2/3}$ and $\alpha_k = (k+1)^{-1}$, so $\alpha_k / \beta_k = (k+1)^{-1/3} \to 0$).
 2. **Markov Chain Ergodicity & Rapid Mixing:**
-   For every fixed policy parameter $\boldsymbol{\theta} \in \Theta$, the induced Markov chain with transition kernel $\mathcal{P}^{\pi_{\boldsymbol{\theta}}}(s' \mid s) \triangleq \sum_a \pi_{\boldsymbol{\theta}}(a \mid s) \mathcal{P}(s' \mid s, a)$ is irreducible, aperiodic, and positive recurrent with unique stationary distribution $d^{\pi_{\boldsymbol{\theta}}}(s)$. The Markov chain exhibits geometric ergodicity:
-   $$\sup_{s \in \mathcal{S}} \| \mathbb{P}(S_t \in \cdot \mid S_0 = s) - d^{\pi_{\boldsymbol{\theta}}}(\cdot) \|_{\text{TV}} \le C \rho^t \quad \text{for constants } C > 0, \rho \in [0, 1)$$
+   For every fixed policy parameter $\theta \in \Theta$, the induced Markov chain with transition kernel $\mathcal{P}^{\pi_{\theta}}(s' \mid s) \triangleq \sum_a \pi_{\theta}(a \mid s) \mathcal{P}(s' \mid s, a)$ is irreducible, aperiodic, and positive recurrent with unique stationary distribution $d^{\pi_{\theta}}(s)$. The Markov chain exhibits geometric ergodicity:
+   $$\sup_{s \in \mathcal{S}} \| \mathbb{P}(S_t \in \cdot \mid S_0 = s) - d^{\pi_{\theta}}(\cdot) \|_{\text{TV}} \le C \rho^t \quad \text{for constants } C > 0, \rho \in [0, 1)$$
 3. **Smoothness and Boundedness:**
-   - The policy $\pi_{\boldsymbol{\theta}}(a \mid s) > 0$ is twice continuously differentiable with respect to $\boldsymbol{\theta}$ with uniformly bounded score functions: $\sup_{\boldsymbol{\theta}, s, a} \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 \le C_\psi < \infty$ and bounded Hessian $\|\nabla_{\boldsymbol{\theta}}^2 \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 \le C_H < \infty$.
-   - The critic is linear: $V_{\mathbf{w}}(s) = \mathbf{w}^\top \boldsymbol{\phi}(s)$, where the feature vector $\boldsymbol{\phi}(s) \in \mathbb{R}^m$ satisfies $\sup_{s \in \mathcal{S}} \|\boldsymbol{\phi}(s)\|_2 \le C_\phi < \infty$, and the feature matrix $\boldsymbol{\Phi} \in \mathbb{R}^{|\mathcal{S}| \times m}$ has full column rank $m \le |\mathcal{S}|$.
+   - The policy $\pi_{\theta}(a \mid s) > 0$ is twice continuously differentiable with respect to $\theta$ with uniformly bounded score functions: $\sup_{\theta, s, a} \|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\|_2 \le C_\psi < \infty$ and bounded Hessian $\|\nabla_{\theta}^2 \log \pi_{\theta}(a \mid s)\|_2 \le C_H < \infty$.
+   - The critic is linear: $V_{\mathbf{w}}(s) = \mathbf{w}^\top \phi(s)$, where the feature vector $\phi(s) \in \mathbb{R}^m$ satisfies $\sup_{s \in \mathcal{S}} \|\phi(s)\|_2 \le C_\phi < \infty$, and the feature matrix $\Phi \in \mathbb{R}^{|\mathcal{S}| \times m}$ has full column rank $m \le |\mathcal{S}|$.
    - Rewards are uniformly bounded: $\sup_{s, a} |R(s, a)| \le R_{\max} < \infty$.
 4. **Strict Negative Definiteness / Hurwitz Condition (Tsitsiklis & Van Roy, 1997):**
-   For any fixed $\boldsymbol{\theta}$, the expected TD operator governing the critic is affine:
-   $$\bar{\mathbf{h}}_{\boldsymbol{\theta}}(\mathbf{w}) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \boldsymbol{\phi}(s') - \mathbf{w}^\top \boldsymbol{\phi}(s) \right) \boldsymbol{\phi}(s) \right] = \mathbf{b}_{\boldsymbol{\theta}} - \mathbf{A}_{\boldsymbol{\theta}} \mathbf{w}$$
-   where $\mathbf{b}_{\boldsymbol{\theta}} \triangleq \boldsymbol{\Phi}^\top \mathbf{D}_{\boldsymbol{\theta}} \mathbf{R}_{\boldsymbol{\theta}}$ and $\mathbf{A}_{\boldsymbol{\theta}} \triangleq \boldsymbol{\Phi}^\top \mathbf{D}_{\boldsymbol{\theta}} (\mathbf{I} - \gamma \mathbf{P}_{\boldsymbol{\theta}}) \boldsymbol{\Phi}$.
-   Because $\mathbf{D}_{\boldsymbol{\theta}} = \operatorname{diag}(d^{\pi_{\boldsymbol{\theta}}})$ and $\mathbf{I} - \gamma \mathbf{P}_{\boldsymbol{\theta}}$ is strictly positive definite on the range of $\boldsymbol{\Phi}$, the matrix $-\mathbf{A}_{\boldsymbol{\theta}}$ is **Hurwitz** (all eigenvalues have strictly negative real parts: $\operatorname{Re}(\lambda_i(-\mathbf{A}_{\boldsymbol{\theta}})) < 0$).
-   Consequently, the fast critic ODE $\dot{\mathbf{w}}(t) = \bar{\mathbf{h}}_{\boldsymbol{\theta}}(\mathbf{w}(t))$ possesses a unique, globally asymptotically stable equilibrium:
-   $$\mathbf{w}^*(\boldsymbol{\theta}) = \mathbf{A}_{\boldsymbol{\theta}}^{-1} \mathbf{b}_{\boldsymbol{\theta}}$$
+   For any fixed $\theta$, the expected TD operator governing the critic is affine:
+   $$\bar{\mathbf{h}}_{\theta}(\mathbf{w}) \triangleq \mathbb{E}_{s \sim d^\pi, a \sim \pi, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \phi(s') - \mathbf{w}^\top \phi(s) \right) \phi(s) \right] = \mathbf{b}_{\theta} - \mathbf{A}_{\theta} \mathbf{w}$$
+   where $\mathbf{b}_{\theta} \triangleq \Phi^\top \mathbf{D}_{\theta} \mathbf{R}_{\theta}$ and $\mathbf{A}_{\theta} \triangleq \Phi^\top \mathbf{D}_{\theta} (\mathbf{I} - \gamma \mathbf{P}_{\theta}) \Phi$.
+   Because $\mathbf{D}_{\theta} = \operatorname{diag}(d^{\pi_{\theta}})$ and $\mathbf{I} - \gamma \mathbf{P}_{\theta}$ is strictly positive definite on the range of $\Phi$, the matrix $-\mathbf{A}_{\theta}$ is **Hurwitz** (all eigenvalues have strictly negative real parts: $\operatorname{Re}(\lambda_i(-\mathbf{A}_{\theta})) < 0$).
+   Consequently, the fast critic ODE $\dot{\mathbf{w}}(t) = \bar{\mathbf{h}}_{\theta}(\mathbf{w}(t))$ possesses a unique, globally asymptotically stable equilibrium:
+   $$\mathbf{w}^*(\theta) = \mathbf{A}_{\theta}^{-1} \mathbf{b}_{\theta}$$
 5. **Lipschitz Continuity of Value Equilibrium Map:**
-   The equilibrium map $\boldsymbol{\theta} \mapsto \mathbf{w}^*(\boldsymbol{\theta})$ is Lipschitz continuous:
-   $$\|\mathbf{w}^*(\boldsymbol{\theta}_1) - \mathbf{w}^*(\boldsymbol{\theta}_2)\|_2 \le L_w \|\boldsymbol{\theta}_1 - \boldsymbol{\theta}_2\|_2 \quad \forall \boldsymbol{\theta}_1, \boldsymbol{\theta}_2 \in \Theta$$
+   The equilibrium map $\theta \mapsto \mathbf{w}^*(\theta)$ is Lipschitz continuous:
+   $$\|\mathbf{w}^*(\theta_1) - \mathbf{w}^*(\theta_2)\|_2 \le L_w \|\theta_1 - \theta_2\|_2 \quad \forall \theta_1, \theta_2 \in \Theta$$
 6. **Martingale Difference Noise Regularity:**
-   The observation noise terms $\mathbf{M}_{k+1}^{(\mathbf{w})} \triangleq \delta_k(\mathbf{w}_k) \boldsymbol{\phi}(s_k) - \bar{\mathbf{h}}_{\boldsymbol{\theta}_k}(\mathbf{w}_k)$ and $\mathbf{M}_{k+1}^{(\boldsymbol{\theta})} \triangleq \delta_k(\mathbf{w}_k) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}_k}(a_k \mid s_k) - \bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}_k)$ are martingale difference sequences with bounded conditional variances: $\mathbb{E}[\|\mathbf{M}_{k+1}\|^2 \mid \mathcal{F}_k] \le \sigma_M^2 < \infty$.
+   The observation noise terms $\mathbf{M}_{k+1}^{(\mathbf{w})} \triangleq \delta_k(\mathbf{w}_k) \phi(s_k) - \bar{\mathbf{h}}_{\theta_k}(\mathbf{w}_k)$ and $\mathbf{M}_{k+1}^{(\theta)} \triangleq \delta_k(\mathbf{w}_k) \nabla_{\theta} \log \pi_{\theta_k}(a_k \mid s_k) - \bar{\mathbf{g}}(\theta_k, \mathbf{w}_k)$ are martingale difference sequences with bounded conditional variances: $\mathbb{E}[\|\mathbf{M}_{k+1}\|^2 \mid \mathcal{F}_k] \le \sigma_M^2 < \infty$.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation**
 The two-timescale mechanism is the algorithmic analogue of the **Born-Oppenheimer approximation** in quantum mechanics or **singular perturbation theory** in dynamical systems:
-- Fast clock (Critic, timescale $\beta_k$): Think of the critic as an electron orbiting a massive atomic nucleus (the actor). Because $\alpha_k / \beta_k \to 0$, from the critic's perspective, the actor's position $\boldsymbol{\theta}_k$ is virtually motionless:
-  $$\frac{\|\boldsymbol{\theta}_{k+1} - \boldsymbol{\theta}_k\|_2}{\beta_k} = \frac{\alpha_k}{\beta_k} \mathcal{O}(1) \to 0$$
-  On the fast timescale, the critic sees a fixed policy $\boldsymbol{\theta}$, and the projected Bellman contraction drags $\mathbf{w}_k$ exponentially fast onto the low-dimensional equilibrium manifold $\mathcal{V} = \{ (\mathbf{w}^*(\boldsymbol{\theta}), \boldsymbol{\theta}) : \boldsymbol{\theta} \in \Theta \}$.
-- Slow clock (Actor, timescale $\alpha_k$): On the slow timescale, the critic's high-frequency fluctuations have completely dissipated, and $\mathbf{w}_k$ has already snapped to $\mathbf{w}^*(\boldsymbol{\theta}_k)$ up to an $o(1)$ perturbation.
-  The actor therefore experiences clean, quasi-deterministic gradient ascent along the performance surface $J(\boldsymbol{\theta})$:
-  $$\dot{\boldsymbol{\theta}}(t) = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t))$$
-  Because $J(\boldsymbol{\theta})$ acts as a natural Lyapunov function ($\dot{J} = \|\nabla J\|^2 \ge 0$), the actor cannot orbit or diverge; it must monotonically climb the performance manifold until it reaches a stationary point $\nabla J(\boldsymbol{\theta}) = \mathbf{0}$.
+- Fast clock (Critic, timescale $\beta_k$): Think of the critic as an electron orbiting a massive atomic nucleus (the actor). Because $\alpha_k / \beta_k \to 0$, from the critic's perspective, the actor's position $\theta_k$ is virtually motionless:
+  $$\frac{\|\theta_{k+1} - \theta_k\|_2}{\beta_k} = \frac{\alpha_k}{\beta_k} \mathcal{O}(1) \to 0$$
+  On the fast timescale, the critic sees a fixed policy $\theta$, and the projected Bellman contraction drags $\mathbf{w}_k$ exponentially fast onto the low-dimensional equilibrium manifold $\mathcal{V} = \{ (\mathbf{w}^*(\theta), \theta) : \theta \in \Theta \}$.
+- Slow clock (Actor, timescale $\alpha_k$): On the slow timescale, the critic's high-frequency fluctuations have completely dissipated, and $\mathbf{w}_k$ has already snapped to $\mathbf{w}^*(\theta_k)$ up to an $o(1)$ perturbation.
+  The actor therefore experiences clean, quasi-deterministic gradient ascent along the performance surface $J(\theta)$:
+  $$\dot{\theta}(t) = \nabla_{\theta} J(\theta(t))$$
+  Because $J(\theta)$ acts as a natural Lyapunov function ($\dot{J} = \|\nabla J\|^2 \ge 0$), the actor cannot orbit or diverge; it must monotonically climb the performance manifold until it reaches a stationary point $\nabla J(\theta) = \mathbf{0}$.
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof**
 *Step 1: Express the coupled iterations in standard stochastic approximation form.*
-Define the filtration $\mathcal{F}_k \triangleq \sigma(\mathbf{w}_0, \boldsymbol{\theta}_0, s_0, a_0, \dots, s_k, a_k)$.
+Define the filtration $\mathcal{F}_k \triangleq \sigma(\mathbf{w}_0, \theta_0, s_0, a_0, \dots, s_k, a_k)$.
 The updates can be written as:
-$$\mathbf{w}_{k+1} = \mathbf{w}_k + \beta_k \left[ \bar{\mathbf{h}}_{\boldsymbol{\theta}_k}(\mathbf{w}_k) + \mathbf{M}_{k+1}^{(\mathbf{w})} \right] \quad \text{(Equation 1)}$$
-$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k + \alpha_k \left[ \bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}_k) + \mathbf{M}_{k+1}^{(\boldsymbol{\theta})} \right] \quad \text{(Equation 2)}$$
+$$\mathbf{w}_{k+1} = \mathbf{w}_k + \beta_k \left[ \bar{\mathbf{h}}_{\theta_k}(\mathbf{w}_k) + \mathbf{M}_{k+1}^{(\mathbf{w})} \right] \quad \text{(Equation 1)}$$
+$$\theta_{k+1} = \theta_k + \alpha_k \left[ \bar{\mathbf{g}}(\theta_k, \mathbf{w}_k) + \mathbf{M}_{k+1}^{(\theta)} \right] \quad \text{(Equation 2)}$$
 where:
-$$\bar{\mathbf{h}}_{\boldsymbol{\theta}}(\mathbf{w}) \triangleq \mathbb{E}_{s \sim d^{\pi_{\boldsymbol{\theta}}}, a \sim \pi_{\boldsymbol{\theta}}, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \boldsymbol{\phi}(s') - \mathbf{w}^\top \boldsymbol{\phi}(s) \right) \boldsymbol{\phi}(s) \right]$$
-$$\bar{\mathbf{g}}(\boldsymbol{\theta}, \mathbf{w}) \triangleq \mathbb{E}_{s \sim d^{\pi_{\boldsymbol{\theta}}}, a \sim \pi_{\boldsymbol{\theta}}, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \boldsymbol{\phi}(s') - \mathbf{w}^\top \boldsymbol{\phi}(s) \right) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right]$$
+$$\bar{\mathbf{h}}_{\theta}(\mathbf{w}) \triangleq \mathbb{E}_{s \sim d^{\pi_{\theta}}, a \sim \pi_{\theta}, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \phi(s') - \mathbf{w}^\top \phi(s) \right) \phi(s) \right]$$
+$$\bar{\mathbf{g}}(\theta, \mathbf{w}) \triangleq \mathbb{E}_{s \sim d^{\pi_{\theta}}, a \sim \pi_{\theta}, s' \sim \mathcal{P}} \left[ \left( R(s, a) + \gamma \mathbf{w}^\top \phi(s') - \mathbf{w}^\top \phi(s) \right) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right]$$
 
 *Step 2: Analysis of the fast timescale (The Critic).*
 Define the continuous-time schedule for the critic by $t_0^\beta = 0$ and $t_n^\beta = \sum_{i=0}^{n-1} \beta_i$.
-Let us examine the total displacement of the slow parameter $\boldsymbol{\theta}$ over any time horizon $T > 0$ on the critic's clock:
+Let us examine the total displacement of the slow parameter $\theta$ over any time horizon $T > 0$ on the critic's clock:
 Let $m(n, T) \triangleq \max \{ m \ge n : t_m^\beta - t_n^\beta \le T \}$.
 Using the triangle inequality on Equation 2:
-$$\|\boldsymbol{\theta}_{m(n, T)} - \boldsymbol{\theta}_n\|_2 \le \sum_{k=n}^{m(n, T)-1} \alpha_k \left( \|\bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}_k)\|_2 + \|\mathbf{M}_{k+1}^{(\boldsymbol{\theta})}\|_2 \right)$$
+$$\|\theta_{m(n, T)} - \theta_n\|_2 \le \sum_{k=n}^{m(n, T)-1} \alpha_k \left( \|\bar{\mathbf{g}}(\theta_k, \mathbf{w}_k)\|_2 + \|\mathbf{M}_{k+1}^{(\theta)}\|_2 \right)$$
 Using the boundedness of rewards, features, and scores, $\|\bar{\mathbf{g}}\|_2 \le C_g < \infty$.
 Multiply and divide by $\beta_k$:
-$$\|\boldsymbol{\theta}_{m(n, T)} - \boldsymbol{\theta}_n\|_2 \le \sup_{k \ge n} \left( \frac{\alpha_k}{\beta_k} \right) \sum_{k=n}^{m(n, T)-1} \beta_k \left( C_g + \|\mathbf{M}_{k+1}^{(\boldsymbol{\theta})}\|_2 \right)$$
+$$\|\theta_{m(n, T)} - \theta_n\|_2 \le \sup_{k \ge n} \left( \frac{\alpha_k}{\beta_k} \right) \sum_{k=n}^{m(n, T)-1} \beta_k \left( C_g + \|\mathbf{M}_{k+1}^{(\theta)}\|_2 \right)$$
 Since $\sum_{k=n}^{m(n, T)-1} \beta_k \le T$ and by Assumption 1, $\lim_{n \to \infty} \sup_{k \ge n} \left( \frac{\alpha_k}{\beta_k} \right) = 0$:
-$$\lim_{n \to \infty} \sup_{t \in [t_n^\beta, t_n^\beta + T]} \|\bar{\boldsymbol{\theta}}(t) - \bar{\boldsymbol{\theta}}(t_n^\beta)\|_2 = 0 \quad \text{almost surely.}$$
-Thus, on the critic's timescale, $\boldsymbol{\theta}$ is asymptotically **quasi-static** (a frozen constant parameter).
-By the Borkar-Meyn ODE Theorem for single-timescale stochastic approximations with Martingale noise (since $\sum \beta_k^2 < \infty$), the interpolated trajectory $\bar{\mathbf{w}}(t)$ asymptotically tracks the solution of the ODE with frozen $\boldsymbol{\theta}$:
-$$\dot{\mathbf{w}}(t) = \bar{\mathbf{h}}_{\boldsymbol{\theta}}(\mathbf{w}(t)) = \mathbf{b}_{\boldsymbol{\theta}} - \mathbf{A}_{\boldsymbol{\theta}} \mathbf{w}(t)$$
-Since $-\mathbf{A}_{\boldsymbol{\theta}}$ is Hurwitz by Assumption 4, the unique equilibrium is:
-$$\mathbf{w}^*(\boldsymbol{\theta}) = \mathbf{A}_{\boldsymbol{\theta}}^{-1} \mathbf{b}_{\boldsymbol{\theta}}$$
-and by Lyapunov stability of linear ODEs with Hurwitz matrices, $\mathbf{w}(t) \to \mathbf{w}^*(\boldsymbol{\theta})$ exponentially fast:
-$$\|\mathbf{w}(t) - \mathbf{w}^*(\boldsymbol{\theta})\|_2 \le K_0 e^{-\lambda_{\min}(\mathbf{A}) t} \|\mathbf{w}(0) - \mathbf{w}^*(\boldsymbol{\theta})\|_2$$
+$$\lim_{n \to \infty} \sup_{t \in [t_n^\beta, t_n^\beta + T]} \|\bar{\theta}(t) - \bar{\theta}(t_n^\beta)\|_2 = 0 \quad \text{almost surely.}$$
+Thus, on the critic's timescale, $\theta$ is asymptotically **quasi-static** (a frozen constant parameter).
+By the Borkar-Meyn ODE Theorem for single-timescale stochastic approximations with Martingale noise (since $\sum \beta_k^2 < \infty$), the interpolated trajectory $\bar{\mathbf{w}}(t)$ asymptotically tracks the solution of the ODE with frozen $\theta$:
+$$\dot{\mathbf{w}}(t) = \bar{\mathbf{h}}_{\theta}(\mathbf{w}(t)) = \mathbf{b}_{\theta} - \mathbf{A}_{\theta} \mathbf{w}(t)$$
+Since $-\mathbf{A}_{\theta}$ is Hurwitz by Assumption 4, the unique equilibrium is:
+$$\mathbf{w}^*(\theta) = \mathbf{A}_{\theta}^{-1} \mathbf{b}_{\theta}$$
+and by Lyapunov stability of linear ODEs with Hurwitz matrices, $\mathbf{w}(t) \to \mathbf{w}^*(\theta)$ exponentially fast:
+$$\|\mathbf{w}(t) - \mathbf{w}^*(\theta)\|_2 \le K_0 e^{-\lambda_{\min}(\mathbf{A}) t} \|\mathbf{w}(0) - \mathbf{w}^*(\theta)\|_2$$
 Therefore, the critic tracks the parameter-dependent equilibrium:
-$$\lim_{k \to \infty} \|\mathbf{w}_k - \mathbf{w}^*(\boldsymbol{\theta}_k)\|_2 = 0 \quad \text{almost surely.} \quad \text{(Equation 3)}$$
+$$\lim_{k \to \infty} \|\mathbf{w}_k - \mathbf{w}^*(\theta_k)\|_2 = 0 \quad \text{almost surely.} \quad \text{(Equation 3)}$$
 
 *Step 3: Analysis of the slow timescale (The Actor).*
 Now consider the continuous-time schedule of the actor: $t_0^\alpha = 0, t_n^\alpha = \sum_{i=0}^{n-1} \alpha_i$.
-Rewrite the actor recursion (Equation 2) by adding and subtracting the equilibrium drift $\bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}^*(\boldsymbol{\theta}_k))$:
-$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k + \alpha_k \left[ \bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}^*(\boldsymbol{\theta}_k)) + \mathbf{e}_k + \mathbf{M}_{k+1}^{(\boldsymbol{\theta})} \right] \quad \text{(Equation 4)}$$
-where $\mathbf{e}_k \triangleq \bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}_k) - \bar{\mathbf{g}}(\boldsymbol{\theta}_k, \mathbf{w}^*(\boldsymbol{\theta}_k))$ is the tracking error.
+Rewrite the actor recursion (Equation 2) by adding and subtracting the equilibrium drift $\bar{\mathbf{g}}(\theta_k, \mathbf{w}^*(\theta_k))$:
+$$\theta_{k+1} = \theta_k + \alpha_k \left[ \bar{\mathbf{g}}(\theta_k, \mathbf{w}^*(\theta_k)) + \mathbf{e}_k + \mathbf{M}_{k+1}^{(\theta)} \right] \quad \text{(Equation 4)}$$
+where $\mathbf{e}_k \triangleq \bar{\mathbf{g}}(\theta_k, \mathbf{w}_k) - \bar{\mathbf{g}}(\theta_k, \mathbf{w}^*(\theta_k))$ is the tracking error.
 By the mean-value theorem applied to $\bar{\mathbf{g}}$ with respect to $\mathbf{w}$:
-$$\|\mathbf{e}_k\|_2 \le L_{\mathbf{w}} \|\mathbf{w}_k - \mathbf{w}^*(\boldsymbol{\theta}_k)\|_2$$
-where $L_{\mathbf{w}} = \sup_{\boldsymbol{\theta}, s, a} \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 \cdot \|\boldsymbol{\phi}(s) - \gamma \mathbb{E}[\boldsymbol{\phi}(s')]\|_2 \le C_\psi C_\phi (1 + \gamma) < \infty$.
-From Equation 3, since $\|\mathbf{w}_k - \mathbf{w}^*(\boldsymbol{\theta}_k)\|_2 \to 0$ almost surely:
+$$\|\mathbf{e}_k\|_2 \le L_{\mathbf{w}} \|\mathbf{w}_k - \mathbf{w}^*(\theta_k)\|_2$$
+where $L_{\mathbf{w}} = \sup_{\theta, s, a} \|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\|_2 \cdot \|\phi(s) - \gamma \mathbb{E}[\phi(s')]\|_2 \le C_\psi C_\phi (1 + \gamma) < \infty$.
+From Equation 3, since $\|\mathbf{w}_k - \mathbf{w}^*(\theta_k)\|_2 \to 0$ almost surely:
 $$\lim_{k \to \infty} \|\mathbf{e}_k\|_2 = 0 \quad \text{almost surely.}$$
-Furthermore, the martingale noise sum $\sum_{i=0}^{k-1} \alpha_i \mathbf{M}_{i+1}^{(\boldsymbol{\theta})}$ converges almost surely by the Martingale Convergence Theorem because:
-$$\sum_{k=0}^\infty \alpha_k^2 \mathbb{E}[\|\mathbf{M}_{k+1}^{(\boldsymbol{\theta})}\|^2 \mid \mathcal{F}_k] \le \sigma_M^2 \sum_{k=0}^\infty \alpha_k^2 < \infty$$
-By Kushner-Clark Lemma and Borkar's Two-Timescale Theorem (Borkar, 2008, Chapter 6), the tracking error $\mathbf{e}_k$ and martingale noise are asymptotically negligible. The piecewise linear continuous-time interpolation $\bar{\boldsymbol{\theta}}(t)$ converges uniformly on compact intervals to the solution of the autonomous limiting ODE:
-$$\dot{\boldsymbol{\theta}}(t) = \bar{\mathbf{g}}(\boldsymbol{\theta}(t), \mathbf{w}^*(\boldsymbol{\theta}(t))) \quad \text{(Equation 5)}$$
+Furthermore, the martingale noise sum $\sum_{i=0}^{k-1} \alpha_i \mathbf{M}_{i+1}^{(\theta)}$ converges almost surely by the Martingale Convergence Theorem because:
+$$\sum_{k=0}^\infty \alpha_k^2 \mathbb{E}[\|\mathbf{M}_{k+1}^{(\theta)}\|^2 \mid \mathcal{F}_k] \le \sigma_M^2 \sum_{k=0}^\infty \alpha_k^2 < \infty$$
+By Kushner-Clark Lemma and Borkar's Two-Timescale Theorem (Borkar, 2008, Chapter 6), the tracking error $\mathbf{e}_k$ and martingale noise are asymptotically negligible. The piecewise linear continuous-time interpolation $\bar{\theta}(t)$ converges uniformly on compact intervals to the solution of the autonomous limiting ODE:
+$$\dot{\theta}(t) = \bar{\mathbf{g}}(\theta(t), \mathbf{w}^*(\theta(t))) \quad \text{(Equation 5)}$$
 
 *Step 4: Identification with the Policy Gradient.*
 Recall from Derivation 11.14.1 that when the critic satisfies the projected Bellman equation or compatible conditions, the expected advantage inner product equals the exact policy gradient:
-$$\bar{\mathbf{g}}(\boldsymbol{\theta}, \mathbf{w}^*(\boldsymbol{\theta})) = \mathbb{E}_{s \sim d^\pi, a \sim \pi} \left[ \left( Q^{\pi_{\boldsymbol{\theta}}}(s, a) - V^{\pi_{\boldsymbol{\theta}}}(s) \right) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right] = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+$$\bar{\mathbf{g}}(\theta, \mathbf{w}^*(\theta)) = \mathbb{E}_{s \sim d^\pi, a \sim \pi} \left[ \left( Q^{\pi_{\theta}}(s, a) - V^{\pi_{\theta}}(s) \right) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right] = \nabla_{\theta} J(\theta)$$
 Therefore, the slow limiting ODE (Equation 5) is strictly the **gradient ascent ODE**:
-$$\dot{\boldsymbol{\theta}}(t) = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t)) \quad \text{(Equation 6)}$$
+$$\dot{\theta}(t) = \nabla_{\theta} J(\theta(t)) \quad \text{(Equation 6)}$$
 
 *Step 5: Lyapunov Stability and Convergence to Stationary Points.*
-Define the Lyapunov function $\mathcal{L}(\boldsymbol{\theta}) \triangleq - J(\boldsymbol{\theta})$.
+Define the Lyapunov function $\mathcal{L}(\theta) \triangleq - J(\theta)$.
 Compute the orbital time derivative along the trajectories of Equation 6:
-$$\frac{d}{dt} J(\boldsymbol{\theta}(t)) = \left( \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t)) \right)^\top \dot{\boldsymbol{\theta}}(t) = \left( \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t)) \right)^\top \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t)) = \|\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t))\|_2^2 \ge 0$$
+$$\frac{d}{dt} J(\theta(t)) = \left( \nabla_{\theta} J(\theta(t)) \right)^\top \dot{\theta}(t) = \left( \nabla_{\theta} J(\theta(t)) \right)^\top \nabla_{\theta} J(\theta(t)) = \|\nabla_{\theta} J(\theta(t))\|_2^2 \ge 0$$
 The time derivative is strictly non-negative everywhere:
-$$\frac{d}{dt} \mathcal{L}(\boldsymbol{\theta}(t)) = - \|\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}(t))\|_2^2 \le 0$$
-Thus, $\mathcal{L}(\boldsymbol{\theta})$ is a strict Lyapunov function for the system.
-The set where $\frac{d}{dt} \mathcal{L}(\boldsymbol{\theta}) = 0$ is precisely the set of critical points (stationary points) of the policy performance:
-$$\mathcal{Z} \triangleq \{ \boldsymbol{\theta} \in \Theta : \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbf{0} \}$$
-By **LaSalle's Invariance Principle**, every bounded trajectory of the ODE $\dot{\boldsymbol{\theta}} = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ converges to the largest invariant subset of $\mathcal{Z}$.
-Consequently, the discrete-time actor sequence $\boldsymbol{\theta}_k$ converges almost surely to the stationary set $\mathcal{Z}$:
-$$\lim_{k \to \infty} \operatorname{dist}(\boldsymbol{\theta}_k, \mathcal{Z}) = 0 \quad \text{almost surely, i.e.,} \quad \lim_{k \to \infty} \|\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}_k)\|_2 = 0 \quad \blacksquare$$
+$$\frac{d}{dt} \mathcal{L}(\theta(t)) = - \|\nabla_{\theta} J(\theta(t))\|_2^2 \le 0$$
+Thus, $\mathcal{L}(\theta)$ is a strict Lyapunov function for the system.
+The set where $\frac{d}{dt} \mathcal{L}(\theta) = 0$ is precisely the set of critical points (stationary points) of the policy performance:
+$$\mathcal{Z} \triangleq \{ \theta \in \Theta : \nabla_{\theta} J(\theta) = \mathbf{0} \}$$
+By **LaSalle's Invariance Principle**, every bounded trajectory of the ODE $\dot{\theta} = \nabla_{\theta} J(\theta)$ converges to the largest invariant subset of $\mathcal{Z}$.
+Consequently, the discrete-time actor sequence $\theta_k$ converges almost surely to the stationary set $\mathcal{Z}$:
+$$\lim_{k \to \infty} \operatorname{dist}(\theta_k, \mathcal{Z}) = 0 \quad \text{almost surely, i.e.,} \quad \lim_{k \to \infty} \|\nabla_{\theta} J(\theta_k)\|_2 = 0 \quad \blacksquare$$
 
 ---
 
@@ -368,10 +368,10 @@ where C_ψ ≜ max_{s, a} ‖∇_θ \log \pi_θ(a | s)‖_2, and prove that:
 ```
 
 **Part 1: Problem Statement & Mathematical Goal**
-In practical Actor-Critic methods (such as A2C and A3C), the true state-value function $V^{\pi_{\boldsymbol{\theta}}}(s)$ is approximated by a parameterized neural network $V_{\boldsymbol{\phi}}(s)$. Because function approximators cannot achieve zero error across all states simultaneously, the critic carries a non-zero pointwise approximation error:
-$$\epsilon(s) \triangleq V_{\boldsymbol{\phi}}(s) - V^{\pi_{\boldsymbol{\theta}}}(s), \quad \sup_{s \in \mathcal{S}} |\epsilon(s)| \le \epsilon_{\text{critic}}$$
-When the 1-step TD error $\hat{\delta}_{\boldsymbol{\phi}}(s, a) = R(s, a) + \gamma V_{\boldsymbol{\phi}}(s') - V_{\boldsymbol{\phi}}(s)$ is used as the advantage estimator, it introduces bias into the policy gradient:
-$$\mathbf{E}_{\text{grad}} \triangleq \widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) - \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
+In practical Actor-Critic methods (such as A2C and A3C), the true state-value function $V^{\pi_{\theta}}(s)$ is approximated by a parameterized neural network $V_{\phi}(s)$. Because function approximators cannot achieve zero error across all states simultaneously, the critic carries a non-zero pointwise approximation error:
+$$\epsilon(s) \triangleq V_{\phi}(s) - V^{\pi_{\theta}}(s), \quad \sup_{s \in \mathcal{S}} |\epsilon(s)| \le \epsilon_{\text{critic}}$$
+When the 1-step TD error $\hat{\delta}_{\phi}(s, a) = R(s, a) + \gamma V_{\phi}(s') - V_{\phi}(s)$ is used as the advantage estimator, it introduces bias into the policy gradient:
+$$\mathbf{E}_{\text{grad}} \triangleq \widehat{\nabla}_{\theta} J(\theta) - \nabla_{\theta} J(\theta)$$
 Our mathematical goal is to derive an exact, first-principles upper bound on $\|\mathbf{E}_{\text{grad}}\|_2$, proving analytically:
 1. Why the current state error $\epsilon(s)$ cancels out completely from the gradient bias (due to score function orthogonality).
 2. Exactly how the bootstrapped next-state error $\epsilon(s')$ propagates through the transition dynamics $\mathcal{P}(s' \mid s, a)$ and discount factor $\gamma$.
@@ -380,89 +380,89 @@ Our mathematical goal is to derive an exact, first-principles upper bound on $\|
 **Part 2: Explicit Assumptions & Regularity Conditions**
 1. **Finite or Compact State Space:** The state space $\mathcal{S}$ is finite with cardinality $|\mathcal{S}|$, and the action space $\mathcal{A}$ is finite.
 2. **Discount Factor:** $\gamma \in [0, 1)$, ensuring the convergence of the Neumann series $\sum_{t=0}^\infty \gamma^t = \frac{1}{1 - \gamma}$.
-3. **Score Function Boundedness:** The score function $\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$ has uniformly bounded Euclidean norm:
-   $$C_\psi \triangleq \max_{s \in \mathcal{S}, a \in \mathcal{A}} \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 < \infty$$
-4. **Pointwise Uniform Critic Error:** The critic approximation error $\epsilon(s) \triangleq V_{\boldsymbol{\phi}}(s) - V^{\pi_{\boldsymbol{\theta}}}(s)$ is bounded in $L_\infty$ norm:
+3. **Score Function Boundedness:** The score function $\nabla_{\theta} \log \pi_{\theta}(a \mid s)$ has uniformly bounded Euclidean norm:
+   $$C_\psi \triangleq \max_{s \in \mathcal{S}, a \in \mathcal{A}} \|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\|_2 < \infty$$
+4. **Pointwise Uniform Critic Error:** The critic approximation error $\epsilon(s) \triangleq V_{\phi}(s) - V^{\pi_{\theta}}(s)$ is bounded in $L_\infty$ norm:
    $$\|\epsilon\|_\infty \triangleq \max_{s \in \mathcal{S}} |\epsilon(s)| \le \epsilon_{\text{critic}} < \infty$$
 5. **Discounted State Measure:** The unnormalized discounted state visitation measure is:
-   $$d^{\pi_{\boldsymbol{\theta}}}(s) \triangleq \sum_{t=0}^\infty \gamma^t \mathbb{P}(S_t = s \mid S_0 \sim \mu; \pi_{\boldsymbol{\theta}})$$
-   which satisfies $\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) = \sum_{t=0}^\infty \gamma^t = \frac{1}{1 - \gamma}$.
+   $$d^{\pi_{\theta}}(s) \triangleq \sum_{t=0}^\infty \gamma^t \mathbb{P}(S_t = s \mid S_0 \sim \mu; \pi_{\theta})$$
+   which satisfies $\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) = \sum_{t=0}^\infty \gamma^t = \frac{1}{1 - \gamma}$.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation**
 Consider what happens when we evaluate the expectation of the 1-step TD advantage estimator:
-$$\hat{\delta}_{\boldsymbol{\phi}}(s, a) = R(s, a) + \gamma \mathbb{E}_{s' \sim \mathcal{P}}[V_{\boldsymbol{\phi}}(s')] - V_{\boldsymbol{\phi}}(s)$$
-Substitute $V_{\boldsymbol{\phi}} = V^{\pi_{\boldsymbol{\theta}}} + \epsilon$:
-$$\hat{\delta}_{\boldsymbol{\phi}}(s, a) = \underbrace{R(s, a) + \gamma \mathbb{E}_{s'}[V^{\pi_{\boldsymbol{\theta}}}(s')] - V^{\pi_{\boldsymbol{\theta}}}(s)}_{A^{\pi_{\boldsymbol{\theta}}}(s, a) \text{ (True Advantage)}} + \underbrace{\gamma \mathbb{E}_{s' \sim \mathcal{P}(\cdot \mid s, a)}[\epsilon(s')]}_{\text{Future Bootstrapping Error}} - \underbrace{\epsilon(s)}_{\text{Current Baseline Error}}$$
+$$\hat{\delta}_{\phi}(s, a) = R(s, a) + \gamma \mathbb{E}_{s' \sim \mathcal{P}}[V_{\phi}(s')] - V_{\phi}(s)$$
+Substitute $V_{\phi} = V^{\pi_{\theta}} + \epsilon$:
+$$\hat{\delta}_{\phi}(s, a) = \underbrace{R(s, a) + \gamma \mathbb{E}_{s'}[V^{\pi_{\theta}}(s')] - V^{\pi_{\theta}}(s)}_{A^{\pi_{\theta}}(s, a) \text{ (True Advantage)}} + \underbrace{\gamma \mathbb{E}_{s' \sim \mathcal{P}(\cdot \mid s, a)}[\epsilon(s')]}_{\text{Future Bootstrapping Error}} - \underbrace{\epsilon(s)}_{\text{Current Baseline Error}}$$
 Now observe the fundamental geometric asymmetry between the two error terms:
-- The current baseline error $\epsilon(s)$ is **action-independent**! When multiplied by the score vector $\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)$ and integrated over $a \sim \pi_{\boldsymbol{\theta}}$, it is projected onto $\sum_a \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) = \nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$. The baseline invariance property acts as an **ideal high-pass filter** that annihilates $\epsilon(s)$ completely!
+- The current baseline error $\epsilon(s)$ is **action-independent**! When multiplied by the score vector $\nabla_{\theta} \log \pi_{\theta}(a \mid s)$ and integrated over $a \sim \pi_{\theta}$, it is projected onto $\sum_a \nabla_{\theta} \pi_{\theta}(a \mid s) = \nabla_{\theta} (1) = \mathbf{0}$. The baseline invariance property acts as an **ideal high-pass filter** that annihilates $\epsilon(s)$ completely!
 - In contrast, the future bootstrapping error $\gamma \sum_{s'} \mathcal{P}(s' \mid s, a) \epsilon(s')$ **depends on action $a$** through the transition dynamics $\mathcal{P}(s' \mid s, a)$. Because different actions lead to different distributions of future states, this term does not vanish.
 The policy gradient bias is therefore generated *exclusively* by the differential shift in future value errors across competing actions!
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof**
 *Step 1: Write down the true policy gradient and the critic-based policy gradient.*
 By the Policy Gradient Theorem with advantage baseline:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) A^{\pi_{\boldsymbol{\theta}}}(s, a) \quad \text{(Equation 1)}$$
+$$\nabla_{\theta} J(\theta) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) A^{\pi_{\theta}}(s, a) \quad \text{(Equation 1)}$$
 where the true advantage function is:
-$$A^{\pi_{\boldsymbol{\theta}}}(s, a) = Q^{\pi_{\boldsymbol{\theta}}}(s, a) - V^{\pi_{\boldsymbol{\theta}}}(s) = \left( R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V^{\pi_{\boldsymbol{\theta}}}(s') \right) - V^{\pi_{\boldsymbol{\theta}}}(s)$$
-The estimated policy gradient using the approximate critic $V_{\boldsymbol{\phi}}$ is:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \bar{\delta}_{\boldsymbol{\phi}}(s, a) \quad \text{(Equation 2)}$$
-where $\bar{\delta}_{\boldsymbol{\phi}}(s, a)$ is the expected 1-step TD advantage under critic $V_{\boldsymbol{\phi}}$:
-$$\bar{\delta}_{\boldsymbol{\phi}}(s, a) \triangleq R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V_{\boldsymbol{\phi}}(s') - V_{\boldsymbol{\phi}}(s)$$
+$$A^{\pi_{\theta}}(s, a) = Q^{\pi_{\theta}}(s, a) - V^{\pi_{\theta}}(s) = \left( R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V^{\pi_{\theta}}(s') \right) - V^{\pi_{\theta}}(s)$$
+The estimated policy gradient using the approximate critic $V_{\phi}$ is:
+$$\widehat{\nabla}_{\theta} J(\theta) = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \bar{\delta}_{\phi}(s, a) \quad \text{(Equation 2)}$$
+where $\bar{\delta}_{\phi}(s, a)$ is the expected 1-step TD advantage under critic $V_{\phi}$:
+$$\bar{\delta}_{\phi}(s, a) \triangleq R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V_{\phi}(s') - V_{\phi}(s)$$
 
 *Step 2: Express the difference between advantage estimators.*
-Substitute $V_{\boldsymbol{\phi}}(s) = V^{\pi_{\boldsymbol{\theta}}}(s) + \epsilon(s)$ into $\bar{\delta}_{\boldsymbol{\phi}}(s, a)$:
-$$\bar{\delta}_{\boldsymbol{\phi}}(s, a) = R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \left[ V^{\pi_{\boldsymbol{\theta}}}(s') + \epsilon(s') \right] - \left[ V^{\pi_{\boldsymbol{\theta}}}(s) + \epsilon(s) \right]$$
+Substitute $V_{\phi}(s) = V^{\pi_{\theta}}(s) + \epsilon(s)$ into $\bar{\delta}_{\phi}(s, a)$:
+$$\bar{\delta}_{\phi}(s, a) = R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \left[ V^{\pi_{\theta}}(s') + \epsilon(s') \right] - \left[ V^{\pi_{\theta}}(s) + \epsilon(s) \right]$$
 Regrouping into the true advantage and error terms:
-$$\bar{\delta}_{\boldsymbol{\phi}}(s, a) = \underbrace{R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V^{\pi_{\boldsymbol{\theta}}}(s') - V^{\pi_{\boldsymbol{\theta}}}(s)}_{A^{\pi_{\boldsymbol{\theta}}}(s, a)} + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s)$$
-Subtracting $A^{\pi_{\boldsymbol{\theta}}}(s, a)$:
-$$\bar{\delta}_{\boldsymbol{\phi}}(s, a) - A^{\pi_{\boldsymbol{\theta}}}(s, a) = \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s) \quad \text{(Equation 3)}$$
+$$\bar{\delta}_{\phi}(s, a) = \underbrace{R(s, a) + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) V^{\pi_{\theta}}(s') - V^{\pi_{\theta}}(s)}_{A^{\pi_{\theta}}(s, a)} + \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s)$$
+Subtracting $A^{\pi_{\theta}}(s, a)$:
+$$\bar{\delta}_{\phi}(s, a) - A^{\pi_{\theta}}(s, a) = \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s) \quad \text{(Equation 3)}$$
 
 *Step 3: Compute the policy gradient estimation error vector $\mathbf{E}_{\text{grad}}$.*
 Subtract Equation 1 from Equation 2:
-$$\mathbf{E}_{\text{grad}} \triangleq \widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) - \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$$
-$$= \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \left[ \bar{\delta}_{\boldsymbol{\phi}}(s, a) - A^{\pi_{\boldsymbol{\theta}}}(s, a) \right]$$
+$$\mathbf{E}_{\text{grad}} \triangleq \widehat{\nabla}_{\theta} J(\theta) - \nabla_{\theta} J(\theta)$$
+$$= \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \left[ \bar{\delta}_{\phi}(s, a) - A^{\pi_{\theta}}(s, a) \right]$$
 Substitute Equation 3 into this expression:
-$$\mathbf{E}_{\text{grad}} = \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \left[ \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s) \right] \quad \text{(Equation 4)}$$
+$$\mathbf{E}_{\text{grad}} = \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \left[ \gamma \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') - \epsilon(s) \right] \quad \text{(Equation 4)}$$
 
 *Step 4: Distribute and evaluate the current-state error term.*
 Split Equation 4 into two distinct sums:
-$$\mathbf{E}_{\text{grad}} = \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s')$$
-$$- \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \epsilon(s) \left[ \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right] \quad \text{(Equation 5)}$$
+$$\mathbf{E}_{\text{grad}} = \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s')$$
+$$- \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \epsilon(s) \left[ \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right] \quad \text{(Equation 5)}$$
 Examine the bracketed term in the second sum:
-$$\sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) = \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \frac{\nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}}(a \mid s)} = \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s)$$
+$$\sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) = \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \frac{\nabla_{\theta} \pi_{\theta}(a \mid s)}{\pi_{\theta}(a \mid s)} = \sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s)$$
 Interchanging the gradient and finite sum:
-$$\sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) = \nabla_{\boldsymbol{\theta}} \left( \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \right) = \nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$$
+$$\sum_{a \in \mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) = \nabla_{\theta} \left( \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \right) = \nabla_{\theta} (1) = \mathbf{0}$$
 Therefore, the second term vanishes identically:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \epsilon(s) \cdot \mathbf{0} = \mathbf{0}$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \epsilon(s) \cdot \mathbf{0} = \mathbf{0}$$
 This proves that the current-state error $\epsilon(s)$ contributes **identically zero bias** to the policy gradient!
 
 *Step 5: Simplify to the surviving future-state error term.*
-$$\mathbf{E}_{\text{grad}} = \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \quad \text{(Equation 6)}$$
+$$\mathbf{E}_{\text{grad}} = \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s) \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \quad \text{(Equation 6)}$$
 
 *Step 6: Apply the norm inequality.*
 Taking the Euclidean norm $\|\cdot\|_2$ of both sides and applying the triangle inequality:
-$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 \left| \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \right|$$
+$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\|_2 \left| \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \right|$$
 Applying the triangle inequality to the inner sum over $s'$:
 $$\left| \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \right| \le \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) |\epsilon(s')| \le \max_{s'' \in \mathcal{S}} |\epsilon(s'')| \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a)$$
 Since $\sum_{s'} \mathcal{P}(s' \mid s, a) = 1$ and $\max_{s''} |\epsilon(s'')| = \|\epsilon\|_\infty \le \epsilon_{\text{critic}}$:
 $$\left| \sum_{s' \in \mathcal{S}} \mathcal{P}(s' \mid s, a) \epsilon(s') \right| \le \epsilon_{\text{critic}} \cdot 1 = \epsilon_{\text{critic}}$$
 
 *Step 7: Substitute the bounds.*
-By Assumption 3, $\|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\|_2 \le C_\psi$. Substituting both uniform bounds:
-$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s) \cdot C_\psi \cdot \epsilon_{\text{critic}}$$
+By Assumption 3, $\|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\|_2 \le C_\psi$. Substituting both uniform bounds:
+$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s) \cdot C_\psi \cdot \epsilon_{\text{critic}}$$
 Factor the scalar constants $\gamma C_\psi \epsilon_{\text{critic}}$ outside the sums:
-$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma C_\psi \epsilon_{\text{critic}} \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) \underbrace{\sum_{a \in \mathcal{A}} \pi_{\boldsymbol{\theta}}(a \mid s)}_{1} = \gamma C_\psi \epsilon_{\text{critic}} \sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s)$$
+$$\|\mathbf{E}_{\text{grad}}\|_2 \le \gamma C_\psi \epsilon_{\text{critic}} \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) \underbrace{\sum_{a \in \mathcal{A}} \pi_{\theta}(a \mid s)}_{1} = \gamma C_\psi \epsilon_{\text{critic}} \sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s)$$
 By Assumption 5, for the unnormalized state visitation distribution:
-$$\sum_{s \in \mathcal{S}} d^{\pi_{\boldsymbol{\theta}}}(s) = \sum_{t=0}^\infty \gamma^t = \frac{1}{1 - \gamma}$$
+$$\sum_{s \in \mathcal{S}} d^{\pi_{\theta}}(s) = \sum_{t=0}^\infty \gamma^t = \frac{1}{1 - \gamma}$$
 Therefore:
-$$\|\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) - \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})\|_2 \le \frac{\gamma}{1 - \gamma} C_\psi \epsilon_{\text{critic}} \quad \blacksquare$$
+$$\|\widehat{\nabla}_{\theta} J(\theta) - \nabla_{\theta} J(\theta)\|_2 \le \frac{\gamma}{1 - \gamma} C_\psi \epsilon_{\text{critic}} \quad \blacksquare$$
 
 *Step 8: Generalization to L_2 norm via Cauchy-Schwarz.*
-Under the normalized distribution $\tilde{d}^{\pi}(s) \triangleq (1-\gamma) d^{\pi}(s)$, let the critic error vector be $\boldsymbol{\epsilon} \in \mathbb{R}^{|\mathcal{S}|}$.
+Under the normalized distribution $\tilde{d}^{\pi}(s) \triangleq (1-\gamma) d^{\pi}(s)$, let the critic error vector be $\epsilon \in \mathbb{R}^{|\mathcal{S}|}$.
 By the Cauchy-Schwarz inequality relating the $L_1$ and $L_2$ norms in finite dimensions:
-$$\sum_{s \in \mathcal{S}} |\epsilon(s)| \le \sqrt{|\mathcal{S}|} \left( \sum_{s \in \mathcal{S}} \epsilon(s)^2 \right)^{1/2} = \sqrt{|\mathcal{S}|} \|\boldsymbol{\epsilon}\|_2 \le \sqrt{|\mathcal{S}|} \sqrt{|\mathcal{S}|} \|\boldsymbol{\epsilon}\|_\infty = |\mathcal{S}| \epsilon_{\text{critic}}$$
+$$\sum_{s \in \mathcal{S}} |\epsilon(s)| \le \sqrt{|\mathcal{S}|} \left( \sum_{s \in \mathcal{S}} \epsilon(s)^2 \right)^{1/2} = \sqrt{|\mathcal{S}|} \|\epsilon\|_2 \le \sqrt{|\mathcal{S}|} \sqrt{|\mathcal{S}|} \|\epsilon\|_\infty = |\mathcal{S}| \epsilon_{\text{critic}}$$
 Using the normalized measure $\tilde{d}^{\pi}$, the bound scales with the effective dimensionality of the state space:
-$$\|\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) - \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})\|_2 \le \frac{\gamma \sqrt{|\mathcal{S}|}}{1 - \gamma} C_\psi \|\boldsymbol{\epsilon}\|_{2, \tilde{d}} \le \frac{\sqrt{|\mathcal{S}|}}{1 - \gamma} C_\psi \epsilon_{\text{critic}} \quad \blacksquare$$
+$$\|\widehat{\nabla}_{\theta} J(\theta) - \nabla_{\theta} J(\theta)\|_2 \le \frac{\gamma \sqrt{|\mathcal{S}|}}{1 - \gamma} C_\psi \|\epsilon\|_{2, \tilde{d}} \le \frac{\sqrt{|\mathcal{S}|}}{1 - \gamma} C_\psi \epsilon_{\text{critic}} \quad \blacksquare$$
 
 ---
 
@@ -491,8 +491,8 @@ Think of reinforcement learning as navigating a mountainous terrain at night:
 ## 4. Real-World Analogy: The Jazz Improviser and Rhythm Section
 
 Imagine a jazz trumpet soloist (The Actor) performing live with an experienced bassist and drummer (The Critic):
-- The trumpeter plays spontaneous, exploratory musical lines $\pi_{\boldsymbol{\theta}}(a \mid s)$.
-- The rhythm section maintains the harmonic groove and tempo, establishing the baseline $V_{\boldsymbol{\phi}}(s)$.
+- The trumpeter plays spontaneous, exploratory musical lines $\pi_{\theta}(a \mid s)$.
+- The rhythm section maintains the harmonic groove and tempo, establishing the baseline $V_{\phi}(s)$.
 - When the trumpeter hits a daring note, the rhythm section immediately signals whether it resolved into harmonic brilliance ($\delta_t > 0$) or clashed discordantly ($\delta_t < 0$).
 - The trumpeter doesn't wait until the 3-hour concert concludes to know if that note worked; the instantaneous harmonic feedback allows real-time musical adaptation mid-measure!
 
@@ -528,7 +528,7 @@ Let us trace an exact, cell-by-cell numerical forward and backward pass of an Ac
 | $V(s), V(s')$ | Critic State Value Outputs | $\mathbf{w}_V^\top s + b_V$ |
 | $\delta$ | TD Error / Advantage Estimate | $r + \gamma V(s') - V(s)$ |
 | $\mathbf{z}$ | Actor Logits Vector | $\mathbf{W}_\pi s + \mathbf{b}_\pi$ |
-| $\boldsymbol{\pi}$ | Action Probability Vector | $\text{Softmax}(\mathbf{z})$ |
+| $\pi$ | Action Probability Vector | $\text{Softmax}(\mathbf{z})$ |
 | $\mathcal{H}$ | Policy Shannon Entropy | $-\sum \pi_i \ln(\pi_i)$ |
 | $\mathcal{L}_{\text{policy}}$ | Actor Loss | $-\ln(\pi(a_0)) \cdot \delta$ |
 | $\mathcal{L}_{\text{value}}$ | Critic Loss | $\frac{1}{2} \delta^2$ |
@@ -631,7 +631,7 @@ The logit for chosen action $a_0$ is reinforced from $1.0000$ to $1.0753$!
 
 ### Illustration 1: Why Bootstrapping Introduces Bias (Analytical Proof & Numerical Verification)
 **Problem:**
-1. REINFORCE uses the true empirical return $G_t$, which has zero bias: $\mathbb{E}[G_t \mid S_t, A_t] = Q^\pi(S_t, A_t)$. Actor-Critic replaces $G_t$ with 1-step bootstrap $R_{t+1} + \gamma V_{\boldsymbol{\phi}}(S_{t+1})$. Prove that if the critic is imperfect ($V_{\boldsymbol{\phi}} \neq V^\pi$), the policy gradient update becomes biased if and only if future-state critic errors depend on the action chosen.
+1. REINFORCE uses the true empirical return $G_t$, which has zero bias: $\mathbb{E}[G_t \mid S_t, A_t] = Q^\pi(S_t, A_t)$. Actor-Critic replaces $G_t$ with 1-step bootstrap $R_{t+1} + \gamma V_{\phi}(S_{t+1})$. Prove that if the critic is imperfect ($V_{\phi} \neq V^\pi$), the policy gradient update becomes biased if and only if future-state critic errors depend on the action chosen.
 2. In a 2-state MDP, starting state $s_0$ has actions $\{a_1, a_2\}$ transitioning to successor states $\{s_1, s_2\}$:
    - Transition dynamics: $\mathcal{P}(\cdot \mid s_0, a_1) = [0.80, 0.20]^\top$, $\mathcal{P}(\cdot \mid s_0, a_2) = [0.10, 0.90]^\top$.
    - True state values: $V^\pi(s_1) = 10.00, V^\pi(s_2) = 2.00$.
@@ -640,18 +640,18 @@ The logit for chosen action $a_0$ is reinforced from $1.0000$ to $1.0753$!
    - Imperfect critic with estimation errors: $\epsilon(s_0) = +0.50, \epsilon(s_1) = +2.00, \epsilon(s_2) = -1.00$.
    Compute:
    a. True action values $Q^\pi(s_0, a)$, state value $V^\pi(s_0)$, and exact policy gradient $\nabla_\theta J(\theta)$.
-   b. Approximate critic values $V_{\boldsymbol{\phi}}(s)$, expected TD errors $\mathbb{E}[\delta_{\boldsymbol{\phi}} \mid a]$, and approximate policy gradient $\widehat{\nabla}_\theta J(\theta)$.
+   b. Approximate critic values $V_{\phi}(s)$, expected TD errors $\mathbb{E}[\delta_{\phi} \mid a]$, and approximate policy gradient $\widehat{\nabla}_\theta J(\theta)$.
    c. Verify that the empirical bias $\widehat{\nabla}_\theta J(\theta) - \nabla_\theta J(\theta)$ matches the theoretical bound formula from Derivation 11.14.3 to machine precision, confirming that current-state error $\epsilon(s_0)$ produces zero bias.
 
 **Solution:**
 **Part 1: Analytical Derivation:**
-Let $\epsilon(s) \triangleq V_{\boldsymbol{\phi}}(s) - V^\pi(s)$ be the critic's approximation error.
+Let $\epsilon(s) \triangleq V_{\phi}(s) - V^\pi(s)$ be the critic's approximation error.
 The expected TD error target conditioned on $(S_t = s, A_t = a)$ is:
-$$\mathbb{E} \left[ R_{t+1} + \gamma V_{\boldsymbol{\phi}}(S_{t+1}) \mid S_t = s, A_t = a \right]$$
+$$\mathbb{E} \left[ R_{t+1} + \gamma V_{\phi}(S_{t+1}) \mid S_t = s, A_t = a \right]$$
 $$= \mathbb{E} \left[ R_{t+1} + \gamma \left( V^\pi(S_{t+1}) + \epsilon(S_{t+1}) \right) \mid S_t = s, A_t = a \right]$$
 $$= Q^\pi(s, a) + \gamma \mathbb{E} \left[ \epsilon(S_{t+1}) \mid S_t = s, A_t = a \right]$$
 The policy gradient evaluated using this critic is:
-$$\widehat{\nabla}_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) + \gamma \mathbb{E} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(A_t \mid S_t) \mathbb{E}[\epsilon(S_{t+1}) \mid S_t, A_t] \right]$$
+$$\widehat{\nabla}_{\theta} J(\theta) = \nabla_{\theta} J(\theta) + \gamma \mathbb{E} \left[ \nabla_{\theta} \log \pi_{\theta}(A_t \mid S_t) \mathbb{E}[\epsilon(S_{t+1}) \mid S_t, A_t] \right]$$
 Unless $\mathbb{E}[\epsilon(S') \mid s, a]$ is independent of $a$ (or $\epsilon \equiv 0$), this extra term does not vanish.
 Actor-Critic accepts non-zero initial bias in exchange for a massive reduction in variance ($\mathcal{O}(1)$ vs $\mathcal{O}(T)$), which makes neural network training practical!
 
@@ -669,20 +669,20 @@ $$= 0.2400 \times 8.5600 - 0.2400 \times 4.5200 = 0.2400 \times (8.5600 - 4.5200
 
 *Step 2: Compute approximate critic values and expected TD errors.*
 Critic outputs:
-$$V_{\boldsymbol{\phi}}(s_0) = V^\pi(s_0) + \epsilon(s_0) = 6.9440 + 0.50 = \mathbf{7.4440}$$
-$$V_{\boldsymbol{\phi}}(s_1) = V^\pi(s_1) + \epsilon(s_1) = 10.00 + 2.00 = \mathbf{12.0000}$$
-$$V_{\boldsymbol{\phi}}(s_2) = V^\pi(s_2) + \epsilon(s_2) = 2.00 - 1.00 = \mathbf{1.0000}$$
+$$V_{\phi}(s_0) = V^\pi(s_0) + \epsilon(s_0) = 6.9440 + 0.50 = \mathbf{7.4440}$$
+$$V_{\phi}(s_1) = V^\pi(s_1) + \epsilon(s_1) = 10.00 + 2.00 = \mathbf{12.0000}$$
+$$V_{\phi}(s_2) = V^\pi(s_2) + \epsilon(s_2) = 2.00 - 1.00 = \mathbf{1.0000}$$
 Expected successor value under action $a_1$:
-$$\mathbb{E}[V_{\boldsymbol{\phi}}(S') \mid a_1] = 0.80 \times 12.0000 + 0.20 \times 1.0000 = 9.6000 + 0.2000 = \mathbf{9.8000}$$
+$$\mathbb{E}[V_{\phi}(S') \mid a_1] = 0.80 \times 12.0000 + 0.20 \times 1.0000 = 9.6000 + 0.2000 = \mathbf{9.8000}$$
 Expected TD error for action $a_1$:
-$$\mathbb{E}[\delta_{\boldsymbol{\phi}} \mid a_1] = R(s_0, a_1) + \gamma \mathbb{E}[V_{\boldsymbol{\phi}}(S') \mid a_1] - V_{\boldsymbol{\phi}}(s_0) = 1.00 + 0.90 \times 9.8000 - 7.4440 = 1.00 + 8.8200 - 7.4440 = \mathbf{+2.3760}$$
+$$\mathbb{E}[\delta_{\phi} \mid a_1] = R(s_0, a_1) + \gamma \mathbb{E}[V_{\phi}(S') \mid a_1] - V_{\phi}(s_0) = 1.00 + 0.90 \times 9.8000 - 7.4440 = 1.00 + 8.8200 - 7.4440 = \mathbf{+2.3760}$$
 Expected successor value under action $a_2$:
-$$\mathbb{E}[V_{\boldsymbol{\phi}}(S') \mid a_2] = 0.10 \times 12.0000 + 0.90 \times 1.0000 = 1.2000 + 0.9000 = \mathbf{2.1000}$$
+$$\mathbb{E}[V_{\phi}(S') \mid a_2] = 0.10 \times 12.0000 + 0.90 \times 1.0000 = 1.2000 + 0.9000 = \mathbf{2.1000}$$
 Expected TD error for action $a_2$:
-$$\mathbb{E}[\delta_{\boldsymbol{\phi}} \mid a_2] = R(s_0, a_2) + \gamma \mathbb{E}[V_{\boldsymbol{\phi}}(S') \mid a_2] - V_{\boldsymbol{\phi}}(s_0) = 2.00 + 0.90 \times 2.1000 - 7.4440 = 2.00 + 1.8900 - 7.4440 = \mathbf{-3.5540}$$
+$$\mathbb{E}[\delta_{\phi} \mid a_2] = R(s_0, a_2) + \gamma \mathbb{E}[V_{\phi}(S') \mid a_2] - V_{\phi}(s_0) = 2.00 + 0.90 \times 2.1000 - 7.4440 = 2.00 + 1.8900 - 7.4440 = \mathbf{-3.5540}$$
 
 *Step 3: Compute approximate policy gradient.*
-$$\widehat{\nabla}_\theta J(\theta) = \pi(a_1) \psi(a_1) \mathbb{E}[\delta_{\boldsymbol{\phi}} \mid a_1] + \pi(a_2) \psi(a_2) \mathbb{E}[\delta_{\boldsymbol{\phi}} \mid a_2]$$
+$$\widehat{\nabla}_\theta J(\theta) = \pi(a_1) \psi(a_1) \mathbb{E}[\delta_{\phi} \mid a_1] + \pi(a_2) \psi(a_2) \mathbb{E}[\delta_{\phi} \mid a_2]$$
 $$= 0.60 \times (+0.40) \times 2.3760 + 0.40 \times (-0.60) \times (-3.5540)$$
 $$= 0.2400 \times 2.3760 + 0.2400 \times 3.5540 = 0.2400 \times (2.3760 + 3.5540) = 0.2400 \times 5.9300 = \mathbf{+1.4232}$$
 
@@ -755,7 +755,7 @@ The critic updates its estimation of state $s_1$ from $2.0000$ to $2.8000$.
 
 *Step 4: Backward pass and parameter update for Actor.*
 The chosen action is $A_t = a_1$. The score vector with respect to logits $\mathbf{z}$ is:
-$$\nabla_{\mathbf{z}} \log \pi(a_1 \mid s_1) = \mathbf{e}_1 - \boldsymbol{\pi} = \begin{bmatrix} 1.0 - \pi(a_1 \mid s_1) \\ 0.0 - \pi(a_2 \mid s_1) \end{bmatrix} = \begin{bmatrix} 1.0 - 0.64566 \\ -0.35434 \end{bmatrix} = \begin{bmatrix} +0.35434 \\ -0.35434 \end{bmatrix}$$
+$$\nabla_{\mathbf{z}} \log \pi(a_1 \mid s_1) = \mathbf{e}_1 - \pi = \begin{bmatrix} 1.0 - \pi(a_1 \mid s_1) \\ 0.0 - \pi(a_2 \mid s_1) \end{bmatrix} = \begin{bmatrix} 1.0 - 0.64566 \\ -0.35434 \end{bmatrix} = \begin{bmatrix} +0.35434 \\ -0.35434 \end{bmatrix}$$
 Policy gradient vector with respect to logits:
 $$\mathbf{g}_{\mathbf{z}} = \delta_t \nabla_{\mathbf{z}} \log \pi(a_1 \mid s_1) = 4.0000 \times \begin{bmatrix} +0.35434 \\ -0.35434 \end{bmatrix} = \begin{bmatrix} +1.41737 \\ -1.41737 \end{bmatrix}$$
 Gradient with respect to the weight matrix $\mathbf{W}_\pi$:
@@ -791,7 +791,7 @@ Consider a synchronous A2C architecture operating with $K = 4$ parallel environm
   - Actor head: $\mathbf{W}_\pi = \begin{bmatrix} 0.5 & -0.5 \\ -0.5 & 0.5 \end{bmatrix}$ (producing 2 logits $\mathbf{z}(s) = \mathbf{W}_\pi s$).
 - **Hyperparameters:** $\gamma = 0.90$, value loss coefficient $c_1 = 0.50$, entropy bonus coefficient $c_2 = 0.01$, learning rate $\alpha = 0.05$.
 Compute:
-1. Batched critic evaluations and the 4-dimensional TD error vector $\boldsymbol{\delta}_t$.
+1. Batched critic evaluations and the 4-dimensional TD error vector $\delta_t$.
 2. Batched actor policy probabilities, log-probabilities of actions taken, and Shannon entropies.
 3. Individual worker multi-task losses $\mathcal{L}_{\text{total}}^{(k)}$ and the mean batched loss $\bar{\mathcal{L}}_{\text{total}}$.
 4. Synchronous aggregated gradients $\nabla_{\mathbf{w}_V} \bar{\mathcal{L}}$ and $\nabla_{\mathbf{W}_\pi} \bar{\mathcal{L}}$.
@@ -809,15 +809,15 @@ TD targets with terminal masking $\mathbf{y}_t = \mathbf{R}_{t+1} + \gamma (1 - 
 - Worker 3: $y^{(3)} = 2.0 + 0.90 \times (1 - 0) \times 2.0000 = 2.0 + 1.8000 = \mathbf{3.8000}$
 - Worker 4: $y^{(4)} = 0.5 + 0.90 \times (1 - 0) \times 1.4000 = 0.5 + 1.2600 = \mathbf{1.7600}$
 $$\mathbf{y}_t = [2.3500, -0.5000, 3.8000, 1.7600]^\top$$
-Batched TD errors (Advantage vector) $\boldsymbol{\delta}_t = \mathbf{y}_t - \mathbf{V}_t$:
-$$\boldsymbol{\delta}_t = \begin{bmatrix} 2.3500 - 2.0000 \\ -0.5000 - 1.0000 \\ 3.8000 - 1.8000 \\ 1.7600 - 1.2000 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.3500 \\ -1.5000 \\ +2.0000 \\ +0.5600 \end{bmatrix}}$$
+Batched TD errors (Advantage vector) $\delta_t = \mathbf{y}_t - \mathbf{V}_t$:
+$$\delta_t = \begin{bmatrix} 2.3500 - 2.0000 \\ -0.5000 - 1.0000 \\ 3.8000 - 1.8000 \\ 1.7600 - 1.2000 \end{bmatrix} = \mathbf{\begin{bmatrix} +0.3500 \\ -1.5000 \\ +2.0000 \\ +0.5600 \end{bmatrix}}$$
 
 *Step 2: Batched Actor Evaluation & Entropies.*
 Logit matrix $\mathbf{Z} = \mathbf{S}_t \mathbf{W}_\pi^\top$:
-- Worker 1 ($s^{(1)} = [1, 0]$): $\mathbf{z}^{(1)} = [0.5, -0.5]^\top \implies \boldsymbol{\pi}^{(1)} = [0.73106, 0.26894]^\top$
-- Worker 2 ($s^{(2)} = [0, 1]$): $\mathbf{z}^{(2)} = [-0.5, 0.5]^\top \implies \boldsymbol{\pi}^{(2)} = [0.26894, 0.73106]^\top$
-- Worker 3 ($s^{(3)} = [0.8, 0.2]$): $\mathbf{z}^{(3)} = [0.3, -0.3]^\top \implies \boldsymbol{\pi}^{(3)} = [0.64566, 0.35434]^\top$
-- Worker 4 ($s^{(4)} = [0.2, 0.8]$): $\mathbf{z}^{(4)} = [-0.3, 0.3]^\top \implies \boldsymbol{\pi}^{(4)} = [0.35434, 0.64566]^\top$
+- Worker 1 ($s^{(1)} = [1, 0]$): $\mathbf{z}^{(1)} = [0.5, -0.5]^\top \implies \pi^{(1)} = [0.73106, 0.26894]^\top$
+- Worker 2 ($s^{(2)} = [0, 1]$): $\mathbf{z}^{(2)} = [-0.5, 0.5]^\top \implies \pi^{(2)} = [0.26894, 0.73106]^\top$
+- Worker 3 ($s^{(3)} = [0.8, 0.2]$): $\mathbf{z}^{(3)} = [0.3, -0.3]^\top \implies \pi^{(3)} = [0.64566, 0.35434]^\top$
+- Worker 4 ($s^{(4)} = [0.2, 0.8]$): $\mathbf{z}^{(4)} = [-0.3, 0.3]^\top \implies \pi^{(4)} = [0.35434, 0.64566]^\top$
 
 Log-probabilities of taken actions:
 - Worker 1 ($a=0$): $\ln(0.73106) \approx -0.31326$
@@ -846,7 +846,7 @@ $$= \frac{0.50}{4} \left[ -0.35 \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} - (-1.5
 $$= 0.125 \left[ \begin{bmatrix} -0.350 \\ 0.000 \end{bmatrix} + \begin{bmatrix} 0.000 \\ 1.500 \end{bmatrix} + \begin{bmatrix} -1.600 \\ -0.400 \end{bmatrix} + \begin{bmatrix} -0.112 \\ -0.448 \end{bmatrix} \right] = 0.125 \begin{bmatrix} -2.0620 \\ +0.6520 \end{bmatrix} = \mathbf{\begin{bmatrix} -0.25775 \\ +0.08150 \end{bmatrix}}$$
 
 Actor gradient:
-Let $\mathbf{g}_{\mathbf{z}}^{(k)} = \delta^{(k)} (\boldsymbol{\pi}^{(k)} - \mathbf{e}_{a^{(k)}}) + c_2 \boldsymbol{\pi}^{(k)} \odot (\ln \boldsymbol{\pi}^{(k)} + \mathcal{H}^{(k)})$.
+Let $\mathbf{g}_{\mathbf{z}}^{(k)} = \delta^{(k)} (\pi^{(k)} - \mathbf{e}_{a^{(k)}}) + c_2 \pi^{(k)} \odot (\ln \pi^{(k)} + \mathcal{H}^{(k)})$.
 Aggregating $\nabla_{\mathbf{W}_\pi} \bar{\mathcal{L}} = \frac{1}{4} \sum_{k=1}^4 \mathbf{g}_{\mathbf{z}}^{(k)} (s^{(k)})^\top$ yields:
 $$\nabla_{\mathbf{W}_\pi} \bar{\mathcal{L}} = \mathbf{\begin{bmatrix} -0.15465 & -0.09730 \\ +0.15465 & +0.09730 \end{bmatrix}}$$
 

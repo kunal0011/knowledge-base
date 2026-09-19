@@ -540,14 +540,14 @@ When returns exceed $[V_{\min}, V_{\max}]$, C51 truncates the tail at $V_{\max}$
 **Problem:**
 A QR-DQN agent uses $N = 4$ quantiles to model returns.
 Target cumulative probabilities are:
-$$\tau_i = \frac{2i - 1}{2N} \implies \boldsymbol{\tau} = [0.1250, \ 0.3750, \ 0.6250, \ 0.8750]^\top$$
+$$\tau_i = \frac{2i - 1}{2N} \implies \tau = [0.1250, \ 0.3750, \ 0.6250, \ 0.8750]^\top$$
 The current online network estimates quantile locations:
-$$\boldsymbol{\theta} = [\theta_1 = 1.0000, \quad \theta_2 = 3.0000, \quad \theta_3 = 5.0000, \quad \theta_4 = 7.0000]^\top$$
+$$\theta = [\theta_1 = 1.0000, \quad \theta_2 = 3.0000, \quad \theta_3 = 5.0000, \quad \theta_4 = 7.0000]^\top$$
 A transition yields target return sample $Y = 4.0000$.
 Let the Huber threshold be $\kappa = 1.0000$, and learning rate $\alpha = 0.5000$.
 1. Compute the TD error residues $u_i = Y - \theta_i$.
 2. Compute the Quantile Huber loss $\rho_{\tau_i}^\kappa(u_i)$ for each quantile.
-3. Compute the parameter gradients $\nabla_{\theta_i} \mathcal{L}$ and the updated quantile positions $\boldsymbol{\theta}_{\text{new}}$.
+3. Compute the parameter gradients $\nabla_{\theta_i} \mathcal{L}$ and the updated quantile positions $\theta_{\text{new}}$.
 
 **Solution:**
 

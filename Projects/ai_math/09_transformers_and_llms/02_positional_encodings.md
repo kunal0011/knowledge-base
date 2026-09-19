@@ -187,19 +187,19 @@ where $\mathbf{q}, \mathbf{k} \in \mathbb{C} \cong \mathbb{R}^2$ and $\theta \in
 
 #### Theorem: Adjoint of Rotary Position Embedding
 Let $\tilde{\mathbf{q}}_m = \mathbf{R}_{\Theta, m} \mathbf{q}_m \in \mathbb{R}^d$ be the rotated query at sequence index $m$, where $\mathbf{R}_{\Theta, m} \in \mathrm{SO}(2)^{d/2}$ is orthogonal.
-Given the upstream loss sensitivity $\boldsymbol{\delta}_{\tilde{q}} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{q}}_m} \in \mathbb{R}^d$:
+Given the upstream loss sensitivity $\delta_{\tilde{q}} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{q}}_m} \in \mathbb{R}^d$:
 
 1. The exact analytical gradient with respect to the raw unrotated query $\mathbf{q}_m$ is:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} = \mathbf{R}_{\Theta, m}^T \boldsymbol{\delta}_{\tilde{q}} = \mathbf{R}_{\Theta, -m} \boldsymbol{\delta}_{\tilde{q}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} = \mathbf{R}_{\Theta, m}^T \delta_{\tilde{q}} = \mathbf{R}_{\Theta, -m} \delta_{\tilde{q}}$$
 2. RoPE preserves gradient magnitude identically across all sequence positions:
-   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} \right\|_2 \equiv \|\boldsymbol{\delta}_{\tilde{q}}\|_2, \quad \forall m \in \mathbb{N}$$
+   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} \right\|_2 \equiv \|\delta_{\tilde{q}}\|_2, \quad \forall m \in \mathbb{N}$$
 
 #### Proof:
 1. **Differential Derivation:**
    The variation of loss is:
-   $$d\mathcal{L} = \left\langle \boldsymbol{\delta}_{\tilde{q}}, \, d\tilde{\mathbf{q}}_m \right\rangle = \boldsymbol{\delta}_{\tilde{q}}^T d\tilde{\mathbf{q}}_m = \boldsymbol{\delta}_{\tilde{q}}^T (\mathbf{R}_{\Theta, m} \, d\mathbf{q}_m) = (\mathbf{R}_{\Theta, m}^T \boldsymbol{\delta}_{\tilde{q}})^T d\mathbf{q}_m$$
+   $$d\mathcal{L} = \left\langle \delta_{\tilde{q}}, \, d\tilde{\mathbf{q}}_m \right\rangle = \delta_{\tilde{q}}^T d\tilde{\mathbf{q}}_m = \delta_{\tilde{q}}^T (\mathbf{R}_{\Theta, m} \, d\mathbf{q}_m) = (\mathbf{R}_{\Theta, m}^T \delta_{\tilde{q}})^T d\mathbf{q}_m$$
    By definition of the gradient:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} = \mathbf{R}_{\Theta, m}^T \boldsymbol{\delta}_{\tilde{q}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} = \mathbf{R}_{\Theta, m}^T \delta_{\tilde{q}}$$
 
 2. **Orthogonality and Inverse Rotation:**
    Each $2 \times 2$ block of $\mathbf{R}_{\Theta, m}$ is:
@@ -210,7 +210,7 @@ Given the upstream loss sensitivity $\boldsymbol{\delta}_{\tilde{q}} = \frac{\pa
 
 3. **Norm Conservation (Isometry):**
    Because $\mathbf{R}_{\Theta, m} \in \mathrm{O}(d)$ is an orthogonal transformation:
-   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} \right\|_2^2 = \left( \mathbf{R}_{\Theta, -m} \boldsymbol{\delta}_{\tilde{q}} \right)^T \left( \mathbf{R}_{\Theta, -m} \boldsymbol{\delta}_{\tilde{q}} \right) = \boldsymbol{\delta}_{\tilde{q}}^T \left( \mathbf{R}_{\Theta, -m}^T \mathbf{R}_{\Theta, -m} \right) \boldsymbol{\delta}_{\tilde{q}} = \boldsymbol{\delta}_{\tilde{q}}^T \mathbf{I} \boldsymbol{\delta}_{\tilde{q}} = \|\boldsymbol{\delta}_{\tilde{q}}\|_2^2$$
+   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{q}_m} \right\|_2^2 = \left( \mathbf{R}_{\Theta, -m} \delta_{\tilde{q}} \right)^T \left( \mathbf{R}_{\Theta, -m} \delta_{\tilde{q}} \right) = \delta_{\tilde{q}}^T \left( \mathbf{R}_{\Theta, -m}^T \mathbf{R}_{\Theta, -m} \right) \delta_{\tilde{q}} = \delta_{\tilde{q}}^T \mathbf{I} \delta_{\tilde{q}} = \|\delta_{\tilde{q}}\|_2^2$$
    Unlike additive positional encodings (which distort gradient norm depending on $\|PE_m\|$) or learned embeddings (which fragment gradients into separate embedding table rows), RoPE is an **exact isometry**. It introduces **zero gradient vanishing or explosion** regardless of how deep or long the sequence is. $\blacksquare$
 
 ---
@@ -410,7 +410,7 @@ $$\mathbf{q} = \begin{bmatrix} 1.0 \\ 0.0 \\ 2.0 \\ -1.0 \end{bmatrix}, \quad \m
 1. Evaluate rotated Query $\tilde{\mathbf{q}}_3$ and rotated Key $\tilde{\mathbf{k}}_1$.
 2. Compute the attention inner product $\tilde{\mathbf{q}}_3^T \tilde{\mathbf{k}}_1$.
 3. Verify that the result equals $\mathbf{q}^T \mathbf{R}_{\Theta, n - m} \mathbf{k}$ using relative displacement $\Delta = n - m = -2$.
-4. Given upstream gradient $\boldsymbol{\delta}_{\tilde{q}} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{q}}_3} = [1.0, 1.0, 0.0, -1.0]^T$, calculate the raw parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{q}}$ and verify exact $\ell_2$-norm conservation.
+4. Given upstream gradient $\delta_{\tilde{q}} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{q}}_3} = [1.0, 1.0, 0.0, -1.0]^T$, calculate the raw parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{q}}$ and verify exact $\ell_2$-norm conservation.
 
 **Solution:**
 
@@ -464,8 +464,8 @@ $$= 0.500000 + 0.500000 + 0.366025 + 2.732050 = 1.000000 + 3.098075 = \mathbf{4.
 
 #### Step 4: Backward Pass and Isometry Check
 
-Given upstream loss gradient $\boldsymbol{\delta}_{\tilde{q}} = [1.0, 1.0, 0.0, -1.0]^T$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{q}} = \mathbf{R}_{\Theta, -3} \boldsymbol{\delta}_{\tilde{q}}$$
+Given upstream loss gradient $\delta_{\tilde{q}} = [1.0, 1.0, 0.0, -1.0]^T$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{q}} = \mathbf{R}_{\Theta, -3} \delta_{\tilde{q}}$$
 
 - **Subspace 1 (angle $-135^\circ$):** $\cos(-135^\circ) = -0.707107, \sin(-135^\circ) = -0.707107$.
   $$\mathbf{R}_{-135^\circ} = \begin{bmatrix} -0.707107 & 0.707107 \\ -0.707107 & -0.707107 \end{bmatrix}$$
@@ -478,7 +478,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}} = \mathbf{R}_{\Theta, -3} \bo
 $$\frac{\partial \mathcal{L}}{\partial \mathbf{q}} = \begin{bmatrix} 0.000000 \\ -1.414214 \\ -1.000000 \\ 0.000000 \end{bmatrix}$$
 
 - **Norm Preservation Verification:**
-  $$\|\boldsymbol{\delta}_{\tilde{q}}\|_2^2 = (1.0)^2 + (1.0)^2 + (0.0)^2 + (-1.0)^2 = 1 + 1 + 0 + 1 = \mathbf{3.000000}$$
+  $$\|\delta_{\tilde{q}}\|_2^2 = (1.0)^2 + (1.0)^2 + (0.0)^2 + (-1.0)^2 = 1 + 1 + 0 + 1 = \mathbf{3.000000}$$
   $$\left\| \frac{\partial \mathcal{L}}{\partial \mathbf{q}} \right\|_2^2 = (0.0)^2 + (-1.414214)^2 + (-1.0)^2 + (0.0)^2 = 0 + 2.000000 + 1.0 + 0 = \mathbf{3.000000}$$
   Gradient magnitude is perfectly preserved without damping or amplification!
 
@@ -644,7 +644,7 @@ In frameworks like PyTorch and Triton, one never creates full block-diagonal mat
 Instead, the 2D rotation of pair $[x_1, x_2]$:
 $$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} = \begin{bmatrix} x_1 \cos\theta - x_2 \sin\theta \\ x_1 \sin\theta + x_2 \cos\theta \end{bmatrix}$$
 is vectorized across all $d$ channels via:
-$$\mathbf{R}_{\Theta, m} \mathbf{x} = (\mathbf{x} \odot \cos(m \boldsymbol{\theta})) + (\operatorname{rotate\_half}(\mathbf{x}) \odot \sin(m \boldsymbol{\theta}))$$
+$$\mathbf{R}_{\Theta, m} \mathbf{x} = (\mathbf{x} \odot \cos(m \theta)) + (\operatorname{rotate\_half}(\mathbf{x}) \odot \sin(m \theta))$$
 where:
 $$\operatorname{rotate\_half}(\mathbf{x}) = [-x_{d/2+1:d}, \, x_{1:d/2}] \quad \text{or} \quad [-x_2, x_1, -x_4, x_3, \dots]$$
 This requires only **two element-wise multiplications and one addition**, executing at memory bandwidth speeds in a single fused GPU kernel.

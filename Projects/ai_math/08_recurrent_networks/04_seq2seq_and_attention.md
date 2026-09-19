@@ -94,7 +94,7 @@ $$\alpha_{i, j} = \frac{\exp(e_{i, j})}{\sum_{k=1}^{T_x} \exp(e_{i, k})}, \quad 
 Here, $\alpha_{i, j} \in (0, 1)$ represents the probability that the target token $y_i$ aligns with or translates from the source token $x_j$.
 
 #### Step 3: Dynamic Context Vector
-The context vector $\mathbf{c}_i$ is the expected source annotation under distribution $\boldsymbol{\alpha}_i$:
+The context vector $\mathbf{c}_i$ is the expected source annotation under distribution $\alpha_i$:
 $$\mathbf{c}_i = \sum_{j=1}^{T_x} \alpha_{i, j} \mathbf{h}_j \in \mathbb{R}^{2d_h}$$
 
 #### Step 4: Decoder State Update
@@ -144,32 +144,32 @@ For Luong General Attention with learned alignment matrix $\mathbf{W}_a \in \mat
 1. **Raw Energy Scores:**
    $$e_j = \mathbf{s}_t^T \mathbf{W}_a \mathbf{h}_j, \quad \forall j \in \{1, \dots, N\} \implies \mathbf{e} = \mathbf{H}^T \mathbf{W}_a^T \mathbf{s}_t \in \mathbb{R}^N$$
 2. **Attention Weights (Softmax):**
-   $$\boldsymbol{\alpha} = \operatorname{softmax}(\mathbf{e}) \in \mathbb{R}^N, \quad \alpha_j = \frac{\exp(e_j)}{\sum_{k=1}^N \exp(e_k)}$$
+   $$\alpha = \operatorname{softmax}(\mathbf{e}) \in \mathbb{R}^N, \quad \alpha_j = \frac{\exp(e_j)}{\sum_{k=1}^N \exp(e_k)}$$
 3. **Context Vector:**
-   $$\mathbf{c}_t = \sum_{j=1}^N \alpha_j \mathbf{h}_j = \mathbf{H} \boldsymbol{\alpha} \in \mathbb{R}^{d_{\text{enc}}}$$
+   $$\mathbf{c}_t = \sum_{j=1}^N \alpha_j \mathbf{h}_j = \mathbf{H} \alpha \in \mathbb{R}^{d_{\text{enc}}}$$
 
 #### Step 2: Backward Pass from Upstream Context Gradient
-Let $\boldsymbol{\delta}_t^c \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \in \mathbb{R}^{d_{\text{enc}}}$ be the gradient of the objective loss with respect to the context vector $\mathbf{c}_t$.
-By the multivariable chain rule, the gradient w.r.t. the attention distribution vector $\boldsymbol{\alpha}$ is:
-$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} = \left( \frac{\partial \mathbf{c}_t}{\partial \boldsymbol{\alpha}} \right)^T \boldsymbol{\delta}_t^c = \mathbf{H}^T \boldsymbol{\delta}_t^c \in \mathbb{R}^N$$
-Coordinate-wise: $\frac{\partial \mathcal{L}}{\partial \alpha_j} = \langle \boldsymbol{\delta}_t^c, \mathbf{h}_j \rangle = (\boldsymbol{\delta}_t^c)^T \mathbf{h}_j$.
+Let $\delta_t^c \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \in \mathbb{R}^{d_{\text{enc}}}$ be the gradient of the objective loss with respect to the context vector $\mathbf{c}_t$.
+By the multivariable chain rule, the gradient w.r.t. the attention distribution vector $\alpha$ is:
+$$\frac{\partial \mathcal{L}}{\partial \alpha} = \left( \frac{\partial \mathbf{c}_t}{\partial \alpha} \right)^T \delta_t^c = \mathbf{H}^T \delta_t^c \in \mathbb{R}^N$$
+Coordinate-wise: $\frac{\partial \mathcal{L}}{\partial \alpha_j} = \langle \delta_t^c, \mathbf{h}_j \rangle = (\delta_t^c)^T \mathbf{h}_j$.
 
 #### Step 3: Exact Evaluation through the Softmax Jacobian Matrix
-The mapping $\mathbf{e} \mapsto \boldsymbol{\alpha} = \operatorname{softmax}(\mathbf{e})$ has Jacobian matrix $\mathbf{J}_{\text{softmax}} \in \mathbb{R}^{N \times N}$:
+The mapping $\mathbf{e} \mapsto \alpha = \operatorname{softmax}(\mathbf{e})$ has Jacobian matrix $\mathbf{J}_{\text{softmax}} \in \mathbb{R}^{N \times N}$:
 $$\frac{\partial \alpha_j}{\partial e_k} = \begin{cases} \alpha_j (1 - \alpha_j) & \text{if } j = k \\ -\alpha_j \alpha_k & \text{if } j \neq k \end{cases} = \alpha_j \left( \delta_{j, k} - \alpha_k \right)$$
 In matrix notation:
-$$\mathbf{J}_{\text{softmax}} = \operatorname{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^T$$
+$$\mathbf{J}_{\text{softmax}} = \operatorname{diag}(\alpha) - \alpha \alpha^T$$
 
 Applying the chain rule to obtain the gradient w.r.t. the pre-softmax scores $\mathbf{e}$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{e}} = \mathbf{J}_{\text{softmax}}^T \frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} = \left( \operatorname{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^T \right) \left( \mathbf{H}^T \boldsymbol{\delta}_t^c \right)$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{e}} = \mathbf{J}_{\text{softmax}}^T \frac{\partial \mathcal{L}}{\partial \alpha} = \left( \operatorname{diag}(\alpha) - \alpha \alpha^T \right) \left( \mathbf{H}^T \delta_t^c \right)$$
 
 Coordinate-wise:
-$$\frac{\partial \mathcal{L}}{\partial e_k} = \sum_{j=1}^N \frac{\partial \mathcal{L}}{\partial \alpha_j} \frac{\partial \alpha_j}{\partial e_k} = \sum_{j=1}^N \left( (\boldsymbol{\delta}_t^c)^T \mathbf{h}_j \right) \alpha_j (\delta_{j, k} - \alpha_k) = \alpha_k (\boldsymbol{\delta}_t^c)^T \mathbf{h}_k - \alpha_k \sum_{j=1}^N \alpha_j (\boldsymbol{\delta}_t^c)^T \mathbf{h}_j$$
+$$\frac{\partial \mathcal{L}}{\partial e_k} = \sum_{j=1}^N \frac{\partial \mathcal{L}}{\partial \alpha_j} \frac{\partial \alpha_j}{\partial e_k} = \sum_{j=1}^N \left( (\delta_t^c)^T \mathbf{h}_j \right) \alpha_j (\delta_{j, k} - \alpha_k) = \alpha_k (\delta_t^c)^T \mathbf{h}_k - \alpha_k \sum_{j=1}^N \alpha_j (\delta_t^c)^T \mathbf{h}_j$$
 Recognizing that $\sum_{j=1}^N \alpha_j \mathbf{h}_j = \mathbf{c}_t$:
-$$\frac{\partial \mathcal{L}}{\partial e_k} = \alpha_k \left[ (\boldsymbol{\delta}_t^c)^T \mathbf{h}_k - (\boldsymbol{\delta}_t^c)^T \mathbf{c}_t \right] = \alpha_k \, (\boldsymbol{\delta}_t^c)^T (\mathbf{h}_k - \mathbf{c}_t)$$
+$$\frac{\partial \mathcal{L}}{\partial e_k} = \alpha_k \left[ (\delta_t^c)^T \mathbf{h}_k - (\delta_t^c)^T \mathbf{c}_t \right] = \alpha_k \, (\delta_t^c)^T (\mathbf{h}_k - \mathbf{c}_t)$$
 
 **Geometric Meaning:**
-The gradient w.r.t. the score $e_k$ is proportional to how much encoder state $\mathbf{h}_k$ deviates from the current mean context vector $\mathbf{c}_t$, projected along the error direction $\boldsymbol{\delta}_t^c$!
+The gradient w.r.t. the score $e_k$ is proportional to how much encoder state $\mathbf{h}_k$ deviates from the current mean context vector $\mathbf{c}_t$, projected along the error direction $\delta_t^c$!
 
 #### Step 4: Gradients w.r.t. Parameters, Query, and Keys
 1. **Gradient w.r.t. Bilinear Weight Matrix $\mathbf{W}_a$:**
@@ -179,7 +179,7 @@ The gradient w.r.t. the score $e_k$ is proportional to how much encoder state $\
    $$\frac{\partial \mathcal{L}_{\text{attn}}}{\partial \mathbf{s}_t} = \mathbf{W}_a \left( \sum_{k=1}^N \frac{\partial \mathcal{L}}{\partial e_k} \mathbf{h}_k \right) \in \mathbb{R}^{d_{\text{dec}}}$$
 3. **Gradient w.r.t. Encoder Annotations $\mathbf{h}_k$:**
    Each $\mathbf{h}_k$ influences the loss through two simultaneous pathways—the context sum and the score computation:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_k} = \underbrace{\alpha_k \boldsymbol{\delta}_t^c}_{\text{Direct Context Contribution}} + \underbrace{\frac{\partial \mathcal{L}}{\partial e_k} \mathbf{W}_a^T \mathbf{s}_t}_{\text{Indirect Alignment Scoring Contribution}} \in \mathbb{R}^{d_{\text{enc}}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_k} = \underbrace{\alpha_k \delta_t^c}_{\text{Direct Context Contribution}} + \underbrace{\frac{\partial \mathcal{L}}{\partial e_k} \mathbf{W}_a^T \mathbf{s}_t}_{\text{Indirect Alignment Scoring Contribution}} \in \mathbb{R}^{d_{\text{enc}}}$$
 This establishes the complete, exact closed-form backpropagation pass for attention layers. $\blacksquare$
 
 ---
@@ -301,7 +301,7 @@ The context vector $\mathbf{c}_i$ is strictly constrained to lie inside the **po
   A student reads a 400-page historical treatise in German. They close the book, put it away, and are asked to write a 10-page analysis in English entirely from memory. They will inevitably forget specific dates, names, and secondary arguments because human short-term memory has a strict capacity limit.
 - **Attention Seq2Seq (Open-Book Exam):**
   The student keeps the original German book wide open on their desk.
-  - When writing a sentence about the Treaty of Versailles (Query $\mathbf{s}_t$), they glance down at the index, scan page 142 (Attention weights $\boldsymbol{\alpha}$), extract the exact clause (Context $\mathbf{c}_t$), and write the translated passage.
+  - When writing a sentence about the Treaty of Versailles (Query $\mathbf{s}_t$), they glance down at the index, scan page 142 (Attention weights $\alpha$), extract the exact clause (Context $\mathbf{c}_t$), and write the translated passage.
   - Because they can look back at any page at any moment, the length of the book no longer causes memory decay.
 
 ---
@@ -350,7 +350,7 @@ $$\mathbf{e} = \begin{bmatrix} 1.0 \\ 2.0 \\ 2.0 \end{bmatrix}$$
 
 ---
 
-### 5.4 Step 2: Softmax Attention Distribution ($\boldsymbol{\alpha}$)
+### 5.4 Step 2: Softmax Attention Distribution ($\alpha$)
 
 Exponentials ($e^1 \approx 2.718282$, $e^2 \approx 7.389056$):
 $$\exp(e_1) = 2.718282$$
@@ -365,7 +365,7 @@ $$\alpha_1 = \frac{2.718282}{17.496394} \approx \mathbf{0.155362}$$
 $$\alpha_2 = \frac{7.389056}{17.496394} \approx \mathbf{0.422319}$$
 $$\alpha_3 = \frac{7.389056}{17.496394} \approx \mathbf{0.422319}$$
 
-$$\boldsymbol{\alpha} = \begin{bmatrix} 0.155362 \\ 0.422319 \\ 0.422319 \end{bmatrix}, \quad \sum \alpha_j = 1.000000$$
+$$\alpha = \begin{bmatrix} 0.155362 \\ 0.422319 \\ 0.422319 \end{bmatrix}, \quad \sum \alpha_j = 1.000000$$
 
 ---
 
@@ -395,7 +395,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \begin{bmatrix} 1.0 \\ 0.
    $$\frac{\partial \mathcal{L}}{\partial \alpha_1} = [1.0, 0.0] \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} = 1.0$$
    $$\frac{\partial \mathcal{L}}{\partial \alpha_2} = [1.0, 0.0] \begin{bmatrix} 0.0 \\ 2.0 \end{bmatrix} = 0.0$$
    $$\frac{\partial \mathcal{L}}{\partial \alpha_3} = [1.0, 0.0] \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} = 1.0$$
-   $$\frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} = \begin{bmatrix} 1.0 \\ 0.0 \\ 1.0 \end{bmatrix}$$
+   $$\frac{\partial \mathcal{L}}{\partial \alpha} = \begin{bmatrix} 1.0 \\ 0.0 \\ 1.0 \end{bmatrix}$$
 
 2. **Gradient w.r.t. Encoder Hidden States $\mathbf{h}_j$:**
    $$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_j} = \alpha_j \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} + \frac{\partial \mathcal{L}}{\partial e_j} \frac{\partial e_j}{\partial \mathbf{h}_j}$$
@@ -436,12 +436,12 @@ Distinguish mathematically between **Soft Attention** and **Hard Attention** (Xu
 **Solution:**
 1. **Soft Attention (Differentiable):**
    The context vector is the expected value under the multinomial distribution:
-   $$\mathbf{c} = \mathbb{E}_{j \sim \boldsymbol{\alpha}}[\mathbf{h}_j] = \sum_{j=1}^{T_x} \alpha_j \mathbf{h}_j$$
+   $$\mathbf{c} = \mathbb{E}_{j \sim \alpha}[\mathbf{h}_j] = \sum_{j=1}^{T_x} \alpha_j \mathbf{h}_j$$
    Because $\alpha_j = \text{softmax}(e_j)$ is smooth and continuously differentiable everywhere, the gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{h}_j}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{s}_t}$ can be computed in closed form via standard backpropagation.
 2. **Hard Attention (Stochastic / Non-differentiable):**
-   Instead of a weighted sum, Hard Attention treats the choice of position as a discrete latent variable $z \sim \operatorname{Categorical}(\boldsymbol{\alpha})$:
+   Instead of a weighted sum, Hard Attention treats the choice of position as a discrete latent variable $z \sim \operatorname{Categorical}(\alpha)$:
    $$\mathbf{c} = \mathbf{h}_z, \quad z \in \{1, \dots, T_x\}$$
-   Because selecting a discrete index is non-differentiable, backpropagation cannot compute $\frac{\partial \mathbf{c}}{\partial \boldsymbol{\alpha}}$. One must resort to Reinforcement Learning policy gradients (e.g., REINFORCE) or Gumbel-Softmax relaxations, which suffer from high variance and slow training convergence.
+   Because selecting a discrete index is non-differentiable, backpropagation cannot compute $\frac{\partial \mathbf{c}}{\partial \alpha}$. One must resort to Reinforcement Learning policy gradients (e.g., REINFORCE) or Gumbel-Softmax relaxations, which suffer from high variance and slow training convergence.
 
 ---
 
@@ -452,8 +452,8 @@ A Bahdanau additive attention layer aligns decoder hidden state $\mathbf{s}_{t-1
 Given:
 $$\mathbf{s}_{t-1} = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix}, \quad \mathbf{h}_1 = \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix}, \quad \mathbf{h}_2 = \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix}$$
 $$\mathbf{W}_a = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad \mathbf{U}_a = \begin{bmatrix} 0.5 & 0.0 \\ 0.0 & 0.5 \end{bmatrix}, \quad \mathbf{v}_a = \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix}$$
-1. Calculate the pre-activations $\mathbf{z}_j = \mathbf{W}_a \mathbf{s}_{t-1} + \mathbf{U}_a \mathbf{h}_j$, non-linearities $\mathbf{a}_j = \tanh(\mathbf{z}_j)$, scalar alignment scores $e_j = \mathbf{v}_a^T \mathbf{a}_j$, softmax weights $\boldsymbol{\alpha}$, and dynamic context vector $\mathbf{c}_t$.
-2. Given upstream loss gradient $\boldsymbol{\delta}_t^c = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$, backpropagate step-by-step through the softmax Jacobian to evaluate $\frac{\partial \mathcal{L}}{\partial \mathbf{e}}$, $\frac{\partial \mathcal{L}}{\partial \mathbf{z}_j}$, parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a}$, and decoder gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{s}_{t-1}}$.
+1. Calculate the pre-activations $\mathbf{z}_j = \mathbf{W}_a \mathbf{s}_{t-1} + \mathbf{U}_a \mathbf{h}_j$, non-linearities $\mathbf{a}_j = \tanh(\mathbf{z}_j)$, scalar alignment scores $e_j = \mathbf{v}_a^T \mathbf{a}_j$, softmax weights $\alpha$, and dynamic context vector $\mathbf{c}_t$.
+2. Given upstream loss gradient $\delta_t^c = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix}$, backpropagate step-by-step through the softmax Jacobian to evaluate $\frac{\partial \mathcal{L}}{\partial \mathbf{e}}$, $\frac{\partial \mathcal{L}}{\partial \mathbf{z}_j}$, parameter gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a}$, and decoder gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{s}_{t-1}}$.
 
 **Solution:**
 
@@ -490,14 +490,14 @@ $$\mathbf{W}_a = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad \ma
 #### Step 2: Backward Sensitivity Pass
 
 1. **Gradient w.r.t. Attention Probabilities $\alpha_j$:**
-   $$\frac{\partial \mathcal{L}}{\partial \alpha_j} = (\boldsymbol{\delta}_t^c)^T \mathbf{h}_j$$
+   $$\frac{\partial \mathcal{L}}{\partial \alpha_j} = (\delta_t^c)^T \mathbf{h}_j$$
    $$\frac{\partial \mathcal{L}}{\partial \alpha_1} = [1.0, 2.0] \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} = 1.000000$$
    $$\frac{\partial \mathcal{L}}{\partial \alpha_2} = [1.0, 2.0] \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = 2.000000$$
 
 2. **Backpropagation through Softmax Jacobian to Alignment Scores $e_j$:**
    The projected inner product is:
-   $$\boldsymbol{\alpha}^T \frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} = (0.459429)(1.0) + (0.540571)(2.0) = 0.459429 + 1.081142 = 1.540571$$
-   Applying $\frac{\partial \mathcal{L}}{\partial e_j} = \alpha_j \left( \frac{\partial \mathcal{L}}{\partial \alpha_j} - \boldsymbol{\alpha}^T \frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} \right)$:
+   $$\alpha^T \frac{\partial \mathcal{L}}{\partial \alpha} = (0.459429)(1.0) + (0.540571)(2.0) = 0.459429 + 1.081142 = 1.540571$$
+   Applying $\frac{\partial \mathcal{L}}{\partial e_j} = \alpha_j \left( \frac{\partial \mathcal{L}}{\partial \alpha_j} - \alpha^T \frac{\partial \mathcal{L}}{\partial \alpha} \right)$:
    $$\frac{\partial \mathcal{L}}{\partial e_1} = 0.459429 (1.000000 - 1.540571) = 0.459429(-0.540571) = \mathbf{-0.248354}$$
    $$\frac{\partial \mathcal{L}}{\partial e_2} = 0.540571 (2.000000 - 1.540571) = 0.540571(0.459429) = \mathbf{+0.248354}$$
    *(Verification: $\sum_j \frac{\partial \mathcal{L}}{\partial e_j} = -0.248354 + 0.248354 = 0$, adhering exactly to the probability simplex tangent space).*
@@ -513,11 +513,11 @@ $$\mathbf{W}_a = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad \ma
 
 4. **Gradient w.r.t. Weight Matrix $\mathbf{W}_a$ and Decoder State $\mathbf{s}_{t-1}$:**
    Summing pre-activation errors:
-   $$\boldsymbol{\delta}_z = \sum_{j=1}^2 \frac{\partial \mathcal{L}}{\partial \mathbf{z}_j} = \begin{bmatrix} -0.104302 + 0.195318 \\ -0.195318 + 0.248354 \end{bmatrix} = \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix}$$
+   $$\delta_z = \sum_{j=1}^2 \frac{\partial \mathcal{L}}{\partial \mathbf{z}_j} = \begin{bmatrix} -0.104302 + 0.195318 \\ -0.195318 + 0.248354 \end{bmatrix} = \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix}$$
    Then the outer product gives:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a} = \boldsymbol{\delta}_z \mathbf{s}_{t-1}^T = \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix} \begin{bmatrix} 0.5 & -0.5 \end{bmatrix} = \begin{bmatrix} \mathbf{0.045508} & \mathbf{-0.045508} \\ \mathbf{0.026518} & \mathbf{-0.026518} \end{bmatrix}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a} = \delta_z \mathbf{s}_{t-1}^T = \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix} \begin{bmatrix} 0.5 & -0.5 \end{bmatrix} = \begin{bmatrix} \mathbf{0.045508} & \mathbf{-0.045508} \\ \mathbf{0.026518} & \mathbf{-0.026518} \end{bmatrix}$$
    The decoder adjoint is:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{s}_{t-1}} = \mathbf{W}_a^T \boldsymbol{\delta}_z = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix} = \begin{bmatrix} \mathbf{0.091016} \\ \mathbf{0.053036} \end{bmatrix}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{s}_{t-1}} = \mathbf{W}_a^T \delta_z = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 0.091016 \\ 0.053036 \end{bmatrix} = \begin{bmatrix} \mathbf{0.091016} \\ \mathbf{0.053036} \end{bmatrix}$$
 
 ---
 
@@ -527,8 +527,8 @@ $$\mathbf{W}_a = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}, \quad \ma
 A Luong attention layer uses general bilinear scoring $e_j = \mathbf{s}_t^T \mathbf{W}_a \mathbf{h}_j$ between decoder query $\mathbf{s}_t = [1.0, 2.0]^T$ and encoder memory keys $\mathbf{h}_1 = [2.0, -1.0]^T, \mathbf{h}_2 = [0.0, 1.0]^T$.
 The bilinear weight parameter matrix is:
 $$\mathbf{W}_a = \begin{bmatrix} 0.5 & 1.0 \\ -0.5 & 0.5 \end{bmatrix}$$
-1. Compute the bilinear transformation $\mathbf{s}_t^T \mathbf{W}_a$, alignment scores $e_1, e_2$, attention weights $\boldsymbol{\alpha}$, and context vector $\mathbf{c}_t$.
-2. Given upstream loss gradient $\boldsymbol{\delta}_t^c = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$, compute the exact analytical gradients $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{s}_t}$.
+1. Compute the bilinear transformation $\mathbf{s}_t^T \mathbf{W}_a$, alignment scores $e_1, e_2$, attention weights $\alpha$, and context vector $\mathbf{c}_t$.
+2. Given upstream loss gradient $\delta_t^c = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$, compute the exact analytical gradients $\frac{\partial \mathcal{L}}{\partial \mathbf{W}_a}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{s}_t}$.
 
 **Solution:**
 
@@ -558,12 +558,12 @@ $$\mathbf{W}_a = \begin{bmatrix} 0.5 & 1.0 \\ -0.5 & 0.5 \end{bmatrix}$$
 #### Step 2: Backward Sensitivity Pass
 
 1. **Gradient w.r.t. Attention Probabilities:**
-   $$\frac{\partial \mathcal{L}}{\partial \alpha_1} = (\boldsymbol{\delta}_t^c)^T \mathbf{h}_1 = [2.0, 1.0] \begin{bmatrix} 2.0 \\ -1.0 \end{bmatrix} = 4.0 - 1.0 = 3.000000$$
-   $$\frac{\partial \mathcal{L}}{\partial \alpha_2} = (\boldsymbol{\delta}_t^c)^T \mathbf{h}_2 = [2.0, 1.0] \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = 1.000000$$
+   $$\frac{\partial \mathcal{L}}{\partial \alpha_1} = (\delta_t^c)^T \mathbf{h}_1 = [2.0, 1.0] \begin{bmatrix} 2.0 \\ -1.0 \end{bmatrix} = 4.0 - 1.0 = 3.000000$$
+   $$\frac{\partial \mathcal{L}}{\partial \alpha_2} = (\delta_t^c)^T \mathbf{h}_2 = [2.0, 1.0] \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = 1.000000$$
 
 2. **Gradient w.r.t. Alignment Scores $e_j$:**
    Weighted average gradient:
-   $$\boldsymbol{\alpha}^T \frac{\partial \mathcal{L}}{\partial \boldsymbol{\alpha}} = (0.006693)(3.0) + (0.993307)(1.0) = 0.020079 + 0.993307 = 1.013386$$
+   $$\alpha^T \frac{\partial \mathcal{L}}{\partial \alpha} = (0.006693)(3.0) + (0.993307)(1.0) = 0.020079 + 0.993307 = 1.013386$$
    Applying the Softmax Jacobian:
    $$\frac{\partial \mathcal{L}}{\partial e_1} = \alpha_1 \left( 3.0 - 1.013386 \right) = 0.006693(1.986614) = \mathbf{+0.013296}$$
    $$\frac{\partial \mathcal{L}}{\partial e_2} = \alpha_2 \left( 1.0 - 1.013386 \right) = 0.993307(-0.013386) = \mathbf{-0.013296}$$

@@ -598,7 +598,7 @@ Trace 2 consecutive training steps:
 - **Step 2:** Action $A_2 = 1$ is chosen, emitting reward $R_2 = 0.5000$.
 
 Compute for each step:
-1. The Softmax action probability distribution $\boldsymbol{\pi}_t$.
+1. The Softmax action probability distribution $\pi_t$.
 2. The running baseline update $\bar{R}_{t+1} = \bar{R}_t + \frac{1}{t}(R_t - \bar{R}_t)$.
 3. The preference vector update $\mathbf{H}_{t+1}$.
 
@@ -655,27 +655,27 @@ Because Arm 1 performed below the baseline ($0.50 < 2.50$), its preference was p
 
 **Problem:**
 A personalized news recommendation engine selects between $K = 2$ articles ($a \in \{1, 2\}$) based on a $d = 2$ dimensional user context vector $\mathbf{x} = [x_1, x_2]^\top$.
-For each arm $a$, the expected reward is modeled as $q(\mathbf{x}, a) = \mathbf{x}^\top \boldsymbol{\theta}_a^*$.
+For each arm $a$, the expected reward is modeled as $q(\mathbf{x}, a) = \mathbf{x}^\top \theta_a^*$.
 Ridge regularization parameter: $\lambda = 1.0 \implies \mathbf{A}_1 = \mathbf{A}_2 = \mathbf{I}_2$.
 Response vectors initialized to zero: $\mathbf{b}_1 = \mathbf{b}_2 = [0.0, 0.0]^\top$.
 Exploration parameter: $\alpha = 1.0$.
 
 1. **User 1 arrives** with context vector:
    $$\mathbf{x}^{(1)} = \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix}$$
-   Compute the parameter estimates $\hat{\boldsymbol{\theta}}_a = \mathbf{A}_a^{-1} \mathbf{b}_a$ and the LinUCB decision scores:
-   $$\text{UCB}_a = \hat{\boldsymbol{\theta}}_a^\top \mathbf{x} + \alpha \sqrt{\mathbf{x}^\top \mathbf{A}_a^{-1} \mathbf{x}}$$
+   Compute the parameter estimates $\hat{\theta}_a = \mathbf{A}_a^{-1} \mathbf{b}_a$ and the LinUCB decision scores:
+   $$\text{UCB}_a = \hat{\theta}_a^\top \mathbf{x} + \alpha \sqrt{\mathbf{x}^\top \mathbf{A}_a^{-1} \mathbf{x}}$$
    Break ties in favor of Arm 1.
 2. The user clicks on Article 1 ($R_1 = 1.0$).
    Update the covariance matrix $\mathbf{A}_1 \leftarrow \mathbf{A}_1 + \mathbf{x}^{(1)} (\mathbf{x}^{(1)})^\top$ and response vector $\mathbf{b}_1 \leftarrow \mathbf{b}_1 + R_1 \mathbf{x}^{(1)}$.
 3. Compute the analytical inverse $\mathbf{A}_1^{-1}$ using direct $2 \times 2$ matrix inversion.
 4. **User 2 arrives** with identical context vector $\mathbf{x}^{(2)} = [0.80, 0.60]^\top$.
-   Compute the updated parameter vector $\hat{\boldsymbol{\theta}}_1$, the new uncertainty bonus, and the resulting LinUCB scores for both arms.
+   Compute the updated parameter vector $\hat{\theta}_1$, the new uncertainty bonus, and the resulting LinUCB scores for both arms.
 
 **Step-by-Step Solution:**
 
 **1. Decision for User 1 ($t = 1$):**
 - Parameter estimates:
-  $$\hat{\boldsymbol{\theta}}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \mathbf{I}_2^{-1} \begin{bmatrix} 0 \\ 0 \end{bmatrix} = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}, \qquad \hat{\boldsymbol{\theta}}_2 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}$$
+  $$\hat{\theta}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \mathbf{I}_2^{-1} \begin{bmatrix} 0 \\ 0 \end{bmatrix} = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}, \qquad \hat{\theta}_2 = \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix}$$
 - Uncertainty bonus for both arms:
   $$\mathbf{x}^\top \mathbf{A}_a^{-1} \mathbf{x} = \mathbf{x}^\top \mathbf{I}_2 \mathbf{x} = \|\mathbf{x}\|_2^2 = (0.80)^2 + (0.60)^2 = 0.64 + 0.36 = 1.0000$$
   $$\text{Bonus: } \alpha \sqrt{1.0000} = 1.0(1.0) = \mathbf{1.0000}$$
@@ -697,10 +697,10 @@ Using the $2 \times 2$ inverse formula $\begin{bmatrix} a & b \\ c & d \end{bmat
 $$\mathbf{A}_1^{-1} = \frac{1}{2.0000} \begin{bmatrix} 1.36 & -0.48 \\ -0.48 & 1.64 \end{bmatrix} = \begin{bmatrix} \mathbf{0.6800} & \mathbf{-0.2400} \\ \mathbf{-0.2400} & \mathbf{0.8200} \end{bmatrix}$$
 
 **4. Decision for User 2 ($t = 2$):**
-- Updated Ridge regression weights $\hat{\boldsymbol{\theta}}_1$:
-  $$\hat{\boldsymbol{\theta}}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \begin{bmatrix} 0.6800 & -0.2400 \\ -0.2400 & 0.8200 \end{bmatrix} \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix} = \begin{bmatrix} 0.6800(0.80) - 0.2400(0.60) \\ -0.2400(0.80) + 0.8200(0.60) \end{bmatrix} = \begin{bmatrix} 0.5440 - 0.1440 \\ -0.1920 + 0.4920 \end{bmatrix} = \begin{bmatrix} \mathbf{0.4000} \\ \mathbf{0.3000} \end{bmatrix}$$
+- Updated Ridge regression weights $\hat{\theta}_1$:
+  $$\hat{\theta}_1 = \mathbf{A}_1^{-1} \mathbf{b}_1 = \begin{bmatrix} 0.6800 & -0.2400 \\ -0.2400 & 0.8200 \end{bmatrix} \begin{bmatrix} 0.80 \\ 0.60 \end{bmatrix} = \begin{bmatrix} 0.6800(0.80) - 0.2400(0.60) \\ -0.2400(0.80) + 0.8200(0.60) \end{bmatrix} = \begin{bmatrix} 0.5440 - 0.1440 \\ -0.1920 + 0.4920 \end{bmatrix} = \begin{bmatrix} \mathbf{0.4000} \\ \mathbf{0.3000} \end{bmatrix}$$
 - Expected reward estimate for Arm 1:
-  $$\hat{\boldsymbol{\theta}}_1^\top \mathbf{x} = 0.4000(0.80) + 0.3000(0.60) = 0.3200 + 0.1800 = \mathbf{0.5000}$$
+  $$\hat{\theta}_1^\top \mathbf{x} = 0.4000(0.80) + 0.3000(0.60) = 0.3200 + 0.1800 = \mathbf{0.5000}$$
 - Uncertainty quadric for Arm 1:
   $$\mathbf{x}^\top \mathbf{A}_1^{-1} \mathbf{x} = \begin{bmatrix} 0.80 & 0.60 \end{bmatrix} \begin{bmatrix} 0.4000 \\ 0.3000 \end{bmatrix} = 0.80(0.4000) + 0.60(0.3000) = 0.3200 + 0.1800 = \mathbf{0.5000}$$
   $$\text{Uncertainty Bonus: } 1.0 \sqrt{0.5000} \approx \mathbf{0.707107}$$

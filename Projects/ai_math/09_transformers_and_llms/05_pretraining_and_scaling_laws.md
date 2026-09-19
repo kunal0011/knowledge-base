@@ -38,7 +38,7 @@ Given a fixed budget of compute FLOPs, doubling model size requires doubling the
 
 #### 1. Autoregressive Causal Language Modeling (CLM)
 The dominant objective for modern foundation models (GPT, LLaMA, Mistral). Given text tokens $\mathbf{x} = (x_1, \dots, x_T)$:
-$$\mathcal{L}_{\text{CLM}}(\boldsymbol{\theta}) = - \frac{1}{T} \sum_{t=1}^T \log P_{\boldsymbol{\theta}}(x_t \mid x_1, \dots, x_{t-1})$$
+$$\mathcal{L}_{\text{CLM}}(\theta) = - \frac{1}{T} \sum_{t=1}^T \log P_{\theta}(x_t \mid x_1, \dots, x_{t-1})$$
 
 #### 2. Fill-in-the-Middle (FIM) Infilling (Bavarian et al., 2022)
 Standard autoregressive models can only generate text forward. For code completion and document editing, the model must condition on both prefix and suffix to synthesize the middle.

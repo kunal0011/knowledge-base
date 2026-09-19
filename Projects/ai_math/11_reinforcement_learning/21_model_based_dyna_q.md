@@ -53,12 +53,12 @@ An environment model consists of two components:
 2. **Reward Model:** $\hat{\mathcal{R}}(s, a) \approx \mathbb{E}[R_{t+1} \mid S_t = s, A_t = a]$
 
 In a deterministic environment, the model is simply a pair of functions:
-$$\hat{s}' = f_{\boldsymbol{\theta}}(s, a), \quad \hat{r} = g_{\boldsymbol{\psi}}(s, a)$$
+$$\hat{s}' = f_{\theta}(s, a), \quad \hat{r} = g_{\psi}(s, a)$$
 In a tabular setting, the model is a dictionary lookup table:
 $$\text{Model}(s, a) \leftarrow (r, s')$$
 
 Model learning is standard supervised regression/classification:
-$$\min_{\boldsymbol{\theta}, \boldsymbol{\psi}} \sum_{i=1}^M \left[ \mathcal{L}_{\text{trans}}(s_{i+1}, f_{\boldsymbol{\theta}}(s_i, a_i)) + \mathcal{L}_{\text{rew}}(r_{i+1}, g_{\boldsymbol{\psi}}(s_i, a_i)) \right]$$
+$$\min_{\theta, \psi} \sum_{i=1}^M \left[ \mathcal{L}_{\text{trans}}(s_{i+1}, f_{\theta}(s_i, a_i)) + \mathcal{L}_{\text{rew}}(r_{i+1}, g_{\psi}(s_i, a_i)) \right]$$
 
 ---
 
@@ -288,7 +288,7 @@ state distribution error compounds quadratically:
 In model-based reinforcement learning, planning involves generating simulated state trajectories using a learned transition model $\hat{\mathcal{P}}$ and reward model $\hat{\mathcal{R}}$.
 Let $V^\pi \in \mathbb{R}^{|\mathcal{S}|}$ denote the true value function of policy $\pi$ under true dynamics $(\mathcal{P}, \mathcal{R})$, and let $\hat{V}^\pi \in \mathbb{R}^{|\mathcal{S}|}$ denote the value function under model dynamics $(\hat{\mathcal{P}}, \hat{\mathcal{R}})$.
 Let the policy performance under initial state distribution $\mu \in \Delta(\mathcal{S})$ be defined by:
-$$J(\pi) \triangleq \boldsymbol{\mu}^\top \mathbf{V}^\pi, \quad \hat{J}(\pi) \triangleq \boldsymbol{\mu}^\top \hat{\mathbf{V}}^\pi$$
+$$J(\pi) \triangleq \mu^\top \mathbf{V}^\pi, \quad \hat{J}(\pi) \triangleq \mu^\top \hat{\mathbf{V}}^\pi$$
 Let the single-step model errors be bounded by:
 $$\max_{s, a} |\mathcal{R}(s, a) - \hat{\mathcal{R}}(s, a)| \le \epsilon_r, \quad \max_{s, a} \|\mathcal{P}(\cdot \mid s, a) - \hat{\mathcal{P}}(\cdot \mid s, a)\|_1 \le \epsilon_m$$
 where $\|\mathcal{P}(\cdot \mid s, a) - \hat{\mathcal{P}}(\cdot \mid s, a)\|_1 = 2 \|\mathcal{P}(\cdot \mid s, a) - \hat{\mathcal{P}}(\cdot \mid s, a)\|_{\text{TV}} = 2 \epsilon_{\text{TV}}$.
@@ -304,7 +304,7 @@ Our mathematical goal is two-fold:
 2. **Transition Probability Kernels:** Both $\mathcal{P}$ and $\hat{\mathcal{P}}$ are valid Markov transition matrices: $\mathcal{P}(s' \mid s, a) \ge 0, \hat{\mathcal{P}}(s' \mid s, a) \ge 0$ and $\sum_{s'} \mathcal{P}(s' \mid s, a) = \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) = 1$ for all $(s, a)$.
 3. **Bounded Rewards:** $R(s, a) \in [0, R_{\max}]$ (or $|R(s, a)| \le R_{\max}$), ensuring that $\|\hat{\mathbf{V}}^\pi\|_\infty \le \frac{R_{\max}}{1 - \gamma}$.
 4. **Discount Modulus:** $\gamma \in [0, 1)$, ensuring invertibility of the Bellman operators $(\mathbf{I} - \gamma \mathbf{P}^\pi)$ and $(\mathbf{I} - \gamma \hat{\mathbf{P}}^\pi)$.
-5. **Initial State Distribution Alignment:** Both the true system and the model rollout start from the identical initial state distribution $d_0 = \hat{d}_0 = \boldsymbol{\mu}$.
+5. **Initial State Distribution Alignment:** Both the true system and the model rollout start from the identical initial state distribution $d_0 = \hat{d}_0 = \mu$.
 
 **3. Underlying Intuition & Geometric / Physical Interpretation:**
 - **The Resolvent Filter:** The true value function and model value function are solutions to linear algebraic systems $(\mathbf{I} - \gamma \mathbf{P}^\pi) \mathbf{V}^\pi = \mathbf{R}^\pi$ and $(\mathbf{I} - \gamma \hat{\mathbf{P}}^\pi) \hat{\mathbf{V}}^\pi = \hat{\mathbf{R}}^\pi$. The difference vector $\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi$ can be decomposed using the matrix resolvent identity into:
@@ -370,9 +370,9 @@ $$\|\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi\|_\infty \le \|(\mathbf{I} - \gamma \m
 *Step 4: Combine to obtain the Simulation Lemma.*
 Substitute the derived bounds into the $L_\infty$ inequality:
 $$\|\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi\|_\infty \le \frac{1}{1 - \gamma} \left[ \epsilon_r + \gamma \frac{\epsilon_m R_{\max}}{1 - \gamma} \right] = \frac{\epsilon_r}{1 - \gamma} + \frac{\gamma \epsilon_m R_{\max}}{(1 - \gamma)^2}$$
-For the scalar expected return $J(\pi) = \boldsymbol{\mu}^\top \mathbf{V}^\pi$:
-$$|J(\pi) - \hat{J}(\pi)| = |\boldsymbol{\mu}^\top (\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi)| \le \|\boldsymbol{\mu}\|_1 \|\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi\|_\infty$$
-Since $\boldsymbol{\mu}$ is a probability distribution, $\|\boldsymbol{\mu}\|_1 = \sum_s \mu(s) = 1$:
+For the scalar expected return $J(\pi) = \mu^\top \mathbf{V}^\pi$:
+$$|J(\pi) - \hat{J}(\pi)| = |\mu^\top (\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi)| \le \|\mu\|_1 \|\mathbf{V}^\pi - \hat{\mathbf{V}}^\pi\|_\infty$$
+Since $\mu$ is a probability distribution, $\|\mu\|_1 = \sum_s \mu(s) = 1$:
 $$|J(\pi) - \hat{J}(\pi)| \le \frac{\epsilon_r}{1 - \gamma} + \frac{\gamma \epsilon_m R_{\max}}{(1 - \gamma)^2}$$
 When the reward model is exact ($\epsilon_r = 0$), this simplifies directly to:
 $$|J(\pi) - \hat{J}(\pi)| \le \frac{\gamma \epsilon_m R_{\max}}{(1 - \gamma)^2}$$
@@ -430,12 +430,12 @@ During the internal planning phase, Dyna-Q+ replaces the empirical reward $\hat{
 $$R_{\text{bonus}}(s, a) \triangleq \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)}$$
 where $\kappa > 0$ is a strictly positive exploration bonus scale parameter.
 
-The corresponding Dyna-Q+ planning operator $\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^*: \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|} \to \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ is defined by:
-$$(\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^* Q)(s, a) \triangleq \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s' \in \mathcal{S}} \hat{\mathcal{P}}(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a')$$
+The corresponding Dyna-Q+ planning operator $\hat{\mathcal{T}}_{\kappa, \tau}^*: \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|} \to \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ is defined by:
+$$(\hat{\mathcal{T}}_{\kappa, \tau}^* Q)(s, a) \triangleq \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s' \in \mathcal{S}} \hat{\mathcal{P}}(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a')$$
 
 Our mathematical goals are:
-1. Prove that for any static snapshot of elapsed counters $\boldsymbol{\tau}$, $\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^*$ is a strict $\gamma$-contraction in $L_\infty$ norm.
-2. Establish the lower bound drift dynamic $Q_{\kappa, \boldsymbol{\tau}}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{\tau(s, a)}$ for any state-action pair neglected for $\tau$ steps.
+1. Prove that for any static snapshot of elapsed counters $\tau$, $\hat{\mathcal{T}}_{\kappa, \tau}^*$ is a strict $\gamma$-contraction in $L_\infty$ norm.
+2. Establish the lower bound drift dynamic $Q_{\kappa, \tau}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{\tau(s, a)}$ for any state-action pair neglected for $\tau$ steps.
 3. Derive the exact closed-form overtaking threshold $\tau^*(s)$ at which an unvisited action's simulated value overtakes an active greedy action with suboptimality gap $\Delta(s)$.
 4. Prove that the recurrence time between physical executions of any state-action pair is bounded, establishing guaranteed change detection.
 
@@ -445,7 +445,7 @@ Our mathematical goals are:
 3. **Discount Modulus:** $\gamma \in [0, 1)$.
 4. **Finite Cardinality:** $|\mathcal{S}| < \infty$ and $|\mathcal{A}| < \infty$.
 5. **Greedy Action Selection:** Action selection in the real environment is $\epsilon$-greedy (or greedy) with respect to the planning action-values $Q$.
-6. **Planning Convergence:** The planning engine executes sufficient iterations $N$ such that $Q$ closely tracks the fixed point $Q_{\kappa, \boldsymbol{\tau}}^*$.
+6. **Planning Convergence:** The planning engine executes sufficient iterations $N$ such that $Q$ closely tracks the fixed point $Q_{\kappa, \tau}^*$.
 
 **3. Underlying Intuition & Geometric / Physical Interpretation:**
 - **Epistemic Uncertainty Pressure:** As an agent operates in one corner of an environment, the elapsed time $\tau(s, a)$ for unvisited actions elsewhere steadily accumulates. The square-root bonus $\kappa \sqrt{\tau}$ acts like a thermodynamic pressure vessel accumulating internal tension over time.
@@ -455,9 +455,9 @@ Our mathematical goals are:
 **4. End-to-End Step-by-Step Algebraic Proof:**
 
 *Step 1: Strict $\gamma$-contraction of the Dyna-Q+ bonus operator.*
-Let $\boldsymbol{\tau} \in \mathbb{R}_{\ge 0}^{|\mathcal{S}| \times |\mathcal{A}|}$ be any fixed vector of counter values.
+Let $\tau \in \mathbb{R}_{\ge 0}^{|\mathcal{S}| \times |\mathcal{A}|}$ be any fixed vector of counter values.
 Let $Q_1, Q_2 \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$. For any $(s, a) \in \mathcal{S} \times \mathcal{A}$:
-$$|(\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^* Q_1)(s, a) - (\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^* Q_2)(s, a)|$$
+$$|(\hat{\mathcal{T}}_{\kappa, \tau}^* Q_1)(s, a) - (\hat{\mathcal{T}}_{\kappa, \tau}^* Q_2)(s, a)|$$
 $$= \left| \left( \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \max_{a'} Q_1(s', a') \right) - \left( \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \max_{a'} Q_2(s', a') \right) \right|$$
 Notice that both $\hat{\mathcal{R}}(s, a)$ and the bonus $\kappa \sqrt{\tau(s, a)}$ are identical in both terms:
 $$\left[ \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} \right] - \left[ \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} \right] = 0$$
@@ -466,35 +466,35 @@ $$= \gamma \left| \sum_{s' \in \mathcal{S}} \hat{\mathcal{P}}(s' \mid s, a) \lef
 Applying the non-expansion property of the maximum operator (Lemma 1 from Derivation 11.21.1):
 $$\le \gamma \sum_{s' \in \mathcal{S}} \hat{\mathcal{P}}(s' \mid s, a) \|Q_1 - Q_2\|_\infty = \gamma \|Q_1 - Q_2\|_\infty$$
 Taking the supremum over all $(s, a)$:
-$$\|\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^* Q_1 - \hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^* Q_2\|_\infty \le \gamma \|Q_1 - Q_2\|_\infty$$
-Because $\gamma < 1$, $\hat{\mathcal{T}}_{\kappa, \boldsymbol{\tau}}^*$ is a strict $\gamma$-contraction in $L_\infty$ norm, possessing a unique fixed point $Q_{\kappa, \boldsymbol{\tau}}^*$.
+$$\|\hat{\mathcal{T}}_{\kappa, \tau}^* Q_1 - \hat{\mathcal{T}}_{\kappa, \tau}^* Q_2\|_\infty \le \gamma \|Q_1 - Q_2\|_\infty$$
+Because $\gamma < 1$, $\hat{\mathcal{T}}_{\kappa, \tau}^*$ is a strict $\gamma$-contraction in $L_\infty$ norm, possessing a unique fixed point $Q_{\kappa, \tau}^*$.
 
 *Step 2: Decomposition and lower bound on the bonus fixed point.*
 Let $Q_0^*$ denote the baseline fixed point with zero bonus ($\kappa = 0$):
 $$Q_0^*(s, a) = \hat{\mathcal{R}}(s, a) + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \max_{a'} Q_0^*(s', a')$$
 The bonus fixed point satisfies:
-$$Q_{\kappa, \boldsymbol{\tau}}^*(s, a) = \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \max_{a'} Q_{\kappa, \boldsymbol{\tau}}^*(s', a')$$
-Subtract $Q_0^*(s, a)$ from $Q_{\kappa, \boldsymbol{\tau}}^*(s, a)$:
-$$Q_{\kappa, \boldsymbol{\tau}}^*(s, a) - Q_0^*(s, a) = \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \left[ \max_{a'} Q_{\kappa, \boldsymbol{\tau}}^*(s', a') - \max_{a'} Q_0^*(s', a') \right]$$
+$$Q_{\kappa, \tau}^*(s, a) = \hat{\mathcal{R}}(s, a) + \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \max_{a'} Q_{\kappa, \tau}^*(s', a')$$
+Subtract $Q_0^*(s, a)$ from $Q_{\kappa, \tau}^*(s, a)$:
+$$Q_{\kappa, \tau}^*(s, a) - Q_0^*(s, a) = \kappa \sqrt{\tau(s, a)} + \gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \left[ \max_{a'} Q_{\kappa, \tau}^*(s', a') - \max_{a'} Q_0^*(s', a') \right]$$
 Since $\kappa \sqrt{\tau(s, a)} \ge 0$ for all $(s, a)$, the bonus reward is a non-negative perturbation.
 By the monotonicity of the Bellman optimality operator:
 $$\mathcal{T}_1 \ge \mathcal{T}_2 \implies Q_{\mathcal{T}_1}^* \ge Q_{\mathcal{T}_2}^*$$
-Therefore, $Q_{\kappa, \boldsymbol{\tau}}^*(s', a') \ge Q_0^*(s', a')$ for all $(s', a')$, which implies:
-$$\max_{a'} Q_{\kappa, \boldsymbol{\tau}}^*(s', a') - \max_{a'} Q_0^*(s', a') \ge 0$$
+Therefore, $Q_{\kappa, \tau}^*(s', a') \ge Q_0^*(s', a')$ for all $(s', a')$, which implies:
+$$\max_{a'} Q_{\kappa, \tau}^*(s', a') - \max_{a'} Q_0^*(s', a') \ge 0$$
 Because $\hat{\mathcal{P}}(s' \mid s, a) \ge 0$ and $\gamma \ge 0$, the continuation term is strictly non-negative:
-$$\gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \left[ \max_{a'} Q_{\kappa, \boldsymbol{\tau}}^*(s', a') - \max_{a'} Q_0^*(s', a') \right] \ge 0$$
+$$\gamma \sum_{s'} \hat{\mathcal{P}}(s' \mid s, a) \left[ \max_{a'} Q_{\kappa, \tau}^*(s', a') - \max_{a'} Q_0^*(s', a') \right] \ge 0$$
 We conclude the fundamental lower bound:
-$$Q_{\kappa, \boldsymbol{\tau}}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{\tau(s, a)} \quad \text{(Inequality 2)}$$
+$$Q_{\kappa, \tau}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{\tau(s, a)} \quad \text{(Inequality 2)}$$
 
 *Step 3: Analytical derivation of the critical overtaking threshold $\tau^*(s)$.*
 Consider a decision state $s$ where:
-1. Action $a^*$ is the current greedy choice, regularly executed along the agent's nominal path, so $\tau(s, a^*) \approx 0 \implies Q_{\kappa, \boldsymbol{\tau}}^*(s, a^*) \approx Q_0^*(s, a^*)$.
+1. Action $a^*$ is the current greedy choice, regularly executed along the agent's nominal path, so $\tau(s, a^*) \approx 0 \implies Q_{\kappa, \tau}^*(s, a^*) \approx Q_0^*(s, a^*)$.
 2. Action $a_{\text{neg}}$ is a neglected, seemingly suboptimal action last executed $\tau$ real time steps ago, with baseline value $Q_0^*(s, a_{\text{neg}})$.
 
 Define the suboptimality gap:
 $$\Delta(s) \triangleq Q_0^*(s, a^*) - Q_0^*(s, a_{\text{neg}}) > 0$$
 Under greedy action selection, the agent switches from executing $a^*$ to testing $a_{\text{neg}}$ when:
-$$Q_{\kappa, \boldsymbol{\tau}}^*(s, a_{\text{neg}}) > Q_{\kappa, \boldsymbol{\tau}}^*(s, a^*)$$
+$$Q_{\kappa, \tau}^*(s, a_{\text{neg}}) > Q_{\kappa, \tau}^*(s, a^*)$$
 Using the lower bound from Inequality 2:
 $$Q_0^*(s, a_{\text{neg}}) + \kappa \sqrt{\tau(s, a_{\text{neg}})} > Q_0^*(s, a^*)$$
 Subtract $Q_0^*(s, a_{\text{neg}})$ from both sides:
@@ -513,9 +513,9 @@ Consequently, the maximum threshold for any action in any state is bounded by a 
 $$\tau_{\max}^* \le \left\lceil \left( \frac{2 R_{\max}}{\kappa (1 - \gamma)} \right)^2 \right\rceil < \infty$$
 Suppose for the sake of contradiction that a state-action pair $(s, a)$ is never visited again after time $t_0$.
 Then $\tau_t(s, a) = t - t_0 \to \infty$ as $t \to \infty$.
-By Inequality 2, $Q_{\kappa, \boldsymbol{\tau}_t}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{t - t_0} \to \infty$.
+By Inequality 2, $Q_{\kappa, \tau_t}^*(s, a) \ge Q_0^*(s, a) + \kappa \sqrt{t - t_0} \to \infty$.
 However, the values of all frequently visited pairs $(s', a')$ are bounded by:
-$$Q_{\kappa, \boldsymbol{\tau}_t}^*(s', a') \le \frac{R_{\max} + \kappa \sqrt{\tau_{\max}^*}}{1 - \gamma} < \infty$$
+$$Q_{\kappa, \tau_t}^*(s', a') \le \frac{R_{\max} + \kappa \sqrt{\tau_{\max}^*}}{1 - \gamma} < \infty$$
 Thus, there must exist a finite time $T \le t_0 + \tau_{\max}^*$ at which $Q(s, a) > \max_{a' \neq a} Q(s, a')$, forcing the greedy policy to select $a$.
 This contradiction proves that no state-action pair can remain unvisited indefinitely. The recurrence time between visits to every state-action pair is finite, guaranteeing that any environmental modification (such as the opening of a shortcut) is discovered within finite time. $\blacksquare$
 
@@ -818,7 +818,7 @@ $$\tau^* = \left\lceil \left( \frac{\Delta}{\kappa} \right)^2 \right\rceil = \le
 
 ### Illustration 4: Compounding Error Bound Numerical Evaluation ($H \in \{1, 5, 10, 20\}$)
 **Problem:**
-A reinforcement learning researcher trains an autoregressive neural network transition model $\hat{\mathcal{P}}_{\boldsymbol{\theta}}(s_{t+1} \mid s_t, a_t)$ on an environment with maximum immediate reward $R_{\max} = 1.0000$ and discount factor $\gamma = 0.9500$.
+A reinforcement learning researcher trains an autoregressive neural network transition model $\hat{\mathcal{P}}_{\theta}(s_{t+1} \mid s_t, a_t)$ on an environment with maximum immediate reward $R_{\max} = 1.0000$ and discount factor $\gamma = 0.9500$.
 Validation testing reveals that the single-step model transition error is bounded by:
 $$\epsilon_m \triangleq \max_{s, a} \|\mathcal{P}(\cdot \mid s, a) - \hat{\mathcal{P}}(\cdot \mid s, a)\|_1 = 0.0500$$
 (equivalent to total variation error $\epsilon_{\text{TV}} = \frac{\epsilon_m}{2} = 0.0250$).
@@ -886,10 +886,10 @@ This arithmetic demonstrates why tabular Dyna-Q is engineered around **1-step lo
 Consider an agent learning a continuous 1D transition model:
 $$s_{t+1} = a^* s_t + b^* a_t + w_t$$
 where the ground-truth physical parameters are $a^* = 0.8000$ and $b^* = 0.5000$, and $w_t \sim \mathcal{N}(0, \sigma^2)$ is Gaussian process noise.
-Let the regressor vector be $\mathbf{x}_t \triangleq [s_t, a_t]^\top \in \mathbb{R}^2$ and parameter vector be $\boldsymbol{\theta} \triangleq [a, b]^\top \in \mathbb{R}^2$, so that the model prediction is $\hat{s}_{t+1} = \mathbf{x}_t^\top \boldsymbol{\theta}$.
+Let the regressor vector be $\mathbf{x}_t \triangleq [s_t, a_t]^\top \in \mathbb{R}^2$ and parameter vector be $\theta \triangleq [a, b]^\top \in \mathbb{R}^2$, so that the model prediction is $\hat{s}_{t+1} = \mathbf{x}_t^\top \theta$.
 
-The agent estimates $\boldsymbol{\theta}$ online using **Recursive Least Squares (RLS)** with:
-- Initial parameter prior: $\boldsymbol{\theta}_0 = [0.0000, 0.0000]^\top$
+The agent estimates $\theta$ online using **Recursive Least Squares (RLS)** with:
+- Initial parameter prior: $\theta_0 = [0.0000, 0.0000]^\top$
 - Initial inverse covariance matrix: $\mathbf{P}_0 = 10.0000 \cdot \mathbf{I}_2 = \begin{bmatrix} 10.0000 & 0.0000 \\ 0.0000 & 10.0000 \end{bmatrix}$
 
 Trace two successive real interaction steps:
@@ -899,8 +899,8 @@ Trace two successive real interaction steps:
 Compute step-by-step:
 1. Denominator scalar $1 + \mathbf{x}_t^\top \mathbf{P}_{t-1} \mathbf{x}_t$
 2. Kalman gain vector $\mathbf{k}_t = \frac{\mathbf{P}_{t-1} \mathbf{x}_t}{1 + \mathbf{x}_t^\top \mathbf{P}_{t-1} \mathbf{x}_t}$
-3. Prediction error (innovation) $e_t = s_{t+1} - \mathbf{x}_t^\top \boldsymbol{\theta}_{t-1}$
-4. Updated parameter vector $\boldsymbol{\theta}_t = \boldsymbol{\theta}_{t-1} + \mathbf{k}_t e_t$
+3. Prediction error (innovation) $e_t = s_{t+1} - \mathbf{x}_t^\top \theta_{t-1}$
+4. Updated parameter vector $\theta_t = \theta_{t-1} + \mathbf{k}_t e_t$
 5. Updated covariance matrix $\mathbf{P}_t = (\mathbf{I} - \mathbf{k}_t \mathbf{x}_t^\top) \mathbf{P}_{t-1}$
 
 **Solution:**
@@ -919,11 +919,11 @@ Regressor: $\mathbf{x}_1 = [1.0000, 2.0000]^\top$, observed target $y_1 = s_1 = 
    $$\mathbf{k}_1 = \frac{1}{51.0000} \begin{bmatrix} 10.0000 \\ 20.0000 \end{bmatrix} = \begin{bmatrix} 0.196078 \\ 0.392157 \end{bmatrix}$$
 
 4. **Prediction error $e_1$:**
-   $$\hat{y}_1 = \mathbf{x}_1^\top \boldsymbol{\theta}_0 = [1.0, 2.0] \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix} = 0.0000$$
+   $$\hat{y}_1 = \mathbf{x}_1^\top \theta_0 = [1.0, 2.0] \begin{bmatrix} 0.0 \\ 0.0 \end{bmatrix} = 0.0000$$
    $$e_1 = y_1 - \hat{y}_1 = 1.8000 - 0.0000 = \mathbf{1.8000}$$
 
-5. **Updated parameter vector $\boldsymbol{\theta}_1$:**
-   $$\boldsymbol{\theta}_1 = \begin{bmatrix} 0.0000 \\ 0.0000 \end{bmatrix} + 1.8000 \begin{bmatrix} 0.196078 \\ 0.392157 \end{bmatrix} = \begin{bmatrix} 0.352941 \\ 0.705882 \end{bmatrix}$$
+5. **Updated parameter vector $\theta_1$:**
+   $$\theta_1 = \begin{bmatrix} 0.0000 \\ 0.0000 \end{bmatrix} + 1.8000 \begin{bmatrix} 0.196078 \\ 0.392157 \end{bmatrix} = \begin{bmatrix} 0.352941 \\ 0.705882 \end{bmatrix}$$
 
 6. **Updated covariance matrix $\mathbf{P}_1$:**
    Outer product $\mathbf{k}_1 \mathbf{x}_1^\top$:
@@ -949,11 +949,11 @@ Regressor: $\mathbf{x}_2 = [1.8000, -1.0000]^\top$, observed target $y_2 = s_2 =
    $$\mathbf{k}_2 = \frac{1}{43.321569} \begin{bmatrix} 18.392157 \\ -9.215686 \end{bmatrix} = \begin{bmatrix} 0.424550 \\ -0.212727 \end{bmatrix}$$
 
 4. **Prediction error $e_2$:**
-   $$\hat{y}_2 = \mathbf{x}_2^\top \boldsymbol{\theta}_1 = 1.8000(0.352941) + (-1.0000)(0.705882) = 0.635294 - 0.705882 = \mathbf{-0.070588}$$
+   $$\hat{y}_2 = \mathbf{x}_2^\top \theta_1 = 1.8000(0.352941) + (-1.0000)(0.705882) = 0.635294 - 0.705882 = \mathbf{-0.070588}$$
    $$e_2 = y_2 - \hat{y}_2 = 0.9400 - (-0.070588) = \mathbf{1.010588}$$
 
-5. **Updated parameter vector $\boldsymbol{\theta}_2$:**
-   $$\boldsymbol{\theta}_2 = \begin{bmatrix} 0.352941 \\ 0.705882 \end{bmatrix} + 1.010588 \begin{bmatrix} 0.424550 \\ -0.212727 \end{bmatrix} = \begin{bmatrix} 0.352941 + 0.429045 \\ 0.705882 - 0.214980 \end{bmatrix} = \begin{bmatrix} \mathbf{0.7820} \\ \mathbf{0.4909} \end{bmatrix}$$
+5. **Updated parameter vector $\theta_2$:**
+   $$\theta_2 = \begin{bmatrix} 0.352941 \\ 0.705882 \end{bmatrix} + 1.010588 \begin{bmatrix} 0.424550 \\ -0.212727 \end{bmatrix} = \begin{bmatrix} 0.352941 + 0.429045 \\ 0.705882 - 0.214980 \end{bmatrix} = \begin{bmatrix} \mathbf{0.7820} \\ \mathbf{0.4909} \end{bmatrix}$$
 
 6. **Updated covariance matrix $\mathbf{P}_2$:**
    $$\mathbf{P}_2 = (\mathbf{I} - \mathbf{k}_2 \mathbf{x}_2^\top) \mathbf{P}_1 = \begin{bmatrix} \mathbf{0.2308} & \mathbf{-0.0091} \\ \mathbf{-0.0091} & \mathbf{0.1964} \end{bmatrix}$$

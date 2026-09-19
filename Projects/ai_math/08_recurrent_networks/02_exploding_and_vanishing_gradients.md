@@ -92,7 +92,7 @@ During SGD optimization, an exploding gradient causes parameter updates $\Delta 
 
 To stabilize training in the presence of exploding gradients without artificially limiting sequence length, Razvan Pascanu, Tomas Mikolov, and Yoshua Bengio introduced **Gradient Clipping by Norm**.
 
-Let $\mathbf{g} = \nabla_{\boldsymbol{\theta}} \mathcal{L}$ be the concatenated gradient vector of all trainable parameters.
+Let $\mathbf{g} = \nabla_{\theta} \mathcal{L}$ be the concatenated gradient vector of all trainable parameters.
 Given a maximum allowable gradient norm threshold $\theta_{\text{clip}} > 0$:
 
 $$\mathbf{g}_{\text{clipped}} = \begin{cases} \mathbf{g} & \text{if } \|\mathbf{g}\| \le \theta_{\text{clip}} \\ \theta_{\text{clip}} \frac{\mathbf{g}}{\|\mathbf{g}\|} & \text{if } \|\mathbf{g}\| > \theta_{\text{clip}} \end{cases}$$
@@ -130,7 +130,7 @@ $$\sigma_i(\mathbf{W}_{hh}) = 1, \quad \forall i \in \{1, \dots, d_h\}$$
 An orthogonal transformation preserves Euclidean vector norms:
 $$\|\mathbf{W}_{hh} \mathbf{v}\|_2 = \|\mathbf{v}\|_2$$
 When backpropagating through the linear component:
-$$\|\mathbf{W}_{hh}^{T - t} \boldsymbol{\delta}\|_2 = \|\boldsymbol{\delta}\|_2$$
+$$\|\mathbf{W}_{hh}^{T - t} \delta\|_2 = \|\delta\|_2$$
 Gradients neither explode nor vanish through the linear transition!
 *(Note: While orthogonal initialization mitigates gradient decay at step 0, as training progresses and non-linearities saturate, gating mechanisms like LSTMs/GRUs become necessary to maintain constant gradient highways).*
 
@@ -535,7 +535,7 @@ Let an unconstrained skew-symmetric matrix parameter $\mathbf{A} \in \mathfrak{s
 $$\mathbf{A} = \begin{bmatrix} 0.0 & -0.5 \\ 0.5 & 0.0 \end{bmatrix}$$
 1. Compute the Cayley transform $\mathbf{W} = (\mathbf{I} - \mathbf{A}) (\mathbf{I} + \mathbf{A})^{-1}$.
 2. Verify algebraically that $\mathbf{W}^T \mathbf{W} = \mathbf{I}$.
-3. For a test gradient vector $\boldsymbol{\delta} = [3.0, 4.0]^T$, verify that $\|\mathbf{W} \boldsymbol{\delta}\|_2 = \|\boldsymbol{\delta}\|_2 = 5.0$, proving zero vanishing and zero exploding gradient flow.
+3. For a test gradient vector $\delta = [3.0, 4.0]^T$, verify that $\|\mathbf{W} \delta\|_2 = \|\delta\|_2 = 5.0$, proving zero vanishing and zero exploding gradient flow.
 
 **Solution:**
 
@@ -562,11 +562,11 @@ $$\mathbf{W} = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix}$$
 $$\mathbf{W}^T \mathbf{W} = \begin{bmatrix} 0.6 & -0.8 \\ 0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} = \begin{bmatrix} 0.36 + 0.64 & 0.48 - 0.48 \\ 0.48 - 0.48 & 0.64 + 0.36 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{I}$$
 
 #### Step 3: Norm Preservation Check
-For $\boldsymbol{\delta} = [3.0, 4.0]^T$:
-$$\|\boldsymbol{\delta}\|_2 = \sqrt{3.0^2 + 4.0^2} = \sqrt{9.0 + 16.0} = \sqrt{25.0} = \mathbf{5.0}$$
-Transforming $\boldsymbol{\delta}$:
-$$\mathbf{W} \boldsymbol{\delta} = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 3.0 \\ 4.0 \end{bmatrix} = \begin{bmatrix} 0.6(3.0) + 0.8(4.0) \\ -0.8(3.0) + 0.6(4.0) \end{bmatrix} = \begin{bmatrix} 1.8 + 3.2 \\ -2.4 + 2.4 \end{bmatrix} = \begin{bmatrix} 5.0 \\ 0.0 \end{bmatrix}$$
-$$\|\mathbf{W} \boldsymbol{\delta}\|_2 = \sqrt{5.0^2 + 0.0^2} = \mathbf{5.0}$$
+For $\delta = [3.0, 4.0]^T$:
+$$\|\delta\|_2 = \sqrt{3.0^2 + 4.0^2} = \sqrt{9.0 + 16.0} = \sqrt{25.0} = \mathbf{5.0}$$
+Transforming $\delta$:
+$$\mathbf{W} \delta = \begin{bmatrix} 0.6 & 0.8 \\ -0.8 & 0.6 \end{bmatrix} \begin{bmatrix} 3.0 \\ 4.0 \end{bmatrix} = \begin{bmatrix} 0.6(3.0) + 0.8(4.0) \\ -0.8(3.0) + 0.6(4.0) \end{bmatrix} = \begin{bmatrix} 1.8 + 3.2 \\ -2.4 + 2.4 \end{bmatrix} = \begin{bmatrix} 5.0 \\ 0.0 \end{bmatrix}$$
+$$\|\mathbf{W} \delta\|_2 = \sqrt{5.0^2 + 0.0^2} = \mathbf{5.0}$$
 
 The gradient vector norm is preserved to machine precision without scaling distortion.
 

@@ -50,7 +50,7 @@ where $\mathbf{x}$ is the user prompt and $\mathbf{y} = (y_1, \dots, y_T)$ is th
 
 #### SFT Loss with Prompt Masking:
 Crucially, the model must **only be penalized for errors on the assistant response**, never on the prompt:
-$$\mathcal{L}_{\text{SFT}}(\boldsymbol{\theta}) = - \frac{1}{T} \sum_{t=1}^T \log \pi_{\boldsymbol{\theta}}(y_t \mid \mathbf{x}, y_{<t})$$
+$$\mathcal{L}_{\text{SFT}}(\theta) = - \frac{1}{T} \sum_{t=1}^T \log \pi_{\theta}(y_t \mid \mathbf{x}, y_{<t})$$
 
 In implementation, all prompt tokens in the target tensor are assigned the ignore index `-100` (`CrossEntropyLoss(ignore_index=-100)`), masking their gradients entirely.
 
@@ -66,18 +66,18 @@ We assume there exists a latent scalar reward function $r^*(\mathbf{x}, \mathbf{
 $$P(y_w \succ y_l \mid \mathbf{x}) = \sigma\left( r^*(\mathbf{x}, y_w) - r^*(\mathbf{x}, y_l) \right) = \frac{1}{1 + e^{-(r^*(\mathbf{x}, y_w) - r^*(\mathbf{x}, y_l))}}$$
 
 #### Reward Model Parameterization & Loss:
-We parameterize a Reward Model $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y})$ by replacing the causal LM head with a scalar regression head $\mathbf{w}_r \in \mathbb{R}^{d_{\text{model}} \times 1}$.
+We parameterize a Reward Model $r_{\psi}(\mathbf{x}, \mathbf{y})$ by replacing the causal LM head with a scalar regression head $\mathbf{w}_r \in \mathbb{R}^{d_{\text{model}} \times 1}$.
 Given a dataset of pairwise comparisons $\mathcal{D}_{\text{pref}} = \{(\mathbf{x}, y_w, y_l)\}$, the reward model minimizes binary cross-entropy:
-$$\mathcal{L}_{\text{RM}}(\boldsymbol{\psi}) = - \mathbb{E}_{(\mathbf{x}, y_w, y_l) \sim \mathcal{D}_{\text{pref}}} \left[ \log \sigma\left( r_{\boldsymbol{\psi}}(\mathbf{x}, y_w) - r_{\boldsymbol{\psi}}(\mathbf{x}, y_l) \right) \right]$$
+$$\mathcal{L}_{\text{RM}}(\psi) = - \mathbb{E}_{(\mathbf{x}, y_w, y_l) \sim \mathcal{D}_{\text{pref}}} \left[ \log \sigma\left( r_{\psi}(\mathbf{x}, y_w) - r_{\psi}(\mathbf{x}, y_l) \right) \right]$$
 
 ---
 
 ### 2.3 Stage 3: RLHF via Proximal Policy Optimization (PPO) (Christiano et al., 2017; Ouyang et al., 2022)
 
-In standard RLHF, the SFT model initializes the RL policy $\pi_{\boldsymbol{\theta}}$ and acts as a frozen reference policy $\pi_{\text{ref}}$.
+In standard RLHF, the SFT model initializes the RL policy $\pi_{\theta}$ and acts as a frozen reference policy $\pi_{\text{ref}}$.
 
 #### The Constrained RL Objective:
-$$\max_{\boldsymbol{\theta}} \mathbb{E}_{\mathbf{x} \sim \mathcal{D}, \, \mathbf{y} \sim \pi_{\boldsymbol{\theta}}(\cdot \mid \mathbf{x})} \left[ r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) \right] - \beta \mathbb{D}_{\text{KL}}\left( \pi_{\boldsymbol{\theta}}(\mathbf{y} \mid \mathbf{x}) \,\|\, \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \right)$$
+$$\max_{\theta} \mathbb{E}_{\mathbf{x} \sim \mathcal{D}, \, \mathbf{y} \sim \pi_{\theta}(\cdot \mid \mathbf{x})} \left[ r_{\psi}(\mathbf{x}, \mathbf{y}) \right] - \beta \mathbb{D}_{\text{KL}}\left( \pi_{\theta}(\mathbf{y} \mid \mathbf{x}) \,\|\, \pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x}) \right)$$
 
 #### The Critical Role of the KL Penalty ($\beta$):
 1. **Preventing Reward Hacking (Goodhart's Law):**
@@ -86,7 +86,7 @@ $$\max_{\boldsymbol{\theta}} \mathbb{E}_{\mathbf{x} \sim \mathcal{D}, \, \mathbf
    The KL penalty ensures the policy remains anchored within the natural distribution of human language learned during pre-training.
 
 #### Token-Level KL Divergence Formulation:
-$$R_{\text{total}}(\mathbf{x}, \mathbf{y}) = r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) - \beta \sum_{t=1}^T \left( \log \pi_{\boldsymbol{\theta}}(y_t \mid \mathbf{x}, y_{<t}) - \log \pi_{\text{ref}}(y_t \mid \mathbf{x}, y_{<t}) \right)$$
+$$R_{\text{total}}(\mathbf{x}, \mathbf{y}) = r_{\psi}(\mathbf{x}, \mathbf{y}) - \beta \sum_{t=1}^T \left( \log \pi_{\theta}(y_t \mid \mathbf{x}, y_{<t}) - \log \pi_{\text{ref}}(y_t \mid \mathbf{x}, y_{<t}) \right)$$
 This composite reward is optimized using PPO actor-critic updates.
 
 ---
@@ -94,9 +94,9 @@ This composite reward is optimized using PPO actor-critic updates.
 ### 2.4 Direct Preference Optimization (DPO) (Rafailov et al., 2023)
 
 PPO is notoriously complex, brittle, and resource-intensive: it requires maintaining **four separate large models in GPU memory simultaneously**:
-1. Actor ($\pi_{\boldsymbol{\theta}}$)
-2. Critic / Value Network ($V_{\boldsymbol{\phi}}$)
-3. Reward Model ($r_{\boldsymbol{\psi}}$)
+1. Actor ($\pi_{\theta}$)
+2. Critic / Value Network ($V_{\phi}$)
+3. Reward Model ($r_{\psi}$)
 4. Reference Model ($\pi_{\text{ref}}$)
 
 Rafael Rafailov et al. made a mathematical discovery: **The constrained RL objective can be solved in closed form, completely eliminating the need for a separate reward model or RL training!**
@@ -129,16 +129,16 @@ The intractable partition function $Z(\mathbf{x})$ **cancels out completely**!
 
 Substituting this directly into the Bradley-Terry log-likelihood yields the **DPO Loss Function**:
 
-$$\mathcal{L}_{\text{DPO}}(\boldsymbol{\theta}; \pi_{\text{ref}}) = - \mathbb{E}_{(\mathbf{x}, y_w, y_l)} \left[ \log \sigma\left( \beta \log \frac{\pi_{\boldsymbol{\theta}}(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \beta \log \frac{\pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})}\right) \right]$$
+$$\mathcal{L}_{\text{DPO}}(\theta; \pi_{\text{ref}}) = - \mathbb{E}_{(\mathbf{x}, y_w, y_l)} \left[ \log \sigma\left( \beta \log \frac{\pi_{\theta}(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \beta \log \frac{\pi_{\theta}(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})}\right) \right]$$
 
 ---
 
 ### 2.5 DPO Gradient Dynamics
 
-Taking the gradient of $\mathcal{L}_{\text{DPO}}$ with respect to policy parameters $\boldsymbol{\theta}$:
+Taking the gradient of $\mathcal{L}_{\text{DPO}}$ with respect to policy parameters $\theta$:
 
-$$\nabla_{\boldsymbol{\theta}} \mathcal{L}_{\text{DPO}} = - \beta \, \underbrace{\sigma\left( \hat{r}_{\boldsymbol{\theta}}(\mathbf{x}, y_l) - \hat{r}_{\boldsymbol{\theta}}(\mathbf{x}, y_w) \right)}_{\text{Error Weight } w(\mathbf{x})} \left[ \underbrace{\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_w \mid \mathbf{x})}_{\text{Increase probability of } y_w} - \underbrace{\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x})}_{\text{Decrease probability of } y_l} \right]$$
-where the implicit reward is $\hat{r}_{\boldsymbol{\theta}}(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi_{\boldsymbol{\theta}}(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})}$.
+$$\nabla_{\theta} \mathcal{L}_{\text{DPO}} = - \beta \, \underbrace{\sigma\left( \hat{r}_{\theta}(\mathbf{x}, y_l) - \hat{r}_{\theta}(\mathbf{x}, y_w) \right)}_{\text{Error Weight } w(\mathbf{x})} \left[ \underbrace{\nabla_{\theta} \log \pi_{\theta}(y_w \mid \mathbf{x})}_{\text{Increase probability of } y_w} - \underbrace{\nabla_{\theta} \log \pi_{\theta}(y_l \mid \mathbf{x})}_{\text{Decrease probability of } y_l} \right]$$
+where the implicit reward is $\hat{r}_{\theta}(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi_{\theta}(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})}$.
 
 #### Insights into the Gradient Mechanism:
 1. **Push-Pull Dynamic:** The gradient simultaneously pushes up the log-likelihood of the preferred completion $y_w$ and pulls down the log-likelihood of the rejected completion $y_l$.
@@ -152,31 +152,31 @@ where the implicit reward is $\hat{r}_{\boldsymbol{\theta}}(\mathbf{x}, \mathbf{
 
 #### Context and Setup
 In RLHF, an LLM generates a trajectory of tokens $\mathbf{y} = (y_1, \dots, y_T)$ given prompt $\mathbf{x}$.
-A scalar reward model assigns terminal score $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y})$ upon generating the final end-of-sequence token.
+A scalar reward model assigns terminal score $r_{\psi}(\mathbf{x}, \mathbf{y})$ upon generating the final end-of-sequence token.
 
 #### Token-Level MDP Formulation:
 1. **State:** $s_t = (\mathbf{x}, y_{<t})$ (the prompt concatenated with all tokens generated so far).
 2. **Action:** $a_t = y_t \in \mathcal{V}$ (the selected token from vocabulary $\mathcal{V}$).
 3. **Transition:** Deterministic string concatenation $s_{t+1} = (s_t, a_t)$.
 4. **Token Reward:**
-   $$R_t = \begin{cases} -\beta \left( \log \pi_{\boldsymbol{\theta}}(y_t \mid s_t) - \log \pi_{\text{ref}}(y_t \mid s_t) \right) & \text{for } t < T \\ r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) - \beta \left( \log \pi_{\boldsymbol{\theta}}(y_T \mid s_T) - \log \pi_{\text{ref}}(y_T \mid s_T) \right) & \text{for } t = T \end{cases}$$
+   $$R_t = \begin{cases} -\beta \left( \log \pi_{\theta}(y_t \mid s_t) - \log \pi_{\text{ref}}(y_t \mid s_t) \right) & \text{for } t < T \\ r_{\psi}(\mathbf{x}, \mathbf{y}) - \beta \left( \log \pi_{\theta}(y_T \mid s_T) - \log \pi_{\text{ref}}(y_T \mid s_T) \right) & \text{for } t = T \end{cases}$$
 
 #### Generalized Advantage Estimation (GAE):
-A learned Value Network (Critic) $V_{\boldsymbol{\phi}}(s_t)$ predicts the expected cumulative discounted future reward.
+A learned Value Network (Critic) $V_{\phi}(s_t)$ predicts the expected cumulative discounted future reward.
 The temporal difference (TD) residual at step $t$ is:
-$$\delta_t^V = R_t + \gamma V_{\boldsymbol{\phi}}(s_{t+1}) - V_{\boldsymbol{\phi}}(s_t)$$
+$$\delta_t^V = R_t + \gamma V_{\phi}(s_{t+1}) - V_{\phi}(s_t)$$
 The $\text{GAE}(\gamma, \lambda)$ advantage function is defined as the exponentially weighted sum of future TD residuals:
 $$\hat{A}_t^{\text{GAE}} = \sum_{l=0}^{T - t} (\gamma \lambda)^l \delta_{t+l}^V$$
 - In language modeling, typically $\gamma = 1.0$ and $\lambda \in [0.95, 1.0]$.
 - Expanding recursively backwards from the final token $T$:
-  $$\hat{A}_T = \delta_T^V = R_T - V_{\boldsymbol{\phi}}(s_T)$$
+  $$\hat{A}_T = \delta_T^V = R_T - V_{\phi}(s_T)$$
   $$\hat{A}_t = \delta_t^V + \gamma \lambda \hat{A}_{t+1} \quad (\forall t = T-1, \dots, 1)$$
 
 #### The PPO Clipped Surrogate Objective:
 To prevent destructively large policy updates, PPO defines the probability ratio:
-$$r_t(\boldsymbol{\theta}) = \frac{\pi_{\boldsymbol{\theta}}(y_t \mid s_t)}{\pi_{\text{old}}(y_t \mid s_t)}$$
+$$r_t(\theta) = \frac{\pi_{\theta}(y_t \mid s_t)}{\pi_{\text{old}}(y_t \mid s_t)}$$
 and optimizes the pessimistic clipped surrogate loss:
-$$\mathcal{L}_t^{\text{CLIP}}(\boldsymbol{\theta}) = \min\left( r_t(\boldsymbol{\theta}) \hat{A}_t, \, \operatorname{clip}(r_t(\boldsymbol{\theta}), 1-\epsilon, 1+\epsilon) \hat{A}_t \right)$$
+$$\mathcal{L}_t^{\text{CLIP}}(\theta) = \min\left( r_t(\theta) \hat{A}_t, \, \operatorname{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right)$$
 - If $\hat{A}_t > 0$ (action was better than expected), $r_t$ is pushed upward, but clipped at $1 + \epsilon$ to prevent over-optimizing lucky samples.
 - If $\hat{A}_t < 0$ (action was worse than expected), $r_t$ is pushed downward, but clipped at $1 - \epsilon$. $\blacksquare$
 
@@ -218,7 +218,7 @@ where $Z(\mathbf{x}) = \sum_{\mathbf{y}} \pi_{\text{ref}}(\mathbf{y} \mid \mathb
    Substituting $r(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi^*(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})} + \beta \log Z(\mathbf{x})$:
    $$r(\mathbf{x}, y_w) - r(\mathbf{x}, y_l) = \left( \beta \log \frac{\pi^*(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} + \beta \log Z(\mathbf{x}) \right) - \left( \beta \log \frac{\pi^*(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})} + \beta \log Z(\mathbf{x}) \right)$$
    $$= \beta \log \frac{\pi^*(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \beta \log \frac{\pi^*(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})}$$
-   The normalization constant $Z(\mathbf{x})$ cancels unconditionally. Parameterizing $\pi^*$ directly with policy $\pi_{\boldsymbol{\theta}}$ bypasses RL entirely. $\blacksquare$
+   The normalization constant $Z(\mathbf{x})$ cancels unconditionally. Parameterizing $\pi^*$ directly with policy $\pi_{\theta}$ bypasses RL entirely. $\blacksquare$
 
 ---
 
@@ -226,11 +226,11 @@ where $Z(\mathbf{x}) = \sum_{\mathbf{y}} \pi_{\text{ref}}(\mathbf{y} \mid \mathb
 
 #### 1. The DPO Overfitting Dilemma & IPO (Azar et al., 2023)
 In DPO, if the dataset contains deterministic pairs ($P(y_w \succ y_l) = 1$), the cross-entropy loss drives the log-ratio difference $\beta (\log \pi(y_w) - \log \pi(y_l)) \to +\infty$.
-This causes the policy to collapse: $\pi_{\boldsymbol{\theta}}(y_l) \to 0$ and likelihood of $y_w$ drifts into degenerate low-entropy modes.
+This causes the policy to collapse: $\pi_{\theta}(y_l) \to 0$ and likelihood of $y_w$ drifts into degenerate low-entropy modes.
 
 **Identity Preference Optimization (IPO):**
 Azar et al. bypass the Bradley-Terry non-linear link entirely, minimizing a regularized quadratic loss on the implicit reward margin:
-$$\mathcal{L}_{\text{IPO}}(\boldsymbol{\theta}) = \mathbb{E}_{(\mathbf{x}, y_w, y_l)} \left[ \left( \log \frac{\pi_{\boldsymbol{\theta}}(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \log \frac{\pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})} - \frac{\tau}{2} \right)^2 \right]$$
+$$\mathcal{L}_{\text{IPO}}(\theta) = \mathbb{E}_{(\mathbf{x}, y_w, y_l)} \left[ \left( \log \frac{\pi_{\theta}(y_w \mid \mathbf{x})}{\pi_{\text{ref}}(y_w \mid \mathbf{x})} - \log \frac{\pi_{\theta}(y_l \mid \mathbf{x})}{\pi_{\text{ref}}(y_l \mid \mathbf{x})} - \frac{\tau}{2} \right)^2 \right]$$
 where $\tau$ target controls the margin gap. IPO guarantees that the implicit reward gap never grows unbounded, preventing over-optimization.
 
 #### 2. Kahneman-Tversky Optimization (KTO) (Ethayarajh et al., 2024)
@@ -238,9 +238,9 @@ DPO requires **paired preferences** $(x, y_w, y_l)$. In real-world products, use
 
 KTO builds on Daniel Kahneman and Amos Tversky's **Prospect Theory**:
 - Humans evaluate outcomes relative to a reference point with **loss aversion** (losses hurt more than equal gains feel good).
-- Let $z(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi_{\boldsymbol{\theta}}(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})}$ be the implicit reward, and $z_{\text{ref}} = \mathbb{E}_{\mathbf{x}, \mathbf{y}}[z(\mathbf{x}, \mathbf{y})]$ be the reference anchor.
+- Let $z(\mathbf{x}, \mathbf{y}) = \beta \log \frac{\pi_{\theta}(\mathbf{y} \mid \mathbf{x})}{\pi_{\text{ref}}(\mathbf{y} \mid \mathbf{x})}$ be the implicit reward, and $z_{\text{ref}} = \mathbb{E}_{\mathbf{x}, \mathbf{y}}[z(\mathbf{x}, \mathbf{y})]$ be the reference anchor.
 - The KTO loss is:
-  $$\mathcal{L}_{\text{KTO}}(\boldsymbol{\theta}) = \mathbb{E}_{\mathbf{x}, \mathbf{y}} \left[ w(\mathbf{y}) \cdot \sigma\left( \lambda_{\mathbf{y}} \left( z(\mathbf{x}, \mathbf{y}) - z_{\text{ref}} \right) \right) \right]$$
+  $$\mathcal{L}_{\text{KTO}}(\theta) = \mathbb{E}_{\mathbf{x}, \mathbf{y}} \left[ w(\mathbf{y}) \cdot \sigma\left( \lambda_{\mathbf{y}} \left( z(\mathbf{x}, \mathbf{y}) - z_{\text{ref}} \right) \right) \right]$$
   where $\lambda_{y} = 1$ for desirable outputs ($y \in \mathcal{Y}_{\text{desirable}}$) and $\lambda_y = -1$ with higher penalty weight $\lambda_{\text{loss}} > 1$ for rejected outputs.
 KTO matches or exceeds DPO performance while learning directly from cheap, natural thumbs-up/down signals without requiring artificial pairwise contrast. $\blacksquare$
 
@@ -291,10 +291,10 @@ Let us trace a complete DPO loss and gradient calculation with exact hand arithm
 | $y_w$ | Preferred Completion | Text string | Accurate, clear response |
 | $y_l$ | Rejected Completion | Text string | Verbose, hallucinated response |
 | $\log \pi_{\text{ref}}(y \mid x)$ | Reference Log-Prob | Scalar | Baseline log-likelihood under frozen SFT model |
-| $\log \pi_{\boldsymbol{\theta}}(y \mid x)$ | Policy Log-Prob | Scalar | Current model log-likelihood |
+| $\log \pi_{\theta}(y \mid x)$ | Policy Log-Prob | Scalar | Current model log-likelihood |
 | $\beta$ | KL Temperature | Scalar ($0.5$) | Controls strength of implicit KL anchor |
-| $\hat{r}_{\boldsymbol{\theta}}(x, y)$ | Implicit Reward | Scalar | $\beta (\log \pi_{\boldsymbol{\theta}} - \log \pi_{\text{ref}})$ |
-| $\Delta r$ | Reward Margin | Scalar | $\hat{r}_{\boldsymbol{\theta}}(x, y_w) - \hat{r}_{\boldsymbol{\theta}}(x, y_l)$ |
+| $\hat{r}_{\theta}(x, y)$ | Implicit Reward | Scalar | $\beta (\log \pi_{\theta} - \log \pi_{\text{ref}})$ |
+| $\Delta r$ | Reward Margin | Scalar | $\hat{r}_{\theta}(x, y_w) - \hat{r}_{\theta}(x, y_l)$ |
 | $\mathcal{L}_{\text{DPO}}$ | Objective Loss | Scalar | $-\log \sigma(\Delta r)$ |
 | $w_{\text{grad}}$ | Error Weight | Scalar $\in (0, 1)$ | $\sigma(-\Delta r) = \text{gradient scaling factor}$ |
 
@@ -309,10 +309,10 @@ $$\log \pi_{\text{ref}}(y_w \mid \mathbf{x}) = -2.0$$
 $$\log \pi_{\text{ref}}(y_l \mid \mathbf{x}) = -2.0$$
 *(The reference model initially views both completions as equally likely).*
 
-#### Current Policy Log-Likelihoods (Policy $\pi_{\boldsymbol{\theta}}$):
+#### Current Policy Log-Likelihoods (Policy $\pi_{\theta}$):
 Suppose the current model currently favors the **wrong** response:
-$$\log \pi_{\boldsymbol{\theta}}(y_w \mid \mathbf{x}) = -1.5$$
-$$\log \pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x}) = -1.0$$
+$$\log \pi_{\theta}(y_w \mid \mathbf{x}) = -1.5$$
+$$\log \pi_{\theta}(y_l \mid \mathbf{x}) = -1.0$$
 *(The model assigns higher probability to the loser $y_l$ than the winner $y_w$!)*
 
 ---
@@ -320,20 +320,20 @@ $$\log \pi_{\boldsymbol{\theta}}(y_l \mid \mathbf{x}) = -1.0$$
 ### 5.3 Step 1: Compute Log-Ratio and Implicit Rewards
 
 1. **Log-Ratio for Winner ($y_w$):**
-   $$\Delta \log \pi(y_w) = \log \pi_{\boldsymbol{\theta}}(y_w) - \log \pi_{\text{ref}}(y_w) = -1.5 - (-2.0) = +0.50$$
+   $$\Delta \log \pi(y_w) = \log \pi_{\theta}(y_w) - \log \pi_{\text{ref}}(y_w) = -1.5 - (-2.0) = +0.50$$
    Implicit Reward:
-   $$\hat{r}_{\boldsymbol{\theta}}(y_w) = \beta \cdot \Delta \log \pi(y_w) = 0.5 \times 0.50 = \mathbf{0.25}$$
+   $$\hat{r}_{\theta}(y_w) = \beta \cdot \Delta \log \pi(y_w) = 0.5 \times 0.50 = \mathbf{0.25}$$
 
 2. **Log-Ratio for Loser ($y_l$):**
-   $$\Delta \log \pi(y_l) = \log \pi_{\boldsymbol{\theta}}(y_l) - \log \pi_{\text{ref}}(y_l) = -1.0 - (-2.0) = +1.00$$
+   $$\Delta \log \pi(y_l) = \log \pi_{\theta}(y_l) - \log \pi_{\text{ref}}(y_l) = -1.0 - (-2.0) = +1.00$$
    Implicit Reward:
-   $$\hat{r}_{\boldsymbol{\theta}}(y_l) = \beta \cdot \Delta \log \pi(y_l) = 0.5 \times 1.00 = \mathbf{0.50}$$
+   $$\hat{r}_{\theta}(y_l) = \beta \cdot \Delta \log \pi(y_l) = 0.5 \times 1.00 = \mathbf{0.50}$$
 
 ---
 
 ### 5.4 Step 2: Compute Reward Margin ($\Delta r$)
 
-$$\Delta r = \hat{r}_{\boldsymbol{\theta}}(y_w) - \hat{r}_{\boldsymbol{\theta}}(y_l) = 0.25 - 0.50 = \mathbf{-0.25}$$
+$$\Delta r = \hat{r}_{\theta}(y_w) - \hat{r}_{\theta}(y_l) = 0.25 - 0.50 = \mathbf{-0.25}$$
 
 Because the model mistakenly preferred $y_l$, the margin is **negative** ($-0.25$).
 
@@ -353,12 +353,12 @@ The gradient scaling factor is:
 $$w_{\text{grad}} = \sigma(-\Delta r) = \sigma(+0.25) = 1 - \sigma(-0.25) = 1 - 0.437824 = \mathbf{0.562176}$$
 
 The total gradient applied to parameters is:
-$$\nabla_{\boldsymbol{\theta}} \mathcal{L}_{\text{DPO}} = -(0.5)(0.562176) \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_w) - \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_l) \right]$$
-$$= -0.281088 \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_w) + 0.281088 \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(y_l)$$
+$$\nabla_{\theta} \mathcal{L}_{\text{DPO}} = -(0.5)(0.562176) \left[ \nabla_{\theta} \log \pi_{\theta}(y_w) - \nabla_{\theta} \log \pi_{\theta}(y_l) \right]$$
+$$= -0.281088 \nabla_{\theta} \log \pi_{\theta}(y_w) + 0.281088 \nabla_{\theta} \log \pi_{\theta}(y_l)$$
 
-When the optimizer takes a gradient descent step $\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \eta \nabla \mathcal{L}$:
-- It adds $+0.281 \eta \nabla \log \pi_{\boldsymbol{\theta}}(y_w)$, directly **increasing** the winner's likelihood.
-- It subtracts $-0.281 \eta \nabla \log \pi_{\boldsymbol{\theta}}(y_l)$, directly **decreasing** the loser's likelihood.
+When the optimizer takes a gradient descent step $\theta \leftarrow \theta - \eta \nabla \mathcal{L}$:
+- It adds $+0.281 \eta \nabla \log \pi_{\theta}(y_w)$, directly **increasing** the winner's likelihood.
+- It subtracts $-0.281 \eta \nabla \log \pi_{\theta}(y_l)$, directly **decreasing** the loser's likelihood.
 
 ---
 
@@ -371,11 +371,11 @@ Goodhart's Law states: *"When a measure becomes a target, it ceases to be a good
 How does reward hacking manifest in an LLM if the KL divergence constraint is disabled ($\beta = 0$)?
 
 **Solution:**
-A neural reward model $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y})$ is an imperfect approximation of human preference, typically trained on only $50,000 - 100,000$ comparisons.
+A neural reward model $r_{\psi}(\mathbf{x}, \mathbf{y})$ is an imperfect approximation of human preference, typically trained on only $50,000 - 100,000$ comparisons.
 If $\beta = 0$, PPO treats the reward model as an absolute ground-truth oracle:
 - The policy discovers that repeating specific words (*"certainly!", "delighted!", "moreover"*), producing excessively long outputs (verbosity bias), or using exaggerated flattery (sycophancy) reliably triggers maximum activation in the reward model's linear head.
 - The policy degenerates into outputting 1,000-word repetitive essays that receive a reward score of $+99.9$, but are completely unreadable and useless to actual human users.
-- The KL penalty $\beta \mathbb{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}} \,\|\, \pi_{\text{ref}})$ prevents this by strictly penalizing the policy if it strays too far from the reference model's natural distribution.
+- The KL penalty $\beta \mathbb{D}_{\text{KL}}(\pi_{\theta} \,\|\, \pi_{\text{ref}})$ prevents this by strictly penalizing the policy if it strays too far from the reference model's natural distribution.
 
 ---
 
@@ -402,11 +402,11 @@ Only the predictions for tokens `1037`, `3899`, and `102` contribute to the loss
 
 **Problem:**
 An RLHF policy generates a 3-token trajectory $\mathbf{y} = (y_1, y_2, y_3)$ given prompt $\mathbf{x}$.
-A trained reward model evaluates the complete completion, assigning scalar score $r_{\boldsymbol{\psi}}(\mathbf{x}, \mathbf{y}) = 2.50$.
+A trained reward model evaluates the complete completion, assigning scalar score $r_{\psi}(\mathbf{x}, \mathbf{y}) = 2.50$.
 Let the per-token generation probabilities be:
-- Step 1: $\log \pi_{\boldsymbol{\theta}}(y_1) = -1.00, \quad \log \pi_{\text{ref}}(y_1) = -1.50$
-- Step 2: $\log \pi_{\boldsymbol{\theta}}(y_2) = -0.80, \quad \log \pi_{\text{ref}}(y_2) = -0.80$
-- Step 3: $\log \pi_{\boldsymbol{\theta}}(y_3) = -1.20, \quad \log \pi_{\text{ref}}(y_3) = -0.60$
+- Step 1: $\log \pi_{\theta}(y_1) = -1.00, \quad \log \pi_{\text{ref}}(y_1) = -1.50$
+- Step 2: $\log \pi_{\theta}(y_2) = -0.80, \quad \log \pi_{\text{ref}}(y_2) = -0.80$
+- Step 3: $\log \pi_{\theta}(y_3) = -1.20, \quad \log \pi_{\text{ref}}(y_3) = -0.60$
 
 Let KL coefficient $\beta = 0.20$, discount $\gamma = 1.00$, and GAE parameter $\lambda = 0.95$.
 The Value network (Critic) estimates state values:
@@ -420,8 +420,8 @@ $$V(s_1) = 2.00, \quad V(s_2) = 2.20, \quad V(s_3) = 2.40, \quad V(s_4) = 0.00 \
 
 #### Step 1: Token-Level Composite Rewards $R_t$
 The composite reward penalizes policy drift at each token:
-$$R_t = -\beta \left( \log \pi_{\boldsymbol{\theta}}(y_t) - \log \pi_{\text{ref}}(y_t) \right) \quad (\text{for } t < 3)$$
-$$R_3 = r_{\boldsymbol{\psi}} - \beta \left( \log \pi_{\boldsymbol{\theta}}(y_3) - \log \pi_{\text{ref}}(y_3) \right)$$
+$$R_t = -\beta \left( \log \pi_{\theta}(y_t) - \log \pi_{\text{ref}}(y_t) \right) \quad (\text{for } t < 3)$$
+$$R_3 = r_{\psi} - \beta \left( \log \pi_{\theta}(y_3) - \log \pi_{\text{ref}}(y_3) \right)$$
 
 - **Token 1:**
   $$R_1 = -0.20 \times (-1.00 - (-1.50)) = -0.20 \times (+0.50) = \mathbf{-0.1000}$$
@@ -477,7 +477,7 @@ A simple decision policy evaluates two candidate tokens: winner $y_w$ and loser 
 The current model parameters are the unnormalized logits $\mathbf{z} = [z_w, z_l]^T = [0.0, 1.0]^T$.
 The frozen reference model has uniform logits $\mathbf{z}_{\text{ref}} = [0.5, 0.5]^T$.
 KL scale is $\beta = 1.0$, and learning rate is $\eta = 1.0$.
-1. Compute the probabilities under policy $\pi_{\boldsymbol{\theta}}$ and reference $\pi_{\text{ref}}$.
+1. Compute the probabilities under policy $\pi_{\theta}$ and reference $\pi_{\text{ref}}$.
 2. Compute the implicit rewards $\hat{r}(y_w), \hat{r}(y_l)$ and reward margin $\Delta r$.
 3. Compute the DPO loss $\mathcal{L}_{\text{DPO}}$.
 4. Evaluate the analytical parameter gradient $\nabla_{\mathbf{z}} \mathcal{L}_{\text{DPO}}$ and apply one gradient descent step $\mathbf{z} \leftarrow \mathbf{z} - \eta \nabla \mathcal{L}$. Verify that the preference inverts.
@@ -485,7 +485,7 @@ KL scale is $\beta = 1.0$, and learning rate is $\eta = 1.0$.
 **Solution:**
 
 #### Step 1: Probability Distributions
-1. **Policy $\pi_{\boldsymbol{\theta}}$ ($\mathbf{z} = [0.0, 1.0]$):**
+1. **Policy $\pi_{\theta}$ ($\mathbf{z} = [0.0, 1.0]$):**
    $$\exp(0.0) = 1.000000, \quad \exp(1.0) = 2.718282 \implies \text{Sum} = 3.718282$$
    $$\pi(y_w) = \frac{1.000000}{3.718282} \approx \mathbf{0.268941} \implies \log \pi(y_w) = \ln(0.268941) = \mathbf{-1.313262}$$
    $$\pi(y_l) = \frac{2.718282}{3.718282} \approx \mathbf{0.731059} \implies \log \pi(y_l) = \ln(0.731059) = \mathbf{-0.313262}$$
@@ -515,8 +515,8 @@ The gradient scaling weight is:
 $$w_{\text{grad}} = \sigma(-\Delta r) = \sigma(+1.000000) = 1 - 0.268941 = \mathbf{0.731059}$$
 
 Evaluating softmax derivatives w.r.t. logits $\mathbf{z}$:
-$$\nabla_{\mathbf{z}} \log \pi(y_w) = \mathbf{e}_w - \boldsymbol{\pi} = \begin{bmatrix} 1.0 - 0.268941 \\ 0.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} +0.731059 \\ -0.731059 \end{bmatrix}$$
-$$\nabla_{\mathbf{z}} \log \pi(y_l) = \mathbf{e}_l - \boldsymbol{\pi} = \begin{bmatrix} 0.0 - 0.268941 \\ 1.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} -0.268941 \\ +0.268941 \end{bmatrix}$$
+$$\nabla_{\mathbf{z}} \log \pi(y_w) = \mathbf{e}_w - \pi = \begin{bmatrix} 1.0 - 0.268941 \\ 0.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} +0.731059 \\ -0.731059 \end{bmatrix}$$
+$$\nabla_{\mathbf{z}} \log \pi(y_l) = \mathbf{e}_l - \pi = \begin{bmatrix} 0.0 - 0.268941 \\ 1.0 - 0.731059 \end{bmatrix} = \begin{bmatrix} -0.268941 \\ +0.268941 \end{bmatrix}$$
 $$\nabla_{\mathbf{z}} \log \pi(y_w) - \nabla_{\mathbf{z}} \log \pi(y_l) = \begin{bmatrix} 0.731059 - (-0.268941) \\ -0.731059 - 0.268941 \end{bmatrix} = \begin{bmatrix} +1.000000 \\ -1.000000 \end{bmatrix}$$
 
 Multiplying by $-w_{\text{grad}}$:

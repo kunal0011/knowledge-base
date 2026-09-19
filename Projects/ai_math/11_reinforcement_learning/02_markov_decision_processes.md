@@ -120,7 +120,7 @@ $\mathbf{d}^\pi$ is the normalized left-eigenvector of $\mathbf{P}^\pi$ associat
 In discounted continuing environments starting from initial distribution $S_0 \sim \rho_0(s)$, the discounted visitation frequency is:
 $$d^\pi(s) \equiv (1 - \gamma) \sum_{t=0}^\infty \gamma^t \mathbb{P}\left( S_t = s \mid S_0 \sim \rho_0, \pi \right)$$
 In vector notation:
-$$\mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top \sum_{t=0}^\infty \left( \gamma \mathbf{P}^\pi \right)^t = (1 - \gamma) \boldsymbol{\rho}_0^\top \left( \mathbf{I} - \gamma \mathbf{P}^\pi \right)^{-1}$$
+$$\mathbf{d}^\pi = (1 - \gamma) \rho_0^\top \sum_{t=0}^\infty \left( \gamma \mathbf{P}^\pi \right)^t = (1 - \gamma) \rho_0^\top \left( \mathbf{I} - \gamma \mathbf{P}^\pi \right)^{-1}$$
 
 ---
 
@@ -246,49 +246,49 @@ The solution is uniquely determined, computationally exact via matrix inversion 
 #### Derivation 11.2.2: The Discounted State Visitation Distribution & The Invariant Balance Equation
 
 ##### Problem Statement & Goal
-For an MDP under fixed policy $\pi$ with initial state distribution $\boldsymbol{\rho}_0 \in \Delta^{n-1}$, the normalized discounted state visitation distribution is defined by:
-$$d^\pi(s) \equiv (1 - \gamma) \sum_{t=0}^\infty \gamma^t \mathbb{P}\left( S_t = s \mid S_0 \sim \boldsymbol{\rho}_0, \, \pi \right)$$
+For an MDP under fixed policy $\pi$ with initial state distribution $\rho_0 \in \Delta^{n-1}$, the normalized discounted state visitation distribution is defined by:
+$$d^\pi(s) \equiv (1 - \gamma) \sum_{t=0}^\infty \gamma^t \mathbb{P}\left( S_t = s \mid S_0 \sim \rho_0, \, \pi \right)$$
 We prove that:
 1. $d^\pi(s)$ is a mathematically rigorous probability distribution: $d^\pi(s) \ge 0$ for all $s$ and $\sum_{s \in \mathcal{S}} d^\pi(s) = 1$.
-2. In compact matrix notation, $\mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$.
+2. In compact matrix notation, $\mathbf{d}^\pi = (1 - \gamma) \rho_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$.
 3. $d^\pi$ satisfies the fundamental discounted balance equation:
    $$d^\pi(s') = (1 - \gamma) \rho_0(s') + \gamma \sum_{s \in \mathcal{S}} d^\pi(s) \mathcal{P}^\pi(s' \mid s)$$
 
 ##### Explicit Assumptions
 1. Discrete state space $|\mathcal{S}| = n < \infty$.
-2. Initial state distribution $\boldsymbol{\rho}_0 = [\rho_0(s_1), \dots, \rho_0(s_n)]^\top$ satisfies $\rho_0(s) \ge 0$ and $\boldsymbol{\rho}_0^\top \mathbf{1} = \sum_{s} \rho_0(s) = 1$.
+2. Initial state distribution $\rho_0 = [\rho_0(s_1), \dots, \rho_0(s_n)]^\top$ satisfies $\rho_0(s) \ge 0$ and $\rho_0^\top \mathbf{1} = \sum_{s} \rho_0(s) = 1$.
 3. $\mathbf{P}^\pi$ is the induced row-stochastic transition matrix ($\mathbf{P}^\pi \ge \mathbf{0}$, $\mathbf{P}^\pi \mathbf{1} = \mathbf{1}$).
 4. Discount factor satisfies $\gamma \in [0, 1)$.
 
 ##### Underlying Intuition
-In ergodic un-discounted Markov chains, the stationary distribution satisfies $\mathbf{d} = \mathbf{d} \mathbf{P}$. In discounted reinforcement learning, discounting at rate $\gamma$ is mathematically isomorphic to an undiscounted process where at each time step, with probability $(1 - \gamma)$, the agent "dies" and restarts afresh from distribution $\boldsymbol{\rho}_0$. Thus, $d^\pi$ represents the exact equilibrium balance between exogenous initial restarts (weighted by $1 - \gamma$) and endogenous one-step transitions (weighted by $\gamma$).
+In ergodic un-discounted Markov chains, the stationary distribution satisfies $\mathbf{d} = \mathbf{d} \mathbf{P}$. In discounted reinforcement learning, discounting at rate $\gamma$ is mathematically isomorphic to an undiscounted process where at each time step, with probability $(1 - \gamma)$, the agent "dies" and restarts afresh from distribution $\rho_0$. Thus, $d^\pi$ represents the exact equilibrium balance between exogenous initial restarts (weighted by $1 - \gamma$) and endogenous one-step transitions (weighted by $\gamma$).
 
 ##### End-to-End Mathematical Derivation
 
 **Step 1: Expressing State Marginals in Vector Form**
-Let $\mathbf{p}_t^\top \in \mathbb{R}^{1 \times n}$ denote the row vector of marginal state probabilities at time step $t$, where the $i$-th entry is $\mathbb{P}(S_t = s_i \mid S_0 \sim \boldsymbol{\rho}_0, \pi)$.
+Let $\mathbf{p}_t^\top \in \mathbb{R}^{1 \times n}$ denote the row vector of marginal state probabilities at time step $t$, where the $i$-th entry is $\mathbb{P}(S_t = s_i \mid S_0 \sim \rho_0, \pi)$.
 At $t = 0$:
-$$\mathbf{p}_0^\top = \boldsymbol{\rho}_0^\top$$
+$$\mathbf{p}_0^\top = \rho_0^\top$$
 By the Chapman-Kolmogorov equations and policy induction:
-$$\mathbf{p}_1^\top = \mathbf{p}_0^\top \mathbf{P}^\pi = \boldsymbol{\rho}_0^\top \mathbf{P}^\pi$$
+$$\mathbf{p}_1^\top = \mathbf{p}_0^\top \mathbf{P}^\pi = \rho_0^\top \mathbf{P}^\pi$$
 By mathematical induction, for any $t \ge 0$:
-$$\mathbf{p}_t^\top = \boldsymbol{\rho}_0^\top (\mathbf{P}^\pi)^t$$
+$$\mathbf{p}_t^\top = \rho_0^\top (\mathbf{P}^\pi)^t$$
 
 **Step 2: Vector Representation of $d^\pi$**
 Assembling the discounted sum across all horizons $t \ge 0$:
-$$\mathbf{d}^\pi = (1 - \gamma) \sum_{t=0}^\infty \gamma^t \mathbf{p}_t^\top = (1 - \gamma) \boldsymbol{\rho}_0^\top \sum_{t=0}^\infty (\gamma \mathbf{P}^\pi)^t$$
+$$\mathbf{d}^\pi = (1 - \gamma) \sum_{t=0}^\infty \gamma^t \mathbf{p}_t^\top = (1 - \gamma) \rho_0^\top \sum_{t=0}^\infty (\gamma \mathbf{P}^\pi)^t$$
 From Derivation 11.2.1, the Neumann series $\sum_{t=0}^\infty (\gamma \mathbf{P}^\pi)^t$ converges unconditionally to $(\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$.
 Therefore:
-$$\mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$$
+$$\mathbf{d}^\pi = (1 - \gamma) \rho_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$$
 
 **Step 3: Proof of Non-Negativity**
-Because $\boldsymbol{\rho}_0 \ge \mathbf{0}$ and $\mathbf{P}^\pi \ge \mathbf{0}$, all powers $(\mathbf{P}^\pi)^t$ have purely non-negative elements. Since $\gamma \in [0, 1)$, the scalar factor $(1 - \gamma) \gamma^t > 0$ for all $t \ge 0$.
+Because $\rho_0 \ge \mathbf{0}$ and $\mathbf{P}^\pi \ge \mathbf{0}$, all powers $(\mathbf{P}^\pi)^t$ have purely non-negative elements. Since $\gamma \in [0, 1)$, the scalar factor $(1 - \gamma) \gamma^t > 0$ for all $t \ge 0$.
 The sum of non-negative elements is non-negative:
 $$d^\pi(s) \ge 0, \quad \forall s \in \mathcal{S}$$
 
 **Step 4: Proof of Total Probability Conservation ($\sum_s d^\pi(s) = 1$)**
 We evaluate the total probability mass by post-multiplying $\mathbf{d}^\pi$ by the all-ones vector $\mathbf{1}$:
-$$\mathbf{d}^\pi \mathbf{1} = (1 - \gamma) \boldsymbol{\rho}_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1} \mathbf{1}$$
+$$\mathbf{d}^\pi \mathbf{1} = (1 - \gamma) \rho_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1} \mathbf{1}$$
 Notice that because $\mathbf{P}^\pi$ is row-stochastic:
 $$\mathbf{P}^\pi \mathbf{1} = \mathbf{1}$$
 Consequently:
@@ -299,15 +299,15 @@ $$\mathbf{1} = (1 - \gamma) (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1} \mathbf{1}
 Dividing both sides by the non-zero scalar $(1 - \gamma)$:
 $$(\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1} \mathbf{1} = \frac{1}{1 - \gamma} \mathbf{1}$$
 Substitute this exact identity back into the probability sum:
-$$\mathbf{d}^\pi \mathbf{1} = (1 - \gamma) \boldsymbol{\rho}_0^\top \left[ \frac{1}{1 - \gamma} \mathbf{1} \right] = \boldsymbol{\rho}_0^\top \mathbf{1} = 1$$
-since $\boldsymbol{\rho}_0$ is a normalized probability distribution ($\boldsymbol{\rho}_0^\top \mathbf{1} = 1$).
+$$\mathbf{d}^\pi \mathbf{1} = (1 - \gamma) \rho_0^\top \left[ \frac{1}{1 - \gamma} \mathbf{1} \right] = \rho_0^\top \mathbf{1} = 1$$
+since $\rho_0$ is a normalized probability distribution ($\rho_0^\top \mathbf{1} = 1$).
 Thus, $\sum_{s \in \mathcal{S}} d^\pi(s) = 1$ strictly holds.
 
 **Step 5: Derivation of the Discounted Invariant Balance Equation**
-Post-multiply the vector equation $\mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$ by $(\mathbf{I} - \gamma \mathbf{P}^\pi)$:
-$$\mathbf{d}^\pi (\mathbf{I} - \gamma \mathbf{P}^\pi) = (1 - \gamma) \boldsymbol{\rho}_0^\top$$
+Post-multiply the vector equation $\mathbf{d}^\pi = (1 - \gamma) \rho_0^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$ by $(\mathbf{I} - \gamma \mathbf{P}^\pi)$:
+$$\mathbf{d}^\pi (\mathbf{I} - \gamma \mathbf{P}^\pi) = (1 - \gamma) \rho_0^\top$$
 Expand the matrix multiplication:
-$$\mathbf{d}^\pi - \gamma \mathbf{d}^\pi \mathbf{P}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top \implies \mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top + \gamma \mathbf{d}^\pi \mathbf{P}^\pi$$
+$$\mathbf{d}^\pi - \gamma \mathbf{d}^\pi \mathbf{P}^\pi = (1 - \gamma) \rho_0^\top \implies \mathbf{d}^\pi = (1 - \gamma) \rho_0^\top + \gamma \mathbf{d}^\pi \mathbf{P}^\pi$$
 Examining the $j$-th component corresponding to state $s' \in \mathcal{S}$:
 $$d^\pi(s') = (1 - \gamma) \rho_0(s') + \gamma \sum_{s \in \mathcal{S}} d^\pi(s) \mathcal{P}^\pi(s' \mid s)$$
 This proves the fundamental balance equation governing discounted state visitation in all policy evaluation and policy gradient theorems. $\blacksquare$
@@ -424,7 +424,7 @@ Let us compute an induced Markov Reward Process, trajectory return, and POMDP be
 | $\mathcal{A}$ | Action Set | 2 Actions | Choices $\{a_1, a_2\}$ available to the agent |
 | $\mathbf{P}_{a_1}, \mathbf{P}_{a_2}$ | Action Transition Matrices | $(3, 3)$ | State-to-state transition probabilities under specific actions |
 | $\mathbf{r}_{a_1}, \mathbf{r}_{a_2}$ | Action Reward Vectors | $(3,)$ | Expected immediate reward emitted in each state under each action |
-| $\boldsymbol{\pi}$ | Stochastic Policy | $(3, 2)$ | Action probabilities $\pi(a \mid s)$ for all state-action pairs |
+| $\pi$ | Stochastic Policy | $(3, 2)$ | Action probabilities $\pi(a \mid s)$ for all state-action pairs |
 | $\mathbf{P}^\pi$ | Induced Transition Matrix | $(3, 3)$ | Policy-weighted transition matrix $\sum_a \pi(a \mid s) \mathbf{P}_a$ |
 | $\mathbf{r}^\pi$ | Induced Reward Vector | $(3,)$ | Policy-weighted reward vector $\sum_a \pi(a \mid s) \mathbf{r}_a$ |
 | $\gamma$ | Discount Factor | Scalar | Value decay rate ($\gamma = 0.90$) |
@@ -642,17 +642,17 @@ $$\mathbf{V} = \frac{1}{13} \begin{bmatrix} 18 & 6 & 2 \\ 2 & 18 & 6 \\ 6 & 2 & 
 
 **Problem:**
 For the 3-state MRP of Illustration 3 ($\gamma = 0.50$, transition matrix $\mathbf{P}$), assume the agent always begins in state $S_1$, so the initial distribution is:
-$$\boldsymbol{\rho}_0 = \begin{bmatrix} 1.0 \\ 0.0 \\ 0.0 \end{bmatrix}$$
+$$\rho_0 = \begin{bmatrix} 1.0 \\ 0.0 \\ 0.0 \end{bmatrix}$$
 1. Calculate the exact normalized discounted state visitation distribution $\mathbf{d}^\pi = [d(S_1), d(S_2), d(S_3)]$.
 2. Verify that the entries sum to exactly $1.0000$.
 3. Verify that $\mathbf{d}^\pi$ satisfies the discounted balance equation $d^\pi(s') = (1 - \gamma)\rho_0(s') + \gamma \sum_s d^\pi(s) \mathcal{P}(s' \mid s)$ for all three states.
 
 **Solution:**
 
-**Step 1: Compute $\mathbf{d}^\pi = (1 - \gamma) \boldsymbol{\rho}_0^\top (\mathbf{I} - \gamma \mathbf{P})^{-1}$**
+**Step 1: Compute $\mathbf{d}^\pi = (1 - \gamma) \rho_0^\top (\mathbf{I} - \gamma \mathbf{P})^{-1}$**
 From Illustration 3, the inverse operator is:
 $$(\mathbf{I} - \gamma \mathbf{P})^{-1} = \frac{1}{13} \begin{bmatrix} 18 & 6 & 2 \\ 2 & 18 & 6 \\ 6 & 2 & 18 \end{bmatrix}$$
-Since $\boldsymbol{\rho}_0^\top = [1, 0, 0]$ and $1 - \gamma = 1 - 0.5 = \frac{1}{2}$:
+Since $\rho_0^\top = [1, 0, 0]$ and $1 - \gamma = 1 - 0.5 = \frac{1}{2}$:
 $$\mathbf{d}^\pi = \frac{1}{2} \begin{bmatrix} 1 & 0 & 0 \end{bmatrix} \left( \frac{1}{13} \begin{bmatrix} 18 & 6 & 2 \\ 2 & 18 & 6 \\ 6 & 2 & 18 \end{bmatrix} \right) = \frac{1}{26} \begin{bmatrix} 18 & 6 & 2 \end{bmatrix} = \mathbf{\begin{bmatrix} \frac{9}{13} & \frac{3}{13} & \frac{1}{13} \end{bmatrix}}$$
 In decimal approximations:
 $$\mathbf{d}^\pi \approx \begin{bmatrix} 0.6923 & 0.2308 & 0.0769 \end{bmatrix}$$

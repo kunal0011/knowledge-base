@@ -5,10 +5,10 @@
 ## 1. Intuition & 101 Motivation
 
 ### The Game-Theoretic Paradigm Shift
-Prior to 2014, generative modeling was dominated by explicit density estimation: maximizing $\log p_{\boldsymbol{\theta}}(\mathbf{x})$ directly or via variational lower bounds ($\text{ELBO}$).
+Prior to 2014, generative modeling was dominated by explicit density estimation: maximizing $\log p_{\theta}(\mathbf{x})$ directly or via variational lower bounds ($\text{ELBO}$).
 In 2014, Ian Goodfellow introduced **Generative Adversarial Networks (GANs)**, abandoning explicit likelihoods in favor of a two-player zero-sum game:
-1. **The Generator ($G_{\boldsymbol{\theta}}$):** Takes standard normal noise $\mathbf{z} \sim p_{\mathbf{z}}$ and maps it to the data space $\mathbf{x}_{\text{fake}} = G_{\boldsymbol{\theta}}(\mathbf{z})$. Its goal is to fool the discriminator.
-2. **The Discriminator ($D_{\boldsymbol{\phi}}$):** Takes a sample $\mathbf{x}$ (either real from $p_{\text{data}}$ or fake from $p_g$) and outputs a scalar probability $D_{\boldsymbol{\phi}}(\mathbf{x}) \in [0, 1]$ indicating whether $\mathbf{x}$ is a genuine data point.
+1. **The Generator ($G_{\theta}$):** Takes standard normal noise $\mathbf{z} \sim p_{\mathbf{z}}$ and maps it to the data space $\mathbf{x}_{\text{fake}} = G_{\theta}(\mathbf{z})$. Its goal is to fool the discriminator.
+2. **The Discriminator ($D_{\phi}$):** Takes a sample $\mathbf{x}$ (either real from $p_{\text{data}}$ or fake from $p_g$) and outputs a scalar probability $D_{\phi}(\mathbf{x}) \in [0, 1]$ indicating whether $\mathbf{x}$ is a genuine data point.
 
 ```
                     THE ADVERSARIAL TRAINING LOOP
@@ -97,8 +97,8 @@ If the supports of $p_{\text{data}}$ and $p_g$ are submanifolds of $\mathbb{R}^D
 $$\operatorname{supp}(p_{\text{data}}) \cap \operatorname{supp}(p_g) = \emptyset \quad (\text{measure zero intersection})$$
 When supports do not overlap:
 $$D_{\text{JS}}\left( p_{\text{data}} \,\|\, p_g \right) = \log 2 \quad (\text{a constant!})$$
-Because $D_{\text{JS}}$ is locally constant, its gradient with respect to generator parameters $\boldsymbol{\theta}$ is:
-$$\nabla_{\boldsymbol{\theta}} D_{\text{JS}}(p_{\text{data}} \,\|\, p_{g_{\boldsymbol{\theta}}}) = \mathbf{0}$$
+Because $D_{\text{JS}}$ is locally constant, its gradient with respect to generator parameters $\theta$ is:
+$$\nabla_{\theta} D_{\text{JS}}(p_{\text{data}} \,\|\, p_{g_{\theta}}) = \mathbf{0}$$
 
 As soon as the discriminator learns to separate the two disjoint manifolds ($D(\mathbf{x}) = 1$ on real data, $D(G(\mathbf{z})) = 0$ on fake data), **the generator receives exactly zero gradient!**
 
@@ -336,7 +336,7 @@ In WGAN-GP, the gradient of the critic $\nabla_{\mathbf{x}} D(\mathbf{x})$ defin
 1. Because $\|\nabla_{\mathbf{x}} D(\mathbf{x})\|_2 \approx 1$, the gradient vectors have unit length everywhere between the generated and data manifolds.
 2. The vector field points directly along the geodesic from $\tilde{\mathbf{x}}$ toward the nearest data point $\mathbf{x}$.
 3. When updating the generator:
-   $$\nabla_{\boldsymbol{\theta}} \mathcal{L}_G = -\nabla_{\boldsymbol{\theta}} D(G(\mathbf{z})) = -\underbrace{\nabla_{\mathbf{x}} D(G(\mathbf{z}))}_{\text{Unit Direction Vector}} \cdot \nabla_{\boldsymbol{\theta}} G(\mathbf{z})$$
+   $$\nabla_{\theta} \mathcal{L}_G = -\nabla_{\theta} D(G(\mathbf{z})) = -\underbrace{\nabla_{\mathbf{x}} D(G(\mathbf{z}))}_{\text{Unit Direction Vector}} \cdot \nabla_{\theta} G(\mathbf{z})$$
    The generator is gently guided along the shortest Euclidean path toward the real data manifold, with constant non-decaying force!
 
 ```
@@ -682,7 +682,7 @@ For any $\theta \in [-2.0, +2.0]$:
 $$|-2.0 - \theta| = \theta + 2.0, \qquad |+2.0 - \theta| = 2.0 - \theta$$
 $$W_1(p_{\text{data}}, \delta_\theta) = 0.50(\theta + 2.0) + 0.50(2.0 - \theta) = 0.50\theta + 1.00 + 1.00 - 0.50\theta = \mathbf{2.000000}$$
 Notice that across the entire interval $\theta \in [-2.0, +2.0]$, $W_1$ is constant ($2.0$).
-If the generator uses a latent noise distribution $\mathbf{z} \sim \mathcal{U}[-1, 1]$ with $G_{\boldsymbol{\theta}}(z) = \mu + s z$:
+If the generator uses a latent noise distribution $\mathbf{z} \sim \mathcal{U}[-1, 1]$ with $G_{\theta}(z) = \mu + s z$:
 - Mode collapse occurs if $s = 0$ (single point $\mu$).
 - The Wasserstein distance for spread $s$ is:
   $$W_1(s) = \int_{-1}^1 \left( 0.5 |-2 - (\mu + sz)| + 0.5 |2 - (\mu + sz)| \right) \frac{1}{2} dz$$

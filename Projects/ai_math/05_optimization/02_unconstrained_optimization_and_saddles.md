@@ -182,25 +182,25 @@ $$\mathbf{T_{\text{escape}} \approx \frac{1}{\eta |\lambda_j|} \ln\left( \frac{R
 Foret et al. (2021) designed SAM to explicitly bias gradient-based training toward flat minima that generalize better.
 
 #### 1. The Min-Max Robust Optimization Problem
-$$\min_{\theta} \mathcal{L}^{\text{SAM}}(\theta) \quad \text{where} \quad \mathcal{L}^{\text{SAM}}(\theta) = \max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \mathcal{L}(\theta + \boldsymbol{\epsilon})$$
+$$\min_{\theta} \mathcal{L}^{\text{SAM}}(\theta) \quad \text{where} \quad \mathcal{L}^{\text{SAM}}(\theta) = \max_{\|\epsilon\|_2 \le \rho} \mathcal{L}(\theta + \epsilon)$$
 where $\rho > 0$ defines the neighborhood perturbation ball.
 
 #### 2. Solving the Inner Maximization via Taylor Expansion
 Approximate the perturbed loss with a first-order Taylor expansion around $\theta$:
-$$\mathcal{L}(\theta + \boldsymbol{\epsilon}) \approx \mathcal{L}(\theta) + \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta)$$
+$$\mathcal{L}(\theta + \epsilon) \approx \mathcal{L}(\theta) + \epsilon^T \nabla_\theta \mathcal{L}(\theta)$$
 The inner maximization problem becomes:
-$$\max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \left[ \mathcal{L}(\theta) + \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta) \right] \iff \max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \boldsymbol{\epsilon}^T \nabla_\theta \mathcal{L}(\theta)$$
+$$\max_{\|\epsilon\|_2 \le \rho} \left[ \mathcal{L}(\theta) + \epsilon^T \nabla_\theta \mathcal{L}(\theta) \right] \iff \max_{\|\epsilon\|_2 \le \rho} \epsilon^T \nabla_\theta \mathcal{L}(\theta)$$
 
-By the Cauchy-Schwarz inequality, $\boldsymbol{\epsilon}^T \nabla \mathcal{L} \le \|\boldsymbol{\epsilon}\|_2 \|\nabla \mathcal{L}\|_2 \le \rho \|\nabla \mathcal{L}\|_2$, with equality achieved when $\boldsymbol{\epsilon}$ is collinear with the gradient:
-$$\mathbf{\boldsymbol{\epsilon}^*(\theta) = \rho \frac{\nabla_\theta \mathcal{L}(\theta)}{\|\nabla_\theta \mathcal{L}(\theta)\|_2}}$$
+By the Cauchy-Schwarz inequality, $\epsilon^T \nabla \mathcal{L} \le \|\epsilon\|_2 \|\nabla \mathcal{L}\|_2 \le \rho \|\nabla \mathcal{L}\|_2$, with equality achieved when $\epsilon$ is collinear with the gradient:
+$$\mathbf{\epsilon^*(\theta) = \rho \frac{\nabla_\theta \mathcal{L}(\theta)}{\|\nabla_\theta \mathcal{L}(\theta)\|_2}}$$
 
 #### 3. Evaluating the SAM Gradient
-Substitute $\boldsymbol{\epsilon}^*(\theta)$ back into the objective:
-$$\mathcal{L}^{\text{SAM}}(\theta) \approx \mathcal{L}(\theta + \boldsymbol{\epsilon}^*(\theta))$$
+Substitute $\epsilon^*(\theta)$ back into the objective:
+$$\mathcal{L}^{\text{SAM}}(\theta) \approx \mathcal{L}(\theta + \epsilon^*(\theta))$$
 Differentiating with respect to $\theta$ using the chain rule:
-$$\nabla_\theta \mathcal{L}^{\text{SAM}}(\theta) \approx \left. \nabla_\theta \mathcal{L}(w) \right|_{w = \theta + \boldsymbol{\epsilon}^*(\theta)}$$
+$$\nabla_\theta \mathcal{L}^{\text{SAM}}(\theta) \approx \left. \nabla_\theta \mathcal{L}(w) \right|_{w = \theta + \epsilon^*(\theta)}$$
 Expanding this perturbed gradient via second-order Taylor series:
-$$\nabla_\theta \mathcal{L}(\theta + \boldsymbol{\epsilon}^*(\theta)) \approx \nabla_\theta \mathcal{L}(\theta) + \nabla^2 \mathcal{L}(\theta) \boldsymbol{\epsilon}^*(\theta) = \mathbf{\nabla_\theta \mathcal{L}(\theta) + \frac{\rho}{\|\nabla_\theta \mathcal{L}(\theta)\|_2} \nabla^2 \mathcal{L}(\theta) \nabla_\theta \mathcal{L}(\theta)}$$
+$$\nabla_\theta \mathcal{L}(\theta + \epsilon^*(\theta)) \approx \nabla_\theta \mathcal{L}(\theta) + \nabla^2 \mathcal{L}(\theta) \epsilon^*(\theta) = \mathbf{\nabla_\theta \mathcal{L}(\theta) + \frac{\rho}{\|\nabla_\theta \mathcal{L}(\theta)\|_2} \nabla^2 \mathcal{L}(\theta) \nabla_\theta \mathcal{L}(\theta)}$$
 
 #### 4. The Implicit Hessian Regularizer
 Notice the second term:

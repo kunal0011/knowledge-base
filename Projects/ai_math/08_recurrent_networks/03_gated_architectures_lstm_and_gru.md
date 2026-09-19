@@ -143,52 +143,52 @@ In this derivation, we derive the exact, complete analytical gradient equations 
 
 #### Step 1: Upstream Gradient Ingestion
 At time step $t$, the LSTM receives two gradient signals:
-1. $\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$ (from current loss $\ell_t$ and future recurrence $\mathbf{h}_{t+1}$),
-2. $\boldsymbol{\delta}_{t+1}^c \equiv \frac{\partial \mathcal{L}_{\text{future}}}{\partial \mathbf{c}_t} \in \mathbb{R}^{d_h}$ (from future cell state $\mathbf{c}_{t+1}$).
+1. $\delta_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$ (from current loss $\ell_t$ and future recurrence $\mathbf{h}_{t+1}$),
+2. $\delta_{t+1}^c \equiv \frac{\partial \mathcal{L}_{\text{future}}}{\partial \mathbf{c}_t} \in \mathbb{R}^{d_h}$ (from future cell state $\mathbf{c}_{t+1}$).
 
 #### Step 2: Total Cell State Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t}$
 The current cell state $\mathbf{c}_t$ affects the loss through two paths:
 1. Immediately through the hidden state $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$,
 2. Into the future through $\mathbf{c}_{t+1}$.
 Applying the multivariable chain rule:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \boldsymbol{\delta}_{t+1}^c + \boldsymbol{\delta}_t^h \odot \mathbf{o}_t \odot \left(1 - \tanh^2(\mathbf{c}_t)\right)$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} = \delta_{t+1}^c + \delta_t^h \odot \mathbf{o}_t \odot \left(1 - \tanh^2(\mathbf{c}_t)\right)$$
 
 #### Step 3: Gate Sensitivities and Pre-Activation Deltas
 Using the forward equations:
 $$\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t), \qquad \mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$$
 
 1. **Output Gate Gradient:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} = \boldsymbol{\delta}_t^h \odot \tanh(\mathbf{c}_t)$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} = \delta_t^h \odot \tanh(\mathbf{c}_t)$$
    Since $\mathbf{o}_t = \sigma(\mathbf{a}_o)$, where $\sigma'(z) = \sigma(z)(1 - \sigma(z))$:
-   $$\boldsymbol{\delta}_t^{a_o} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_o} = \frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t) = \boldsymbol{\delta}_t^h \odot \tanh(\mathbf{c}_t) \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t)$$
+   $$\delta_t^{a_o} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_o} = \frac{\partial \mathcal{L}}{\partial \mathbf{o}_t} \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t) = \delta_t^h \odot \tanh(\mathbf{c}_t) \odot \mathbf{o}_t \odot (1 - \mathbf{o}_t)$$
 
 2. **Candidate Cell State Gradient:**
    $$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{c}}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{i}_t$$
    Since $\tilde{\mathbf{c}}_t = \tanh(\mathbf{a}_c)$, where $\tanh'(z) = 1 - \tanh^2(z)$:
-   $$\boldsymbol{\delta}_t^{a_c} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_c} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{c}}_t} \odot \left(1 - \tilde{\mathbf{c}}_t^2\right) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{i}_t \odot \left(1 - \tilde{\mathbf{c}}_t^2\right)$$
+   $$\delta_t^{a_c} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_c} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{c}}_t} \odot \left(1 - \tilde{\mathbf{c}}_t^2\right) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{i}_t \odot \left(1 - \tilde{\mathbf{c}}_t^2\right)$$
 
 3. **Input Gate Gradient:**
    $$\frac{\partial \mathcal{L}}{\partial \mathbf{i}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \tilde{\mathbf{c}}_t$$
    Since $\mathbf{i}_t = \sigma(\mathbf{a}_i)$:
-   $$\boldsymbol{\delta}_t^{a_i} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_i} = \frac{\partial \mathcal{L}}{\partial \mathbf{i}_t} \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \tilde{\mathbf{c}}_t \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t)$$
+   $$\delta_t^{a_i} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_i} = \frac{\partial \mathcal{L}}{\partial \mathbf{i}_t} \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \tilde{\mathbf{c}}_t \odot \mathbf{i}_t \odot (1 - \mathbf{i}_t)$$
 
 4. **Forget Gate Gradient:**
    $$\frac{\partial \mathcal{L}}{\partial \mathbf{f}_t} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{c}_{t-1}$$
    Since $\mathbf{f}_t = \sigma(\mathbf{a}_f)$:
-   $$\boldsymbol{\delta}_t^{a_f} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_f} = \frac{\partial \mathcal{L}}{\partial \mathbf{f}_t} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)$$
+   $$\delta_t^{a_f} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_f} = \frac{\partial \mathcal{L}}{\partial \mathbf{f}_t} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t) = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{c}_{t-1} \odot \mathbf{f}_t \odot (1 - \mathbf{f}_t)$$
 
 #### Step 4: Backward Recurrence to Previous States
 1. **To Previous Cell State $\mathbf{c}_{t-1}$ (The CEC Highway):**
    $$\frac{\partial \mathcal{L}}{\partial \mathbf{c}_{t-1}} = \frac{\partial \mathcal{L}}{\partial \mathbf{c}_t} \odot \mathbf{f}_t$$
 2. **To Previous Hidden State $\mathbf{h}_{t-1}$ and Input $\mathbf{x}_t$:**
-   Stack all four pre-activation deltas into $\boldsymbol{\delta}_t^{\text{all}} = [\boldsymbol{\delta}_t^{a_i}; \, \boldsymbol{\delta}_t^{a_f}; \, \boldsymbol{\delta}_t^{a_c}; \, \boldsymbol{\delta}_t^{a_o}] \in \mathbb{R}^{4d_h}$.
+   Stack all four pre-activation deltas into $\delta_t^{\text{all}} = [\delta_t^{a_i}; \, \delta_t^{a_f}; \, \delta_t^{a_c}; \, \delta_t^{a_o}] \in \mathbb{R}^{4d_h}$.
    Recall the concatenated forward projection: $\mathbf{a}_{\text{all}} = \mathbf{W}_{\text{all}} \mathbf{v}_t + \mathbf{b}_{\text{all}}$, where $\mathbf{v}_t = [\mathbf{h}_{t-1}; \, \mathbf{x}_t]$.
    Then:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} = \mathbf{W}_{\text{all}}^T \boldsymbol{\delta}_t^{\text{all}} \in \mathbb{R}^{d_h + d_x}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} = \mathbf{W}_{\text{all}}^T \delta_t^{\text{all}} \in \mathbb{R}^{d_h + d_x}$$
    Splitting the vector:
    $$\frac{\partial \mathcal{L}_{\text{recurrent}}}{\partial \mathbf{h}_{t-1}} = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} \right)_{1:d_h}, \qquad \frac{\partial \mathcal{L}}{\partial \mathbf{x}_t} = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{v}_t} \right)_{d_h+1 : d_h+d_x}$$
 3. **Parameter Gradient Accumulation:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{\text{all}}} = \sum_{t=1}^T \boldsymbol{\delta}_t^{\text{all}} \, \mathbf{v}_t^T \in \mathbb{R}^{4d_h \times (d_h + d_x)}, \qquad \frac{\partial \mathcal{L}}{\partial \mathbf{b}_{\text{all}}} = \sum_{t=1}^T \boldsymbol{\delta}_t^{\text{all}} \in \mathbb{R}^{4d_h}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{\text{all}}} = \sum_{t=1}^T \delta_t^{\text{all}} \, \mathbf{v}_t^T \in \mathbb{R}^{4d_h \times (d_h + d_x)}, \qquad \frac{\partial \mathcal{L}}{\partial \mathbf{b}_{\text{all}}} = \sum_{t=1}^T \delta_t^{\text{all}} \in \mathbb{R}^{4d_h}$$
 This completes the exact, closed-form BPTT derivation for LSTM cells. $\blacksquare$
 
 ---
@@ -198,44 +198,44 @@ This completes the exact, closed-form BPTT derivation for LSTM cells. $\blacksqu
 In this derivation, we derive the exact BPTT gradient equations for the Gated Recurrent Unit (GRU).
 
 #### Step 1: Upstream Gradient and Intermediate Derivatives
-Given upstream gradient $\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$.
+Given upstream gradient $\delta_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \in \mathbb{R}^{d_h}$.
 From the GRU update equation:
 $$\mathbf{h}_t = (1 - \mathbf{z}_t) \odot \mathbf{h}_{t-1} + \mathbf{z}_t \odot \tilde{\mathbf{h}}_t$$
 
 Taking partial derivatives:
 1. **Candidate Hidden State:**
-   $$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} = \boldsymbol{\delta}_t^h \odot \mathbf{z}_t$$
+   $$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} = \delta_t^h \odot \mathbf{z}_t$$
 2. **Update Gate:**
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} = \boldsymbol{\delta}_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1})$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} = \delta_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1})$$
 
 #### Step 2: Pre-Activation Deltas for Candidate and Update Gate
 1. **Candidate Pre-activation $\mathbf{a}_h$:**
    Since $\tilde{\mathbf{h}}_t = \tanh(\mathbf{a}_h)$:
-   $$\boldsymbol{\delta}_t^{a_h} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_h} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} \odot (1 - \tilde{\mathbf{h}}_t^2) = \boldsymbol{\delta}_t^h \odot \mathbf{z}_t \odot (1 - \tilde{\mathbf{h}}_t^2)$$
+   $$\delta_t^{a_h} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_h} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{h}}_t} \odot (1 - \tilde{\mathbf{h}}_t^2) = \delta_t^h \odot \mathbf{z}_t \odot (1 - \tilde{\mathbf{h}}_t^2)$$
 
 2. **Update Gate Pre-activation $\mathbf{a}_z$:**
    Since $\mathbf{z}_t = \sigma(\mathbf{a}_z)$:
-   $$\boldsymbol{\delta}_t^{a_z} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_z} = \frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t) = \boldsymbol{\delta}_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1}) \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t)$$
+   $$\delta_t^{a_z} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_z} = \frac{\partial \mathcal{L}}{\partial \mathbf{z}_t} \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t) = \delta_t^h \odot (\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1}) \odot \mathbf{z}_t \odot (1 - \mathbf{z}_t)$$
 
 #### Step 3: Backpropagation Through the Reset Gate
 The candidate pre-activation is $\mathbf{a}_h = \mathbf{W}_{hh} (\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{W}_{xh} \mathbf{x}_t + \mathbf{b}_h$.
 Differentiating with respect to the gated recurrent activation $\tilde{\mathbf{r}}_t \equiv \mathbf{r}_t \odot \mathbf{h}_{t-1}$:
-$$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h}$$
+$$\frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{W}_{hh}^T \delta_t^{a_h}$$
 
 Now differentiate with respect to the reset gate $\mathbf{r}_t$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} \odot \mathbf{h}_{t-1} = \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) \odot \mathbf{h}_{t-1}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} = \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} \odot \mathbf{h}_{t-1} = \left( \mathbf{W}_{hh}^T \delta_t^{a_h} \right) \odot \mathbf{h}_{t-1}$$
 Since $\mathbf{r}_t = \sigma(\mathbf{a}_r)$:
-$$\boldsymbol{\delta}_t^{a_r} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_r} = \frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t) = \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) \odot \mathbf{h}_{t-1} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t)$$
+$$\delta_t^{a_r} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_r} = \frac{\partial \mathcal{L}}{\partial \mathbf{r}_t} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t) = \left( \mathbf{W}_{hh}^T \delta_t^{a_h} \right) \odot \mathbf{h}_{t-1} \odot \mathbf{r}_t \odot (1 - \mathbf{r}_t)$$
 
 #### Step 4: Total Recurrent Gradient w.r.t. $\mathbf{h}_{t-1}$
 The previous hidden state $\mathbf{h}_{t-1}$ influences the loss along three distinct pathways:
-1. Directly through the linear interpolation shortcut: $(1 - \mathbf{z}_t) \odot \boldsymbol{\delta}_t^h$
-2. Through the gated candidate state: $\mathbf{r}_t \odot \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{r}_t \odot (\mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h})$
-3. Through the gate projections $[\mathbf{W}_{zr}; \, \mathbf{W}_{rr}]^T [\boldsymbol{\delta}_t^{a_z}; \, \boldsymbol{\delta}_t^{a_r}]$
+1. Directly through the linear interpolation shortcut: $(1 - \mathbf{z}_t) \odot \delta_t^h$
+2. Through the gated candidate state: $\mathbf{r}_t \odot \frac{\partial \mathcal{L}}{\partial \tilde{\mathbf{r}}_t} = \mathbf{r}_t \odot (\mathbf{W}_{hh}^T \delta_t^{a_h})$
+3. Through the gate projections $[\mathbf{W}_{zr}; \, \mathbf{W}_{rr}]^T [\delta_t^{a_z}; \, \delta_t^{a_r}]$
 
 Summing all contributions:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_{t-1}} = \boldsymbol{\delta}_t^h \odot (1 - \mathbf{z}_t) + \mathbf{r}_t \odot \left( \mathbf{W}_{hh}^T \boldsymbol{\delta}_t^{a_h} \right) + \mathbf{W}_{z, h}^T \boldsymbol{\delta}_t^{a_z} + \mathbf{W}_{r, h}^T \boldsymbol{\delta}_t^{a_r}$$
-When $\mathbf{z}_t \to \mathbf{0}$, the term $\boldsymbol{\delta}_t^h \odot (1 - \mathbf{z}_t) \to \boldsymbol{\delta}_t^h$, guaranteeing that the gradient bypasses all non-linearities and matrix weights unimpeded. $\blacksquare$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_{t-1}} = \delta_t^h \odot (1 - \mathbf{z}_t) + \mathbf{r}_t \odot \left( \mathbf{W}_{hh}^T \delta_t^{a_h} \right) + \mathbf{W}_{z, h}^T \delta_t^{a_z} + \mathbf{W}_{r, h}^T \delta_t^{a_r}$$
+When $\mathbf{z}_t \to \mathbf{0}$, the term $\delta_t^h \odot (1 - \mathbf{z}_t) \to \delta_t^h$, guaranteeing that the gradient bypasses all non-linearities and matrix weights unimpeded. $\blacksquare$
 
 ---
 

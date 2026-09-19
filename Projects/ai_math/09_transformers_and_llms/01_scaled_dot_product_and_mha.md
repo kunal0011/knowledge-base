@@ -229,20 +229,20 @@ where for each head $i \in \{1, \dots, h\}$:
 $$\mathbf{Q}_i = \mathbf{X} \mathbf{W}_i^Q, \quad \mathbf{K}_i = \mathbf{X} \mathbf{W}_i^K, \quad \mathbf{V}_i = \mathbf{X} \mathbf{W}_i^V$$
 $$\mathbf{S}_i = \frac{1}{\sqrt{d_k}} \mathbf{Q}_i \mathbf{K}_i^T, \quad \mathbf{A}_i = \operatorname{softmax}(\mathbf{S}_i), \quad \mathbf{O}_i = \mathbf{A}_i \mathbf{V}_i$$
 
-Given upstream gradient $\boldsymbol{\Delta}^Y = \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} \in \mathbb{R}^{T \times d_{\text{model}}}$:
+Given upstream gradient $\Delta^Y = \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} \in \mathbb{R}^{T \times d_{\text{model}}}$:
 
 1. **Output Projection Matrix Gradient:**
    The differential of $\mathbf{Y}$ with respect to $\mathbf{W}^O$ is $d\mathbf{Y} = \mathbf{H} \, d\mathbf{W}^O$.
    The variation of loss is:
-   $$d\mathcal{L} = \operatorname{tr}\left( (\boldsymbol{\Delta}^Y)^T d\mathbf{Y} \right) = \operatorname{tr}\left( (\boldsymbol{\Delta}^Y)^T \mathbf{H} \, d\mathbf{W}^O \right) = \operatorname{tr}\left( (\mathbf{H}^T \boldsymbol{\Delta}^Y)^T d\mathbf{W}^O \right)$$
+   $$d\mathcal{L} = \operatorname{tr}\left( (\Delta^Y)^T d\mathbf{Y} \right) = \operatorname{tr}\left( (\Delta^Y)^T \mathbf{H} \, d\mathbf{W}^O \right) = \operatorname{tr}\left( (\mathbf{H}^T \Delta^Y)^T d\mathbf{W}^O \right)$$
    Therefore:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \boldsymbol{\Delta}^Y \in \mathbb{R}^{h d_v \times d_{\text{model}}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \Delta^Y \in \mathbb{R}^{h d_v \times d_{\text{model}}}$$
 
 2. **Upstream Gradient Partitioning Across Heads:**
    The sensitivity w.r.t. the concatenated representation $\mathbf{H}$ is:
-   $$\boldsymbol{\Delta}^H = \frac{\partial \mathcal{L}}{\partial \mathbf{H}} = \boldsymbol{\Delta}^Y (\mathbf{W}^O)^T \in \mathbb{R}^{T \times h d_v}$$
-   Partitioning $\boldsymbol{\Delta}^H$ into $h$ block columns of width $d_v$:
-   $$\boldsymbol{\Delta}^H = [\boldsymbol{\Delta}^{O_1}, \boldsymbol{\Delta}^{O_2}, \dots, \boldsymbol{\Delta}^{O_h}], \quad \text{where } \boldsymbol{\Delta}^{O_i} \in \mathbb{R}^{T \times d_v}$$
+   $$\Delta^H = \frac{\partial \mathcal{L}}{\partial \mathbf{H}} = \Delta^Y (\mathbf{W}^O)^T \in \mathbb{R}^{T \times h d_v}$$
+   Partitioning $\Delta^H$ into $h$ block columns of width $d_v$:
+   $$\Delta^H = [\Delta^{O_1}, \Delta^{O_2}, \dots, \Delta^{O_h}], \quad \text{where } \Delta^{O_i} \in \mathbb{R}^{T \times d_v}$$
 
 3. **Adjoints for Projection Matrices $\mathbf{W}_i^Q, \mathbf{W}_i^K, \mathbf{W}_i^V$:**
    Applying the chain rule through the linear maps $\mathbf{Q}_i = \mathbf{X} \mathbf{W}_i^Q$, $\mathbf{K}_i = \mathbf{X} \mathbf{W}_i^K$, $\mathbf{V}_i = \mathbf{X} \mathbf{W}_i^V$:
@@ -719,7 +719,7 @@ $$\mathbf{W}^O = \begin{bmatrix}
 0.0 & 0.5 & 0.0 & -0.5
 \end{bmatrix} \in \mathbb{R}^{4 \times 4}$$
 1. Form concatenated matrix $\mathbf{H} = [\mathbf{O}_1, \mathbf{O}_2] \in \mathbb{R}^{2 \times 4}$ and evaluate layer output $\mathbf{Y} = \mathbf{H} \mathbf{W}^O$.
-2. Given upstream loss gradient $\boldsymbol{\Delta}^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix} \in \mathbb{R}^{2 \times 4}$, compute projection weight gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O}$ and partition the backpropagated sensitivity $\boldsymbol{\Delta}^H$ into individual head error matrices $\boldsymbol{\Delta}^{O_1}$ and $\boldsymbol{\Delta}^{O_2}$.
+2. Given upstream loss gradient $\Delta^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix} \in \mathbb{R}^{2 \times 4}$, compute projection weight gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O}$ and partition the backpropagated sensitivity $\Delta^H$ into individual head error matrices $\Delta^{O_1}$ and $\Delta^{O_2}$.
 
 **Solution:**
 
@@ -753,14 +753,14 @@ $$\mathbf{W}^O = \begin{bmatrix}
 
 #### Step 2: Backward Sensitivity and Adjoint Splitting
 
-1. **Projection Weight Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \boldsymbol{\Delta}^Y$:**
+1. **Projection Weight Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{W}^O} = \mathbf{H}^T \Delta^Y$:**
    $$\mathbf{H}^T = \begin{bmatrix}
    1.500000 & 2.832576 \\
    1.500000 & 0.167424 \\
    0.500000 & 1.000000 \\
    2.000000 & 1.000000
    \end{bmatrix}$$
-   Multiplying by $\boldsymbol{\Delta}^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix}$:
+   Multiplying by $\Delta^Y = \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 2.0 \end{bmatrix}$:
    - Column 1: $\mathbf{H}^T [1.0, 0.0]^T = [1.500000, 1.500000, 0.500000, 2.000000]^T$
    - Column 2: $\mathbf{H}^T [0.0, 2.0]^T = [5.665152, 0.334848, 2.000000, 2.000000]^T$
    - Column 3: $\mathbf{H}^T [1.0, 0.0]^T = [1.500000, 1.500000, 0.500000, 2.000000]^T$
@@ -773,7 +773,7 @@ $$\mathbf{W}^O = \begin{bmatrix}
    \mathbf{2.000000} & \mathbf{2.000000} & \mathbf{2.000000} & \mathbf{2.000000}
    \end{bmatrix}$$
 
-2. **Full Concatenated Sensitivity $\boldsymbol{\Delta}^H = \boldsymbol{\Delta}^Y (\mathbf{W}^O)^T$:**
+2. **Full Concatenated Sensitivity $\Delta^H = \Delta^Y (\mathbf{W}^O)^T$:**
    $$(\mathbf{W}^O)^T = \begin{bmatrix}
    0.5 & 0.0 & 0.5 & 0.0 \\
    0.0 & 0.5 & 0.0 & 0.5 \\
@@ -783,12 +783,12 @@ $$\mathbf{W}^O = \begin{bmatrix}
    - Row 1: $[1.0, 0.0, 1.0, 0.0] (\mathbf{W}^O)^T = [0.5 + 0.5, 0.0, 0.5 - 0.5, 0.0] = [\mathbf{1.0}, \mathbf{0.0}, \mathbf{0.0}, \mathbf{0.0}]$
    - Row 2: $[0.0, 2.0, 0.0, 2.0] (\mathbf{W}^O)^T = [0.0, 1.0 + 1.0, 0.0, 1.0 - 1.0] = [\mathbf{0.0}, \mathbf{2.0}, \mathbf{0.0}, \mathbf{0.0}]$
 
-   $$\boldsymbol{\Delta}^H = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 0.0 \end{bmatrix}$$
+   $$\Delta^H = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 2.0 & 0.0 & 0.0 \end{bmatrix}$$
 
 3. **Partitioning into Head Sensitivities:**
    Extracting the first 2 columns for Head 1 and the last 2 columns for Head 2:
-   $$\boldsymbol{\Delta}^{O_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} = \begin{bmatrix} \mathbf{1.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{2.0} \end{bmatrix}$$
-   $$\boldsymbol{\Delta}^{O_2} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_2} = \begin{bmatrix} \mathbf{0.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{0.0} \end{bmatrix}$$
+   $$\Delta^{O_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_1} = \begin{bmatrix} \mathbf{1.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{2.0} \end{bmatrix}$$
+   $$\Delta^{O_2} = \frac{\partial \mathcal{L}}{\partial \mathbf{O}_2} = \begin{bmatrix} \mathbf{0.0} & \mathbf{0.0} \\ \mathbf{0.0} & \mathbf{0.0} \end{bmatrix}$$
 
 The upstream gradient distributes cleanly across heads according to the orthogonal structure of the output projection matrix.
 

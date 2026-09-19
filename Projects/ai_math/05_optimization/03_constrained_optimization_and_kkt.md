@@ -151,7 +151,7 @@ $$\min_{\mathbf{w} \in \mathbb{R}^D, \,\, b \in \mathbb{R}} \quad \frac{1}{2} \|
 
 #### 2. Formulating the Lagrangian
 Attach Lagrange multipliers $\alpha_i \ge 0$:
-$$\mathcal{L}(\mathbf{w}, b, \boldsymbol{\alpha}) = \frac{1}{2} \mathbf{w}^T \mathbf{w} + \sum_{i=1}^N \alpha_i \left[ 1 - y_i(\mathbf{w}^T \mathbf{x}_i + b) \right] = \frac{1}{2} \mathbf{w}^T \mathbf{w} - \sum_{i=1}^N \alpha_i y_i \mathbf{w}^T \mathbf{x}_i - b \sum_{i=1}^N \alpha_i y_i + \sum_{i=1}^N \alpha_i$$
+$$\mathcal{L}(\mathbf{w}, b, \alpha) = \frac{1}{2} \mathbf{w}^T \mathbf{w} + \sum_{i=1}^N \alpha_i \left[ 1 - y_i(\mathbf{w}^T \mathbf{x}_i + b) \right] = \frac{1}{2} \mathbf{w}^T \mathbf{w} - \sum_{i=1}^N \alpha_i y_i \mathbf{w}^T \mathbf{x}_i - b \sum_{i=1}^N \alpha_i y_i + \sum_{i=1}^N \alpha_i$$
 
 #### 3. Primal Stationarity Conditions
 Differentiate $\mathcal{L}$ with respect to the primal variables $\mathbf{w}$ and $b$ and set to zero:
@@ -167,8 +167,8 @@ $$= \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_
 $$= \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j)$$
 
 #### 5. The Dual Quadratic Program
-The dual optimization problem depends **only on the dual multipliers $\boldsymbol{\alpha}$**:
-$$\mathbf{\max_{\boldsymbol{\alpha} \in \mathbb{R}^N} \quad \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j) \quad \text{s.t.} \quad \alpha_i \ge 0 \,\, \forall i, \quad \sum_{i=1}^N \alpha_i y_i = 0}$$
+The dual optimization problem depends **only on the dual multipliers $\alpha$**:
+$$\mathbf{\max_{\alpha \in \mathbb{R}^N} \quad \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j (\mathbf{x}_i^T \mathbf{x}_j) \quad \text{s.t.} \quad \alpha_i \ge 0 \,\, \forall i, \quad \sum_{i=1}^N \alpha_i y_i = 0}$$
 
 #### 6. The Kernel Trick Emergence
 Notice that the features $\mathbf{x}_i$ appear **exclusively as inner products $\mathbf{x}_i^T \mathbf{x}_j$**!
@@ -188,7 +188,7 @@ where $\sigma_i^2 > 0$ represents channel noise (or worker latency/variance).
 
 #### 2. Lagrangian Formulation
 Attach equality multiplier $\nu \in \mathbb{R}$ and inequality multipliers $\lambda_i \ge 0$:
-$$\mathcal{L}(\mathbf{p}, \nu, \boldsymbol{\lambda}) = -\sum_{i=1}^M \ln\left( \frac{p_i + \sigma_i^2}{\sigma_i^2} \right) + \nu \left( \sum_{i=1}^M p_i - P \right) - \sum_{i=1}^M \lambda_i p_i$$
+$$\mathcal{L}(\mathbf{p}, \nu, \lambda) = -\sum_{i=1}^M \ln\left( \frac{p_i + \sigma_i^2}{\sigma_i^2} \right) + \nu \left( \sum_{i=1}^M p_i - P \right) - \sum_{i=1}^M \lambda_i p_i$$
 
 #### 3. KKT Conditions
 1. **Stationarity:**

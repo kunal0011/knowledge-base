@@ -5,7 +5,7 @@
 ## 1. Intuition & 101 Motivation
 
 In policy gradient and actor-critic algorithms, the parameter update is driven by the policy gradient theorem:
-$$g = \mathbb{E} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) \hat{A}_t \right]$$
+$$g = \mathbb{E} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) \hat{A}_t \right]$$
 
 The performance, sample efficiency, and stability of the entire learning process hinge directly on how we estimate the **Advantage function** $\hat{A}_t \approx Q^\pi(s_t, a_t) - V^\pi(s_t)$.
 
@@ -13,7 +13,7 @@ We face a classic, fundamental tension:
 1. **The 1-Step TD Advantage ($\hat{A}_t = \delta_t$):**
    $$\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$$
    - *Advantage:* Minimal variance (only 1 step of environmental reward noise).
-   - *Drawback:* High bias if the neural network critic $V_{\boldsymbol{\phi}}$ is inaccurate or improperly trained.
+   - *Drawback:* High bias if the neural network critic $V_{\phi}$ is inaccurate or improperly trained.
 2. **The Empirical Monte Carlo Advantage ($\hat{A}_t = G_t - V(S_t)$):**
    $$G_t - V(S_t) = \sum_{k=0}^\infty \gamma^k R_{t+k+1} - V(S_t)$$
    - *Advantage:* Completely unbiased (the expectation is identically the true advantage).
@@ -207,7 +207,7 @@ $$\hat{A}_t^{\text{GAE}} = \delta_t^V + \gamma \lambda (1 - d_{t+1}) \hat{A}_{t+
 #### Derivation 11.15.2: Bias-Variance Tradeoff Bound for GAE as a Function of $\lambda \in [0, 1]$
 
 ##### Part 1: Problem Statement & Mathematical Goal
-Let $\pi_{\boldsymbol{\theta}}$ denote a parameterized policy and let $V^\pi(s)$ denote the true state-value function under $\pi$:
+Let $\pi_{\theta}$ denote a parameterized policy and let $V^\pi(s)$ denote the true state-value function under $\pi$:
 $$V^\pi(s) \triangleq \mathbb{E}_{\tau \sim \pi} \left[ \sum_{l=0}^\infty \gamma^l R_{t+l+1} \;\middle|\; S_t = s \right]$$
 The true advantage function is defined as $A^\pi(s, a) \triangleq Q^\pi(s, a) - V^\pi(s)$.
 In practical actor-critic architectures, an approximate value function $V(s) \approx V^\pi(s)$ is employed. Define the pointwise critic error as:
@@ -227,9 +227,9 @@ Our mathematical goals are:
 1. **Stationary Markov Dynamics:** State transitions $S_{t+1} \sim \mathcal{P}(\cdot \mid S_t, A_t)$ and rewards $R_{t+1} \sim \mathcal{R}(\cdot \mid S_t, A_t)$ satisfy the Markov property.
 2. **Bellman Expectation Equation:** The true value function satisfies the Bellman equation:
    $$V^\pi(s) = \mathbb{E}_{a \sim \pi(\cdot \mid s), s' \sim \mathcal{P}(\cdot \mid s, a)} \left[ R(s, a, s') + \gamma V^\pi(s') \right]$$
-3. **Score Function Regularity:** The policy $\pi_{\boldsymbol{\theta}}(a \mid s)$ is differentiable with respect to $\boldsymbol{\theta}$, and the score function satisfies the zero-mean baseline condition:
-   $$\mathbb{E}_{a \sim \pi_{\boldsymbol{\theta}}(\cdot \mid s)} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \right] = \int_{\mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a \mid s) \, da = \nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$$
-   Furthermore, define $C_{\text{score}} \triangleq \sup_{s} \mathbb{E}_{a \sim \pi} \left[ \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\| \right] < \infty$.
+3. **Score Function Regularity:** The policy $\pi_{\theta}(a \mid s)$ is differentiable with respect to $\theta$, and the score function satisfies the zero-mean baseline condition:
+   $$\mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \right] = \int_{\mathcal{A}} \nabla_{\theta} \pi_{\theta}(a \mid s) \, da = \nabla_{\theta} (1) = \mathbf{0}$$
+   Furthermore, define $C_{\text{score}} \triangleq \sup_{s} \mathbb{E}_{a \sim \pi} \left[ \|\nabla_{\theta} \log \pi_{\theta}(a \mid s)\| \right] < \infty$.
 4. **Martingale Difference Residuals:** The centered TD residuals $\xi_{t+l} \triangleq \delta_{t+l}^V - \mathbb{E}[\delta_{t+l}^V \mid \mathcal{F}_{t+l}]$ satisfy $\mathbb{E}[\xi_{t+l} \mid \mathcal{F}_{t+l}] = 0$ and have conditionally bounded variance $\mathbb{E}[\xi_{t+l}^2 \mid \mathcal{F}_{t+l}] \le \sigma^2 < \infty$.
 
 ##### Part 3: Underlying Intuition & Geometric / Physical Interpretation
@@ -296,21 +296,21 @@ $$\operatorname{Bias}\left( \hat{A}_t^{\text{GAE}} \;\middle|\; s_t, a_t \right)
 
 **Step 5: Impact on Policy Gradient Update (Zero Baseline Bias)**
 The policy gradient update direction at state $s_t$ is:
-$$g(s_t) \triangleq \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) \hat{A}_t^{\text{GAE}} \right]$$
+$$g(s_t) \triangleq \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) \hat{A}_t^{\text{GAE}} \right]$$
 Substitute the expected advantage $\mathbb{E}[\hat{A}_t^{\text{GAE}} \mid s_t, a_t] = A^\pi(s_t, a_t) + \operatorname{Bias}(\hat{A}_t^{\text{GAE}} \mid s_t, a_t)$:
-$$g(s_t) = \underbrace{\mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) A^\pi(s_t, a_t) \right]}_{\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) \text{ (True Policy Gradient)}} + \operatorname{Bias}_{\text{PG}}(s_t)$$
+$$g(s_t) = \underbrace{\mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) A^\pi(s_t, a_t) \right]}_{\nabla_{\theta} J(\theta) \text{ (True Policy Gradient)}} + \operatorname{Bias}_{\text{PG}}(s_t)$$
 where the policy gradient bias vector is:
-$$\operatorname{Bias}_{\text{PG}}(s_t) = \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) \left( -e(s_t) + \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{\pi} \left[ e(S_{t+m}) \;\middle|\; s_t, a_t \right] \right) \right]$$
+$$\operatorname{Bias}_{\text{PG}}(s_t) = \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) \left( -e(s_t) + \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{\pi} \left[ e(S_{t+m}) \;\middle|\; s_t, a_t \right] \right) \right]$$
 Notice the first term involving $-e(s_t)$:
-$$\mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) (-e(s_t)) \right] = -e(s_t) \int_{\mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi_{\boldsymbol{\theta}}(a_t \mid s_t) \, da_t = -e(s_t) \nabla_{\boldsymbol{\theta}} (1) = \mathbf{0}$$
+$$\mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) (-e(s_t)) \right] = -e(s_t) \int_{\mathcal{A}} \nabla_{\theta} \pi_{\theta}(a_t \mid s_t) \, da_t = -e(s_t) \nabla_{\theta} (1) = \mathbf{0}$$
 The local critic error $-e(s_t)$ produces identically zero bias in the policy gradient!
 The policy gradient bias is driven entirely by the future states $S_{t+m}$ for $m \ge 1$:
-$$\operatorname{Bias}_{\text{PG}}(s_t) = \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t) \mathbb{E}_{\pi} \left[ e(S_{t+m}) \;\middle|\; s_t, a_t \right] \right]$$
+$$\operatorname{Bias}_{\text{PG}}(s_t) = \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{a_t \sim \pi} \left[ \nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t) \mathbb{E}_{\pi} \left[ e(S_{t+m}) \;\middle|\; s_t, a_t \right] \right]$$
 Take the Euclidean norm on both sides and apply the triangle inequality:
-$$\left\| \operatorname{Bias}_{\text{PG}}(s_t) \right\| \le \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{a_t \sim \pi} \left[ \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)\| \cdot \left| \mathbb{E}_{\pi}[e(S_{t+m}) \mid s_t, a_t] \right| \right]$$
+$$\left\| \operatorname{Bias}_{\text{PG}}(s_t) \right\| \le \gamma (1 - \lambda) \sum_{m=1}^\infty (\gamma \lambda)^{m-1} \mathbb{E}_{a_t \sim \pi} \left[ \|\nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)\| \cdot \left| \mathbb{E}_{\pi}[e(S_{t+m}) \mid s_t, a_t] \right| \right]$$
 Since $\left| \mathbb{E}[e(S_{t+m}) \mid s_t, a_t] \right| \le \epsilon_V$:
-$$\left\| \operatorname{Bias}_{\text{PG}}(s_t) \right\| \le \gamma (1 - \lambda) \epsilon_V \mathbb{E}_{a_t \sim \pi} \left[ \|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a_t \mid s_t)\| \right] \sum_{m=1}^\infty (\gamma \lambda)^{m-1}$$
-Using $\sum_{m=1}^\infty (\gamma \lambda)^{m-1} = \sum_{j=0}^\infty (\gamma \lambda)^j = \frac{1}{1 - \gamma \lambda}$ and $C_{\text{score}} = \sup_s \mathbb{E}[\|\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}\|]$:
+$$\left\| \operatorname{Bias}_{\text{PG}}(s_t) \right\| \le \gamma (1 - \lambda) \epsilon_V \mathbb{E}_{a_t \sim \pi} \left[ \|\nabla_{\theta} \log \pi_{\theta}(a_t \mid s_t)\| \right] \sum_{m=1}^\infty (\gamma \lambda)^{m-1}$$
+Using $\sum_{m=1}^\infty (\gamma \lambda)^{m-1} = \sum_{j=0}^\infty (\gamma \lambda)^j = \frac{1}{1 - \gamma \lambda}$ and $C_{\text{score}} = \sup_s \mathbb{E}[\|\nabla_{\theta} \log \pi_{\theta}\|]$:
 $$\left\| \operatorname{Bias}_{\text{PG}}(s_t) \right\| \le C_{\text{score}} \frac{\gamma (1 - \lambda)}{1 - \gamma \lambda} \epsilon_V$$
 - **At $\lambda = 1$:** The factor $(1 - \lambda) = (1 - 1) = 0$, giving $\left\| \operatorname{Bias}_{\text{PG}} \right\| = 0$ (exact zero bias).
 - **At $\lambda = 0$:** The factor becomes $\frac{\gamma (1 - 0)}{1 - 0} = \gamma$, giving $\left\| \operatorname{Bias}_{\text{PG}} \right\| \le C_{\text{score}} \gamma \epsilon_V = \mathcal{O}(\epsilon_V)$ (maximum bias).
@@ -892,7 +892,7 @@ This eliminates GAE's learned critic dependency (saving $\sim$40% of compute), b
 
 The accompanying Python script implements:
 1. Exact numerical verification of Part 5 GAE hand calculations:
-   - TD residuals $\boldsymbol{\delta}^V = [1.6000, 2.5000, 0.0000]$
+   - TD residuals $\delta^V = [1.6000, 2.5000, 0.0000]$
    - GAE advantages $\hat{\mathbf{A}}^{\text{GAE}} = [3.4000, 2.5000, 0.0000]$ matching PyTorch/NumPy to $< 10^{-14}$.
 2. Benchmark of empirical variance and policy gradient accuracy across $\lambda \in \{0.0, 0.5, 0.8, 0.95, 1.0\}$.
 3. Production-grade, vectorized backward GAE implementation used in PPO.

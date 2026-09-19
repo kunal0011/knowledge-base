@@ -85,9 +85,9 @@ $$\frac{\partial \mathcal{L}}{\partial \theta} = \sum_{t=1}^T \frac{\partial \ma
 
 #### 1. Output Layer Gradients ($\mathbf{W}_{hy}, \mathbf{b}_y$)
 For cross-entropy loss with softmax activation, the error at time step $t$ is:
-$$\boldsymbol{\delta}_t^y \equiv \frac{\partial \mathcal{L}_t}{\partial \mathbf{z}_t} = \hat{\mathbf{y}}_t - \mathbf{y}_t \in \mathbb{R}^{d_y}$$
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hy}} = \sum_{t=1}^T \boldsymbol{\delta}_t^y \, \mathbf{h}_t^T \in \mathbb{R}^{d_y \times d_h}$$
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{b}_y} = \sum_{t=1}^T \boldsymbol{\delta}_t^y \in \mathbb{R}^{d_y}$$
+$$\delta_t^y \equiv \frac{\partial \mathcal{L}_t}{\partial \mathbf{z}_t} = \hat{\mathbf{y}}_t - \mathbf{y}_t \in \mathbb{R}^{d_y}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hy}} = \sum_{t=1}^T \delta_t^y \, \mathbf{h}_t^T \in \mathbb{R}^{d_y \times d_h}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{b}_y} = \sum_{t=1}^T \delta_t^y \in \mathbb{R}^{d_y}$$
 
 ---
 
@@ -97,7 +97,7 @@ At any time step $t$, the hidden state $\mathbf{h}_t$ influences the loss in two
 2. **Into the Future:** through the next hidden state $\mathbf{h}_{t+1}$, which influences all future losses $\sum_{k=t+1}^T \mathcal{L}_k$.
 
 Applying the multivariable chain rule backwards in time from $t = T, T-1, \dots, 1$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} = \underbrace{\mathbf{W}_{hy}^T \boldsymbol{\delta}_t^y}_{\text{Direct loss contribution at } t} + \underbrace{\left( \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \right)^T \frac{\partial \mathcal{L}}{\partial \mathbf{h}_{t+1}}}_{\text{Recurrent gradient from future } t+1}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} = \underbrace{\mathbf{W}_{hy}^T \delta_t^y}_{\text{Direct loss contribution at } t} + \underbrace{\left( \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \right)^T \frac{\partial \mathcal{L}}{\partial \mathbf{h}_{t+1}}}_{\text{Recurrent gradient from future } t+1}$$
 
 To compute the Jacobian $\frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t}$:
 Recall: $\mathbf{h}_{t+1} = \tanh(\mathbf{a}_{t+1})$, so $\frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{a}_{t+1}} = \operatorname{diag}\left(1 - \mathbf{h}_{t+1}^2\right)$.
@@ -107,23 +107,23 @@ By the chain rule:
 $$\frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} = \operatorname{diag}\left(1 - \mathbf{h}_{t+1}^2\right) \mathbf{W}_{hh}$$
 
 Therefore, the backward recurrence relation for the hidden gradient is:
-$$\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} = \mathbf{W}_{hy}^T \boldsymbol{\delta}_t^y + \mathbf{W}_{hh}^T \left( \boldsymbol{\delta}_{t+1}^h \odot (1 - \mathbf{h}_{t+1}^2) \right)$$
+$$\delta_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} = \mathbf{W}_{hy}^T \delta_t^y + \mathbf{W}_{hh}^T \left( \delta_{t+1}^h \odot (1 - \mathbf{h}_{t+1}^2) \right)$$
 with the terminal boundary condition at $t = T$:
-$$\boldsymbol{\delta}_T^h = \mathbf{W}_{hy}^T \boldsymbol{\delta}_T^y$$
+$$\delta_T^h = \mathbf{W}_{hy}^T \delta_T^y$$
 
 ---
 
 #### 3. Pre-activation Gradient ($\frac{\partial \mathcal{L}}{\partial \mathbf{a}_t}$)
 Define:
-$$\boldsymbol{\delta}_t^a \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_t} = \boldsymbol{\delta}_t^h \odot (1 - \mathbf{h}_t^2) \in \mathbb{R}^{d_h}$$
+$$\delta_t^a \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_t} = \delta_t^h \odot (1 - \mathbf{h}_t^2) \in \mathbb{R}^{d_h}$$
 
 ---
 
 #### 4. Recurrent and Input Weight Gradients ($\mathbf{W}_{hh}, \mathbf{W}_{xh}, \mathbf{b}_h$)
 Accumulating across all time steps:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \boldsymbol{\delta}_t^a \, \mathbf{h}_{t-1}^T \in \mathbb{R}^{d_h \times d_h}$$
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{xh}} = \sum_{t=1}^T \boldsymbol{\delta}_t^a \, \mathbf{x}_t^T \in \mathbb{R}^{d_h \times d_x}$$
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{b}_h} = \sum_{t=1}^T \boldsymbol{\delta}_t^a \in \mathbb{R}^{d_h}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \delta_t^a \, \mathbf{h}_{t-1}^T \in \mathbb{R}^{d_h \times d_h}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{xh}} = \sum_{t=1}^T \delta_t^a \, \mathbf{x}_t^T \in \mathbb{R}^{d_h \times d_x}$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{b}_h} = \sum_{t=1}^T \delta_t^a \in \mathbb{R}^{d_h}$$
 
 ---
 
@@ -155,33 +155,33 @@ subject to the state transition constraints:
 $$\mathbf{c}_t(\mathbf{h}_t, \mathbf{h}_{t-1}, \mathbf{W}) \equiv f(\mathbf{h}_{t-1}, \mathbf{x}_t; \mathbf{W}) - \mathbf{h}_t = \mathbf{0}, \quad \forall t \in \{1, \dots, T\}$$
 
 #### Step 2: The Lagrangian Formulation and Adjoint Multipliers
-Form the Lagrangian functional by introducing vector Lagrange multipliers (adjoint vectors) $\boldsymbol{\lambda}_t \in \mathbb{R}^{d_h}$ for each constraint:
-$$\mathcal{J}(\{\mathbf{h}_t\}_{t=1}^T, \mathbf{W}, \{\boldsymbol{\lambda}_t\}_{t=1}^T) = \sum_{t=1}^T \ell_t(\mathbf{h}_t) + \sum_{t=1}^T \boldsymbol{\lambda}_t^T \left( f(\mathbf{h}_{t-1}, \mathbf{x}_t; \mathbf{W}) - \mathbf{h}_t \right)$$
+Form the Lagrangian functional by introducing vector Lagrange multipliers (adjoint vectors) $\lambda_t \in \mathbb{R}^{d_h}$ for each constraint:
+$$\mathcal{J}(\{\mathbf{h}_t\}_{t=1}^T, \mathbf{W}, \{\lambda_t\}_{t=1}^T) = \sum_{t=1}^T \ell_t(\mathbf{h}_t) + \sum_{t=1}^T \lambda_t^T \left( f(\mathbf{h}_{t-1}, \mathbf{x}_t; \mathbf{W}) - \mathbf{h}_t \right)$$
 
 By the principle of stationary action, the total derivative $\frac{d\mathcal{L}}{d\mathbf{W}}$ is obtained by setting the variation of $\mathcal{J}$ with respect to all internal states $\mathbf{h}_t$ to zero:
 $$d_{\mathbf{h}_t} \mathcal{J} = \mathbf{0}, \quad \forall t \in \{1, \dots, T\}$$
 
 #### Step 3: Derivation of the Backward Adjoint Equations
 Differentiating $\mathcal{J}$ with respect to state $\mathbf{h}_t$ (for $1 \le t < T$):
-$$\frac{\partial \mathcal{J}}{\partial \mathbf{h}_t} = \frac{\partial \ell_t}{\partial \mathbf{h}_t} - \boldsymbol{\lambda}_t^T + \boldsymbol{\lambda}_{t+1}^T \frac{\partial f(\mathbf{h}_t, \mathbf{x}_{t+1}; \mathbf{W})}{\partial \mathbf{h}_t} = \mathbf{0}^T$$
+$$\frac{\partial \mathcal{J}}{\partial \mathbf{h}_t} = \frac{\partial \ell_t}{\partial \mathbf{h}_t} - \lambda_t^T + \lambda_{t+1}^T \frac{\partial f(\mathbf{h}_t, \mathbf{x}_{t+1}; \mathbf{W})}{\partial \mathbf{h}_t} = \mathbf{0}^T$$
 
-Transposing and isolating $\boldsymbol{\lambda}_t$:
-$$\boldsymbol{\lambda}_t = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right)^T + \left( \frac{\partial f(\mathbf{h}_t, \mathbf{x}_{t+1})}{\partial \mathbf{h}_t} \right)^T \boldsymbol{\lambda}_{t+1}$$
+Transposing and isolating $\lambda_t$:
+$$\lambda_t = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right)^T + \left( \frac{\partial f(\mathbf{h}_t, \mathbf{x}_{t+1})}{\partial \mathbf{h}_t} \right)^T \lambda_{t+1}$$
 
 For the terminal step $t = T$, since $\mathbf{h}_T$ does not enter any future constraint:
-$$\frac{\partial \mathcal{J}}{\partial \mathbf{h}_T} = \frac{\partial \ell_T}{\partial \mathbf{h}_T} - \boldsymbol{\lambda}_T^T = \mathbf{0}^T \implies \boldsymbol{\lambda}_T = \left( \frac{\partial \ell_T}{\partial \mathbf{h}_T} \right)^T$$
+$$\frac{\partial \mathcal{J}}{\partial \mathbf{h}_T} = \frac{\partial \ell_T}{\partial \mathbf{h}_T} - \lambda_T^T = \mathbf{0}^T \implies \lambda_T = \left( \frac{\partial \ell_T}{\partial \mathbf{h}_T} \right)^T$$
 
 Evaluating the state transition Jacobian:
 $$\frac{\partial f(\mathbf{h}_t, \mathbf{x}_{t+1})}{\partial \mathbf{h}_t} = \operatorname{diag}\left(1 - \mathbf{h}_{t+1}^2\right) \mathbf{W}_{hh} \equiv \mathbf{D}_{t+1} \mathbf{W}_{hh}$$
 where $\mathbf{D}_{t+1} = \operatorname{diag}\left(1 - \mathbf{h}_{t+1}^2\right)$.
 
 Substituting this Jacobian into the adjoint recursion:
-$$\boldsymbol{\lambda}_t = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right)^T + \mathbf{W}_{hh}^T \mathbf{D}_{t+1} \boldsymbol{\lambda}_{t+1}$$
-Identifying $\boldsymbol{\lambda}_t \equiv \boldsymbol{\delta}_t^h = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \right)^T$ recovers the exact backward recurrence of BPTT.
+$$\lambda_t = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right)^T + \mathbf{W}_{hh}^T \mathbf{D}_{t+1} \lambda_{t+1}$$
+Identifying $\lambda_t \equiv \delta_t^h = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t} \right)^T$ recovers the exact backward recurrence of BPTT.
 
 #### Step 4: Total Parameter Derivative Accumulation
 At the saddle point where $\frac{\partial \mathcal{J}}{\partial \mathbf{h}_t} = \mathbf{0}$ and constraints $\mathbf{c}_t = \mathbf{0}$ are satisfied, the total derivative of the loss with respect to parameters equals the partial derivative of $\mathcal{J}$:
-$$\frac{d\mathcal{L}}{d\mathbf{W}_{hh}} = \frac{\partial \mathcal{J}}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \boldsymbol{\lambda}_t^T \frac{\partial f(\mathbf{h}_{t-1}, \mathbf{x}_t; \mathbf{W})}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \left( \mathbf{D}_t \boldsymbol{\lambda}_t \right) \mathbf{h}_{t-1}^T = \sum_{t=1}^T \boldsymbol{\delta}_t^a \, \mathbf{h}_{t-1}^T$$
+$$\frac{d\mathcal{L}}{d\mathbf{W}_{hh}} = \frac{\partial \mathcal{J}}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \lambda_t^T \frac{\partial f(\mathbf{h}_{t-1}, \mathbf{x}_t; \mathbf{W})}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \left( \mathbf{D}_t \lambda_t \right) \mathbf{h}_{t-1}^T = \sum_{t=1}^T \delta_t^a \, \mathbf{h}_{t-1}^T$$
 This proves that BPTT is mathematically exact and identical to the discrete adjoint state method of optimal control. $\blacksquare$
 
 ---
@@ -207,7 +207,7 @@ with initial condition $\frac{\partial \mathbf{h}_0}{\partial W_{i, j}} = \mathb
 
 #### Step 2: Instantaneous Online Gradient Evaluation
 At any time step $t$, the gradient of the immediate step loss $\ell_t$ is computed without waiting for future steps:
-$$\frac{\partial \ell_t}{\partial W_{i, j}} = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right) \frac{\partial \mathbf{h}_t}{\partial W_{i, j}} = \left( \boldsymbol{\delta}_t^y \mathbf{W}_{hy} \right) \frac{\partial \mathbf{h}_t}{\partial W_{i, j}}$$
+$$\frac{\partial \ell_t}{\partial W_{i, j}} = \left( \frac{\partial \ell_t}{\partial \mathbf{h}_t} \right) \frac{\partial \mathbf{h}_t}{\partial W_{i, j}} = \left( \delta_t^y \mathbf{W}_{hy} \right) \frac{\partial \mathbf{h}_t}{\partial W_{i, j}}$$
 The total gradient across the sequence is:
 $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^T \frac{\partial \ell_t}{\partial \mathbf{W}_{hh}}$$
 
@@ -293,7 +293,7 @@ Operating in hidden state phase space $\mathbb{R}^{d_h}$:
 - **RNN (The Courtroom Stenographer):** The stenographer listens to continuous spoken testimony over 6 hours.
   - They cannot record every raw audio waveform in short-term working memory.
   - Instead, after every spoken word $\mathbf{x}_t$, they update their running mental model $\mathbf{h}_t$ ("The witness just contradicted their earlier statement").
-  - When the judge asks at 5:00 PM "Why did the witness pause at 10:00 AM?", the error signal $\boldsymbol{\delta}$ must trace backwards through thousands of sequential mental states. If their memory degraded at 11:00 AM, the historical connection is permanently severed.
+  - When the judge asks at 5:00 PM "Why did the witness pause at 10:00 AM?", the error signal $\delta$ must trace backwards through thousands of sequential mental states. If their memory degraded at 11:00 AM, the historical connection is permanently severed.
 
 ---
 
@@ -314,9 +314,9 @@ Let us trace a full forward pass and complete BPTT backward pass on a concrete t
 | $\mathbf{h}_1, \mathbf{h}_2$ | Hidden State Activations | $(2,)$ | Hidden memories $\mathbf{h}_t = \tanh(\mathbf{a}_t)$ |
 | $\mathbf{W}_{hy}$ | Hidden-to-Output Weights | $(2, 2)$ | Maps hidden state to output logits |
 | $\mathbf{z}_1, \mathbf{z}_2$ | Output Logits | $(2,)$ | Unnormalized scores for prediction |
-| $\boldsymbol{\delta}_t^z \equiv \hat{\mathbf{y}}_t - \mathbf{y}_t$ | Output Loss Gradient | $(2,)$ | Error at output time step $t$ |
-| $\boldsymbol{\delta}_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t}$ | Hidden Gradient | $(2,)$ | Sensitivity of total loss w.r.t. hidden state at $t$ |
-| $\boldsymbol{\delta}_t^a \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_t}$ | Pre-activation Gradient | $(2,)$ | $\boldsymbol{\delta}_t^h \odot (1 - \mathbf{h}_t^2)$ |
+| $\delta_t^z \equiv \hat{\mathbf{y}}_t - \mathbf{y}_t$ | Output Loss Gradient | $(2,)$ | Error at output time step $t$ |
+| $\delta_t^h \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{h}_t}$ | Hidden Gradient | $(2,)$ | Sensitivity of total loss w.r.t. hidden state at $t$ |
+| $\delta_t^a \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{a}_t}$ | Pre-activation Gradient | $(2,)$ | $\delta_t^h \odot (1 - \mathbf{h}_t^2)$ |
 
 ---
 
@@ -333,7 +333,7 @@ $$\mathbf{W}_{xh} = \begin{bmatrix} 0.5 & 0.0 \\ 0.0 & 0.5 \end{bmatrix}, \quad 
 
 #### Targets:
 At each time step, suppose downstream targets and softmax produce output errors:
-$$\boldsymbol{\delta}_1^z \equiv \frac{\partial \mathcal{L}_1}{\partial \mathbf{z}_1} = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix}, \quad \boldsymbol{\delta}_2^z \equiv \frac{\partial \mathcal{L}_2}{\partial \mathbf{z}_2} = \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix}$$
+$$\delta_1^z \equiv \frac{\partial \mathcal{L}_1}{\partial \mathbf{z}_1} = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix}, \quad \delta_2^z \equiv \frac{\partial \mathcal{L}_2}{\partial \mathbf{z}_2} = \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix}$$
 
 ---
 
@@ -374,34 +374,34 @@ $$\boldsymbol{\delta}_1^z \equiv \frac{\partial \mathcal{L}_1}{\partial \mathbf{
 #### 1. Backward at Time Step $t = 2$:
 - **Hidden Gradient at $t = 2$:**
   Since $t=2$ is the terminal step ($T=2$), there is no future gradient:
-  $$\boldsymbol{\delta}_2^h = \mathbf{W}_{hy}^T \boldsymbol{\delta}_2^z = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix} = \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix}$$
+  $$\delta_2^h = \mathbf{W}_{hy}^T \delta_2^z = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix} = \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix}$$
 
-- **Pre-activation Gradient at $t = 2$ ($\boldsymbol{\delta}_2^a = \boldsymbol{\delta}_2^h \odot (1 - \mathbf{h}_2^2)$):**
+- **Pre-activation Gradient at $t = 2$ ($\delta_2^a = \delta_2^h \odot (1 - \mathbf{h}_2^2)$):**
   $$1 - h_{2, 1}^2 = 1 - (0.182773)^2 = 1 - 0.033406 = 0.966594$$
   $$1 - h_{2, 2}^2 = 1 - (0.462117)^2 = 1 - 0.213552 = 0.786448$$
-  $$\boldsymbol{\delta}_2^a = \begin{bmatrix} 0.2 \times 0.966594 \\ 0.1 \times 0.786448 \end{bmatrix} = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix}$$
+  $$\delta_2^a = \begin{bmatrix} 0.2 \times 0.966594 \\ 0.1 \times 0.786448 \end{bmatrix} = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix}$$
 
 - **Parameter Gradient Contributions at $t = 2$:**
-  $$\frac{\partial \mathcal{L}_2}{\partial \mathbf{W}_{hh}} = \boldsymbol{\delta}_2^a \, \mathbf{h}_1^T = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix} \begin{bmatrix} 0.462117 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.089336 & 0.0 \\ 0.036343 & 0.0 \end{bmatrix}$$
-  $$\frac{\partial \mathcal{L}_2}{\partial \mathbf{W}_{xh}} = \boldsymbol{\delta}_2^a \, \mathbf{x}_2^T = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix} \begin{bmatrix} 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} 0.0 & 0.193319 \\ 0.0 & 0.078645 \end{bmatrix}$$
+  $$\frac{\partial \mathcal{L}_2}{\partial \mathbf{W}_{hh}} = \delta_2^a \, \mathbf{h}_1^T = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix} \begin{bmatrix} 0.462117 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.089336 & 0.0 \\ 0.036343 & 0.0 \end{bmatrix}$$
+  $$\frac{\partial \mathcal{L}_2}{\partial \mathbf{W}_{xh}} = \delta_2^a \, \mathbf{x}_2^T = \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix} \begin{bmatrix} 0.0 & 1.0 \end{bmatrix} = \begin{bmatrix} 0.0 & 0.193319 \\ 0.0 & 0.078645 \end{bmatrix}$$
 
 ---
 
 #### 2. Backward at Time Step $t = 1$ (The Temporal Recurrence):
-- **Hidden Gradient at $t = 1$ ($\boldsymbol{\delta}_1^h$):**
-  $$\boldsymbol{\delta}_1^h = \underbrace{\mathbf{W}_{hy}^T \boldsymbol{\delta}_1^z}_{\text{Direct from } \mathcal{L}_1} + \underbrace{\mathbf{W}_{hh}^T \boldsymbol{\delta}_2^a}_{\text{Recurrent from } t=2}$$
+- **Hidden Gradient at $t = 1$ ($\delta_1^h$):**
+  $$\delta_1^h = \underbrace{\mathbf{W}_{hy}^T \delta_1^z}_{\text{Direct from } \mathcal{L}_1} + \underbrace{\mathbf{W}_{hh}^T \delta_2^a}_{\text{Recurrent from } t=2}$$
   $$\text{Direct Term} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix} = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix}$$
   $$\text{Recurrent Term} = \begin{bmatrix} 0.4 & 0.0 \\ 0.1 & 0.4 \end{bmatrix} \begin{bmatrix} 0.193319 \\ 0.078645 \end{bmatrix} = \begin{bmatrix} 0.4(0.193319) \\ 0.1(0.193319) + 0.4(0.078645) \end{bmatrix} = \begin{bmatrix} 0.077328 \\ 0.019332 + 0.031458 \end{bmatrix} = \begin{bmatrix} 0.077328 \\ 0.050790 \end{bmatrix}$$
-  $$\boldsymbol{\delta}_1^h = \begin{bmatrix} 0.5 + 0.077328 \\ -0.5 + 0.050790 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.577328 \\ -0.449210 \end{bmatrix}}$$
+  $$\delta_1^h = \begin{bmatrix} 0.5 + 0.077328 \\ -0.5 + 0.050790 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.577328 \\ -0.449210 \end{bmatrix}}$$
 
-- **Pre-activation Gradient at $t = 1$ ($\boldsymbol{\delta}_1^a = \boldsymbol{\delta}_1^h \odot (1 - \mathbf{h}_1^2)$):**
+- **Pre-activation Gradient at $t = 1$ ($\delta_1^a = \delta_1^h \odot (1 - \mathbf{h}_1^2)$):**
   $$1 - h_{1, 1}^2 = 1 - (0.462117)^2 = 0.786448$$
   $$1 - h_{1, 2}^2 = 1 - 0.0 = 1.0$$
-  $$\boldsymbol{\delta}_1^a = \begin{bmatrix} 0.577328 \times 0.786448 \\ -0.449210 \times 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.454038 \\ -0.449210 \end{bmatrix}}$$
+  $$\delta_1^a = \begin{bmatrix} 0.577328 \times 0.786448 \\ -0.449210 \times 1.0 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.454038 \\ -0.449210 \end{bmatrix}}$$
 
 - **Parameter Gradient Contributions at $t = 1$:**
-  $$\frac{\partial \mathcal{L}_1}{\partial \mathbf{W}_{hh}} = \boldsymbol{\delta}_1^a \, \mathbf{h}_0^T = \boldsymbol{\delta}_1^a \begin{bmatrix} 0 & 0 \end{bmatrix} = \begin{bmatrix} 0 & 0 \\ 0 & 0 \end{bmatrix}$$
-  $$\frac{\partial \mathcal{L}_1}{\partial \mathbf{W}_{xh}} = \boldsymbol{\delta}_1^a \, \mathbf{x}_1^T = \begin{bmatrix} 0.454038 \\ -0.449210 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.454038 & 0.0 \\ -0.449210 & 0.0 \end{bmatrix}$$
+  $$\frac{\partial \mathcal{L}_1}{\partial \mathbf{W}_{hh}} = \delta_1^a \, \mathbf{h}_0^T = \delta_1^a \begin{bmatrix} 0 & 0 \end{bmatrix} = \begin{bmatrix} 0 & 0 \\ 0 & 0 \end{bmatrix}$$
+  $$\frac{\partial \mathcal{L}_1}{\partial \mathbf{W}_{xh}} = \delta_1^a \, \mathbf{x}_1^T = \begin{bmatrix} 0.454038 \\ -0.449210 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.454038 & 0.0 \\ -0.449210 & 0.0 \end{bmatrix}$$
 
 ---
 
@@ -410,7 +410,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hh}} = \frac{\partial \mathca
 
 $$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{xh}} = \frac{\partial \mathcal{L}_1}{\partial \mathbf{W}_{xh}} + \frac{\partial \mathcal{L}_2}{\partial \mathbf{W}_{xh}} = \begin{bmatrix} 0.454038 & 0.193319 \\ -0.449210 & 0.078645 \end{bmatrix}$$
 
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hy}} = \boldsymbol{\delta}_1^z \mathbf{h}_1^T + \boldsymbol{\delta}_2^z \mathbf{h}_2^T = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix} [0.462117, 0] + \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix} [0.182773, 0.462117]$$
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{W}_{hy}} = \delta_1^z \mathbf{h}_1^T + \delta_2^z \mathbf{h}_2^T = \begin{bmatrix} 0.5 \\ -0.5 \end{bmatrix} [0.462117, 0] + \begin{bmatrix} 0.2 \\ 0.1 \end{bmatrix} [0.182773, 0.462117]$$
 $$= \begin{bmatrix} 0.231059 & 0 \\ -0.231059 & 0 \end{bmatrix} + \begin{bmatrix} 0.036555 & 0.092423 \\ 0.018277 & 0.046212 \end{bmatrix} = \mathbf{\begin{bmatrix} 0.267614 & 0.092423 \\ -0.212782 & 0.046212 \end{bmatrix}}$$
 
 Every calculation above is exact and mathematically transparent.

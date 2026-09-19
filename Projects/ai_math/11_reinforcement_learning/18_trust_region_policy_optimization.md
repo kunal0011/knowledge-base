@@ -5,7 +5,7 @@
 ## 1. Intuition & 101 Motivation
 
 In Chapter 11.17, we saw that **Natural Policy Gradients (NPG)** solve the fundamental coordinate-dependency problem of standard policy gradients by taking steps bounded in distribution space:
-$$\bar{D}_{\text{KL}}(\pi_{\boldsymbol{\theta}} \parallel \pi_{\boldsymbol{\theta} + \Delta \boldsymbol{\theta}}) \le \delta$$
+$$\bar{D}_{\text{KL}}(\pi_{\theta} \parallel \pi_{\theta + \Delta \theta}) \le \delta$$
 yielding the optimal step direction $\tilde{\mathbf{g}} = \mathbf{F}^{-1} \mathbf{g}$.
 
 However, applying NPG to modern deep neural networks with millions of parameters ($d \ge 10^6$) presents a catastrophic computational barrier:
@@ -59,11 +59,11 @@ Schulman et al. define the **Surrogate Objective** $L_\pi(\tilde{\pi})$ by subst
 $$L_\pi(\tilde{\pi}) \triangleq J(\pi) + \sum_{s \in \mathcal{S}} d^\pi(s) \sum_{a \in \mathcal{A}} \tilde{\pi}(a \mid s) A^\pi(s, a)$$
 
 Using importance sampling, this can be estimated empirically from rollouts collected under policy $\theta_{\text{old}}$:
-$$L_{\boldsymbol{\theta}_{\text{old}}}(\boldsymbol{\theta}) = \mathbb{E}_{s \sim d^{\pi_{\text{old}}}, a \sim \pi_{\text{old}}} \left[ \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a \mid s)} \hat{A}^{\pi_{\text{old}}}(s, a) \right]$$
+$$L_{\theta_{\text{old}}}(\theta) = \mathbb{E}_{s \sim d^{\pi_{\text{old}}}, a \sim \pi_{\text{old}}} \left[ \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta_{\text{old}}}(a \mid s)} \hat{A}^{\pi_{\text{old}}}(s, a) \right]$$
 
-Notice that at $\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}$:
-$$L_{\boldsymbol{\theta}_{\text{old}}}(\boldsymbol{\theta}_{\text{old}}) = 0, \quad \left. \nabla_{\boldsymbol{\theta}} L_{\boldsymbol{\theta}_{\text{old}}}(\boldsymbol{\theta}) \right|_{\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}} = \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}_{\text{old}})$$
-The surrogate objective matches the true return $J(\boldsymbol{\theta})$ to first order!
+Notice that at $\theta = \theta_{\text{old}}$:
+$$L_{\theta_{\text{old}}}(\theta_{\text{old}}) = 0, \quad \left. \nabla_{\theta} L_{\theta_{\text{old}}}(\theta) \right|_{\theta = \theta_{\text{old}}} = \nabla_{\theta} J(\theta_{\text{old}})$$
+The surrogate objective matches the true return $J(\theta)$ to first order!
 
 #### Theorem: Monotonic Improvement Bound (Schulman et al., 2015)
 Let $D_{\text{KL}}^{\max}(\pi, \tilde{\pi}) \triangleq \max_{s \in \mathcal{S}} D_{\text{KL}}(\pi(\cdot \mid s) \parallel \tilde{\pi}(\cdot \mid s))$ and $\epsilon \triangleq \max_{s, a} |A^\pi(s, a)|$.
@@ -78,17 +78,17 @@ This guarantees that maximizing the right-hand side is guaranteed to generate **
 
 In practice, the penalty coefficient $C$ is too large, resulting in overly conservative steps. TRPO converts the penalty into a **hard trust region constraint** on the average KL divergence:
 
-$$\max_{\boldsymbol{\theta}} \mathbb{E}_{s \sim d^{\pi_{\text{old}}}, a \sim \pi_{\text{old}}} \left[ \frac{\pi_{\boldsymbol{\theta}}(a \mid s)}{\pi_{\boldsymbol{\theta}_{\text{old}}}(a \mid s)} \hat{A}_t \right] \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta}) \le \delta$$
-where $\bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim d^{\pi_{\text{old}}}} [D_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}}(\cdot \mid s))]$.
+$$\max_{\theta} \mathbb{E}_{s \sim d^{\pi_{\text{old}}}, a \sim \pi_{\text{old}}} \left[ \frac{\pi_{\theta}(a \mid s)}{\pi_{\theta_{\text{old}}}(a \mid s)} \hat{A}_t \right] \quad \text{subject to} \quad \bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta) \le \delta$$
+where $\bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta) \triangleq \mathbb{E}_{s \sim d^{\pi_{\text{old}}}} [D_{\text{KL}}(\pi_{\theta_{\text{old}}}(\cdot \mid s) \parallel \pi_{\theta}(\cdot \mid s))]$.
 
 #### Quadratic Approximation:
 Taking a first-order Taylor expansion of the objective and a second-order expansion of the constraint:
-$$\max_{\Delta \boldsymbol{\theta}} \mathbf{g}^\top \Delta \boldsymbol{\theta} \quad \text{subject to} \quad \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \le \delta$$
+$$\max_{\Delta \theta} \mathbf{g}^\top \Delta \theta \quad \text{subject to} \quad \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \le \delta$$
 where:
-$$\mathbf{g} \triangleq \left. \nabla_{\boldsymbol{\theta}} L_{\boldsymbol{\theta}_{\text{old}}}(\boldsymbol{\theta}) \right|_{\boldsymbol{\theta}_{\text{old}}}, \quad \mathbf{F} \triangleq \left. \nabla_{\boldsymbol{\theta}}^2 \bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta}) \right|_{\boldsymbol{\theta}_{\text{old}}}$$
+$$\mathbf{g} \triangleq \left. \nabla_{\theta} L_{\theta_{\text{old}}}(\theta) \right|_{\theta_{\text{old}}}, \quad \mathbf{F} \triangleq \left. \nabla_{\theta}^2 \bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta) \right|_{\theta_{\text{old}}}$$
 
 As derived in Chapter 11.17, the analytical solution is:
-$$\Delta \boldsymbol{\theta} = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} \mathbf{x} \quad \text{where} \quad \mathbf{F} \mathbf{x} = \mathbf{g}$$
+$$\Delta \theta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} \mathbf{x} \quad \text{where} \quad \mathbf{F} \mathbf{x} = \mathbf{g}$$
 
 ---
 
@@ -96,12 +96,12 @@ $$\Delta \boldsymbol{\theta} = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{F} 
 
 To solve $\mathbf{F} \mathbf{x} = \mathbf{g}$, we need to multiply the matrix $\mathbf{F}$ by arbitrary search vectors $\mathbf{v} \in \mathbb{R}^d$ without computing or storing $\mathbf{F}$.
 Notice that:
-$$\mathbf{F} \mathbf{v} = \nabla_{\boldsymbol{\theta}}^2 \bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta}) \mathbf{v} = \nabla_{\boldsymbol{\theta}} \left( \nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta})^\top \mathbf{v} \right)$$
+$$\mathbf{F} \mathbf{v} = \nabla_{\theta}^2 \bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta) \mathbf{v} = \nabla_{\theta} \left( \nabla_{\theta} \bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta)^\top \mathbf{v} \right)$$
 
 #### In PyTorch / Autograd:
-1. Compute the scalar quantity $y = \left( \nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}} \right)^\top \mathbf{v}$ (an inner product of vectors).
-2. Take the gradient of $y$ with respect to $\boldsymbol{\theta}$:
-   $$\mathbf{F} \mathbf{v} = \operatorname{autograd.grad}(y, \boldsymbol{\theta})$$
+1. Compute the scalar quantity $y = \left( \nabla_{\theta} \bar{D}_{\text{KL}} \right)^\top \mathbf{v}$ (an inner product of vectors).
+2. Take the gradient of $y$ with respect to $\theta$:
+   $$\mathbf{F} \mathbf{v} = \operatorname{autograd.grad}(y, \theta)$$
 This requires only **one extra backward pass**, using $\mathcal{O}(d)$ memory!
 
 ---
@@ -130,16 +130,16 @@ Return x_{final}
 
 ### 2.6 Backtracking Line Search
 
-Because the linear-quadratic approximation is only locally accurate, taking the full step $\Delta \boldsymbol{\theta}$ might violate the non-linear KL constraint or decrease the surrogate objective.
+Because the linear-quadratic approximation is only locally accurate, taking the full step $\Delta \theta$ might violate the non-linear KL constraint or decrease the surrogate objective.
 TRPO applies a **backtracking line search**:
-$$\boldsymbol{\theta}_{\text{new}} = \boldsymbol{\theta}_{\text{old}} + \alpha^j \Delta \boldsymbol{\theta} \quad \text{for } j \in \{0, 1, 2, \dots, M\}$$
+$$\theta_{\text{new}} = \theta_{\text{old}} + \alpha^j \Delta \theta \quad \text{for } j \in \{0, 1, 2, \dots, M\}$$
 where $\alpha \in (0, 1)$ (typically $\alpha = 0.5$, max steps $M = 10$).
 
 The candidate update is accepted at the smallest integer $j$ that satisfies both:
-1. **Surrogate Improvement:** $L_{\boldsymbol{\theta}_{\text{old}}}(\boldsymbol{\theta}_{\text{new}}) \ge 0$
-2. **Trust Region Enforcement:** $\bar{D}_{\text{KL}}(\boldsymbol{\theta}_{\text{old}} \parallel \boldsymbol{\theta}_{\text{new}}) \le \delta$
+1. **Surrogate Improvement:** $L_{\theta_{\text{old}}}(\theta_{\text{new}}) \ge 0$
+2. **Trust Region Enforcement:** $\bar{D}_{\text{KL}}(\theta_{\text{old}} \parallel \theta_{\text{new}}) \le \delta$
 
-If no step satisfies both criteria after $M$ reductions, the update is aborted ($\boldsymbol{\theta}_{\text{new}} = \boldsymbol{\theta}_{\text{old}}$), ensuring total stability!
+If no step satisfies both criteria after $M$ reductions, the update is aborted ($\theta_{\text{new}} = \theta_{\text{old}}$), ensuring total stability!
 
 ---
 
@@ -168,7 +168,7 @@ Prove from first principles:
 ```
 
 **Part 1: Problem Statement & Mathematical Goal**
-In reinforcement learning policy optimization, we seek to update policy parameters from $\boldsymbol{\theta}_{\text{old}}$ (representing policy $\pi$) to $\boldsymbol{\theta}$ (representing policy $\tilde{\pi}$) to maximize the expected discounted return $J(\tilde{\pi})$. However, evaluating $J(\tilde{\pi})$ requires generating trajectories under $\tilde{\pi}$, which is unknown prior to executing the update.
+In reinforcement learning policy optimization, we seek to update policy parameters from $\theta_{\text{old}}$ (representing policy $\pi$) to $\theta$ (representing policy $\tilde{\pi}$) to maximize the expected discounted return $J(\tilde{\pi})$. However, evaluating $J(\tilde{\pi})$ requires generating trajectories under $\tilde{\pi}$, which is unknown prior to executing the update.
 Our mathematical goal is two-fold:
 1. Express the exact performance difference $J(\tilde{\pi}) - J(\pi)$ as an expectation of the old advantage function $A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s)$ over trajectories generated by the new policy $\tilde{\pi}$.
 2. Derive a rigorous lower bound on $J(\tilde{\pi})$ in terms of the surrogate objective $L_\pi(\tilde{\pi})$ (which evaluates state visitation under the old policy $\pi$) and the maximum KL divergence $D_{\text{KL}}^{\max}(\pi, \tilde{\pi})$, establishing that maximizing this bound guarantees monotonic policy improvement: $J(\pi_{k+1}) \ge J(\pi_k)$.
@@ -325,62 +325,62 @@ Using Karush-Kuhn-Tucker (KKT) conditions, derive from first principles:
 **Part 1: Problem Statement & Mathematical Goal**
 In Trust Region Policy Optimization, taking an unconstrained step along the policy gradient $\mathbf{g}$ can cause catastrophic policy collapse because the Euclidean gradient does not account for the non-linear curvature of the probability distribution manifold.
 To guarantee stable policy improvement within a local neighborhood, TRPO forms a local quadratic surrogate problem:
-$$\max_{\Delta \boldsymbol{\theta} \in \mathbb{R}^d} \mathbf{g}^\top \Delta \boldsymbol{\theta} \quad \text{subject to} \quad \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \le \delta$$
-Our mathematical goal is to solve this constrained quadratic program analytically using Karush-Kuhn-Tucker (KKT) duality theory, derive the exact closed-form optimal step direction and step magnitude $\Delta \boldsymbol{\theta}^*$, and prove that the solution is the unique global maximizer.
+$$\max_{\Delta \theta \in \mathbb{R}^d} \mathbf{g}^\top \Delta \theta \quad \text{subject to} \quad \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \le \delta$$
+Our mathematical goal is to solve this constrained quadratic program analytically using Karush-Kuhn-Tucker (KKT) duality theory, derive the exact closed-form optimal step direction and step magnitude $\Delta \theta^*$, and prove that the solution is the unique global maximizer.
 
 **Part 2: Explicit Assumptions & Regularity Conditions**
-1. **Non-Zero Gradient:** $\mathbf{g} \ne \mathbf{0}$. If $\mathbf{g} = \mathbf{0}$, the current parameter $\boldsymbol{\theta}_{\text{old}}$ is already a stationary point of the surrogate objective, yielding the trivial optimal step $\Delta \boldsymbol{\theta}^* = \mathbf{0}$.
-2. **Symmetric Positive Definiteness:** The Fisher Information Matrix $\mathbf{F} \in \mathbb{R}^{d \times d}$ is symmetric ($\mathbf{F} = \mathbf{F}^\top$) and strictly positive definite ($\mathbf{F} \succ 0$), meaning all eigenvalues satisfy $\lambda_{\min}(\mathbf{F}) > 0$. This ensures that $\mathbf{F}^{-1}$ exists and is also strictly positive definite, and that the quadratic form $\Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} > 0$ for all $\Delta \boldsymbol{\theta} \ne \mathbf{0}$.
+1. **Non-Zero Gradient:** $\mathbf{g} \ne \mathbf{0}$. If $\mathbf{g} = \mathbf{0}$, the current parameter $\theta_{\text{old}}$ is already a stationary point of the surrogate objective, yielding the trivial optimal step $\Delta \theta^* = \mathbf{0}$.
+2. **Symmetric Positive Definiteness:** The Fisher Information Matrix $\mathbf{F} \in \mathbb{R}^{d \times d}$ is symmetric ($\mathbf{F} = \mathbf{F}^\top$) and strictly positive definite ($\mathbf{F} \succ 0$), meaning all eigenvalues satisfy $\lambda_{\min}(\mathbf{F}) > 0$. This ensures that $\mathbf{F}^{-1}$ exists and is also strictly positive definite, and that the quadratic form $\Delta \theta^\top \mathbf{F} \Delta \theta > 0$ for all $\Delta \theta \ne \mathbf{0}$.
 3. **Strictly Positive Trust Region Radius:** $\delta > 0$.
-4. **Slater's Constraint Qualification:** The optimization problem is convex (minimizing a linear function over a convex quadratic set). The point $\Delta \boldsymbol{\theta} = \mathbf{0}$ satisfies $\frac{1}{2} \mathbf{0}^\top \mathbf{F} \mathbf{0} = 0 < \delta$. Hence, an interior point exists, satisfying Slater's condition, which guarantees strong duality and that the KKT conditions are both necessary and sufficient for global optimality.
+4. **Slater's Constraint Qualification:** The optimization problem is convex (minimizing a linear function over a convex quadratic set). The point $\Delta \theta = \mathbf{0}$ satisfies $\frac{1}{2} \mathbf{0}^\top \mathbf{F} \mathbf{0} = 0 < \delta$. Hence, an interior point exists, satisfying Slater's condition, which guarantees strong duality and that the KKT conditions are both necessary and sufficient for global optimality.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation**
-Geometrically, the objective function $\mathbf{g}^\top \Delta \boldsymbol{\theta}$ describes a family of parallel hyperplanes in $\mathbb{R}^d$ whose normal vector points along $\mathbf{g}$. We wish to move as far as possible in the direction of increasing $\mathbf{g}^\top \Delta \boldsymbol{\theta}$.
-The constraint $\frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \le \delta$ defines a solid $d$-dimensional hyper-ellipsoid centered at the origin $\Delta \boldsymbol{\theta} = \mathbf{0}$. The principal axes of this ellipsoid align with the eigenvectors of $\mathbf{F}$, and the semi-axis lengths are inversely proportional to the square roots of the eigenvalues: $a_i = \sqrt{2 \delta / \lambda_i}$.
+Geometrically, the objective function $\mathbf{g}^\top \Delta \theta$ describes a family of parallel hyperplanes in $\mathbb{R}^d$ whose normal vector points along $\mathbf{g}$. We wish to move as far as possible in the direction of increasing $\mathbf{g}^\top \Delta \theta$.
+The constraint $\frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \le \delta$ defines a solid $d$-dimensional hyper-ellipsoid centered at the origin $\Delta \theta = \mathbf{0}$. The principal axes of this ellipsoid align with the eigenvectors of $\mathbf{F}$, and the semi-axis lengths are inversely proportional to the square roots of the eigenvalues: $a_i = \sqrt{2 \delta / \lambda_i}$.
 - Along directions of high curvature (large $\lambda_i$, where the policy distribution changes violently with tiny parameter perturbations), the ellipsoid is compressed, strictly limiting the step size.
 - Along directions of low curvature (small $\lambda_i$, where the policy distribution is insensitive to parameter variations), the ellipsoid is elongated, permitting larger exploratory steps.
-The optimal step $\Delta \boldsymbol{\theta}^*$ is the unique boundary point of this ellipsoid where the outward surface normal of the ellipsoid, given by $\nabla_{\Delta \boldsymbol{\theta}} \left( \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \right) = \mathbf{F} \Delta \boldsymbol{\theta}$, is parallel to the objective gradient $\mathbf{g}$.
+The optimal step $\Delta \theta^*$ is the unique boundary point of this ellipsoid where the outward surface normal of the ellipsoid, given by $\nabla_{\Delta \theta} \left( \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \right) = \mathbf{F} \Delta \theta$, is parallel to the objective gradient $\mathbf{g}$.
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof**
 
 *Step 1: Standard Form Formulation.*
 We formulate the problem as a standard convex minimization problem:
-$$\min_{\Delta \boldsymbol{\theta} \in \mathbb{R}^d} f_0(\Delta \boldsymbol{\theta}) \quad \text{subject to} \quad f_1(\Delta \boldsymbol{\theta}) \le 0$$
+$$\min_{\Delta \theta \in \mathbb{R}^d} f_0(\Delta \theta) \quad \text{subject to} \quad f_1(\Delta \theta) \le 0$$
 where:
-$$f_0(\Delta \boldsymbol{\theta}) \triangleq -\mathbf{g}^\top \Delta \boldsymbol{\theta}, \quad f_1(\Delta \boldsymbol{\theta}) \triangleq \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} - \delta$$
+$$f_0(\Delta \theta) \triangleq -\mathbf{g}^\top \Delta \theta, \quad f_1(\Delta \theta) \triangleq \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta - \delta$$
 
 *Step 2: Construct the Lagrangian Function.*
 Introduce the Lagrange multiplier (dual variable) $\lambda \ge 0$ associated with the inequality constraint:
-$$\mathcal{L}(\Delta \boldsymbol{\theta}, \lambda) \triangleq f_0(\Delta \boldsymbol{\theta}) + \lambda f_1(\Delta \boldsymbol{\theta}) = -\mathbf{g}^\top \Delta \boldsymbol{\theta} + \lambda \left( \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} - \delta \right)$$
+$$\mathcal{L}(\Delta \theta, \lambda) \triangleq f_0(\Delta \theta) + \lambda f_1(\Delta \theta) = -\mathbf{g}^\top \Delta \theta + \lambda \left( \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta - \delta \right)$$
 
 *Step 3: State the Karush-Kuhn-Tucker (KKT) Conditions.*
-Since Slater's condition holds, $\Delta \boldsymbol{\theta}^*$ is a global optimum if and only if there exists $\lambda^* \in \mathbb{R}$ satisfying:
+Since Slater's condition holds, $\Delta \theta^*$ is a global optimum if and only if there exists $\lambda^* \in \mathbb{R}$ satisfying:
 1. **Stationarity:**
-   $$\nabla_{\Delta \boldsymbol{\theta}} \mathcal{L}(\Delta \boldsymbol{\theta}^*, \lambda^*) = -\mathbf{g} + \lambda^* \mathbf{F} \Delta \boldsymbol{\theta}^* = \mathbf{0} \quad \text{(KKT 1)}$$
+   $$\nabla_{\Delta \theta} \mathcal{L}(\Delta \theta^*, \lambda^*) = -\mathbf{g} + \lambda^* \mathbf{F} \Delta \theta^* = \mathbf{0} \quad \text{(KKT 1)}$$
 2. **Primal Feasibility:**
-   $$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} \Delta \boldsymbol{\theta}^* - \delta \le 0 \quad \text{(KKT 2)}$$
+   $$\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} \Delta \theta^* - \delta \le 0 \quad \text{(KKT 2)}$$
 3. **Dual Feasibility:**
    $$\lambda^* \ge 0 \quad \text{(KKT 3)}$$
 4. **Complementary Slackness:**
-   $$\lambda^* \left( \frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} \Delta \boldsymbol{\theta}^* - \delta \right) = 0 \quad \text{(KKT 4)}$$
+   $$\lambda^* \left( \frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} \Delta \theta^* - \delta \right) = 0 \quad \text{(KKT 4)}$$
 
 *Step 4: Prove the Constraint is Strictly Active ($\lambda^* > 0$).*
 We prove by contradiction that $\lambda^* \ne 0$.
 Suppose $\lambda^* = 0$. Then by Stationarity (KKT 1):
-$$-\mathbf{g} + (0) \mathbf{F} \Delta \boldsymbol{\theta}^* = \mathbf{0} \implies -\mathbf{g} = \mathbf{0} \implies \mathbf{g} = \mathbf{0}$$
+$$-\mathbf{g} + (0) \mathbf{F} \Delta \theta^* = \mathbf{0} \implies -\mathbf{g} = \mathbf{0} \implies \mathbf{g} = \mathbf{0}$$
 However, this contradicts Assumption 1 ($\mathbf{g} \ne \mathbf{0}$).
 Therefore, $\lambda^* \ne 0$.
 Combining with Dual Feasibility $\lambda^* \ge 0$ (KKT 3), we establish:
 $$\lambda^* > 0$$
 From Complementary Slackness (KKT 4), since $\lambda^* \ne 0$, the constraint term must vanish identically:
-$$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} \Delta \boldsymbol{\theta}^* - \delta = 0 \implies \frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} \Delta \boldsymbol{\theta}^* = \delta \quad \text{(Equation 1)}$$
+$$\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} \Delta \theta^* - \delta = 0 \implies \frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} \Delta \theta^* = \delta \quad \text{(Equation 1)}$$
 The optimal solution lies strictly on the boundary of the trust region ellipsoid.
 
 *Step 5: Solve for the Primal Step in Terms of Dual Variable $\lambda^*$.*
 Rearranging the Stationarity condition (KKT 1):
-$$\lambda^* \mathbf{F} \Delta \boldsymbol{\theta}^* = \mathbf{g}$$
+$$\lambda^* \mathbf{F} \Delta \theta^* = \mathbf{g}$$
 Since $\mathbf{F}$ is positive definite, its inverse $\mathbf{F}^{-1}$ exists. Dividing by the non-zero scalar $\lambda^*$ and pre-multiplying by $\mathbf{F}^{-1}$:
-$$\Delta \boldsymbol{\theta}^* = \frac{1}{\lambda^*} \mathbf{F}^{-1} \mathbf{g} \quad \text{(Equation 2)}$$
+$$\Delta \theta^* = \frac{1}{\lambda^*} \mathbf{F}^{-1} \mathbf{g} \quad \text{(Equation 2)}$$
 
 *Step 6: Substitute Primal Step into Boundary Constraint to Solve for $\lambda^*$.*
 Substitute Equation 2 into the active constraint Equation 1:
@@ -398,24 +398,24 @@ $$(\lambda^*)^2 = \frac{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}{2 \delta}$$
 Taking the positive square root (since $\lambda^* > 0$):
 $$\lambda^* = \sqrt{\frac{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}{2 \delta}} \quad \text{(Equation 3)}$$
 
-*Step 7: Derive the Analytical Optimal Step $\Delta \boldsymbol{\theta}^*$.*
+*Step 7: Derive the Analytical Optimal Step $\Delta \theta^*$.*
 Substitute Equation 3 back into Equation 2:
-$$\Delta \boldsymbol{\theta}^* = \frac{1}{\sqrt{\frac{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}{2 \delta}}} \mathbf{F}^{-1} \mathbf{g} = \sqrt{\frac{2 \delta}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g} \quad \text{(Equation 4)}$$
+$$\Delta \theta^* = \frac{1}{\sqrt{\frac{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}{2 \delta}}} \mathbf{F}^{-1} \mathbf{g} = \sqrt{\frac{2 \delta}{\mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g}}} \mathbf{F}^{-1} \mathbf{g} \quad \text{(Equation 4)}$$
 
 *Step 8: Express in Terms of the Linear System Solution $\mathbf{x} = \mathbf{F}^{-1} \mathbf{g}$.*
 Let $\mathbf{x} \in \mathbb{R}^d$ be the solution to the linear system $\mathbf{F} \mathbf{x} = \mathbf{g}$, so that $\mathbf{x} = \mathbf{F}^{-1} \mathbf{g}$.
 Then:
 $$\mathbf{x}^\top \mathbf{F} \mathbf{x} = (\mathbf{F}^{-1} \mathbf{g})^\top \mathbf{F} (\mathbf{F}^{-1} \mathbf{g}) = \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{F} \mathbf{F}^{-1} \mathbf{g} = \mathbf{g}^\top \mathbf{F}^{-1} \mathbf{g} = \mathbf{x}^\top \mathbf{g}$$
 Defining the scaling factor $\beta \triangleq \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{g}}}$, the optimal step is concisely:
-$$\Delta \boldsymbol{\theta}^* = \beta \mathbf{x} \quad \text{where} \quad \mathbf{F} \mathbf{x} = \mathbf{g}, \quad \beta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{g}}}$$
+$$\Delta \theta^* = \beta \mathbf{x} \quad \text{where} \quad \mathbf{F} \mathbf{x} = \mathbf{g}, \quad \beta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{g}}}$$
 
 *Step 9: Second-Order Optimality Verification.*
-To verify that $\Delta \boldsymbol{\theta}^*$ is a strict global minimum of $f_0$ (hence strict global maximum of $\mathbf{g}^\top \Delta \boldsymbol{\theta}$), examine the Hessian of the Lagrangian with respect to $\Delta \boldsymbol{\theta}$:
-$$\nabla_{\Delta \boldsymbol{\theta}}^2 \mathcal{L}(\Delta \boldsymbol{\theta}, \lambda^*) = \lambda^* \mathbf{F}$$
+To verify that $\Delta \theta^*$ is a strict global minimum of $f_0$ (hence strict global maximum of $\mathbf{g}^\top \Delta \theta$), examine the Hessian of the Lagrangian with respect to $\Delta \theta$:
+$$\nabla_{\Delta \theta}^2 \mathcal{L}(\Delta \theta, \lambda^*) = \lambda^* \mathbf{F}$$
 Since $\lambda^* > 0$ and $\mathbf{F} \succ 0$:
-$$\mathbf{z}^\top \left( \nabla_{\Delta \boldsymbol{\theta}}^2 \mathcal{L} \right) \mathbf{z} = \lambda^* \mathbf{z}^\top \mathbf{F} \mathbf{z} > 0 \quad \forall \mathbf{z} \ne \mathbf{0}$$
+$$\mathbf{z}^\top \left( \nabla_{\Delta \theta}^2 \mathcal{L} \right) \mathbf{z} = \lambda^* \mathbf{z}^\top \mathbf{F} \mathbf{z} > 0 \quad \forall \mathbf{z} \ne \mathbf{0}$$
 The Hessian of the Lagrangian is strictly positive definite over the entire space $\mathbb{R}^d$.
-By the second-order sufficient conditions for constrained optimization, $\Delta \boldsymbol{\theta}^*$ is the unique, strict global maximizer of the surrogate objective subject to the quadratic trust region constraint. $\blacksquare$
+By the second-order sufficient conditions for constrained optimization, $\Delta \theta^*$ is the unique, strict global maximizer of the surrogate objective subject to the quadratic trust region constraint. $\blacksquare$
 
 ---
 
@@ -450,41 +450,41 @@ Our mathematical goal is two-fold:
 2. Derive the Conjugate Gradient (CG) algorithm from first principles as an exact iterative solver for $\mathbf{F} \mathbf{x} = \mathbf{g}$ that operates strictly through Fisher-vector products, guaranteeing monotone residual reduction and termination in at most $d$ iterations without ever forming matrix $\mathbf{F}$.
 
 **Part 2: Explicit Assumptions & Regularity Conditions**
-1. **Twice Continuous Differentiability ($C^2$):** The parameterized log-likelihood $\log \pi_{\boldsymbol{\theta}}(a \mid s)$ is twice continuously differentiable with respect to parameter vector $\boldsymbol{\theta}$. By Schwarz's theorem (Clairaut's theorem on mixed partials), mixed second derivatives commute: $\frac{\partial^2}{\partial \theta_i \partial \theta_j} = \frac{\partial^2}{\partial \theta_j \partial \theta_i}$.
+1. **Twice Continuous Differentiability ($C^2$):** The parameterized log-likelihood $\log \pi_{\theta}(a \mid s)$ is twice continuously differentiable with respect to parameter vector $\theta$. By Schwarz's theorem (Clairaut's theorem on mixed partials), mixed second derivatives commute: $\frac{\partial^2}{\partial \theta_i \partial \theta_j} = \frac{\partial^2}{\partial \theta_j \partial \theta_i}$.
 2. **Symmetric Positive Definiteness:** $\mathbf{F} \in \mathbb{R}^{d \times d}$ is symmetric and positive definite ($\mathbf{F} \succ 0$). In empirical settings where $\mathbf{F}$ is rank-deficient due to finite batch sampling, a small damping factor $\delta_{\text{damp}} > 0$ is added ($\mathbf{F}_{\text{damp}} = \mathbf{F} + \delta_{\text{damp}} \mathbf{I}$) to guarantee strict positive definiteness.
-3. **Constant Search Vector:** The search vector $\mathbf{v} \in \mathbb{R}^d$ is treated as an independent, constant vector during differentiation with respect to $\boldsymbol{\theta}$: $\frac{\partial v_j}{\partial \theta_i} = 0$.
+3. **Constant Search Vector:** The search vector $\mathbf{v} \in \mathbb{R}^d$ is treated as an independent, constant vector during differentiation with respect to $\theta$: $\frac{\partial v_j}{\partial \theta_i} = 0$.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation**
-- *Pearlmutter's FVP Trick:* The Fisher matrix $\mathbf{F}$ is the Jacobian of the gradient vector field $\nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}}$. Multiplying a Jacobian by a vector $\mathbf{v}$ represents the *directional derivative* of the gradient field along direction $\mathbf{v}$. By the chain rule, this directional derivative can be computed by first taking the inner product of the gradient field with $\mathbf{v}$ (which collapses the $d$-dimensional vector into a single scalar $y$) and then taking the gradient of that single scalar! This requires only one additional backward autodiff pass, consuming $\mathcal{O}(d)$ memory.
+- *Pearlmutter's FVP Trick:* The Fisher matrix $\mathbf{F}$ is the Jacobian of the gradient vector field $\nabla_{\theta} \bar{D}_{\text{KL}}$. Multiplying a Jacobian by a vector $\mathbf{v}$ represents the *directional derivative* of the gradient field along direction $\mathbf{v}$. By the chain rule, this directional derivative can be computed by first taking the inner product of the gradient field with $\mathbf{v}$ (which collapses the $d$-dimensional vector into a single scalar $y$) and then taking the gradient of that single scalar! This requires only one additional backward autodiff pass, consuming $\mathcal{O}(d)$ memory.
 - *Conjugate Gradient Geometry:* Standard gradient descent takes steps orthogonal in Euclidean space ($\mathbf{r}_{k+1}^\top \mathbf{r}_k = 0$), which causes inefficient "zig-zagging" down narrow parabolic valleys. Conjugate Gradient eliminates this inefficiency by choosing search directions that are *mutually conjugate with respect to the metric tensor $\mathbf{F}$*: $\mathbf{p}_i^\top \mathbf{F} \mathbf{p}_j = 0$ for all $i \ne j$. Each step performs an exact line minimization along $\mathbf{p}_k$, guaranteeing that the error component along $\mathbf{p}_k$ is reduced to zero permanently, never to be undone by future iterations.
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof**
 
 *Step 1: First-Principles Derivation of Pearlmutter's Fisher-Vector Product.*
-Let $\bar{D}_{\text{KL}}(\boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim d^\pi} [D_{\text{KL}}(\pi_{\boldsymbol{\theta}_{\text{old}}}(\cdot \mid s) \parallel \pi_{\boldsymbol{\theta}}(\cdot \mid s))]$.
-The Fisher Information Matrix is the Hessian of average KL divergence evaluated at $\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}$:
-$$\mathbf{F} \triangleq \left. \nabla_{\boldsymbol{\theta}}^2 \bar{D}_{\text{KL}}(\boldsymbol{\theta}) \right|_{\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}}$$
+Let $\bar{D}_{\text{KL}}(\theta) \triangleq \mathbb{E}_{s \sim d^\pi} [D_{\text{KL}}(\pi_{\theta_{\text{old}}}(\cdot \mid s) \parallel \pi_{\theta}(\cdot \mid s))]$.
+The Fisher Information Matrix is the Hessian of average KL divergence evaluated at $\theta = \theta_{\text{old}}$:
+$$\mathbf{F} \triangleq \left. \nabla_{\theta}^2 \bar{D}_{\text{KL}}(\theta) \right|_{\theta = \theta_{\text{old}}}$$
 In component notation, the $(i, j)$-th entry of $\mathbf{F}$ is:
-$$F_{ij} = \left. \frac{\partial^2 \bar{D}_{\text{KL}}}{\partial \theta_i \partial \theta_j} \right|_{\boldsymbol{\theta}_{\text{old}}}$$
+$$F_{ij} = \left. \frac{\partial^2 \bar{D}_{\text{KL}}}{\partial \theta_i \partial \theta_j} \right|_{\theta_{\text{old}}}$$
 Now, consider the $i$-th component of the matrix-vector product $\mathbf{w} = \mathbf{F} \mathbf{v}$ for an arbitrary constant vector $\mathbf{v} = [v_1, \dots, v_d]^\top$:
-$$w_i = (\mathbf{F} \mathbf{v})_i = \sum_{j=1}^d F_{ij} v_j = \sum_{j=1}^d \left( \left. \frac{\partial^2 \bar{D}_{\text{KL}}}{\partial \theta_i \partial \theta_j} \right|_{\boldsymbol{\theta}_{\text{old}}} \right) v_j$$
+$$w_i = (\mathbf{F} \mathbf{v})_i = \sum_{j=1}^d F_{ij} v_j = \sum_{j=1}^d \left( \left. \frac{\partial^2 \bar{D}_{\text{KL}}}{\partial \theta_i \partial \theta_j} \right|_{\theta_{\text{old}}} \right) v_j$$
 Since $\bar{D}_{\text{KL}} \in C^2$, by Clairaut's theorem mixed partial derivatives commute: $\frac{\partial^2 \bar{D}_{\text{KL}}}{\partial \theta_i \partial \theta_j} = \frac{\partial}{\partial \theta_i} \left( \frac{\partial \bar{D}_{\text{KL}}}{\partial \theta_j} \right)$.
 Furthermore, since $v_j$ is independent of $\theta_i$, we can pull the scalar $v_j$ inside the derivative:
 $$w_i = \sum_{j=1}^d \frac{\partial}{\partial \theta_i} \left( \frac{\partial \bar{D}_{\text{KL}}}{\partial \theta_j} v_j \right)$$
 By linearity of differentiation, exchange the summation and differentiation operator:
 $$w_i = \frac{\partial}{\partial \theta_i} \left( \sum_{j=1}^d \frac{\partial \bar{D}_{\text{KL}}}{\partial \theta_j} v_j \right)$$
 Recognize the term in parentheses as the standard Euclidean inner product:
-$$\sum_{j=1}^d \frac{\partial \bar{D}_{\text{KL}}}{\partial \theta_j} v_j = \left( \nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}} \right)^\top \mathbf{v}$$
+$$\sum_{j=1}^d \frac{\partial \bar{D}_{\text{KL}}}{\partial \theta_j} v_j = \left( \nabla_{\theta} \bar{D}_{\text{KL}} \right)^\top \mathbf{v}$$
 Therefore:
-$$w_i = \frac{\partial}{\partial \theta_i} \left( \left( \nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}} \right)^\top \mathbf{v} \right)$$
+$$w_i = \frac{\partial}{\partial \theta_i} \left( \left( \nabla_{\theta} \bar{D}_{\text{KL}} \right)^\top \mathbf{v} \right)$$
 Stacking all $d$ components into vector form proves the Pearlmutter Fisher-Vector Product Identity:
-$$\mathbf{F} \mathbf{v} = \left. \nabla_{\boldsymbol{\theta}} \left( \left( \nabla_{\boldsymbol{\theta}} \bar{D}_{\text{KL}}(\boldsymbol{\theta}) \right)^\top \mathbf{v} \right) \right|_{\boldsymbol{\theta} = \boldsymbol{\theta}_{\text{old}}} \quad \blacksquare$$
+$$\mathbf{F} \mathbf{v} = \left. \nabla_{\theta} \left( \left( \nabla_{\theta} \bar{D}_{\text{KL}}(\theta) \right)^\top \mathbf{v} \right) \right|_{\theta = \theta_{\text{old}}} \quad \blacksquare$$
 
 *Step 2: Equivalent Expectation Form for Policy Gradients.*
-Alternatively, by the Fisher Information identity, $\mathbf{F} = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\boldsymbol{\theta}}} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \right]$.
+Alternatively, by the Fisher Information identity, $\mathbf{F} = \mathbb{E}_{s \sim d^\pi, a \sim \pi_{\theta}} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \right]$.
 Multiplying by $\mathbf{v}$:
-$$\mathbf{F} \mathbf{v} = \mathbb{E}_{s, a} \left[ \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) \left( \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \mathbf{v} \right) \right]$$
-Notice that $\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)^\top \mathbf{v}$ is a simple scalar. Thus, $\mathbf{F}\mathbf{v}$ is simply the expectation of the score vector scaled by this scalar product, completely avoiding matrix operations!
+$$\mathbf{F} \mathbf{v} = \mathbb{E}_{s, a} \left[ \nabla_{\theta} \log \pi_{\theta}(a \mid s) \left( \nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \mathbf{v} \right) \right]$$
+Notice that $\nabla_{\theta} \log \pi_{\theta}(a \mid s)^\top \mathbf{v}$ is a simple scalar. Thus, $\mathbf{F}\mathbf{v}$ is simply the expectation of the score vector scaled by this scalar product, completely avoiding matrix operations!
 
 *Step 3: Quadratic Optimization Equivalence of $\mathbf{F} \mathbf{x} = \mathbf{g}$.*
 Solving the linear system $\mathbf{F} \mathbf{x} = \mathbf{g}$ with $\mathbf{F} \succ 0$ is mathematically equivalent to finding the unconstrained global minimizer of the strictly convex quadratic energy function:
@@ -556,7 +556,7 @@ Crucially, every single iteration requires only one matrix-vector product $\math
 
 ### The Trust Region Ellipsoid
 In parameter space $\mathbb{R}^d$:
-- The constraint $\frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} \le \delta$ defines a high-dimensional **hyper-ellipsoid**.
+- The constraint $\frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta \le \delta$ defines a high-dimensional **hyper-ellipsoid**.
 - The semi-axes of this ellipsoid are proportional to $1/\sqrt{\lambda_i}$, where $\lambda_i$ are the eigenvalues of $\mathbf{F}$. In directions where the policy is sensitive (large $\lambda_i$), the ellipsoid is thin and narrow; in insensitive directions, the ellipsoid is elongated.
 - The Conjugate Gradient algorithm finds the point on this ellipsoid that extends furthest in the direction of objective gradient $\mathbf{g}$.
 - The Backtracking Line Search pulls the step backward along the chord if the curvature deviates from quadratic flatness.
@@ -608,7 +608,7 @@ We will compute:
 2. Conjugate Gradient Iteration 1: Beta factor $\beta_0$, conjugate search direction $\mathbf{p}_1$, matrix-vector product $\mathbf{F} \mathbf{p}_1$, step size $\alpha_1$, final solution $\mathbf{x}_2$.
 3. Exact analytical solution verification via $\mathbf{F}^{-1} \mathbf{g}$.
 4. Quadratic form $\mathbf{x}^\top \mathbf{F} \mathbf{x}$.
-5. Final trust region step scaling factor and update vector $\Delta \boldsymbol{\theta}^*$.
+5. Final trust region step scaling factor and update vector $\Delta \theta^*$.
 
 ---
 
@@ -622,7 +622,7 @@ We will compute:
 | $\mathbf{x}_k$ | CG Approximate Solution to $\mathbf{F}\mathbf{x} = \mathbf{g}$ | Vectors in $\mathbb{R}^2$ |
 | $\mathbf{r}_k$ | CG Residual Vector | $\mathbf{g} - \mathbf{F} \mathbf{x}_k$ |
 | $\mathbf{p}_k$ | CG Conjugate Search Direction | Conjugate to all previous $\mathbf{p}$ |
-| $\Delta \boldsymbol{\theta}^*$ | Final Scaled TRPO Step | $\sqrt{\frac{2\delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} \mathbf{x}$ |
+| $\Delta \theta^*$ | Final Scaled TRPO Step | $\sqrt{\frac{2\delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} \mathbf{x}$ |
 
 ---
 
@@ -705,11 +705,11 @@ Trust region constraint is $\delta = 0.0500$.
 Compute scaling multiplier $\beta$:
 $$\beta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{F} \mathbf{x}}} = \sqrt{\frac{2 \times 0.0500}{2.28571}} = \sqrt{\frac{0.1000}{2.28571}} = \sqrt{0.04375} \approx \mathbf{0.20917}$$
 
-Final TRPO Step $\Delta \boldsymbol{\theta}^*$:
-$$\Delta \boldsymbol{\theta}^* = \beta \mathbf{x} = 0.20917 \begin{bmatrix} 0.85714 \\ 0.57143 \end{bmatrix} \approx \mathbf{\begin{bmatrix} 0.17929 \\ 0.11952 \end{bmatrix}}$$
+Final TRPO Step $\Delta \theta^*$:
+$$\Delta \theta^* = \beta \mathbf{x} = 0.20917 \begin{bmatrix} 0.85714 \\ 0.57143 \end{bmatrix} \approx \mathbf{\begin{bmatrix} 0.17929 \\ 0.11952 \end{bmatrix}}$$
 
 Verify Constraint:
-$$\frac{1}{2} (\Delta \boldsymbol{\theta}^*)^\top \mathbf{F} (\Delta \boldsymbol{\theta}^*) = \frac{1}{2} \beta^2 (\mathbf{x}^\top \mathbf{F} \mathbf{x}) = \frac{1}{2} (0.04375)(2.28571) = \mathbf{0.0500} = \delta \quad \checkmark$$
+$$\frac{1}{2} (\Delta \theta^*)^\top \mathbf{F} (\Delta \theta^*) = \frac{1}{2} \beta^2 (\mathbf{x}^\top \mathbf{F} \mathbf{x}) = \frac{1}{2} (0.04375)(2.28571) = \mathbf{0.0500} = \delta \quad \checkmark$$
 
 ---
 
@@ -821,14 +821,14 @@ The Conjugate Gradient algorithm converged to the exact analytical inverse in ex
 **Problem:**
 Using the CG solution $\mathbf{x} = [0.0, 1.0]^\top$ from Illustration 2 for $\mathbf{F} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$ and $\mathbf{g} = [1.0, 2.0]^\top$:
 1. Compute the exact trust region step length multiplier $\beta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{g}}}$ for trust region radius $\delta = 0.0100$.
-2. Form the proposed full update step $\Delta \boldsymbol{\theta}_0 = \beta \mathbf{x}$ and verify the second-order KL divergence approximation.
+2. Form the proposed full update step $\Delta \theta_0 = \beta \mathbf{x}$ and verify the second-order KL divergence approximation.
 3. Suppose the true environment policy exhibits higher-order cubic non-linear distortion such that:
-   $$\bar{D}_{\text{KL}}(\Delta \boldsymbol{\theta}) = \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{F} \Delta \boldsymbol{\theta} + 3.0 (\Delta \theta_2)^3$$
+   $$\bar{D}_{\text{KL}}(\Delta \theta) = \frac{1}{2} \Delta \theta^\top \mathbf{F} \Delta \theta + 3.0 (\Delta \theta_2)^3$$
    and the surrogate return exhibits quadratic degradation:
-   $$L(\Delta \boldsymbol{\theta}) = \mathbf{g}^\top \Delta \boldsymbol{\theta} - 15.0 (\Delta \theta_2)^2$$
+   $$L(\Delta \theta) = \mathbf{g}^\top \Delta \theta - 15.0 (\Delta \theta_2)^2$$
 4. Perform the backtracking line search with reduction rate $\alpha = 0.50$ ($j = 0, 1, 2, \dots$) to find the smallest backtracking iteration $j$ that simultaneously satisfies:
-   - Trust region enforcement: $\bar{D}_{\text{KL}}(\alpha^j \Delta \boldsymbol{\theta}_0) \le \delta$
-   - Surrogate improvement: $L(\alpha^j \Delta \boldsymbol{\theta}_0) > 0$.
+   - Trust region enforcement: $\bar{D}_{\text{KL}}(\alpha^j \Delta \theta_0) \le \delta$
+   - Surrogate improvement: $L(\alpha^j \Delta \theta_0) > 0$.
 
 **Solution:**
 
@@ -839,42 +839,42 @@ $$\mathbf{x}^\top \mathbf{g} = \begin{bmatrix} 0.0 & 1.0 \end{bmatrix} \begin{bm
 With trust region $\delta = 0.0100$:
 $$\beta = \sqrt{\frac{2 \delta}{\mathbf{x}^\top \mathbf{g}}} = \sqrt{\frac{2 \times 0.0100}{2.0000}} = \sqrt{\frac{0.0200}{2.0000}} = \sqrt{0.0100} = 0.1000$$
 
-#### Step 2: Propose Full Step $\Delta \boldsymbol{\theta}_0$ and Check Second-Order Approximation
-$$\Delta \boldsymbol{\theta}_0 = \beta \mathbf{x} = 0.1000 \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = \begin{bmatrix} 0.0000 \\ 0.1000 \end{bmatrix}$$
+#### Step 2: Propose Full Step $\Delta \theta_0$ and Check Second-Order Approximation
+$$\Delta \theta_0 = \beta \mathbf{x} = 0.1000 \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = \begin{bmatrix} 0.0000 \\ 0.1000 \end{bmatrix}$$
 Second-order Taylor expansion check:
-$$\frac{1}{2} \Delta \boldsymbol{\theta}_0^\top \mathbf{F} \Delta \boldsymbol{\theta}_0 = \frac{1}{2} \begin{bmatrix} 0.0 & 0.1 \end{bmatrix} \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix} \begin{bmatrix} 0.0 \\ 0.1 \end{bmatrix} = \frac{1}{2} \begin{bmatrix} 0.0 & 0.1 \end{bmatrix} \begin{bmatrix} 0.1 \\ 0.2 \end{bmatrix} = \frac{1}{2} (0.0200) = 0.0100 = \delta \quad \checkmark$$
+$$\frac{1}{2} \Delta \theta_0^\top \mathbf{F} \Delta \theta_0 = \frac{1}{2} \begin{bmatrix} 0.0 & 0.1 \end{bmatrix} \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix} \begin{bmatrix} 0.0 \\ 0.1 \end{bmatrix} = \frac{1}{2} \begin{bmatrix} 0.0 & 0.1 \end{bmatrix} \begin{bmatrix} 0.1 \\ 0.2 \end{bmatrix} = \frac{1}{2} (0.0200) = 0.0100 = \delta \quad \checkmark$$
 
 ---
 
 #### Step 3: Backtracking Line Search Evaluation
 
 **Backtracking Iteration $j = 0$ (Full Step: decay factor $\alpha^0 = 1.00$):**
-- Candidate step: $\Delta \boldsymbol{\theta}^{(0)} = 1.0 \times [0.0, 0.1]^\top = [0.0000, 0.1000]^\top$.
+- Candidate step: $\Delta \theta^{(0)} = 1.0 \times [0.0, 0.1]^\top = [0.0000, 0.1000]^\top$.
 - True non-linear KL divergence:
-  $$\bar{D}_{\text{KL}}(\Delta \boldsymbol{\theta}^{(0)}) = \frac{1}{2} (0.0200) + 3.0 \times (0.1000)^3 = 0.0100 + 3.0 \times (0.0010) = 0.0100 + 0.0030 = 0.0130$$
+  $$\bar{D}_{\text{KL}}(\Delta \theta^{(0)}) = \frac{1}{2} (0.0200) + 3.0 \times (0.1000)^3 = 0.0100 + 3.0 \times (0.0010) = 0.0100 + 0.0030 = 0.0130$$
 - Surrogate objective value:
-  $$L(\Delta \boldsymbol{\theta}^{(0)}) = \mathbf{g}^\top \Delta \boldsymbol{\theta}^{(0)} - 15.0 \times (0.1000)^2 = (2.0 \times 0.1000) - 15.0 \times (0.0100) = 0.2000 - 0.1500 = +0.0500$$
+  $$L(\Delta \theta^{(0)}) = \mathbf{g}^\top \Delta \theta^{(0)} - 15.0 \times (0.1000)^2 = (2.0 \times 0.1000) - 15.0 \times (0.0100) = 0.2000 - 0.1500 = +0.0500$$
 - Check criteria:
   - Surrogate improvement: $L = +0.0500 > 0$ (Satisfied)
   - Trust region constraint: $\bar{D}_{\text{KL}} = 0.0130 > \delta = 0.0100$ (**VIOLATED!**)
 - Outcome: **Reject step at $j = 0$ due to trust region boundary breach.**
 
 **Backtracking Iteration $j = 1$ (Decay factor $\alpha^1 = 0.50$):**
-- Candidate step: $\Delta \boldsymbol{\theta}^{(1)} = 0.50 \times [0.0, 0.1]^\top = [0.0000, 0.0500]^\top$.
+- Candidate step: $\Delta \theta^{(1)} = 0.50 \times [0.0, 0.1]^\top = [0.0000, 0.0500]^\top$.
 - Quadratic Fisher form:
-  $$\frac{1}{2} (\Delta \boldsymbol{\theta}^{(1)})^\top \mathbf{F} (\Delta \boldsymbol{\theta}^{(1)}) = (0.5)^2 \times 0.0100 = 0.25 \times 0.0100 = 0.002500$$
+  $$\frac{1}{2} (\Delta \theta^{(1)})^\top \mathbf{F} (\Delta \theta^{(1)}) = (0.5)^2 \times 0.0100 = 0.25 \times 0.0100 = 0.002500$$
 - Cubic distortion term:
   $$3.0 \times (0.0500)^3 = 3.0 \times (0.000125) = 0.000375$$
 - True non-linear KL divergence:
-  $$\bar{D}_{\text{KL}}(\Delta \boldsymbol{\theta}^{(1)}) = 0.002500 + 0.000375 = 0.002875$$
+  $$\bar{D}_{\text{KL}}(\Delta \theta^{(1)}) = 0.002500 + 0.000375 = 0.002875$$
 - Surrogate objective value:
-  $$L(\Delta \boldsymbol{\theta}^{(1)}) = \mathbf{g}^\top \Delta \boldsymbol{\theta}^{(1)} - 15.0 \times (0.0500)^2 = (2.0 \times 0.0500) - 15.0 \times (0.0025) = 0.1000 - 0.0375 = +0.0625$$
+  $$L(\Delta \theta^{(1)}) = \mathbf{g}^\top \Delta \theta^{(1)} - 15.0 \times (0.0500)^2 = (2.0 \times 0.0500) - 15.0 \times (0.0025) = 0.1000 - 0.0375 = +0.0625$$
 - Check criteria:
   - Surrogate improvement: $L = +0.0625 > 0$ (Satisfied: objective improved even more than $j=0$ due to reduced quadratic penalty!)
   - Trust region constraint: $\bar{D}_{\text{KL}} = 0.002875 \le 0.0100$ (Satisfied: well within the safety boundary!)
 - Outcome: **Accept update at backtracking iteration $j = 1$!**
 - Final accepted TRPO update:
-  $$\boldsymbol{\theta}_{\text{new}} = \boldsymbol{\theta}_{\text{old}} + \begin{bmatrix} 0.0000 \\ 0.0500 \end{bmatrix} \quad \blacksquare$$
+  $$\theta_{\text{new}} = \theta_{\text{old}} + \begin{bmatrix} 0.0000 \\ 0.0500 \end{bmatrix} \quad \blacksquare$$
 
 ---
 
@@ -926,7 +926,7 @@ Maximum advantage magnitude:
 $$\epsilon \triangleq \max_{s, a} |A^\pi(s, a)| = \max\left( \frac{5}{6}, \frac{1}{2}, \frac{3}{2} \right) = \frac{3}{2} = 1.5000$$
 
 #### Step 2: Compute $d^\pi$ and Surrogate Objective $L_\pi(\tilde{\pi})$
-Unnormalized discounted state visitation $d^\pi = \boldsymbol{\mu}^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$:
+Unnormalized discounted state visitation $d^\pi = \mu^\top (\mathbf{I} - \gamma \mathbf{P}^\pi)^{-1}$:
 $$\begin{bmatrix} d^\pi(s_1) & d^\pi(s_2) & d^\pi(s_3) \end{bmatrix} \begin{bmatrix} 0.75 & -0.25 & 0.0 \\ 0.0 & 0.75 & -0.25 \\ 0.0 & 0.0 & 0.50 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.0 & 0.0 \end{bmatrix}$$
 - $0.75 d^\pi(s_1) = 1.0 \implies d^\pi(s_1) = \frac{4}{3} \approx 1.333333$
 - $-0.25 d^\pi(s_1) + 0.75 d^\pi(s_2) = 0 \implies d^\pi(s_2) = \frac{1}{3} d^\pi(s_1) = \frac{4}{9} \approx 0.444444$
@@ -973,19 +973,19 @@ The true return $J(\tilde{\pi}) = 2.00625$ exceeds both the old return $J(\pi) =
 ### Illustration 5: Fisher-Vector Product Numerical Verification via PyTorch-style Pearlmutter Trick
 
 **Problem:**
-Consider a continuous 1D Gaussian policy $\pi_{\boldsymbol{\theta}}(a) = \mathcal{N}(\mu, \sigma^2)$ parameterized by $\boldsymbol{\theta} = [\mu, \rho]^\top \in \mathbb{R}^2$ where $\rho \triangleq \log \sigma$ (so $\sigma = e^\rho$).
+Consider a continuous 1D Gaussian policy $\pi_{\theta}(a) = \mathcal{N}(\mu, \sigma^2)$ parameterized by $\theta = [\mu, \rho]^\top \in \mathbb{R}^2$ where $\rho \triangleq \log \sigma$ (so $\sigma = e^\rho$).
 Current parameter point:
-$$\boldsymbol{\theta}_0 = [\mu_0, \rho_0]^\top = [1.0000, 0.5000]^\top$$
+$$\theta_0 = [\mu_0, \rho_0]^\top = [1.0000, 0.5000]^\top$$
 Search direction vector:
 $$\mathbf{v} = [v_1, v_2]^\top = [0.6000, -0.8000]^\top$$
-1. Compute the analytical Fisher Information Matrix $\mathbf{F}(\boldsymbol{\theta}_0)$ and the exact direct matrix-vector product $\mathbf{F} \mathbf{v}$.
+1. Compute the analytical Fisher Information Matrix $\mathbf{F}(\theta_0)$ and the exact direct matrix-vector product $\mathbf{F} \mathbf{v}$.
 2. Using the analytical KL divergence between two univariate Gaussians:
-   $$D_{\text{KL}}(\boldsymbol{\theta}_0 \parallel \boldsymbol{\theta}) = (\rho - \rho_0) + \frac{e^{2\rho_0} + (\mu_0 - \mu)^2}{2 e^{2\rho}} - \frac{1}{2}$$
+   $$D_{\text{KL}}(\theta_0 \parallel \theta) = (\rho - \rho_0) + \frac{e^{2\rho_0} + (\mu_0 - \mu)^2}{2 e^{2\rho}} - \frac{1}{2}$$
    execute the Pearlmutter automatic differentiation procedure step-by-step:
-   - Compute the first gradient $\mathbf{g}_{\text{KL}}(\boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} D_{\text{KL}}(\boldsymbol{\theta}_0 \parallel \boldsymbol{\theta})$.
-   - Form the scalar inner product $y(\boldsymbol{\theta}) = \mathbf{g}_{\text{KL}}(\boldsymbol{\theta})^\top \mathbf{v}$.
-   - Compute the second gradient $\nabla_{\boldsymbol{\theta}} y(\boldsymbol{\theta})$ evaluated at $\boldsymbol{\theta} = \boldsymbol{\theta}_0$.
-3. Prove that the Pearlmutter autograd output $\nabla_{\boldsymbol{\theta}} y|_{\boldsymbol{\theta}_0}$ matches the direct product $\mathbf{F} \mathbf{v}$ to machine precision.
+   - Compute the first gradient $\mathbf{g}_{\text{KL}}(\theta) = \nabla_{\theta} D_{\text{KL}}(\theta_0 \parallel \theta)$.
+   - Form the scalar inner product $y(\theta) = \mathbf{g}_{\text{KL}}(\theta)^\top \mathbf{v}$.
+   - Compute the second gradient $\nabla_{\theta} y(\theta)$ evaluated at $\theta = \theta_0$.
+3. Prove that the Pearlmutter autograd output $\nabla_{\theta} y|_{\theta_0}$ matches the direct product $\mathbf{F} \mathbf{v}$ to machine precision.
 
 **Solution:**
 
@@ -995,9 +995,9 @@ For a Gaussian distribution with parameterization $[\mu, \rho]^\top$ where $\rho
 - $F_{\mu \rho} = F_{\rho \mu} = 0$
 - $F_{\rho \rho} = 2$ (since $\frac{\partial \sigma}{\partial \rho} = \sigma$, $F_{\sigma \sigma} = \frac{2}{\sigma^2} \implies F_{\rho \rho} = \frac{2}{\sigma^2} \left(\frac{\partial \sigma}{\partial \rho}\right)^2 = 2$)
 Therefore, the exact Fisher matrix is diagonal:
-$$\mathbf{F}(\boldsymbol{\theta}) = \begin{bmatrix} e^{-2\rho} & 0 \\ 0 & 2 \end{bmatrix}$$
-At $\boldsymbol{\theta}_0 = [1.0000, 0.5000]^\top$ ($\rho_0 = 0.5000$):
-$$\mathbf{F}(\boldsymbol{\theta}_0) = \begin{bmatrix} e^{-2(0.5)} & 0 \\ 0 & 2 \end{bmatrix} = \begin{bmatrix} e^{-1.0} & 0 \\ 0 & 2 \end{bmatrix} \approx \begin{bmatrix} 0.367879 & 0.000000 \\ 0.000000 & 2.000000 \end{bmatrix}$$
+$$\mathbf{F}(\theta) = \begin{bmatrix} e^{-2\rho} & 0 \\ 0 & 2 \end{bmatrix}$$
+At $\theta_0 = [1.0000, 0.5000]^\top$ ($\rho_0 = 0.5000$):
+$$\mathbf{F}(\theta_0) = \begin{bmatrix} e^{-2(0.5)} & 0 \\ 0 & 2 \end{bmatrix} = \begin{bmatrix} e^{-1.0} & 0 \\ 0 & 2 \end{bmatrix} \approx \begin{bmatrix} 0.367879 & 0.000000 \\ 0.000000 & 2.000000 \end{bmatrix}$$
 Direct matrix-vector multiplication with $\mathbf{v} = [0.6000, -0.8000]^\top$:
 $$\mathbf{F} \mathbf{v} = \begin{bmatrix} 0.367879 & 0.000000 \\ 0.000000 & 2.000000 \end{bmatrix} \begin{bmatrix} 0.6000 \\ -0.8000 \end{bmatrix} = \begin{bmatrix} 0.367879 \times 0.6000 \\ 2.000000 \times (-0.8000) \end{bmatrix} = \mathbf{\begin{bmatrix} +0.220728 \\ -1.600000 \end{bmatrix}}$$
 
@@ -1010,30 +1010,30 @@ Given $D_{\text{KL}}(\mu, \rho) = (\rho - \rho_0) + \frac{e^{2\rho_0} + (\mu_0 -
 Compute partial derivatives with respect to candidate parameters $\mu$ and $\rho$:
 $$\frac{\partial D_{\text{KL}}}{\partial \mu} = \frac{1}{2 e^{2\rho}} \frac{\partial}{\partial \mu} \left( (\mu_0 - \mu)^2 \right) = \frac{-2(\mu_0 - \mu)}{2 e^{2\rho}} = \frac{\mu - \mu_0}{e^{2\rho}}$$
 $$\frac{\partial D_{\text{KL}}}{\partial \rho} = 1 + \left( e^{2\rho_0} + (\mu_0 - \mu)^2 \right) \frac{\partial}{\partial \rho} \left( \frac{1}{2} e^{-2\rho} \right) = 1 - \frac{e^{2\rho_0} + (\mu_0 - \mu)^2}{e^{2\rho}}$$
-Notice that evaluating at $\boldsymbol{\theta} = \boldsymbol{\theta}_0$ ($\mu = \mu_0, \rho = \rho_0$):
-$$\left. \frac{\partial D_{\text{KL}}}{\partial \mu} \right|_{\boldsymbol{\theta}_0} = \frac{0}{e^{2\rho_0}} = 0, \quad \left. \frac{\partial D_{\text{KL}}}{\partial \rho} \right|_{\boldsymbol{\theta}_0} = 1 - \frac{e^{2\rho_0}}{e^{2\rho_0}} = 1 - 1 = 0$$
+Notice that evaluating at $\theta = \theta_0$ ($\mu = \mu_0, \rho = \rho_0$):
+$$\left. \frac{\partial D_{\text{KL}}}{\partial \mu} \right|_{\theta_0} = \frac{0}{e^{2\rho_0}} = 0, \quad \left. \frac{\partial D_{\text{KL}}}{\partial \rho} \right|_{\theta_0} = 1 - \frac{e^{2\rho_0}}{e^{2\rho_0}} = 1 - 1 = 0$$
 The first gradient is $\mathbf{0}$ at the reference point, as expected.
 
 **Step 2b: Inner Product with Vector $\mathbf{v}$:**
-Form the scalar function $y(\mu, \rho) \triangleq (\nabla_{\boldsymbol{\theta}} D_{\text{KL}})^\top \mathbf{v}$:
+Form the scalar function $y(\mu, \rho) \triangleq (\nabla_{\theta} D_{\text{KL}})^\top \mathbf{v}$:
 $$y(\mu, \rho) = v_1 \left( \frac{\mu - \mu_0}{e^{2\rho}} \right) + v_2 \left( 1 - \frac{e^{2\rho_0} + (\mu_0 - \mu)^2}{e^{2\rho}} \right)$$
 
-**Step 2c: Second Backward Pass (Differentiating $y$ with respect to $\boldsymbol{\theta}$):**
+**Step 2c: Second Backward Pass (Differentiating $y$ with respect to $\theta$):**
 Differentiate $y(\mu, \rho)$ with respect to $\mu$:
 $$\frac{\partial y}{\partial \mu} = v_1 \frac{\partial}{\partial \mu} \left( \frac{\mu - \mu_0}{e^{2\rho}} \right) + v_2 \frac{\partial}{\partial \mu} \left( -\frac{(\mu_0 - \mu)^2}{e^{2\rho}} \right) = v_1 \left( \frac{1}{e^{2\rho}} \right) + v_2 \left( \frac{2(\mu_0 - \mu)}{e^{2\rho}} \right)$$
-Evaluate at $\boldsymbol{\theta} = \boldsymbol{\theta}_0$ ($\mu = \mu_0, \rho = \rho_0$):
-$$\left. \frac{\partial y}{\partial \mu} \right|_{\boldsymbol{\theta}_0} = v_1 e^{-2\rho_0} + v_2 (0) = v_1 e^{-2\rho_0} = 0.6000 \times e^{-1.0} \approx \mathbf{+0.220728}$$
+Evaluate at $\theta = \theta_0$ ($\mu = \mu_0, \rho = \rho_0$):
+$$\left. \frac{\partial y}{\partial \mu} \right|_{\theta_0} = v_1 e^{-2\rho_0} + v_2 (0) = v_1 e^{-2\rho_0} = 0.6000 \times e^{-1.0} \approx \mathbf{+0.220728}$$
 
 Differentiate $y(\mu, \rho)$ with respect to $\rho$:
 $$\frac{\partial y}{\partial \rho} = v_1 (\mu - \mu_0) \frac{\partial}{\partial \rho} (e^{-2\rho}) + v_2 \left( e^{2\rho_0} + (\mu_0 - \mu)^2 \right) \frac{\partial}{\partial \rho} (-e^{-2\rho})$$
 $$= v_1 (\mu - \mu_0) (-2 e^{-2\rho}) + v_2 \left( e^{2\rho_0} + (\mu_0 - \mu)^2 \right) (2 e^{-2\rho})$$
-Evaluate at $\boldsymbol{\theta} = \boldsymbol{\theta}_0$ ($\mu = \mu_0, \rho = \rho_0$):
-$$\left. \frac{\partial y}{\partial \rho} \right|_{\boldsymbol{\theta}_0} = v_1 (0) (-2 e^{-2\rho_0}) + v_2 (e^{2\rho_0} + 0)(2 e^{-2\rho_0}) = 0 + v_2 (2 \cdot e^{2\rho_0} e^{-2\rho_0}) = 2 v_2$$
+Evaluate at $\theta = \theta_0$ ($\mu = \mu_0, \rho = \rho_0$):
+$$\left. \frac{\partial y}{\partial \rho} \right|_{\theta_0} = v_1 (0) (-2 e^{-2\rho_0}) + v_2 (e^{2\rho_0} + 0)(2 e^{-2\rho_0}) = 0 + v_2 (2 \cdot e^{2\rho_0} e^{-2\rho_0}) = 2 v_2$$
 $$= 2 \times (-0.8000) = \mathbf{-1.600000}$$
 
 #### Step 3: Comparison and Verification
 Stacking the second gradient results:
-$$\nabla_{\boldsymbol{\theta}} y(\boldsymbol{\theta}_0) = \begin{bmatrix} \left. \frac{\partial y}{\partial \mu} \right|_{\boldsymbol{\theta}_0} \\ \left. \frac{\partial y}{\partial \rho} \right|_{\boldsymbol{\theta}_0} \end{bmatrix} = \mathbf{\begin{bmatrix} +0.220728 \\ -1.600000 \end{bmatrix}} \equiv \mathbf{F} \mathbf{v}$$
+$$\nabla_{\theta} y(\theta_0) = \begin{bmatrix} \left. \frac{\partial y}{\partial \mu} \right|_{\theta_0} \\ \left. \frac{\partial y}{\partial \rho} \right|_{\theta_0} \end{bmatrix} = \mathbf{\begin{bmatrix} +0.220728 \\ -1.600000 \end{bmatrix}} \equiv \mathbf{F} \mathbf{v}$$
 The Pearlmutter double-backward autodiff output reproduces the direct matrix-vector product with $0.0000\%$ error, verifying the foundation of TRPO's matrix-free optimization! $\blacksquare$
 
 ---
@@ -1064,7 +1064,7 @@ The accompanying Python script implements:
 1. Exact numerical verification of Part 5 Conjugate Gradient hand calculations:
    - Iteration 0: $\alpha_0 = 0.45455, \mathbf{x}_1 = [0.9091, 0.4545]^\top$
    - Iteration 1: $\mathbf{x}_2 = [0.85714, 0.57143]^\top$ matching analytical inverse $[6/7, 4/7]^\top$ to $< 10^{-14}$.
-   - Trust region scaling $\beta = 0.20917$ and final step $\Delta \boldsymbol{\theta}^* = [0.17929, 0.11952]^\top$.
+   - Trust region scaling $\beta = 0.20917$ and final step $\Delta \theta^* = [0.17929, 0.11952]^\top$.
 2. Standalone PyTorch implementation of Hessian-Vector Products and Conjugate Gradient.
 3. Complete verification of Section 6 Solved Illustrations:
    - Illustration 2: 2-iteration CG solve on $2 \times 2$ Fisher matrix converging to $[0, 1]^\top$.

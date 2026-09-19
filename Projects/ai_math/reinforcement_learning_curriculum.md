@@ -262,10 +262,10 @@ Every single chapter in this curriculum adheres strictly to the uncompromised un
 #### RL 6.2 Trajectory Optimization & Model Predictive Control (MPC)
 - **Core Theory:** Planning in continuous spaces; Shooting methods vs. Collocation; Open-loop vs. Closed-loop control.
 - **The Cross-Entropy Method (CEM):** Population-based derivative-free optimization:
-  1. Sample $N$ action sequences from candidate Gaussian distribution $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$.
+  1. Sample $N$ action sequences from candidate Gaussian distribution $\mathcal{N}(\mu, \Sigma)$.
   2. Evaluate predicted trajectory returns using the learned world model.
   3. Select top $K$ elite sequences.
-  4. Refit Gaussian parameters $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to the elite set; iterate.
+  4. Refit Gaussian parameters $(\mu, \Sigma)$ to the elite set; iterate.
 - **Model Predictive Control (MPC):** Receding horizon planning: optimize over horizon $H$, execute *only the first action* $a_0$, observe actual state $s_1$, re-plan from $s_1$ (robustness to model errors).
 - **Probabilistic Ensembles with Trajectory Sampling (PETS, Chua et al., 2018):** Ensembles of probabilistic neural networks capturing aleatoric (inherent stochasticity) and epistemic (lack of data) uncertainty.
 - **Tom Yeh Visual Grid:** 2-iteration Cross-Entropy Method optimization with elite selection and mean/variance refitting by hand.

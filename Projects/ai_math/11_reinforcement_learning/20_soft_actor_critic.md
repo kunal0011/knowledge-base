@@ -73,7 +73,7 @@ For any MDP with bounded rewards, $Q^{\pi_{\text{new}}}(s, a) \ge Q^{\pi_{\text{
 ### 2.3 The Continuous Reparameterization Trick & $\tanh$ Squashing
 
 To backpropagate through stochastic continuous actions, SAC uses the **reparameterization trick**:
-$$u = \mu_{\boldsymbol{\theta}}(s) + \sigma_{\boldsymbol{\theta}}(s) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+$$u = \mu_{\theta}(s) + \sigma_{\theta}(s) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
 
 To strictly enforce physical action boundaries $a \in [-1, 1]^m$, the unconstrained Gaussian variable $u$ is squashed through the hyperbolic tangent function:
 $$a = \tanh(u)$$
@@ -96,19 +96,19 @@ $$\log \mu(u \mid s) = - \frac{1}{2} \sum_{i=1}^m \left[ \log(2\pi) + 2 \log \si
 
 To prevent overestimation bias, SAC adopts TD3's Clipped Double Q-learning.
 The soft target value for transition $(s, a, r, s', d)$ is:
-$$y = r + (1 - d) \gamma \left( \min_{j=1, 2} Q_{\boldsymbol{\phi}_j^-}(s', \tilde{a}') - \alpha \log \pi_{\boldsymbol{\theta}}(\tilde{a}' \mid s') \right)$$
-where $\tilde{a}' \sim \pi_{\boldsymbol{\theta}}(\cdot \mid s')$.
+$$y = r + (1 - d) \gamma \left( \min_{j=1, 2} Q_{\phi_j^-}(s', \tilde{a}') - \alpha \log \pi_{\theta}(\tilde{a}' \mid s') \right)$$
+where $\tilde{a}' \sim \pi_{\theta}(\cdot \mid s')$.
 
-The two critic networks $Q_{\boldsymbol{\phi}_1}, Q_{\boldsymbol{\phi}_2}$ minimize the Mean Squared Bellman Error:
-$$\mathcal{L}(\boldsymbol{\phi}_1) = \mathbb{E} \left[ \frac{1}{2} \left( Q_{\boldsymbol{\phi}_1}(s, a) - y \right)^2 \right], \quad \mathcal{L}(\boldsymbol{\phi}_2) = \mathbb{E} \left[ \frac{1}{2} \left( Q_{\boldsymbol{\phi}_2}(s, a) - y \right)^2 \right]$$
+The two critic networks $Q_{\phi_1}, Q_{\phi_2}$ minimize the Mean Squared Bellman Error:
+$$\mathcal{L}(\phi_1) = \mathbb{E} \left[ \frac{1}{2} \left( Q_{\phi_1}(s, a) - y \right)^2 \right], \quad \mathcal{L}(\phi_2) = \mathbb{E} \left[ \frac{1}{2} \left( Q_{\phi_2}(s, a) - y \right)^2 \right]$$
 
 ---
 
 ### 2.5 Actor Loss (Policy Optimization)
 
-The policy parameters $\boldsymbol{\theta}$ are optimized to maximize the soft Q-value while maximizing entropy:
-$$\mathcal{L}(\boldsymbol{\theta}) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \alpha \log \pi_{\boldsymbol{\theta}}(a_{\boldsymbol{\theta}}(s, \epsilon) \mid s) - \min_{j=1, 2} Q_{\boldsymbol{\phi}_j}(s, a_{\boldsymbol{\theta}}(s, \epsilon)) \right]$$
-The policy gradient flows directly through $a_{\boldsymbol{\theta}}(s, \epsilon)$ via the reparameterization trick!
+The policy parameters $\theta$ are optimized to maximize the soft Q-value while maximizing entropy:
+$$\mathcal{L}(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \alpha \log \pi_{\theta}(a_{\theta}(s, \epsilon) \mid s) - \min_{j=1, 2} Q_{\phi_j}(s, a_{\theta}(s, \epsilon)) \right]$$
+The policy gradient flows directly through $a_{\theta}(s, \epsilon)$ via the reparameterization trick!
 
 ---
 
@@ -120,7 +120,7 @@ $$\max_\pi \mathbb{E} \left[ \sum_t R(S_t, A_t) \right] \quad \text{subject to} 
 where $\bar{\mathcal{H}} \triangleq - \dim(\mathcal{A})$ is the heuristic target entropy.
 
 The dual objective for temperature $\alpha$ is:
-$$\mathcal{L}(\alpha) = \mathbb{E}_{s \sim \mathcal{D}, a \sim \pi_{\boldsymbol{\theta}}} \left[ - \alpha \left( \log \pi_{\boldsymbol{\theta}}(a \mid s) + \bar{\mathcal{H}} \right) \right]$$
+$$\mathcal{L}(\alpha) = \mathbb{E}_{s \sim \mathcal{D}, a \sim \pi_{\theta}} \left[ - \alpha \left( \log \pi_{\theta}(a \mid s) + \bar{\mathcal{H}} \right) \right]$$
 
 - If policy entropy is too low ($-\log \pi > \bar{\mathcal{H}}$), $\alpha$ increases to force more exploration.
 - If policy entropy is high enough, $\alpha$ decreases to allow greedy exploitation!
@@ -317,26 +317,26 @@ hyperbolic tangent a = tanh(u) in (-1, 1)^D:
 
 **Part 1: Problem Statement & Mathematical Goal:**
 In continuous robotic control, physical actuators operate within bounded intervals, typically normalized to $a \in (-1, 1)^D$. To sample valid actions without boundary clipping artifacts, Soft Actor-Critic introduces a two-stage generative process:
-1. An unconstrained Gaussian latent variable $u \in \mathbb{R}^D$ is generated via a neural network that outputs state-dependent mean $\boldsymbol{\mu}_{\boldsymbol{\theta}}(s) \in \mathbb{R}^D$ and standard deviation $\boldsymbol{\sigma}_{\boldsymbol{\theta}}(s) \in \mathbb{R}_{>0}^D$:
-   $$u = g_{\boldsymbol{\theta}}(s, \epsilon) \triangleq \boldsymbol{\mu}_{\boldsymbol{\theta}}(s) + \boldsymbol{\sigma}_{\boldsymbol{\theta}}(s) \odot \epsilon, \quad \epsilon \sim p(\epsilon) = \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$$
+1. An unconstrained Gaussian latent variable $u \in \mathbb{R}^D$ is generated via a neural network that outputs state-dependent mean $\mu_{\theta}(s) \in \mathbb{R}^D$ and standard deviation $\sigma_{\theta}(s) \in \mathbb{R}_{>0}^D$:
+   $$u = g_{\theta}(s, \epsilon) \triangleq \mu_{\theta}(s) + \sigma_{\theta}(s) \odot \epsilon, \quad \epsilon \sim p(\epsilon) = \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$$
    where $\odot$ denotes the elementwise Hadamard product, and $\epsilon$ is parameter-independent standard Gaussian noise.
 2. The latent variable $u$ is transformed via the coordinate-wise invertible squashing mapping $f: \mathbb{R}^D \to (-1, 1)^D$:
    $$a = f(u) \triangleq \left( \tanh(u_1), \tanh(u_2), \dots, \tanh(u_D) \right)^T$$
 
 Our mathematical goals are:
-1. Compute the Jacobian matrix $\mathbf{J}_f(u) \triangleq \frac{\partial a}{\partial u}$, evaluate its determinant $|\det(\mathbf{J}_f(u))|$, and derive the exact closed-form expression for the squashed probability density $\log \pi_{\boldsymbol{\theta}}(a \mid s)$ under the transformation of random variables theorem.
-2. Using the Law of the Unconscious Statistician (LOTUS), pass the gradient operator $\nabla_{\boldsymbol{\theta}}$ through the expectation over base noise $\epsilon$, and derive the analytical pathwise policy gradient $\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta})$ for the soft actor objective:
-   $$J(\boldsymbol{\theta}) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ Q(s, a_{\boldsymbol{\theta}}(s, \epsilon)) - \alpha \log \pi_{\boldsymbol{\theta}}(a_{\boldsymbol{\theta}}(s, \epsilon) \mid s) \right]$$
+1. Compute the Jacobian matrix $\mathbf{J}_f(u) \triangleq \frac{\partial a}{\partial u}$, evaluate its determinant $|\det(\mathbf{J}_f(u))|$, and derive the exact closed-form expression for the squashed probability density $\log \pi_{\theta}(a \mid s)$ under the transformation of random variables theorem.
+2. Using the Law of the Unconscious Statistician (LOTUS), pass the gradient operator $\nabla_{\theta}$ through the expectation over base noise $\epsilon$, and derive the analytical pathwise policy gradient $\nabla_{\theta} J(\theta)$ for the soft actor objective:
+   $$J(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ Q(s, a_{\theta}(s, \epsilon)) - \alpha \log \pi_{\theta}(a_{\theta}(s, \epsilon) \mid s) \right]$$
 
 **Part 2: Explicit Assumptions & Regularity Conditions:**
 1. **$C^1$-Diffeomorphism:** The squashing function $f: \mathbb{R}^D \to (-1, 1)^D$ given by $f_i(u) = \tanh(u_i)$ is a continuously differentiable, bijective diffeomorphism with non-zero Jacobian determinant everywhere on $\mathbb{R}^D$.
-2. **Diagonal Latent Covariance:** The latent Gaussian distribution has a diagonal covariance matrix $\boldsymbol{\Sigma}_{\boldsymbol{\theta}}(s) = \operatorname{diag}\left(\sigma_{\boldsymbol{\theta}, 1}^2(s), \dots, \sigma_{\boldsymbol{\theta}, D}^2(s)\right)$, implying components $u_1, \dots, u_D$ are conditionally independent given $s$.
-3. **Smoothness of Policy and Critic:** The network heads $\boldsymbol{\mu}_{\boldsymbol{\theta}}(s)$ and $\boldsymbol{\sigma}_{\boldsymbol{\theta}}(s)$ are continuously differentiable with respect to $\boldsymbol{\theta}$. The critic $Q(s, a)$ is continuously differentiable with respect to $a$.
-4. **Dominated Convergence:** The gradient $\nabla_{\boldsymbol{\theta}} \left[ Q(s, a_{\boldsymbol{\theta}}(s, \epsilon)) - \alpha \log \pi_{\boldsymbol{\theta}}(a_{\boldsymbol{\theta}}(s, \epsilon) \mid s) \right]$ is bounded by an integrable function $M(s, \epsilon)$ such that $\mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}}[M(s, \epsilon)] < \infty$, permitting the interchange of derivative and expectation by the Leibniz integral rule.
+2. **Diagonal Latent Covariance:** The latent Gaussian distribution has a diagonal covariance matrix $\Sigma_{\theta}(s) = \operatorname{diag}\left(\sigma_{\theta, 1}^2(s), \dots, \sigma_{\theta, D}^2(s)\right)$, implying components $u_1, \dots, u_D$ are conditionally independent given $s$.
+3. **Smoothness of Policy and Critic:** The network heads $\mu_{\theta}(s)$ and $\sigma_{\theta}(s)$ are continuously differentiable with respect to $\theta$. The critic $Q(s, a)$ is continuously differentiable with respect to $a$.
+4. **Dominated Convergence:** The gradient $\nabla_{\theta} \left[ Q(s, a_{\theta}(s, \epsilon)) - \alpha \log \pi_{\theta}(a_{\theta}(s, \epsilon) \mid s) \right]$ is bounded by an integrable function $M(s, \epsilon)$ such that $\mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}}[M(s, \epsilon)] < \infty$, permitting the interchange of derivative and expectation by the Leibniz integral rule.
 
 **Part 3: Underlying Intuition & Geometric / Physical Interpretation:**
 - **Geometric Volume Distortion:** When continuous probability mass is transported through a non-linear mapping $a = \tanh(u)$, probability mass must be conserved within corresponding differential volumes: $\pi(a \mid s) |da| = \mu(u \mid s) |du|$. Because $\tanh(u)$ has horizontal asymptotes at $\pm 1$, its slope $\frac{da}{du} = 1 - a^2$ approaches $0$ as $u \to \pm \infty$. This implies that a wide interval in latent space $u$ is compressed into an infinitesimally narrow interval near the action limits $a = \pm 1$. To conserve probability, the density $\pi(a \mid s)$ must blow up by the factor $\left|\frac{da}{du}\right|^{-1} = (1 - a^2)^{-1}$. In log-space, this appears as an additive penalty $-\sum_i \log(1 - a_i^2)$ that counteracts the compression.
-- **Pathwise Gradient vs. REINFORCE:** In the classic policy gradient theorem (Williams, 1992), gradients are computed via the score function $\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s) Q(s, a)$, which treats the environment and critic as a black box and relies on high-variance trial-and-error reward weighting. In contrast, the reparameterization trick decouples the stochasticity (isolated in $\epsilon$) from the network parameters $\boldsymbol{\theta}$. The action $a = \tanh(\boldsymbol{\mu}_{\boldsymbol{\theta}} + \boldsymbol{\sigma}_{\boldsymbol{\theta}} \odot \epsilon)$ becomes a deterministic differentiable node in the computational graph. This allows the backpropagation algorithm to query the directional gradient of the critic $\nabla_a Q(s, a)$ directly, telling the actor precisely which direction in continuous action space produces higher Q-values.
+- **Pathwise Gradient vs. REINFORCE:** In the classic policy gradient theorem (Williams, 1992), gradients are computed via the score function $\nabla_{\theta} \log \pi_{\theta}(a \mid s) Q(s, a)$, which treats the environment and critic as a black box and relies on high-variance trial-and-error reward weighting. In contrast, the reparameterization trick decouples the stochasticity (isolated in $\epsilon$) from the network parameters $\theta$. The action $a = \tanh(\mu_{\theta} + \sigma_{\theta} \odot \epsilon)$ becomes a deterministic differentiable node in the computational graph. This allows the backpropagation algorithm to query the directional gradient of the critic $\nabla_a Q(s, a)$ directly, telling the actor precisely which direction in continuous action space produces higher Q-values.
 
 **Part 4: End-to-End Step-by-Step Algebraic Proof:**
 
@@ -373,72 +373,72 @@ $$\left| \det\left( \mathbf{J}_f(u) \right) \right| = \det\left( \mathbf{J}_f(u)
 *Phase 2: Change-of-Variables Density Formula.*
 
 By the probability conservation theorem for invertible multivariate coordinate transformations $a = f(u)$:
-$$\pi_{\boldsymbol{\theta}}(a \mid s) = \mu_{\boldsymbol{\theta}}(u \mid s) \cdot \left| \det\left( \mathbf{J}_f(u) \right) \right|^{-1}$$
+$$\pi_{\theta}(a \mid s) = \mu_{\theta}(u \mid s) \cdot \left| \det\left( \mathbf{J}_f(u) \right) \right|^{-1}$$
 
 Substituting the determinant expression:
-$$\pi_{\boldsymbol{\theta}}(a \mid s) = \mu_{\boldsymbol{\theta}}(u \mid s) \cdot \left( \prod_{i=1}^D \left( 1 - \tanh^2(u_i) \right) \right)^{-1}$$
+$$\pi_{\theta}(a \mid s) = \mu_{\theta}(u \mid s) \cdot \left( \prod_{i=1}^D \left( 1 - \tanh^2(u_i) \right) \right)^{-1}$$
 
 Taking the natural logarithm of both sides:
-$$\log \pi_{\boldsymbol{\theta}}(a \mid s) = \log\left( \mu_{\boldsymbol{\theta}}(u \mid s) \cdot \prod_{i=1}^D \left( 1 - \tanh^2(u_i) \right)^{-1} \right)$$
-$$= \log \mu_{\boldsymbol{\theta}}(u \mid s) + \sum_{i=1}^D \log\left( \left( 1 - \tanh^2(u_i) \right)^{-1} \right)$$
+$$\log \pi_{\theta}(a \mid s) = \log\left( \mu_{\theta}(u \mid s) \cdot \prod_{i=1}^D \left( 1 - \tanh^2(u_i) \right)^{-1} \right)$$
+$$= \log \mu_{\theta}(u \mid s) + \sum_{i=1}^D \log\left( \left( 1 - \tanh^2(u_i) \right)^{-1} \right)$$
 Using the logarithm power rule $\log(z^{-1}) = -\log(z)$:
-$$\log \pi_{\boldsymbol{\theta}}(a \mid s) = \log \mu_{\boldsymbol{\theta}}(u \mid s) - \sum_{i=1}^D \log\left( 1 - \tanh^2(u_i) \right)$$
+$$\log \pi_{\theta}(a \mid s) = \log \mu_{\theta}(u \mid s) - \sum_{i=1}^D \log\left( 1 - \tanh^2(u_i) \right)$$
 
 Because $a_i = \tanh(u_i)$, this is equivalently:
-$$\log \pi_{\boldsymbol{\theta}}(a \mid s) = \log \mu_{\boldsymbol{\theta}}(u \mid s) - \sum_{i=1}^D \log\left( 1 - a_i^2 \right)$$
+$$\log \pi_{\theta}(a \mid s) = \log \mu_{\theta}(u \mid s) - \sum_{i=1}^D \log\left( 1 - a_i^2 \right)$$
 
-The latent distribution is a factorized multi-variate normal $\mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{\theta}}(s), \operatorname{diag}(\boldsymbol{\sigma}_{\boldsymbol{\theta}}^2(s)))$:
-$$\mu_{\boldsymbol{\theta}}(u \mid s) = \prod_{i=1}^D \frac{1}{\sqrt{2\pi}\sigma_{\boldsymbol{\theta}, i}(s)} \exp\left( - \frac{(u_i - \mu_{\boldsymbol{\theta}, i}(s))^2}{2\sigma_{\boldsymbol{\theta}, i}^2(s)} \right)$$
-$$\log \mu_{\boldsymbol{\theta}}(u \mid s) = - \frac{1}{2} \sum_{i=1}^D \left[ \log(2\pi) + 2 \log \sigma_{\boldsymbol{\theta}, i}(s) + \left( \frac{u_i - \mu_{\boldsymbol{\theta}, i}(s)}{\sigma_{\boldsymbol{\theta}, i}(s)} \right)^2 \right]$$
+The latent distribution is a factorized multi-variate normal $\mathcal{N}(\mu_{\theta}(s), \operatorname{diag}(\sigma_{\theta}^2(s)))$:
+$$\mu_{\theta}(u \mid s) = \prod_{i=1}^D \frac{1}{\sqrt{2\pi}\sigma_{\theta, i}(s)} \exp\left( - \frac{(u_i - \mu_{\theta, i}(s))^2}{2\sigma_{\theta, i}^2(s)} \right)$$
+$$\log \mu_{\theta}(u \mid s) = - \frac{1}{2} \sum_{i=1}^D \left[ \log(2\pi) + 2 \log \sigma_{\theta, i}(s) + \left( \frac{u_i - \mu_{\theta, i}(s)}{\sigma_{\theta, i}(s)} \right)^2 \right]$$
 
 *Phase 3: Analytical Pathwise Reparameterized Policy Gradient.*
 
 The soft actor objective to be maximized is:
-$$J(\boldsymbol{\theta}) \triangleq \mathbb{E}_{s \sim \mathcal{D}} \left[ \mathbb{E}_{a \sim \pi_{\boldsymbol{\theta}}(\cdot \mid s)} \left[ Q(s, a) - \alpha \log \pi_{\boldsymbol{\theta}}(a \mid s) \right] \right]$$
+$$J(\theta) \triangleq \mathbb{E}_{s \sim \mathcal{D}} \left[ \mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)} \left[ Q(s, a) - \alpha \log \pi_{\theta}(a \mid s) \right] \right]$$
 
-Substitute the reparameterized action mapping $a = \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \triangleq \tanh(g_{\boldsymbol{\theta}}(s, \epsilon)) = \tanh(\boldsymbol{\mu}_{\boldsymbol{\theta}}(s) + \boldsymbol{\sigma}_{\boldsymbol{\theta}}(s) \odot \epsilon)$, where $\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$.
+Substitute the reparameterized action mapping $a = \tilde{a}_{\theta}(s, \epsilon) \triangleq \tanh(g_{\theta}(s, \epsilon)) = \tanh(\mu_{\theta}(s) + \sigma_{\theta}(s) \odot \epsilon)$, where $\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$.
 Under LOTUS:
-$$J(\boldsymbol{\theta}) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ Q(s, \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)) - \alpha \log \pi_{\boldsymbol{\theta}}(\tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \mid s) \right]$$
+$$J(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ Q(s, \tilde{a}_{\theta}(s, \epsilon)) - \alpha \log \pi_{\theta}(\tilde{a}_{\theta}(s, \epsilon) \mid s) \right]$$
 
-Because the noise distribution $p(\epsilon) = \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$ does not depend on $\boldsymbol{\theta}$, we differentiate under the expectation:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \nabla_{\boldsymbol{\theta}} \left[ Q(s, \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)) - \alpha \log \pi_{\boldsymbol{\theta}}(\tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \mid s) \right] \right]$$
+Because the noise distribution $p(\epsilon) = \mathcal{N}(\mathbf{0}, \mathbf{I}_D)$ does not depend on $\theta$, we differentiate under the expectation:
+$$\nabla_{\theta} J(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \nabla_{\theta} \left[ Q(s, \tilde{a}_{\theta}(s, \epsilon)) - \alpha \log \pi_{\theta}(\tilde{a}_{\theta}(s, \epsilon) \mid s) \right] \right]$$
 
 Let us differentiate each term using the multivariate chain rule:
 1. Critic term:
-   $$\nabla_{\boldsymbol{\theta}} Q(s, \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)) = \left( \nabla_{\boldsymbol{\theta}} \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \right)^T \nabla_a Q(s, a)\Big|_{a = \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)}$$
+   $$\nabla_{\theta} Q(s, \tilde{a}_{\theta}(s, \epsilon)) = \left( \nabla_{\theta} \tilde{a}_{\theta}(s, \epsilon) \right)^T \nabla_a Q(s, a)\Big|_{a = \tilde{a}_{\theta}(s, \epsilon)}$$
 2. Entropy term:
-   Note that $\log \pi_{\boldsymbol{\theta}}(\tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \mid s)$ has two pathways of dependence on $\boldsymbol{\theta}$:
-   - Direct parametric dependence in the distribution $\pi_{\boldsymbol{\theta}}(\cdot \mid s)$.
-   - Indirect dependence through the evaluated action $\tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)$.
+   Note that $\log \pi_{\theta}(\tilde{a}_{\theta}(s, \epsilon) \mid s)$ has two pathways of dependence on $\theta$:
+   - Direct parametric dependence in the distribution $\pi_{\theta}(\cdot \mid s)$.
+   - Indirect dependence through the evaluated action $\tilde{a}_{\theta}(s, \epsilon)$.
    By the total derivative chain rule:
-   $$\nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(\tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \mid s) = \left( \nabla_{\boldsymbol{\theta}} \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \right)^T \nabla_a \log \pi_{\boldsymbol{\theta}}(a \mid s)\Big|_{a = \tilde{a}} + \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\Big|_{a = \tilde{a}}$$
+   $$\nabla_{\theta} \log \pi_{\theta}(\tilde{a}_{\theta}(s, \epsilon) \mid s) = \left( \nabla_{\theta} \tilde{a}_{\theta}(s, \epsilon) \right)^T \nabla_a \log \pi_{\theta}(a \mid s)\Big|_{a = \tilde{a}} + \nabla_{\theta} \log \pi_{\theta}(a \mid s)\Big|_{a = \tilde{a}}$$
 
 Combining these terms:
-$$\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \nabla_{\boldsymbol{\theta}} \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon) \left( \nabla_a Q(s, a) - \alpha \nabla_a \log \pi_{\boldsymbol{\theta}}(a \mid s) \right)\Big|_{a = \tilde{a}} - \alpha \nabla_{\boldsymbol{\theta}} \log \pi_{\boldsymbol{\theta}}(a \mid s)\Big|_{a = \tilde{a}} \right]$$
+$$\nabla_{\theta} J(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \epsilon \sim \mathcal{N}} \left[ \nabla_{\theta} \tilde{a}_{\theta}(s, \epsilon) \left( \nabla_a Q(s, a) - \alpha \nabla_a \log \pi_{\theta}(a \mid s) \right)\Big|_{a = \tilde{a}} - \alpha \nabla_{\theta} \log \pi_{\theta}(a \mid s)\Big|_{a = \tilde{a}} \right]$$
 
-Now compute the Jacobian $\nabla_{\boldsymbol{\theta}} \tilde{a}_{\boldsymbol{\theta}}(s, \epsilon)$:
+Now compute the Jacobian $\nabla_{\theta} \tilde{a}_{\theta}(s, \epsilon)$:
 For each action dimension $i \in \{1, \dots, D\}$:
-$$\tilde{a}_i = \tanh(u_i), \quad \text{where} \quad u_i = \mu_{\boldsymbol{\theta}, i}(s) + \sigma_{\boldsymbol{\theta}, i}(s) \epsilon_i$$
+$$\tilde{a}_i = \tanh(u_i), \quad \text{where} \quad u_i = \mu_{\theta, i}(s) + \sigma_{\theta, i}(s) \epsilon_i$$
 By the 1D chain rule:
-$$\frac{\partial \tilde{a}_i}{\partial \boldsymbol{\theta}} = \frac{d \tanh(u_i)}{du_i} \frac{\partial u_i}{\partial \boldsymbol{\theta}} = \left( 1 - \tilde{a}_i^2 \right) \left[ \frac{\partial \mu_{\boldsymbol{\theta}, i}(s)}{\partial \boldsymbol{\theta}} + \epsilon_i \frac{\partial \sigma_{\boldsymbol{\theta}, i}(s)}{\partial \boldsymbol{\theta}} \right]$$
+$$\frac{\partial \tilde{a}_i}{\partial \theta} = \frac{d \tanh(u_i)}{du_i} \frac{\partial u_i}{\partial \theta} = \left( 1 - \tilde{a}_i^2 \right) \left[ \frac{\partial \mu_{\theta, i}(s)}{\partial \theta} + \epsilon_i \frac{\partial \sigma_{\theta, i}(s)}{\partial \theta} \right]$$
 
 *Phase 4: Exact Decomposition of the Base Density Gradient.*
 
 Consider the base Gaussian log-density:
-$$\log \mu_{\boldsymbol{\theta}}(u \mid s) = - \frac{1}{2} \log(2\pi) - \log \sigma_{\boldsymbol{\theta}}(s) - \frac{(u - \mu_{\boldsymbol{\theta}}(s))^2}{2\sigma_{\boldsymbol{\theta}}^2(s)}$$
-When evaluated at the reparameterized sample $u = \mu_{\boldsymbol{\theta}}(s) + \sigma_{\boldsymbol{\theta}}(s) \epsilon$, observe that:
-$$\frac{u - \mu_{\boldsymbol{\theta}}(s)}{\sigma_{\boldsymbol{\theta}}(s)} = \frac{(\mu_{\boldsymbol{\theta}}(s) + \sigma_{\boldsymbol{\theta}}(s) \epsilon) - \mu_{\boldsymbol{\theta}}(s)}{\sigma_{\boldsymbol{\theta}}(s)} = \epsilon$$
+$$\log \mu_{\theta}(u \mid s) = - \frac{1}{2} \log(2\pi) - \log \sigma_{\theta}(s) - \frac{(u - \mu_{\theta}(s))^2}{2\sigma_{\theta}^2(s)}$$
+When evaluated at the reparameterized sample $u = \mu_{\theta}(s) + \sigma_{\theta}(s) \epsilon$, observe that:
+$$\frac{u - \mu_{\theta}(s)}{\sigma_{\theta}(s)} = \frac{(\mu_{\theta}(s) + \sigma_{\theta}(s) \epsilon) - \mu_{\theta}(s)}{\sigma_{\theta}(s)} = \epsilon$$
 Thus:
-$$\log \mu_{\boldsymbol{\theta}}(u_{\boldsymbol{\theta}} \mid s) = - \frac{1}{2} \log(2\pi) - \log \sigma_{\boldsymbol{\theta}}(s) - \frac{1}{2} \epsilon^2$$
+$$\log \mu_{\theta}(u_{\theta} \mid s) = - \frac{1}{2} \log(2\pi) - \log \sigma_{\theta}(s) - \frac{1}{2} \epsilon^2$$
 
-Differentiating this total expression with respect to $\mu_{\boldsymbol{\theta}}$:
-$$\frac{d}{d \mu_{\boldsymbol{\theta}}} \log \mu_{\boldsymbol{\theta}}(u_{\boldsymbol{\theta}} \mid s) = 0$$
+Differentiating this total expression with respect to $\mu_{\theta}$:
+$$\frac{d}{d \mu_{\theta}} \log \mu_{\theta}(u_{\theta} \mid s) = 0$$
 Indeed, expanding via the multivariate chain rule verifies this:
-$$\frac{\partial \log \mu}{\partial \mu_{\boldsymbol{\theta}}} + \frac{\partial \log \mu}{\partial u} \frac{\partial u}{\partial \mu_{\boldsymbol{\theta}}} = \frac{u - \mu_{\boldsymbol{\theta}}}{\sigma_{\boldsymbol{\theta}}^2} + \left( - \frac{u - \mu_{\boldsymbol{\theta}}}{\sigma_{\boldsymbol{\theta}}^2} \right)(1) = \frac{\epsilon}{\sigma_{\boldsymbol{\theta}}} - \frac{\epsilon}{\sigma_{\boldsymbol{\theta}}} = 0$$
-Differentiating with respect to $\log \sigma_{\boldsymbol{\theta}}$:
-$$\frac{d}{d \log \sigma_{\boldsymbol{\theta}}} \log \mu_{\boldsymbol{\theta}}(u_{\boldsymbol{\theta}} \mid s) = \frac{d}{d \log \sigma_{\boldsymbol{\theta}}} \left[ - \frac{1}{2}\log(2\pi) - \log \sigma_{\boldsymbol{\theta}} - \frac{1}{2}\epsilon^2 \right] = -1$$
+$$\frac{\partial \log \mu}{\partial \mu_{\theta}} + \frac{\partial \log \mu}{\partial u} \frac{\partial u}{\partial \mu_{\theta}} = \frac{u - \mu_{\theta}}{\sigma_{\theta}^2} + \left( - \frac{u - \mu_{\theta}}{\sigma_{\theta}^2} \right)(1) = \frac{\epsilon}{\sigma_{\theta}} - \frac{\epsilon}{\sigma_{\theta}} = 0$$
+Differentiating with respect to $\log \sigma_{\theta}$:
+$$\frac{d}{d \log \sigma_{\theta}} \log \mu_{\theta}(u_{\theta} \mid s) = \frac{d}{d \log \sigma_{\theta}} \left[ - \frac{1}{2}\log(2\pi) - \log \sigma_{\theta} - \frac{1}{2}\epsilon^2 \right] = -1$$
 Expanding via the chain rule:
-$$\frac{\partial \log \mu}{\partial \log \sigma_{\boldsymbol{\theta}}} + \frac{\partial \log \mu}{\partial u} \frac{\partial u}{\partial \log \sigma_{\boldsymbol{\theta}}} = \left( -1 + \frac{(u - \mu)^2}{\sigma^2} \right) + \left( - \frac{u - \mu}{\sigma^2} \right) (\sigma \epsilon) = (-1 + \epsilon^2) - \epsilon^2 = -1$$
+$$\frac{\partial \log \mu}{\partial \log \sigma_{\theta}} + \frac{\partial \log \mu}{\partial u} \frac{\partial u}{\partial \log \sigma_{\theta}} = \left( -1 + \frac{(u - \mu)^2}{\sigma^2} \right) + \left( - \frac{u - \mu}{\sigma^2} \right) (\sigma \epsilon) = (-1 + \epsilon^2) - \epsilon^2 = -1$$
 This complete cancellation confirms that the reparameterized gradient of the base density is strictly constant w.r.t. the mean and w.r.t. the scale, providing exceptional gradient stability! $\blacksquare$
 
 ---
@@ -834,9 +834,9 @@ A transition tuple $(s, a, r, s', d)$ is sampled from the replay buffer with:
 
 The actor samples next-state action $a' = 0.664037$ with log-probability $\log \pi(a' \mid s') = -0.644753$ (from Illustration 2).
 The twin target critic networks output:
-$$Q_{\boldsymbol{\phi}_1^-}(s', a') = 3.0000 \cdot s' + 2.0000 \cdot a'$$
-$$Q_{\boldsymbol{\phi}_2^-}(s', a') = 2.5000 \cdot s' + 3.0000 \cdot a'$$
-1. Evaluate $Q_{\boldsymbol{\phi}_1^-}(s', a')$ and $Q_{\boldsymbol{\phi}_2^-}(s', a')$.
+$$Q_{\phi_1^-}(s', a') = 3.0000 \cdot s' + 2.0000 \cdot a'$$
+$$Q_{\phi_2^-}(s', a') = 2.5000 \cdot s' + 3.0000 \cdot a'$$
+1. Evaluate $Q_{\phi_1^-}(s', a')$ and $Q_{\phi_2^-}(s', a')$.
 2. Compute the Clipped Double-Q minimum $\min(Q_1^-, Q_2^-)$.
 3. Compute the entropy-augmented soft state value $V(s')$.
 4. Compute the final Soft Bellman regression target $y$.
@@ -845,13 +845,13 @@ $$Q_{\boldsymbol{\phi}_2^-}(s', a') = 2.5000 \cdot s' + 3.0000 \cdot a'$$
 
 *Step 1: Evaluate twin target critics.*
 - Target Critic 1:
-  $$Q_{\boldsymbol{\phi}_1^-}(s', a') = (3.0000 \times 1.5000) + (2.0000 \times 0.664037) = 4.500000 + 1.328074 = \mathbf{5.828074}$$
+  $$Q_{\phi_1^-}(s', a') = (3.0000 \times 1.5000) + (2.0000 \times 0.664037) = 4.500000 + 1.328074 = \mathbf{5.828074}$$
 - Target Critic 2:
-  $$Q_{\boldsymbol{\phi}_2^-}(s', a') = (2.5000 \times 1.5000) + (3.0000 \times 0.664037) = 3.750000 + 1.992111 = \mathbf{5.742111}$$
+  $$Q_{\phi_2^-}(s', a') = (2.5000 \times 1.5000) + (3.0000 \times 0.664037) = 3.750000 + 1.992111 = \mathbf{5.742111}$$
 
 *Step 2: Clipped Double-Q minimum.*
 To prevent overestimation bias:
-$$\min\left( Q_{\boldsymbol{\phi}_1^-}(s', a'), Q_{\boldsymbol{\phi}_2^-}(s', a') \right) = \min(5.828074, 5.742111) = \mathbf{5.742111}$$
+$$\min\left( Q_{\phi_1^-}(s', a'), Q_{\phi_2^-}(s', a') \right) = \min(5.828074, 5.742111) = \mathbf{5.742111}$$
 
 *Step 3: Entropy-augmented soft value $V(s')$.*
 Subtract the scaled policy log-probability:
@@ -912,10 +912,10 @@ Because the policy entropy $+0.644753$ is significantly *greater* than the requi
 ### Illustration 5: Reparameterized Actor Gradient Step with Automatic Differentiation Trace
 **Problem:**
 Consider a parameterized 1D Gaussian policy with single state feature $s = 1.0000$:
-$$\mu_{\boldsymbol{\theta}}(s) = \theta_\mu = 0.5000, \quad \log \sigma_{\boldsymbol{\theta}}(s) = \theta_{\log\sigma} = 0.2000$$
+$$\mu_{\theta}(s) = \theta_\mu = 0.5000, \quad \log \sigma_{\theta}(s) = \theta_{\log\sigma} = 0.2000$$
 The standard deviation is $\sigma = \exp(\theta_{\log\sigma}) = \exp(0.2000) \approx 1.221403$.
 Let sampled noise $\epsilon = +0.4000$, temperature $\alpha = 0.2000$, and critic $Q(s, a) = 2.0 \cdot s + 3.0 \cdot a$.
-1. Compute the forward pass: latent $u$, squashed action $a$, base log-prob $\log \mu(u)$, Jacobian correction $\ln(1 - a^2)$, policy log-prob $\log \pi(a \mid s)$, critic value $Q(s, a)$, and actor loss $\mathcal{L}(\boldsymbol{\theta}) = \alpha \log \pi(a \mid s) - Q(s, a)$.
+1. Compute the forward pass: latent $u$, squashed action $a$, base log-prob $\log \mu(u)$, Jacobian correction $\ln(1 - a^2)$, policy log-prob $\log \pi(a \mid s)$, critic value $Q(s, a)$, and actor loss $\mathcal{L}(\theta) = \alpha \log \pi(a \mid s) - Q(s, a)$.
 2. Trace the exact backward pass through the computational graph: compute $\frac{\partial \mathcal{L}}{\partial a}$, $\frac{\partial a}{\partial u}$, $\frac{\partial \mathcal{L}}{\partial u}$, $\frac{\partial \mathcal{L}}{\partial \theta_\mu}$, and $\frac{\partial \mathcal{L}}{\partial \theta_{\log\sigma}}$.
 3. Compare the manual chain rule gradients against PyTorch automatic differentiation to verify exact match.
 
@@ -937,7 +937,7 @@ Let sampled noise $\epsilon = +0.4000$, temperature $\alpha = 0.2000$, and criti
 6. Squashed policy log-prob:
    $$\log \pi(a \mid s) = \log \mu(u) - \ln(1 - a^2) = -1.198939 - (-0.850193) = \mathbf{-0.348746}$$
 7. Actor Loss:
-   $$\mathcal{L}(\boldsymbol{\theta}) = \alpha \log \pi(a \mid s) - Q(s, a) = (0.2000 \times -0.348746) - 4.270244$$
+   $$\mathcal{L}(\theta) = \alpha \log \pi(a \mid s) - Q(s, a) = (0.2000 \times -0.348746) - 4.270244$$
    $$= -0.069749 - 4.270244 = \mathbf{-4.339993}$$
 
 *Step 2: Backward Pass through Computational Graph.*
@@ -972,7 +972,7 @@ Running PyTorch autograd on this exact computational graph:
 - `theta_mu.grad = -0.97929767` (matches hand calculation $-0.979298$ to $10^{-6}$)
 - `theta_logstd.grad = -0.67844675` (matches hand calculation $-0.678447$ to $10^{-6}$)
 
-Both parameter gradients are negative, meaning gradient descent ($\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \eta \nabla_{\boldsymbol{\theta}} \mathcal{L}$) will *increase* both $\theta_\mu$ and $\theta_{\log\sigma}$, steering the actor toward higher actions (which yield higher Q-values, since $\nabla_a Q = +3.0 > 0$) while simultaneously increasing exploration entropy! $\blacksquare$
+Both parameter gradients are negative, meaning gradient descent ($\theta \leftarrow \theta - \eta \nabla_{\theta} \mathcal{L}$) will *increase* both $\theta_\mu$ and $\theta_{\log\sigma}$, steering the actor toward higher actions (which yield higher Q-values, since $\nabla_a Q = +3.0 > 0$) while simultaneously increasing exploration entropy! $\blacksquare$
 
 ---
 

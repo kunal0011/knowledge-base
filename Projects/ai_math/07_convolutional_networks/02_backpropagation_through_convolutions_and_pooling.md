@@ -50,8 +50,8 @@ Therefore:
 $$\frac{\partial \mathcal{L}}{\partial K_{u, v}} = \sum_{h=0}^{H_{\text{out}} - 1} \sum_{w=0}^{W_{\text{out}} - 1} \delta_{h, w} \, X_{h \cdot s + u, \, w \cdot s + v}$$
 
 **Structural Interpretation:**
-For stride $s = 1$, this equation represents the cross-correlation between the input $\mathbf{X}$ and the upstream gradient $\boldsymbol{\delta}$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \mathbf{X} \star \boldsymbol{\delta}$$
+For stride $s = 1$, this equation represents the cross-correlation between the input $\mathbf{X}$ and the upstream gradient $\delta$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \mathbf{X} \star \delta$$
 The kernel gradient has spatial dimension $K_H \times K_W$.
 
 For multi-channel, multi-filter tensors ($\mathbf{X} \in \mathbb{R}^{B \times C_{\text{in}} \times H_{\text{in}} \times W_{\text{in}}}$, $\mathbf{K} \in \mathbb{R}^{C_{\text{out}} \times C_{\text{in}} \times K_H \times K_W}$):
@@ -82,8 +82,8 @@ $$\frac{\partial \mathcal{L}}{\partial X_{i, j}} = \sum_{h} \sum_{w} \delta_{h, 
 #### The 180° Kernel Rotation ($\text{rot}_{180}$)
 For unit stride $s = 1$, let $u' = K_H - 1 - u$ and $v' = K_W - 1 - v$. This spatial reflection yields:
 $$K^{\text{rot}}_{u', v'} = K_{K_H - 1 - u', \, K_W - 1 - v'}$$
-Substituting variables transforms the equation into a standard convolution of the zero-padded gradient $\boldsymbol{\delta}$ with the flipped kernel $\mathbf{K}^{\text{rot}}$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \boldsymbol{\delta} * \mathbf{K}^{\text{rot}} = \boldsymbol{\delta} \star \mathbf{K}$$
+Substituting variables transforms the equation into a standard convolution of the zero-padded gradient $\delta$ with the flipped kernel $\mathbf{K}^{\text{rot}}$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \delta * \mathbf{K}^{\text{rot}} = \delta \star \mathbf{K}$$
 where $*$ denotes mathematical convolution (which reflects the kernel) and $\star$ denotes cross-correlation.
 
 #### Boundary Padding for the Backward Pass
@@ -98,7 +98,7 @@ $$p_{\text{backward}} = K_H - 1 - p_{\text{forward}}$$
 
 When the forward stride $s > 1$, output pixels are spaced apart on the input grid.
 In the backward pass:
-1. The upstream gradient $\boldsymbol{\delta}$ must be **dilated** by inserting $s - 1$ zeros between adjacent rows and columns.
+1. The upstream gradient $\delta$ must be **dilated** by inserting $s - 1$ zeros between adjacent rows and columns.
 2. The dilated gradient is padded with $p_{\text{backward}} = K - 1 - p_{\text{forward}}$ zeros.
 3. A unit-stride cross-correlation is performed with the $180^\circ$ flipped kernel $\mathbf{K}^{\text{rot}}$.
 
@@ -152,8 +152,8 @@ $$(\mathcal{T}_{\mathbf{K}} \mathbf{X})_{h, w} = \sum_{u=0}^{K_H - 1} \sum_{v=0}
 where $H_{\text{out}} = H - K_H + 1$ and $W_{\text{out}} = W - K_W + 1$.
 
 Let $\mathcal{L}: \mathcal{Y} \to \mathbb{R}$ be a continuously differentiable scalar loss function. The Fréchet differential of $\mathcal{L}$ with respect to $\mathbf{Y} = \mathcal{T}_{\mathbf{K}} \mathbf{X}$ is:
-$$d\mathcal{L} = \langle \nabla_{\mathbf{Y}} \mathcal{L}, d\mathbf{Y} \rangle = \langle \boldsymbol{\delta}, d\mathbf{Y} \rangle = \sum_{h=0}^{H_{\text{out}}-1} \sum_{w=0}^{W_{\text{out}}-1} \delta_{h, w} \, dY_{h, w}$$
-where $\boldsymbol{\delta} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} \in \mathbb{R}^{H_{\text{out}} \times W_{\text{out}}}$ is the upstream gradient.
+$$d\mathcal{L} = \langle \nabla_{\mathbf{Y}} \mathcal{L}, d\mathbf{Y} \rangle = \langle \delta, d\mathbf{Y} \rangle = \sum_{h=0}^{H_{\text{out}}-1} \sum_{w=0}^{W_{\text{out}}-1} \delta_{h, w} \, dY_{h, w}$$
+where $\delta \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} \in \mathbb{R}^{H_{\text{out}} \times W_{\text{out}}}$ is the upstream gradient.
 
 #### Step 2: Exact Fréchet Derivation of Weight Gradient $\nabla_{\mathbf{K}} \mathcal{L}$
 Holding $\mathbf{X}$ constant and perturbing $\mathbf{K}$ by an infinitesimal variation $d\mathbf{K} \in \mathbb{R}^{K_H \times K_W}$:
@@ -166,9 +166,9 @@ By Fubini's theorem (interchanging finite summations):
 $$d\mathcal{L} = \sum_{u=0}^{K_H - 1} \sum_{v=0}^{K_W - 1} dK_{u, v} \left( \sum_{h=0}^{H_{\text{out}}-1} \sum_{w=0}^{W_{\text{out}}-1} X_{h+u, w+v} \, \delta_{h, w} \right)$$
 
 By Riesz representation theorem on $(\mathbb{R}^{K_H \times K_W}, \langle \cdot, \cdot \rangle)$, $d\mathcal{L} = \langle \nabla_{\mathbf{K}} \mathcal{L}, d\mathbf{K} \rangle$. Identifying the kernel of the linear form gives:
-$$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{K}} \right)_{u, v} = \sum_{h=0}^{H_{\text{out}}-1} \sum_{w=0}^{W_{\text{out}}-1} X_{h+u, w+v} \, \delta_{h, w} = (\mathbf{X} \star \boldsymbol{\delta})_{u, v}$$
+$$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{K}} \right)_{u, v} = \sum_{h=0}^{H_{\text{out}}-1} \sum_{w=0}^{W_{\text{out}}-1} X_{h+u, w+v} \, \delta_{h, w} = (\mathbf{X} \star \delta)_{u, v}$$
 
-Thus, the gradient with respect to the filter is precisely the valid cross-correlation between the input feature map $\mathbf{X}$ and the upstream gradient $\boldsymbol{\delta}$.
+Thus, the gradient with respect to the filter is precisely the valid cross-correlation between the input feature map $\mathbf{X}$ and the upstream gradient $\delta$.
 
 #### Step 3: Exact Adjoint Derivation of Input Gradient $\nabla_{\mathbf{X}} \mathcal{L}$
 Holding $\mathbf{K}$ constant and perturbing $\mathbf{X}$ by $d\mathbf{X} \in \mathbb{R}^{H \times W}$:
@@ -189,8 +189,8 @@ $$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{X}} \right)_{i, j} = \sum_
 Now let $\mathbf{K}^{\text{rot}} \in \mathbb{R}^{K_H \times K_W}$ be the spatial $180^\circ$ reflection of $\mathbf{K}$:
 $$K^{\text{rot}}_{u', v'} = K_{K_H - 1 - u', \, K_W - 1 - v'}$$
 Let $u' = K_H - 1 - (i - h)$ and $v' = K_W - 1 - (j - w)$, which implies $h = i - (K_H - 1 - u')$ and $w = j - (K_W - 1 - v')$.
-Embedding $\boldsymbol{\delta}$ in a zero-padded array $\boldsymbol{\delta}^{\text{pad}} \in \mathbb{R}^{(H_{\text{out}} + 2(K_H - 1)) \times (W_{\text{out}} + 2(K_W - 1))}$:
-$$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{X}} \right)_{i, j} = \sum_{u'=0}^{K_H-1} \sum_{v'=0}^{K_W-1} \delta^{\text{pad}}_{i + u', \, j + v'} \, K^{\text{rot}}_{u', v'} = (\boldsymbol{\delta}^{\text{pad}} \star \mathbf{K}^{\text{rot}})_{i, j} = \text{FullConv}(\boldsymbol{\delta}, \mathbf{K}^{\text{rot}})_{i, j}$$
+Embedding $\delta$ in a zero-padded array $\delta^{\text{pad}} \in \mathbb{R}^{(H_{\text{out}} + 2(K_H - 1)) \times (W_{\text{out}} + 2(K_W - 1))}$:
+$$\left( \frac{\partial \mathcal{L}}{\partial \mathbf{X}} \right)_{i, j} = \sum_{u'=0}^{K_H-1} \sum_{v'=0}^{K_W-1} \delta^{\text{pad}}_{i + u', \, j + v'} \, K^{\text{rot}}_{u', v'} = (\delta^{\text{pad}} \star \mathbf{K}^{\text{rot}})_{i, j} = \text{FullConv}(\delta, \mathbf{K}^{\text{rot}})_{i, j}$$
 
 #### Step 4: Matrix Representation via Doubly Block Toeplitz Operators
 Let $\mathbf{x} = \operatorname{vec}(\mathbf{X}) \in \mathbb{R}^{HW}$ and $\mathbf{y} = \operatorname{vec}(\mathbf{Y}) \in \mathbb{R}^{H_{\text{out}} W_{\text{out}}}$ denote vectorized feature maps in lexicographic (row-major) order. The 2D convolution is an exact matrix-vector multiplication:
@@ -211,9 +211,9 @@ K_{u, 0} & K_{u, 1} & \dots & K_{u, K_W-1} & 0 & \dots & 0 \\
 \end{bmatrix}$$
 
 Using vector calculus, the gradient with respect to $\mathbf{x}$ is the adjoint (transpose):
-$$\nabla_{\mathbf{x}} \mathcal{L} = \mathbf{C}_{\mathbf{K}}^T \boldsymbol{\delta}_{\mathbf{y}}$$
+$$\nabla_{\mathbf{x}} \mathcal{L} = \mathbf{C}_{\mathbf{K}}^T \delta_{\mathbf{y}}$$
 Because the transpose of a Toeplitz matrix reverses the diagonals ($\mathbf{T}_u^T$ shifts down instead of right and has reversed elements), the block transpose $\mathbf{C}_{\mathbf{K}}^T$ precisely mirrors the kernel horizontally and vertically ($180^\circ$ rotation) and expands the spatial domain to full convolution:
-$$\operatorname{vec}^{-1}(\mathbf{C}_{\mathbf{K}}^T \boldsymbol{\delta}_{\mathbf{y}}) \equiv \text{FullConv}(\boldsymbol{\delta}, \mathbf{K}^{\text{rot}})$$
+$$\operatorname{vec}^{-1}(\mathbf{C}_{\mathbf{K}}^T \delta_{\mathbf{y}}) \equiv \text{FullConv}(\delta, \mathbf{K}^{\text{rot}})$$
 $\blacksquare$
 
 ---
@@ -329,19 +329,19 @@ $$\begin{bmatrix} y_0 \\ y_1 \\ y_2 \end{bmatrix} = \begin{bmatrix} k_0 & k_1 & 
 
 Here, $\mathbf{C} \in \mathbb{R}^{3 \times 4}$ is a banded Toeplitz matrix.
 
-By the chain rule of matrix calculus, given upstream gradient vector $\boldsymbol{\delta} = \left[\frac{\partial \mathcal{L}}{\partial y_0}, \frac{\partial \mathcal{L}}{\partial y_1}, \frac{\partial \mathcal{L}}{\partial y_2}\right]^T$:
-$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}} = \mathbf{C}^T \boldsymbol{\delta}$$
+By the chain rule of matrix calculus, given upstream gradient vector $\delta = \left[\frac{\partial \mathcal{L}}{\partial y_0}, \frac{\partial \mathcal{L}}{\partial y_1}, \frac{\partial \mathcal{L}}{\partial y_2}\right]^T$:
+$$\frac{\partial \mathcal{L}}{\partial \mathbf{x}} = \mathbf{C}^T \delta$$
 
 Transposing $\mathbf{C}$:
 $$\mathbf{C}^T = \begin{bmatrix} k_0 & 0 & 0 \\ k_1 & k_0 & 0 \\ 0 & k_1 & k_0 \\ 0 & 0 & k_1 \end{bmatrix} \in \mathbb{R}^{4 \times 3}$$
 
-Computing $\mathbf{C}^T \boldsymbol{\delta}$:
+Computing $\mathbf{C}^T \delta$:
 $$\begin{bmatrix} \frac{\partial \mathcal{L}}{\partial x_0} \\ \frac{\partial \mathcal{L}}{\partial x_1} \\ \frac{\partial \mathcal{L}}{\partial x_2} \\ \frac{\partial \mathcal{L}}{\partial x_3} \end{bmatrix} = \begin{bmatrix} k_0 \delta_0 \\ k_1 \delta_0 + k_0 \delta_1 \\ k_1 \delta_1 + k_0 \delta_2 \\ k_1 \delta_2 \end{bmatrix}$$
 
 Notice what this matrix multiplication represents:
-- It is a convolution of $\boldsymbol{\delta}$ with the flipped kernel $[k_1, k_0]^T$!
+- It is a convolution of $\delta$ with the flipped kernel $[k_1, k_0]^T$!
 - $\delta$ is zero-padded on both sides: $[\dots, 0, \delta_0, \delta_1, \delta_2, 0, \dots]$.
-- When the flipped kernel $[k_1, k_0]$ slides over the padded $\boldsymbol{\delta}$:
+- When the flipped kernel $[k_1, k_0]$ slides over the padded $\delta$:
   - At position 0: $[k_1, k_0] \cdot [0, \delta_0] = k_0 \delta_0$.
   - At position 1: $[k_1, k_0] \cdot [\delta_0, \delta_1] = k_1 \delta_0 + k_0 \delta_1$.
   - At position 2: $[k_1, k_0] \cdot [\delta_1, \delta_2] = k_1 \delta_1 + k_0 \delta_2$.
@@ -355,7 +355,7 @@ The $180^\circ$ rotation is not an arbitrary rule—it is the algebraic necessit
 
 ### 1. The Stage Spotlight vs. The Shadow Traceback
 - **Forward Convolution (Spotlight):** A conical spotlight (the kernel) sweeps across a stage floor (input pixels). At each position, it integrates whatever actors/props stand within its beam into a single light intensity reading on an overhead camera sensor (output feature map).
-- **Backward Input Gradient (Shadow Traceback):** A director on the lighting truss spots a flaw in the camera image (upstream loss gradient $\boldsymbol{\delta}$). To figure out which actor on stage contributed to that flaw, the light beam is projected *backwards* through the same cone aperture. Because the light travels in the opposite direction, the cone is inverted ($180^\circ$ flip), and actors where beams overlap receive illumination proportional to all camera sensors they hit.
+- **Backward Input Gradient (Shadow Traceback):** A director on the lighting truss spots a flaw in the camera image (upstream loss gradient $\delta$). To figure out which actor on stage contributed to that flaw, the light beam is projected *backwards* through the same cone aperture. Because the light travels in the opposite direction, the cone is inverted ($180^\circ$ flip), and actors where beams overlap receive illumination proportional to all camera sensors they hit.
 
 ### 2. The Railway Switching Junction (Max-Pooling)
 - **Forward Max-Pooling:** Multiple train tracks enter a switching yard. A sensor picks the heaviest train (argmax) and routes it onto the main outbound line; all other trains are halted.
@@ -374,10 +374,10 @@ Let us trace a complete numerical example with verified hand arithmetic.
 | $\mathbf{X}$ | Input Matrix | $(3, 3)$ | Forward input feature map activations |
 | $\mathbf{K}$ | Convolution Kernel | $(2, 2)$ | Learnable spatial filter weights |
 | $\mathbf{Y}$ | Forward Output | $(2, 2)$ | Convolution output with $s=1, p=0$ |
-| $\boldsymbol{\delta} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}}$ | Upstream Gradient | $(2, 2)$ | Sensitivity of scalar loss $\mathcal{L}$ w.r.t. output activations |
+| $\delta \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}}$ | Upstream Gradient | $(2, 2)$ | Sensitivity of scalar loss $\mathcal{L}$ w.r.t. output activations |
 | $\frac{\partial \mathcal{L}}{\partial \mathbf{K}}$ | Kernel Gradient | $(2, 2)$ | Accumulation of $\delta \cdot X$ patches over spatial receptive fields |
 | $\mathbf{K}^{\text{rot}}$ | Rotated Kernel | $(2, 2)$ | Kernel rotated $180^\circ$ ($K^{\text{rot}}_{u, v} = K_{1-u, 1-v}$) |
-| $\boldsymbol{\delta}^{\text{pad}}$ | Padded Gradient | $(4, 4)$ | Upstream gradient zero-padded with $p=1$ for full convolution |
+| $\delta^{\text{pad}}$ | Padded Gradient | $(4, 4)$ | Upstream gradient zero-padded with $p=1$ for full convolution |
 | $\frac{\partial \mathcal{L}}{\partial \mathbf{X}}$ | Input Gradient | $(3, 3)$ | Sensitivity of scalar loss $\mathcal{L}$ w.r.t. input activations |
 | $\mathbf{M}$ | Max-Pool Mask | $(4, 4)$ | Boolean mask where $M_{i,j}=1$ if $X_{i,j}$ was the maximum in window |
 
@@ -410,10 +410,10 @@ $$\mathbf{Y} = \begin{bmatrix} 6 & 17 \\ 11 & 3 \end{bmatrix}$$
 
 ---
 
-### 5.4 Given Upstream Gradient $\boldsymbol{\delta} \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}}$
+### 5.4 Given Upstream Gradient $\delta \equiv \frac{\partial \mathcal{L}}{\partial \mathbf{Y}}$
 
 Suppose the upstream loss gradient is:
-$$\boldsymbol{\delta} = \begin{bmatrix} 1 & -1 \\ 2 & 0 \end{bmatrix}$$
+$$\delta = \begin{bmatrix} 1 & -1 \\ 2 & 0 \end{bmatrix}$$
 
 ---
 
@@ -443,19 +443,19 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \begin{bmatrix} 5 & 4 \\ 2 
 
 ### 5.6 Backward Pass 2: Input Gradients $\frac{\partial \mathcal{L}}{\partial \mathbf{X}}$
 
-Using the rotated kernel $\mathbf{K}^{\text{rot}}$ and zero-padded upstream gradient $\boldsymbol{\delta}^{\text{pad}}$:
+Using the rotated kernel $\mathbf{K}^{\text{rot}}$ and zero-padded upstream gradient $\delta^{\text{pad}}$:
 
 $$\mathbf{K} = \begin{bmatrix} 2 & -1 \\ 1 & 3 \end{bmatrix} \implies \mathbf{K}^{\text{rot}} = \begin{bmatrix} 3 & 1 \\ -1 & 2 \end{bmatrix}$$
 
 Padded gradient with $p=1$ ($4 \times 4$):
-$$\boldsymbol{\delta}^{\text{pad}} = \begin{bmatrix}
+$$\delta^{\text{pad}} = \begin{bmatrix}
 0 & 0 & 0 & 0 \\
 0 & 1 & -1 & 0 \\
 0 & 2 & 0 & 0 \\
 0 & 0 & 0 & 0
 \end{bmatrix}$$
 
-Convolving $\boldsymbol{\delta}^{\text{pad}}$ with $\mathbf{K}^{\text{rot}}$ gives the $3 \times 3$ gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}}$:
+Convolving $\delta^{\text{pad}}$ with $\mathbf{K}^{\text{rot}}$ gives the $3 \times 3$ gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}}$:
 
 1. **Position $(0, 0)$:**
    Window: $\begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} \implies (3)(0) + (1)(0) + (-1)(0) + (2)(1) = \mathbf{2}$
@@ -507,7 +507,7 @@ $$\mathbf{M} = \begin{bmatrix}
 0 & 0 & 1 & 0
 \end{bmatrix}$$
 
-Given upstream gradient $\boldsymbol{\delta}_P = \begin{bmatrix} 10 & -4 \\ 3 & 7 \end{bmatrix}$:
+Given upstream gradient $\delta_P = \begin{bmatrix} 10 & -4 \\ 3 & 7 \end{bmatrix}$:
 The backward pass distributes the gradients solely to the masked winning locations:
 $$\frac{\partial \mathcal{L}}{\partial \mathbf{Z}} = \begin{bmatrix}
 0 & 10 & 0 & 0 \\
@@ -523,7 +523,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{Z}} = \begin{bmatrix}
 ### Illustration 1: Multi-Channel Gradient Accumulation
 
 **Problem:**
-Suppose an input has $C_{\text{in}} = 2$ channels, and a layer produces $C_{\text{out}} = 1$ channel using two $2 \times 2$ kernels $\mathbf{K}_0$ and $\mathbf{K}_1$. Given upstream gradient $\boldsymbol{\delta}$, explain why $\frac{\partial \mathcal{L}}{\partial \mathbf{X}_0}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{X}_1}$ are decoupled, while kernel updates depend on their respective channels.
+Suppose an input has $C_{\text{in}} = 2$ channels, and a layer produces $C_{\text{out}} = 1$ channel using two $2 \times 2$ kernels $\mathbf{K}_0$ and $\mathbf{K}_1$. Given upstream gradient $\delta$, explain why $\frac{\partial \mathcal{L}}{\partial \mathbf{X}_0}$ and $\frac{\partial \mathcal{L}}{\partial \mathbf{X}_1}$ are decoupled, while kernel updates depend on their respective channels.
 
 **Solution:**
 The forward equation is:
@@ -533,11 +533,11 @@ Taking partial derivatives:
    $$\frac{\partial Y_{h, w}}{\partial X_{0, i, j}} = K_{0, i - h, j - w}$$
    Channel 1 ($\mathbf{X}_1$) has identically zero derivative w.r.t. $X_{0, i, j}$.
    Therefore:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}_0} = \boldsymbol{\delta} * \mathbf{K}_0^{\text{rot}}, \quad \frac{\partial \mathcal{L}}{\partial \mathbf{X}_1} = \boldsymbol{\delta} * \mathbf{K}_1^{\text{rot}}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}_0} = \delta * \mathbf{K}_0^{\text{rot}}, \quad \frac{\partial \mathcal{L}}{\partial \mathbf{X}_1} = \delta * \mathbf{K}_1^{\text{rot}}$$
    The backward pass splits across input channels independently.
 
 2. With respect to kernels:
-   $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}_0} = \mathbf{X}_0 \star \boldsymbol{\delta}, \quad \frac{\partial \mathcal{L}}{\partial \mathbf{K}_1} = \mathbf{X}_1 \star \boldsymbol{\delta}$$
+   $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}_0} = \mathbf{X}_0 \star \delta, \quad \frac{\partial \mathcal{L}}{\partial \mathbf{K}_1} = \mathbf{X}_1 \star \delta$$
    Each kernel receives gradient from its dedicated input channel correlated with the shared upstream error.
 
 ---
@@ -574,10 +574,10 @@ $$\mathbf{X} = \begin{bmatrix} 2 & 1 & 3 \\ 0 & 4 & 1 \\ 1 & 2 & 0 \end{bmatrix}
 with stride $s = 1$ and valid padding $p = 0$.
 1. Compute the forward output map $\mathbf{Y} \in \mathbb{R}^{2 \times 2}$.
 2. Given the upstream loss gradient:
-$$\boldsymbol{\delta} = \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} = \begin{bmatrix} 2 & -1 \\ 1 & 3 \end{bmatrix}$$
+$$\delta = \frac{\partial \mathcal{L}}{\partial \mathbf{Y}} = \begin{bmatrix} 2 & -1 \\ 1 & 3 \end{bmatrix}$$
 compute the exact kernel gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{K}} \in \mathbb{R}^{2 \times 2}$.
-3. Construct the $180^\circ$ rotated filter $\mathbf{K}^{\text{rot}}$ and zero-padded gradient $\boldsymbol{\delta}^{\text{pad}}$, and compute all $9$ elements of the input gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}} \in \mathbb{R}^{3 \times 3}$.
-4. Verify the conservation identity $\langle \boldsymbol{\delta}, \mathbf{Y} \rangle = \langle \frac{\partial \mathcal{L}}{\partial \mathbf{K}}, \mathbf{K} \rangle = \langle \frac{\partial \mathcal{L}}{\partial \mathbf{X}}, \mathbf{X} \rangle$.
+3. Construct the $180^\circ$ rotated filter $\mathbf{K}^{\text{rot}}$ and zero-padded gradient $\delta^{\text{pad}}$, and compute all $9$ elements of the input gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}} \in \mathbb{R}^{3 \times 3}$.
+4. Verify the conservation identity $\langle \delta, \mathbf{Y} \rangle = \langle \frac{\partial \mathcal{L}}{\partial \mathbf{K}}, \mathbf{K} \rangle = \langle \frac{\partial \mathcal{L}}{\partial \mathbf{X}}, \mathbf{X} \rangle$.
 
 **Solution:**
 
@@ -590,7 +590,7 @@ Using $Y_{h, w} = \sum_{u=0}^1 \sum_{v=0}^1 X_{h+u, w+v} K_{u, v}$:
 
 $$\mathbf{Y} = \begin{bmatrix} 4 & 8 \\ -3 & 8 \end{bmatrix}$$
 
-#### Step 2: Weight Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \mathbf{X} \star \boldsymbol{\delta}$
+#### Step 2: Weight Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \mathbf{X} \star \delta$
 Using $\frac{\partial \mathcal{L}}{\partial K_{u, v}} = \sum_{h=0}^1 \sum_{w=0}^1 \delta_{h, w} X_{h+u, w+v}$:
 - Cell $(0, 0)$:
   $$\frac{\partial \mathcal{L}}{\partial K_{0, 0}} = \delta_{0, 0} X_{0, 0} + \delta_{0, 1} X_{0, 1} + \delta_{1, 0} X_{1, 0} + \delta_{1, 1} X_{1, 1} = 2(2) + (-1)(1) + 1(0) + 3(4) = 4 - 1 + 0 + 12 = \mathbf{15}$$
@@ -603,19 +603,19 @@ Using $\frac{\partial \mathcal{L}}{\partial K_{u, v}} = \sum_{h=0}^1 \sum_{w=0}^
 
 $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \begin{bmatrix} 15 & 6 \\ 3 & 9 \end{bmatrix}$$
 
-#### Step 3: Input Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \text{FullConv}(\boldsymbol{\delta}, \mathbf{K}^{\text{rot}})$
+#### Step 3: Input Gradient $\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \text{FullConv}(\delta, \mathbf{K}^{\text{rot}})$
 Rotating $\mathbf{K}$ by $180^\circ$:
 $$\mathbf{K}^{\text{rot}} = \begin{bmatrix} K_{1, 1} & K_{1, 0} \\ K_{0, 1} & K_{0, 0} \end{bmatrix} = \begin{bmatrix} 1 & 3 \\ -2 & 1 \end{bmatrix}$$
 
-Zero-padding $\boldsymbol{\delta}$ with $p = K - 1 = 1$ gives the $4 \times 4$ padded array:
-$$\boldsymbol{\delta}^{\text{pad}} = \begin{bmatrix}
+Zero-padding $\delta$ with $p = K - 1 = 1$ gives the $4 \times 4$ padded array:
+$$\delta^{\text{pad}} = \begin{bmatrix}
 0 & 0 & 0 & 0 \\
 0 & 2 & -1 & 0 \\
 0 & 1 & 3 & 0 \\
 0 & 0 & 0 & 0
 \end{bmatrix}$$
 
-Computing the 9 spatial outputs by sliding $\mathbf{K}^{\text{rot}}$ over $\boldsymbol{\delta}^{\text{pad}}$:
+Computing the 9 spatial outputs by sliding $\mathbf{K}^{\text{rot}}$ over $\delta^{\text{pad}}$:
 1. $(0, 0)$: $1(0) + 3(0) - 2(0) + 1(2) = \mathbf{2}$
 2. $(0, 1)$: $1(0) + 3(0) - 2(2) + 1(-1) = 0 - 4 - 1 = \mathbf{-5}$
 3. $(0, 2)$: $1(0) + 3(0) - 2(-1) + 1(0) = 0 + 2 + 0 = \mathbf{2}$
@@ -630,7 +630,7 @@ $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}} = \begin{bmatrix} 2 & -5 & 2 
 
 #### Step 4: Conservation Identity Verification
 Because the forward convolution is bilinear, Euler's homogeneous function theorem requires that the inner products match:
-1. $\langle \boldsymbol{\delta}, \mathbf{Y} \rangle = 2(4) + (-1)(8) + 1(-3) + 3(8) = 8 - 8 - 3 + 24 = \mathbf{21}$
+1. $\langle \delta, \mathbf{Y} \rangle = 2(4) + (-1)(8) + 1(-3) + 3(8) = 8 - 8 - 3 + 24 = \mathbf{21}$
 2. $\langle \frac{\partial \mathcal{L}}{\partial \mathbf{K}}, \mathbf{K} \rangle = 15(1) + 6(-2) + 3(3) + 9(1) = 15 - 12 + 9 + 9 = \mathbf{21}$
 3. $\langle \frac{\partial \mathcal{L}}{\partial \mathbf{X}}, \mathbf{X} \rangle = 2(2) + (-5)(1) + 2(3) + 7(0) + 0(4) + (-7)(1) + 3(1) + 10(2) + 3(0) = 4 - 5 + 6 + 0 + 0 - 7 + 3 + 20 + 0 = \mathbf{21}$
 
@@ -651,7 +651,7 @@ $$\mathbf{X} = \begin{bmatrix}
 1. Apply $2 \times 2$ Max-Pooling with stride $2$. Record the winning spatial argmax coordinates and the forward output $\mathbf{Y}_{\text{max}} \in \mathbb{R}^{2 \times 2}$.
 2. Apply $2 \times 2$ Average-Pooling with stride $2$. Compute the forward output $\mathbf{Y}_{\text{avg}} \in \mathbb{R}^{2 \times 2}$.
 3. Given the upstream gradient:
-$$\boldsymbol{\delta} = \begin{bmatrix} 4 & -2 \\ 6 & 2 \end{bmatrix}$$
+$$\delta = \begin{bmatrix} 4 & -2 \\ 6 & 2 \end{bmatrix}$$
 compute the input gradients $\nabla_{\mathbf{X}}^{\text{max}} \mathcal{L}$ and $\nabla_{\mathbf{X}}^{\text{avg}} \mathcal{L}$. Compare their sparsity and gradient sum conservation.
 
 **Solution:**
@@ -768,9 +768,9 @@ This precisely reproduces the first row $[2, 1, 4, 2]$, confirming the exact alg
 In production deep learning frameworks (PyTorch, TensorFlow, JAX), convolution backward passes are not implemented as nested Python loops. NVIDIA cuDNN provides specialized primitives:
 - `cudnnConvolutionForward`: Computes $\mathbf{Y}$ via im2col GEMM or Winograd $F(2 \times 2, 3 \times 3)$.
 - `cudnnConvolutionBackwardData`: Computes $\frac{\partial \mathcal{L}}{\partial \mathbf{X}}$ via transposed GEMM:
-  $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}_{\text{col}}} = \mathbf{K}^T \cdot \boldsymbol{\delta}_{\text{col}} \xrightarrow{\text{col2im}} \frac{\partial \mathcal{L}}{\partial \mathbf{X}}$$
+  $$\frac{\partial \mathcal{L}}{\partial \mathbf{X}_{\text{col}}} = \mathbf{K}^T \cdot \delta_{\text{col}} \xrightarrow{\text{col2im}} \frac{\partial \mathcal{L}}{\partial \mathbf{X}}$$
 - `cudnnConvolutionBackwardFilter`: Computes $\frac{\partial \mathcal{L}}{\partial \mathbf{K}}$:
-  $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \boldsymbol{\delta}_{\text{col}} \cdot \mathbf{X}_{\text{col}}^T$$
+  $$\frac{\partial \mathcal{L}}{\partial \mathbf{K}} = \delta_{\text{col}} \cdot \mathbf{X}_{\text{col}}^T$$
 
 The `col2im` transformation inverts `im2col` by accumulating overlapping receptive field patches back into the full input gradient tensor.
 

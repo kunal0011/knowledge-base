@@ -113,7 +113,7 @@ A foundational question in statistical estimation is: *Can a biased estimator ev
 Hoerl and Kennard (1970) proved that the answer is always **yes** for linear models.
 
 #### 1. Setup
-Consider the standard linear model $\mathbf{y} = X \mathbf{w}^* + \boldsymbol{\epsilon}$, where $X \in \mathbb{R}^{N \times D}$ has full column rank $D$, $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$, and $\text{Cov}(\boldsymbol{\epsilon}) = \sigma^2 I_N$.
+Consider the standard linear model $\mathbf{y} = X \mathbf{w}^* + \epsilon$, where $X \in \mathbb{R}^{N \times D}$ has full column rank $D$, $\mathbb{E}[\epsilon] = \mathbf{0}$, and $\text{Cov}(\epsilon) = \sigma^2 I_N$.
 The Ridge estimator with shrinkage parameter $\lambda \ge 0$ is:
 $$\hat{\mathbf{w}}_\lambda = (X^T X + \lambda I)^{-1} X^T \mathbf{y}$$
 
@@ -133,7 +133,7 @@ $$\text{Var}_{\text{tot}}(\hat{\mathbf{w}}_\lambda) = \text{Tr}(\text{Cov}(\hat{
 
 #### 4. Spectral Decomposition
 Let $X^T X = V \Lambda V^T$ be the eigendecomposition of the symmetric positive definite Gram matrix, where $\Lambda = \text{diag}(d_1, \dots, d_D)$ with eigenvalues $d_j > 0$, and $V = [\mathbf{v}_1, \dots, \mathbf{v}_D]$ is the orthonormal eigenvector matrix.
-Define the rotated parameter coordinates $\boldsymbol{\alpha} = V^T \mathbf{w}^*$, so $\alpha_j = \mathbf{v}_j^T \mathbf{w}^*$.
+Define the rotated parameter coordinates $\alpha = V^T \mathbf{w}^*$, so $\alpha_j = \mathbf{v}_j^T \mathbf{w}^*$.
 
 In this eigenbasis:
 $$(X^T X + \lambda I)^{-1} = V \text{diag}\left( \frac{1}{d_1 + \lambda}, \dots, \frac{1}{d_D + \lambda} \right) V^T$$

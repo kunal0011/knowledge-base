@@ -142,21 +142,21 @@ When gradients $\nabla_s f$ or $\nabla_a f$ are unavailable, discontinuous, or n
 #### Cross-Entropy Method (CEM):
 CEM iteratively fits an exponential family distribution (typically Gaussian) over the sequence of control inputs $U \in \mathbb{R}^{H \cdot d_a}$:
 
-1. **Initialize:** Gaussian prior $\mathcal{N}(\boldsymbol{\mu}^{(0)}, \boldsymbol{\Sigma}^{(0)})$, where $\boldsymbol{\mu}^{(0)} = \mathbf{0}, \boldsymbol{\Sigma}^{(0)} = \sigma_0^2 \mathbf{I}$.
+1. **Initialize:** Gaussian prior $\mathcal{N}(\mu^{(0)}, \Sigma^{(0)})$, where $\mu^{(0)} = \mathbf{0}, \Sigma^{(0)} = \sigma_0^2 \mathbf{I}$.
 2. **For iteration $m = 1, \dots, M$:**
    - Sample $K$ candidate trajectories:
-     $$U^{(k)} \sim \mathcal{N}(\boldsymbol{\mu}^{(m-1)}, \boldsymbol{\Sigma}^{(m-1)}), \quad k \in \{1, \dots, K\}$$
+     $$U^{(k)} \sim \mathcal{N}(\mu^{(m-1)}, \Sigma^{(m-1)}), \quad k \in \{1, \dots, K\}$$
    - Roll out model forward to compute objective cost for each candidate:
      $$J^{(k)} = J(s_0, U^{(k)})$$
    - Sort candidates by cost in ascending order: $J^{(1)} \le J^{(2)} \le \dots \le J^{(K)}$.
    - Select top $K_{\text{elite}} = \lceil \alpha K \rceil$ elite candidates ($\mathcal{E}$).
    - Update Gaussian parameters using sample mean and variance of the elite set:
-     $$\boldsymbol{\mu}_{\text{elite}} = \frac{1}{K_{\text{elite}}} \sum_{k \in \mathcal{E}} U^{(k)}$$
-     $$\boldsymbol{\Sigma}_{\text{elite}} = \frac{1}{K_{\text{elite}}} \sum_{k \in \mathcal{E}} (U^{(k)} - \boldsymbol{\mu}_{\text{elite}})(U^{(k)} - \boldsymbol{\mu}_{\text{elite}})^T$$
+     $$\mu_{\text{elite}} = \frac{1}{K_{\text{elite}}} \sum_{k \in \mathcal{E}} U^{(k)}$$
+     $$\Sigma_{\text{elite}} = \frac{1}{K_{\text{elite}}} \sum_{k \in \mathcal{E}} (U^{(k)} - \mu_{\text{elite}})(U^{(k)} - \mu_{\text{elite}})^T$$
    - Apply soft Polyak momentum updating:
-     $$\boldsymbol{\mu}^{(m)} = \beta \boldsymbol{\mu}_{\text{elite}} + (1 - \beta) \boldsymbol{\mu}^{(m-1)}$$
-     $$\boldsymbol{\Sigma}^{(m)} = \beta \boldsymbol{\Sigma}_{\text{elite}} + (1 - \beta) \boldsymbol{\Sigma}^{(m-1)}$$
-3. Return the final mean $\boldsymbol{\mu}^{(M)}$ as the optimal plan $U^*$.
+     $$\mu^{(m)} = \beta \mu_{\text{elite}} + (1 - \beta) \mu^{(m-1)}$$
+     $$\Sigma^{(m)} = \beta \Sigma_{\text{elite}} + (1 - \beta) \Sigma^{(m-1)}$$
+3. Return the final mean $\mu^{(M)}$ as the optimal plan $U^*$.
 
 ---
 
@@ -910,11 +910,11 @@ Consider a 1D continuous control system starting from $s_0 = 2.0$ with linear dy
 The total trajectory objective for candidate control sequence $U = (u_0, u_1)$ is:
 $$J(U) = (s_1^2 + u_0^2) + (2 s_2^2 + u_1^2), \quad \text{where } s_1 = s_0 + u_0, \quad s_2 = s_1 + u_1$$
 
-Given $N = 10$ sampled candidate trajectories generated from an initial Gaussian prior $\mathcal{N}(\boldsymbol{\mu}^{(0)}, \boldsymbol{\Sigma}^{(0)})$ with $\boldsymbol{\mu}^{(0)} = [0.0, 0.0]^\top$ and $\sigma_0 = 1.0$:
+Given $N = 10$ sampled candidate trajectories generated from an initial Gaussian prior $\mathcal{N}(\mu^{(0)}, \Sigma^{(0)})$ with $\mu^{(0)} = [0.0, 0.0]^\top$ and $\sigma_0 = 1.0$:
 1. Compute the trajectory rollouts $(s_1, s_2)$ and evaluate the cumulative cost $J$ for each candidate.
 2. Rank all $N = 10$ candidates and select the top $K = 3$ elites ($\mathcal{E}$).
-3. Calculate the elite sample mean $\boldsymbol{\mu}_{\text{elite}}$ and population standard deviation $\boldsymbol{\sigma}_{\text{elite}}$.
-4. Apply Polyak smoothing with momentum factor $\beta = 0.7$ to obtain the updated sampling distribution parameters $(\boldsymbol{\mu}^{(1)}, \boldsymbol{\sigma}^{(1)})$.
+3. Calculate the elite sample mean $\mu_{\text{elite}}$ and population standard deviation $\sigma_{\text{elite}}$.
+4. Apply Polyak smoothing with momentum factor $\beta = 0.7$ to obtain the updated sampling distribution parameters $(\mu^{(1)}, \sigma^{(1)})$.
 
 **Solution:**
 
@@ -956,27 +956,27 @@ The elite set is $\mathcal{E} = \{ U^{(9)}, U^{(1)}, U^{(7)} \}$.
 - **Sample Mean:**
   $$\mu_{\text{elite}, 0} = \frac{-1.3 + (-1.2) + (-1.4)}{3} = \frac{-3.9}{3} = \mathbf{-1.300000}$$
   $$\mu_{\text{elite}, 1} = \frac{-0.5 + (-0.6) + (-0.5)}{3} = \frac{-1.6}{3} = \mathbf{-\frac{1.6}{3}} \approx \mathbf{-0.533333}$$
-  $$\boldsymbol{\mu}_{\text{elite}} = \begin{bmatrix} -1.300000 \\ -0.533333 \end{bmatrix}$$
+  $$\mu_{\text{elite}} = \begin{bmatrix} -1.300000 \\ -0.533333 \end{bmatrix}$$
 
 - **Population Variance and Standard Deviation:**
   $$\sigma_{\text{elite}, 0}^2 = \frac{(-1.3 - (-1.3))^2 + (-1.2 - (-1.3))^2 + (-1.4 - (-1.3))^2}{3} = \frac{0 + (0.1)^2 + (-0.1)^2}{3} = \frac{0.02}{3} \approx 0.006667$$
   $$\sigma_{\text{elite}, 0} = \sqrt{\frac{0.02}{3}} \approx \mathbf{0.081650}$$
   $$\sigma_{\text{elite}, 1}^2 = \frac{(-0.5 - (-1.6/3))^2 + (-0.6 - (-1.6/3))^2 + (-0.5 - (-1.6/3))^2}{3} = \frac{(0.033333)^2 + (-0.066667)^2 + (0.033333)^2}{3} = \frac{0.006667}{3} \approx 0.002222$$
   $$\sigma_{\text{elite}, 1} = \sqrt{\frac{0.006667}{3}} \approx \mathbf{0.047140}$$
-  $$\boldsymbol{\sigma}_{\text{elite}} = \begin{bmatrix} 0.081650 \\ 0.047140 \end{bmatrix}$$
+  $$\sigma_{\text{elite}} = \begin{bmatrix} 0.081650 \\ 0.047140 \end{bmatrix}$$
 
 ---
 
 #### Step 4: Polyak Momentum Smoothing ($\beta = 0.7$)
-With initial prior $\boldsymbol{\mu}^{(0)} = [0.0, 0.0]^\top$ and $\boldsymbol{\sigma}^{(0)} = [1.0, 1.0]^\top$:
+With initial prior $\mu^{(0)} = [0.0, 0.0]^\top$ and $\sigma^{(0)} = [1.0, 1.0]^\top$:
 - **Updated Mean:**
   $$\mu_0^{(1)} = 0.7 \times (-1.300000) + 0.3 \times 0.0 = \mathbf{-0.910000}$$
   $$\mu_1^{(1)} = 0.7 \times (-0.533333) + 0.3 \times 0.0 = \mathbf{-0.373333}$$
-  $$\boldsymbol{\mu}^{(1)} = \begin{bmatrix} \mathbf{-0.910000} \\ \mathbf{-0.373333} \end{bmatrix}$$
+  $$\mu^{(1)} = \begin{bmatrix} \mathbf{-0.910000} \\ \mathbf{-0.373333} \end{bmatrix}$$
 - **Updated Standard Deviation:**
   $$\sigma_0^{(1)} = 0.7 \times 0.081650 + 0.3 \times 1.0 = 0.057155 + 0.300000 = \mathbf{0.357155}$$
   $$\sigma_1^{(1)} = 0.7 \times 0.047140 + 0.3 \times 1.0 = 0.032998 + 0.300000 = \mathbf{0.332998}$$
-  $$\boldsymbol{\sigma}^{(1)} = \begin{bmatrix} \mathbf{0.357155} \\ \mathbf{0.332998} \end{bmatrix} \quad \blacksquare$$
+  $$\sigma^{(1)} = \begin{bmatrix} \mathbf{0.357155} \\ \mathbf{0.332998} \end{bmatrix} \quad \blacksquare$$
 
 ---
 

@@ -109,6 +109,10 @@ knowledge-base/
 │   │   ├── README.md                          # Master Portal, Architecture Matrix & Syllabus
 │   │   └── 01-10. Core Language to Multi-Package SPM Architecture
 │   │
+│   ├── Production-React-Native-and-Expo-Development/ # Production React Native & Expo (New Architecture)
+│   │   ├── README.md                          # Master Portal, Technology Matrix & Architecture Roadmap
+│   │   └── 01-12. Hermes Engine, JSI, TurboModules, Fabric, Expo CNG & Monorepo
+│   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
 │

@@ -11,6 +11,7 @@
 [![Microservices Architecture](https://img.shields.io/badge/Microservices%20Design-10%20Chapters-darkgreen.svg)](#-pillar-vii-microservices-architecture--design-10-chapters)
 [![Cloud Data Lake](https://img.shields.io/badge/Cloud%20Data%20Lake-10%20Chapters-indigo.svg)](#-pillar-viii-cloud-data-lake--lakehouse-architecture-10-chapters)
 [![AI Math Foundations](https://img.shields.io/badge/AI%20Math%20Foundations-111%20Chapters-gold.svg)](#-pillar-ix-mathematical-foundations-of-ai--deep-learning-111-chapters)
+[![Mobile Architecture](https://img.shields.io/badge/Mobile%20Engineering-Android%20%26%20Flutter-darkcyan.svg)](#-pillar-x-production-android--flutter-development-10-chapters)
 [![Target Level](https://img.shields.io/badge/Target%20Level-Senior%20%7C%20Staff%20%7C%20Principal%20(L5--L7)-purple.svg)](#curated-interview-learning-tracks)
 
 > A production-grade, end-to-end engineering knowledge base and interview preparation curriculum. Covers the complete **Alex Xu System Design Series (Volumes 1, 2, and 3 — 45 Production Architectures)**, the **Low-Level Design (LLD) Masterclass (14 Design Patterns + Top 50 Interview Questions)**, and the **Coding Masterclass (357 LeetCode Solutions across 14 Algorithmic Paradigms)** with architectural blueprints, 45-minute verbatim interview sparring transcripts, deep explainability guides, runnable simulation benchmark engines, multi-language implementations (**Python 3, C++, Java**), visual execution walkthroughs, and typed solution guides.
@@ -98,6 +99,19 @@ knowledge-base/
 │   │   ├── 08. Governance, Security & Fine-Grained Access Control.md
 │   │   ├── 09. Cloud Cost Engineering, Tiering & FinOps.md
 │   │   └── 10. Multi-Cloud Blueprints & Production Implementation.md
+│   │
+│   ├── Production-Android-and-Flutter-Development/ # Production Android (Kotlin) & Cross-Platform (Flutter)
+│   │   ├── README.md                          # Master Portal, Comparison Matrix & Sitemap
+│   │   ├── 01. Core Languages & Modern Runtime Internals (Kotlin vs Dart).md
+│   │   ├── 02. Declarative UI Paradigms (Jetpack Compose & Flutter Widgets).md
+│   │   ├── 03. Architecture Patterns (MVI, MVVM, Clean Architecture & BLoC).md
+│   │   ├── 04. Dependency Injection & Service Locators (Hilt, Koin, Injectable).md
+│   │   ├── 05. Local Persistence, Caching & Offline-First Data.md
+│   │   ├── 06. Networking, Serialization & Real-Time Sync.md
+│   │   ├── 07. Background Processing, Concurrency & Push Notifications.md
+│   │   ├── 08. Native Platform Channels & Hardware Integration.md
+│   │   ├── 09. Performance Optimization, Profiling & Security Hardening.md
+│   │   └── 10. CI-CD, Release Engineering & Testing (Unit, Widget, E2E).md
 │   │
 │   └── ai_math/                              # Mathematical Foundations of AI & Deep Learning
 │       └── README.md                          # 13 Modules: Linear Algebra to Test-Time Compute
@@ -336,6 +350,14 @@ A rigorous university-level reference course on the mathematics underpinning Mac
 | **13** | **Frontier Reasoning & Inference Compute** | Test-time compute scaling laws (Best-of-N, Beam Search, MCTS), Process Reward Model (PRM) value verification, Pure RL reasoning emergence (DeepSeek-R1-Zero), Lean 4 formalization | [Module 13](Projects/ai_math/13_reasoning_and_test_time_compute) |
 
 > Complete formula derivations, visual arithmetic grids & solved numerical problems: **[AI Mathematical Foundations Master Handbook](Projects/ai_math/README.md)**
+
+---
+
+## 📱 Pillar X: Production Android & Flutter Development (10 Chapters)
+
+A production-grade mobile engineering curriculum covering **Native Android (Kotlin 2.0+ & Jetpack Compose)** and **Cross-Platform Mobile (Flutter & Dart 3+)**. Covers runtime engines, declarative UI slot tables & 3 trees, MVI / BLoC state management, Hilt & Injectable DI, offline-first persistence (Room & Drift), OkHttp & Dio networking with atomic 401 refresh, WorkManager, Platform Channels & Biometrics, R8 & Hardware Keystore security, and Fastlane CI/CD.
+
+> Complete mobile curriculum & runtime comparison: **[Production Android & Flutter Development Master Portal](Projects/Production-Android-and-Flutter-Development/README.md)**
 
 ---
 
